@@ -1,0 +1,22 @@
+{
+  "name": "web",
+  "version": "0.0.1",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite --config vite/config.dev.mjs",
+    "build": "vite build --config vite/config.prod.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lordly/engine": "workspace:*",
+    "phaser": "^4.2.1",
+    "terser": "^5.39.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^8.1.4",
+    "vite-plugin-pwa": "^1.3.0",
+    "wrangler": "^4"
+  }
+}

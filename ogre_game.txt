@@ -1,0 +1,37 @@
+I would like to start a new app that is a game with bmad. This time i dont want to code, I want to use claude code to generate the code and the game. The idea is that I can play it on my Android phone. I keep my projects under ~/projects/{the language of the project}/{project name}, so that's why i have ~/projects/ruby ~/projects/js ~/projects/go etc. So I don't know what technology to use. We can brainstorm and decide together.
+
+The game:
+
+I want the game to be a strategy game like "Ogre Battle 64", my favorite game of all time.
+
+https://en.wikipedia.org/wiki/Ogre_Battle_64
+Ogre Battle 64: Person of Lordly Caliber[a] is a real-time tactical role-playing game.
+
+Fan page: https://ogrebattle64.net/
+https://www.ogrebattle64archive.com/
+gamefaqs: https://gamefaqs.gamespot.com/n64/198230-ogre-battle-64-person-of-lordly-caliber/faqs
+https://lparchive.org/Ogre-Battle-64/
+https://archive.org/details/OgreBattle64PersonOfLordlyCaliberPrimasGuide/mode/2up
+character stats building: http://nickexamples.atspace.cc/Ogre/
+
+
+I want the MVP to be a playable board 1 vs 1 (a friend with a link) or 1 vs AI. I want the focus to be on the strategic board positioning and class choices, with a simple turn-based combat system.
+We don't need many classes in the beginning, let's work with a few simple but engaging ones, in pokemon / rock-papers-scizors combat style. Mage beats knight, knight beats archer, archer beats mage, etc. Archer in the back attacks 2x, Mage does area damage, knights tank and attack 2 in the front, etc. We can detail that later. Both players have same amount of units to position.
+
+
+
+
+Ogre Battle 64 uses an automated, unit-based combat system. Players organize squads of up to five characters into formations, then issue overarching tactics like "Attack Leader". When squads clash, the game transitions to an isometric view, where characters execute semi-real-time attacks, critical hits, and spells based on positioning.Strategic Overview of CombatUnit Organization: You group characters and monsters into squads (or "units") of up to 5 members.Formations: Characters have different attack ranges and effectiveness depending on their position (Front Row vs. Back Row). For example, Fighters belong in the front, while Mages and Archers usually go in the back.Semi-Real-Time Action: During combat, you do not directly control individual strikes. Characters attack simultaneously based on their class attack counts and stats. Multiple hits or area-of-effect spells trigger based on the active row.Indirect Control: You influence battles before and during the clash. You can set unit-wide behavior (e.g., Attack Leader, Attack Weakest, or Attack Strong) and swap formations or use items while the tactical map is paused.Player Perspectives on Combat“What's interesting about the combat system is that you don't have direct control over your units, but you have a lot of influence in what they do. The composition of your units as well as the details of their formation determines how the fights go, which in...”Reddit · r/ogrebattle64 · 6 years agoFor a look at how unit formations and automated attacks play out during active missions:
+
+Wikipedia important references:
+
+Unit formations
+Ogre Battle is a real-time strategy role-playing game. Magnus, the protagonist, commands a battalion of up to 50 troops. Members of the battalion are sectioned off into units, by the player. Each unit must contain a leader. Any character can be dubbed leader, minus most non-human entities, soldiers and basic classes like the Fighter or Amazon. Gorgons and Saturos are the main exceptions to this rule. Each unit, including the leader, has a maximum of five members. Units are used to battle enemy units, which follow the same structural formation.
+
+Battle
+Much like other real time tactics games, Ogre Battle 64 has automatic combat between two outfits. However, what makes the gameplay unique is that, when two parties battle, the screen view switches to an isometric view of a pre-rendered battlefield, which is very reminiscent of typical RPG video game battles. Characters make their attacks in semi-real time, meaning multiple characters act at once. In the battle system, there is a vast array of attacks, critical hits, and parries during the combat situations. The unit is disbanded once each member dies. If at any point Magnus Gallant dies, a game over screen is shown and the game cycles back to the main menu.
+
+Classes
+One of the trademarks of the series is the class system. Each character belongs to a certain class, and the vast majority can be changed into different classes. The classes determine the type of attacks the character can use in battle, what equipment it can carry, as well as effects on the unit's statistics. Many classes are most efficient in certain positions of a unit. All classes are divided into three major groups: male, female, and non-human.
+
+How can we start? I want to use bmad with sprints and so, let's brainstorm the tech stack and the game design. Make me the questions and we define what the project will be. Sounds good?
