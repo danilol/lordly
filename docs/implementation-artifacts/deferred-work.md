@@ -1,5 +1,9 @@
 # Deferred Work
 
+## Product wishes (PO, 2026-07-12) — to scope in a future planning pass
+
+- **"Nice documentation about the project"** (Danilo, during epic 1). The plan already carries NFR3's artifacts (README, `docs/rules.md` arriving with story 2.4's Help screen, ADRs, engine doc comments) — but the PO wants to go beyond that baseline. Candidate scope to discuss when planned (e.g. via `correct-course` or when epic 2 closes): a proper docs site or polished docs/ index, architecture walkthrough for outsiders, gameplay/rules showcase, screenshots/GIFs in the README, contributor guide. Not a current-sprint concern.
+
 ## Deferred from: code review of story-1.1 (2026-07-12)
 
 - No lint/format step in the CI quality gate — only typecheck/test/coverage run today; adding ESLint/Prettier (or equivalent) is a scope decision for a future story, not required by story 1.1's ACs.
