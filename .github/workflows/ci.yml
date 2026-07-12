@@ -20,7 +20,11 @@ jobs:
           node-version: 24
           cache: "pnpm"
 
-      - run: node --version && pnpm --version
+      - run: |
+          node --version
+          which pnpm
+          node -p "require('/home/runner/setup-pnpm/node_modules/pnpm/package.json').version"
+          pnpm --version
 
       - run: pnpm install --frozen-lockfile
 
