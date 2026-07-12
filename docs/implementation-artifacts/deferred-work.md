@@ -2,6 +2,8 @@
 
 ## Product wishes (PO, 2026-07-12) — to scope in a future planning pass
 
+- **Tech-debt story before epic 2** (Danilo, during story 1.5 planning): before the first epic-2 story starts, insert a dedicated refactoring / cleanup / performance-improvement story. Natural scope inputs when it's created: everything in this file's deferred sections (lint tooling + AST purity guard, vite-config consolidation, template cruft, seed-bound constant dedup, chassis-stub notes), plus any hotspots the epic-1 retrospective surfaces. Formalize via `correct-course` or at the epic-1 retrospective so it lands in sprint-status ahead of story 2.1.
+
 - **"Nice documentation about the project"** (Danilo, during epic 1). The plan already carries NFR3's artifacts (README, `docs/rules.md` arriving with story 2.4's Help screen, ADRs, engine doc comments) — but the PO wants to go beyond that baseline. Candidate scope to discuss when planned (e.g. via `correct-course` or when epic 2 closes): a proper docs site or polished docs/ index, architecture walkthrough for outsiders, gameplay/rules showcase, screenshots/GIFs in the README, contributor guide. Not a current-sprint concern.
 
 ## Deferred from: code review of story-1.1 (2026-07-12)

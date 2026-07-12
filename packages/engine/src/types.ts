@@ -109,10 +109,11 @@ export interface MatchSetup {
 }
 
 /**
- * Version of the `BattleEvent` union below (AD-12). Extending the union —
- * as stories 1.5/1.6 will with combat events — bumps this integer.
+ * Version of the `BattleEvent` union below (AD-12). Extending the union
+ * bumps this integer: v1 = chassis envelope (story 1.4), v2 = +UnitAttacked,
+ * +UnitDied (story 1.5). Story 1.6 completes the set with another bump.
  */
-export const LOG_VERSION = 1;
+export const LOG_VERSION = 2;
 
 /**
  * One unit's full initial render state, carried by `BattleStarted` so the
@@ -156,6 +157,35 @@ export interface ActionSkipped {
 }
 
 /**
+ * One target's share of an attack: the **damage** dealt (post-RPS, post-clamp
+ * integer — FR14/FR15) and the target's HP after it landed. The shell renders
+ * these numbers directly and never recomputes them (AD-2).
+ */
+export interface AttackTarget {
+  unit: UnitId;
+  damage: number;
+  hpAfter: number;
+}
+
+/**
+ * A unit attacked (one **action**, one event — AD-12). Melee swings carry a
+ * single target; the Mage's row blast (story 1.6) carries one entry per unit
+ * in the struck row — the array shape is fixed now so 1.6 extends without a
+ * breaking change.
+ */
+export interface UnitAttacked {
+  type: 'UnitAttacked';
+  source: UnitId;
+  targets: AttackTarget[];
+}
+
+/** A unit's HP reached 0 (FR18 wipe input); it loses its unspent actions (FR13). */
+export interface UnitDied {
+  type: 'UnitDied';
+  unit: UnitId;
+}
+
+/**
  * An **engagement** finished: every unit spent its actions (FR17). Carries
  * the per-unit HP snapshot judging and the wipeout loop will read (FR18/19).
  */
@@ -174,12 +204,19 @@ export interface BattleEnded {
 
 /**
  * The closed, versioned battle event union (AD-12): past-tense, one event
- * per (actor, action), carrying everything the UI renders. The chassis
- * declares 5 members; the full set (UnitAttacked, UnitHealed, StatusApplied,
- * ActionMisfired, ActionFizzled, PoisonTicked, UnitDied) completes by story
- * 1.6, each extension bumping `LOG_VERSION`.
+ * per (actor, action), carrying everything the UI renders. v2 declares 7
+ * members; the remaining set (UnitHealed, StatusApplied, ActionMisfired,
+ * ActionFizzled, PoisonTicked) completes in story 1.6 with another
+ * `LOG_VERSION` bump.
  */
-export type BattleEvent = BattleStarted | PassStarted | ActionSkipped | EngagementEnded | BattleEnded;
+export type BattleEvent =
+  | BattleStarted
+  | PassStarted
+  | UnitAttacked
+  | UnitDied
+  | ActionSkipped
+  | EngagementEnded
+  | BattleEnded;
 
 /**
  * The engine's entire output (AD-1, AD-2): an immutable ordered narration of

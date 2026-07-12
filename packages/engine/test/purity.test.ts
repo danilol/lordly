@@ -41,7 +41,17 @@ const sources = import.meta.glob('../src/**/*.ts', { query: '?raw', import: 'def
 describe('engine purity guard (AD-1)', () => {
   it('covers every source module (recursive)', () => {
     const files = Object.keys(sources).map((p) => p.replace('../src/', ''));
-    expect(files.sort()).toEqual(['balance.ts', 'hash.ts', 'index.ts', 'resolve.ts', 'rng.ts', 'types.ts', 'validate.ts']);
+    expect(files.sort()).toEqual([
+      'balance.ts',
+      'hash.ts',
+      'index.ts',
+      'judging.ts',
+      'resolve.ts',
+      'rng.ts',
+      'targeting.ts',
+      'types.ts',
+      'validate.ts',
+    ]);
   });
 
   it('src/ contains no effectful or nondeterministic constructs', () => {

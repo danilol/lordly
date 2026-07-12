@@ -1,0 +1,647 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`golden battles (story 1.5 — melee era) > golden #1: a death — concentrated knights kill the front cleric 1`] = `
+{
+  "events": [
+    {
+      "type": "BattleStarted",
+      "units": [
+        {
+          "class": "knight",
+          "element": "fire",
+          "hp": 140,
+          "id": "A:0",
+          "maxHp": 140,
+          "placement": {
+            "col": "left",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "knight",
+          "element": "water",
+          "hp": 140,
+          "id": "A:1",
+          "maxHp": 140,
+          "placement": {
+            "col": "center",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "knight",
+          "element": "wind",
+          "hp": 140,
+          "id": "A:2",
+          "maxHp": 140,
+          "placement": {
+            "col": "right",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "cleric",
+          "element": "earth",
+          "hp": 90,
+          "id": "B:0",
+          "maxHp": 90,
+          "placement": {
+            "col": "right",
+            "row": "front",
+          },
+          "side": "B",
+        },
+        {
+          "class": "cleric",
+          "element": "fire",
+          "hp": 90,
+          "id": "B:1",
+          "maxHp": 90,
+          "placement": {
+            "col": "right",
+            "row": "mid",
+          },
+          "side": "B",
+        },
+        {
+          "class": "cleric",
+          "element": "water",
+          "hp": 90,
+          "id": "B:2",
+          "maxHp": 90,
+          "placement": {
+            "col": "right",
+            "row": "back",
+          },
+          "side": "B",
+        },
+      ],
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "B:0",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "B:1",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "B:2",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 66,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 42,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "B:2",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 18,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 0,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "B:0",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "engagement": 1,
+      "hp": {
+        "A:0": 140,
+        "A:1": 140,
+        "A:2": 140,
+        "B:0": 0,
+        "B:1": 90,
+        "B:2": 90,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "hpPct": {
+        "A": 100,
+        "B": 66,
+      },
+      "type": "BattleEnded",
+      "winner": "A",
+    },
+  ],
+  "logVersion": 2,
+}
+`;
+
+exports[`golden battles (story 1.5 — melee era) > golden #2: an HP-percentage decision — knight duel vs mercenary line 1`] = `
+{
+  "events": [
+    {
+      "type": "BattleStarted",
+      "units": [
+        {
+          "class": "knight",
+          "element": "fire",
+          "hp": 140,
+          "id": "A:0",
+          "maxHp": 140,
+          "placement": {
+            "col": "center",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "mercenary",
+          "element": "water",
+          "hp": 110,
+          "id": "A:1",
+          "maxHp": 110,
+          "placement": {
+            "col": "left",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "archer",
+          "element": "wind",
+          "hp": 90,
+          "id": "A:2",
+          "maxHp": 90,
+          "placement": {
+            "col": "center",
+            "row": "back",
+          },
+          "side": "A",
+        },
+        {
+          "class": "mercenary",
+          "element": "earth",
+          "hp": 110,
+          "id": "B:0",
+          "maxHp": 110,
+          "placement": {
+            "col": "center",
+            "row": "front",
+          },
+          "side": "B",
+        },
+        {
+          "class": "mercenary",
+          "element": "fire",
+          "hp": 110,
+          "id": "B:1",
+          "maxHp": 110,
+          "placement": {
+            "col": "left",
+            "row": "mid",
+          },
+          "side": "B",
+        },
+        {
+          "class": "witch",
+          "element": "water",
+          "hp": 85,
+          "id": "B:2",
+          "maxHp": 85,
+          "placement": {
+            "col": "right",
+            "row": "back",
+          },
+          "side": "B",
+        },
+      ],
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "B:2",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 94,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 128,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 116,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 74,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "B:2",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 58,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 104,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 38,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "engagement": 1,
+      "hp": {
+        "A:0": 104,
+        "A:1": 110,
+        "A:2": 90,
+        "B:0": 38,
+        "B:1": 110,
+        "B:2": 85,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "hpPct": {
+        "A": 89,
+        "B": 76,
+      },
+      "type": "BattleEnded",
+      "winner": "A",
+    },
+  ],
+  "logVersion": 2,
+}
+`;
+
+exports[`golden battles (story 1.5 — melee era) > golden #3: an exact-tie draw — mirrored triple knights, symmetric totals 1`] = `
+{
+  "events": [
+    {
+      "type": "BattleStarted",
+      "units": [
+        {
+          "class": "knight",
+          "element": "fire",
+          "hp": 140,
+          "id": "A:0",
+          "maxHp": 140,
+          "placement": {
+            "col": "left",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "knight",
+          "element": "water",
+          "hp": 140,
+          "id": "A:1",
+          "maxHp": 140,
+          "placement": {
+            "col": "center",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "knight",
+          "element": "wind",
+          "hp": 140,
+          "id": "A:2",
+          "maxHp": 140,
+          "placement": {
+            "col": "right",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "knight",
+          "element": "earth",
+          "hp": 140,
+          "id": "B:0",
+          "maxHp": 140,
+          "placement": {
+            "col": "left",
+            "row": "front",
+          },
+          "side": "B",
+        },
+        {
+          "class": "knight",
+          "element": "fire",
+          "hp": 140,
+          "id": "B:1",
+          "maxHp": 140,
+          "placement": {
+            "col": "center",
+            "row": "front",
+          },
+          "side": "B",
+        },
+        {
+          "class": "knight",
+          "element": "water",
+          "hp": 140,
+          "id": "B:2",
+          "maxHp": 140,
+          "placement": {
+            "col": "right",
+            "row": "front",
+          },
+          "side": "B",
+        },
+      ],
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 124,
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 124,
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 124,
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 124,
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 124,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 124,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 108,
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 108,
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 108,
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 108,
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 108,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 108,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "engagement": 1,
+      "hp": {
+        "A:0": 108,
+        "A:1": 108,
+        "A:2": 108,
+        "B:0": 108,
+        "B:1": 108,
+        "B:2": 108,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "hpPct": {
+        "A": 77,
+        "B": 77,
+      },
+      "type": "BattleEnded",
+      "winner": "draw",
+    },
+  ],
+  "logVersion": 2,
+}
+`;

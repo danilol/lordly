@@ -11,12 +11,15 @@ export { ALL_CLASSES, ALL_COLS, ALL_ELEMENTS, ALL_ROWS, ALL_SIDES, LOG_VERSION }
 export type { Col, Element, MatchSetup, Mode, Placement, Row, Side, SpellKind, Unit, UnitClass, UnitId } from './types';
 export type {
   ActionSkipped,
+  AttackTarget,
   BattleEnded,
   BattleEvent,
   BattleLog,
   BattleStarted,
   EngagementEnded,
   PassStarted,
+  UnitAttacked,
+  UnitDied,
   UnitSnapshot,
 } from './types';
 export { resolveBattle } from './resolve';

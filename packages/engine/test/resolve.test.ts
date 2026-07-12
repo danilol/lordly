@@ -12,12 +12,17 @@ function setup(partial: Pick<MatchSetup, 'armies' | 'placements'>, seed = 7): Ma
   return { seed, balanceVersion: BALANCE.version, mode: 'single', ...partial };
 }
 
-/** The ordered actor ids of every taken turn, grouped by pass. */
+/**
+ * The ordered actor ids of every taken turn, grouped by pass. Since story 1.5
+ * a turn is either an `ActionSkipped` (idle/dead) or a `UnitAttacked` (melee)
+ * — both count as the actor's one action.
+ */
 function turnsByPass(log: ReturnType<typeof resolveBattle>): UnitId[][] {
   const passes: UnitId[][] = [];
   for (const e of log.events) {
     if (e.type === 'PassStarted') passes.push([]);
     if (e.type === 'ActionSkipped') passes[passes.length - 1]?.push(e.unit);
+    if (e.type === 'UnitAttacked') passes[passes.length - 1]?.push(e.source);
   }
   return passes;
 }
@@ -59,8 +64,10 @@ describe('resolveBattle chassis (FR13, FR17, AD-1, AD-12)', () => {
     expect(log.events.filter((e) => e.type === 'EngagementEnded')).toHaveLength(1);
     const ended = log.events[log.events.length - 1];
     if (ended?.type === 'BattleEnded') {
-      expect(ended.winner).toBe('draw');
-      expect(ended.hpPct).toEqual({ A: 100, B: 100 });
+      // Since 1.5 melee units deal real damage — assert structure, not a draw.
+      expect(['A', 'B', 'draw']).toContain(ended.winner);
+      expect(ended.hpPct.A).toBeGreaterThanOrEqual(0);
+      expect(ended.hpPct.B).toBeGreaterThanOrEqual(0);
     }
   });
 
@@ -318,8 +325,9 @@ describe('resolveBattle chassis (FR13, FR17, AD-1, AD-12)', () => {
 describe('chassis properties (NFR2, FR20)', () => {
   test.prop([matchSetupArb])('terminates with a bounded, well-formed log', (s) => {
     const log = resolveBattle(s);
-    // Ceiling: 1 BattleStarted + passes(≤2) + turns(≤ 6 units × 2 actions) + 1 EngagementEnded + 1 BattleEnded
-    expect(log.events.length).toBeLessThanOrEqual(1 + 2 + 12 + 1 + 1);
+    // Ceiling: 1 BattleStarted + passes(≤2) + turns(≤ 6 units × 2 actions)
+    // + deaths(≤6 UnitDied) + 1 EngagementEnded + 1 BattleEnded
+    expect(log.events.length).toBeLessThanOrEqual(1 + 2 + 12 + 6 + 1 + 1);
     expect(log.events[0]?.type).toBe('BattleStarted');
     expect(log.events[log.events.length - 1]?.type).toBe('BattleEnded');
   });
@@ -396,29 +404,36 @@ describe('chassis properties (NFR2, FR20)', () => {
     const log = resolveBattle(s);
     const trace = log.events.map((e) => {
       if (e.type === 'ActionSkipped') return `turn:${e.unit}`;
+      if (e.type === 'UnitAttacked') return `atk:${e.source}>${e.targets.map((t) => `${t.unit}-${t.damage}`).join(',')}`;
+      if (e.type === 'UnitDied') return `died:${e.unit}`;
       if (e.type === 'PassStarted') return `pass:${e.pass}`;
       return e.type;
     });
-    // Pinned at implementation time; a change means the timeline ordering,
-    // stream derivation, or event envelope changed — an engine API change.
+    // Pinned at implementation time (re-pinned in 1.5: melee actors now emit
+    // UnitAttacked — an engine behavior change with a LOG_VERSION bump); any
+    // change here means ordering, derivation, or the envelope changed.
     expect(trace).toEqual([
       'BattleStarted',
       'pass:1',
       'turn:A:2',
       'turn:A:1',
-      'turn:B:2',
+      'atk:B:2>A:0-12',
       'turn:B:0',
       'turn:B:1',
-      'turn:A:0',
+      'atk:A:0>B:2-20',
       'pass:2',
       'turn:A:2',
       'turn:A:1',
-      'turn:B:2',
+      'atk:B:2>A:0-12',
       'turn:B:0',
       'turn:B:1',
-      'turn:A:0',
+      'atk:A:0>B:2-20',
       'EngagementEnded',
       'BattleEnded',
     ]);
+    const verdict = log.events[log.events.length - 1];
+    if (verdict?.type === 'BattleEnded') {
+      expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 92, B: 85 } });
+    }
   });
 });
