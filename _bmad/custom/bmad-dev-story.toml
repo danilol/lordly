@@ -1,0 +1,23 @@
+# Team overrides for bmad-dev-story (merged over the skill's customize.toml).
+
+[workflow]
+
+# Demo step: after a story is complete and its status is updated, always
+# show the user what was produced before offering next steps.
+on_complete = """
+DEMO STEP (added 2026-07-12 by Danilo's request): before ending the workflow,
+demo what the story produced.
+
+1. Verify the local toolchain first: this repo needs Node 24 — use
+   `$HOME/.nvm/versions/node/v24.16.0/bin` on PATH for agent-run commands, and
+   remind the user their own shell needs `nvm use` (there is a repo `.nvmrc`).
+2. Start the relevant runnable surface of the story (for web stories:
+   `pnpm --filter web dev`, background it, confirm it serves via curl) and give
+   the user the exact URL to open plus what they should see there.
+3. List, in plain language, what the story added or changed that the user can
+   see or touch: pages/screens, commands, CI behavior, files worth opening.
+   Distinguish "visible in the browser" from "infrastructure you benefit from
+   invisibly".
+4. Leave the dev server running for the user to explore unless they say
+   otherwise; tell them how to stop it (Ctrl+C) and how to restart it later.
+"""
