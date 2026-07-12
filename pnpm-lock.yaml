@@ -43,7 +43,7 @@ importers:
   packages/engine:
     dependencies:
       pure-rand:
-        specifier: ^8.4.2
+        specifier: 8.4.2
         version: 8.4.2
     devDependencies:
       '@fast-check/vitest':

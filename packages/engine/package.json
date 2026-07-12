@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "pure-rand": "^8.4.2"
+    "pure-rand": "8.4.2"
   },
   "devDependencies": {
     "@fast-check/vitest": "^0.4",

@@ -1,6 +1,7 @@
 import { xoroshiro128plus } from 'pure-rand/generator/xoroshiro128plus';
 import { uniformInt } from 'pure-rand/distribution/uniformInt';
 import type { JumpableRandomGenerator } from 'pure-rand/types/JumpableRandomGenerator';
+import { ALL_ELEMENTS } from './types';
 import type { Element } from './types';
 
 /**
@@ -17,63 +18,103 @@ export type StreamLabel = (typeof STREAM_LABELS)[number];
 /**
  * An opaque, stateful randomness stream. Drawing from it advances it in
  * place; determinism holds at the seed boundary (FR20): the same seed and
- * label always yield the same sequence. The underlying generator never
- * leaks out of this module.
+ * label always yield the same sequence. The underlying generator is held in
+ * module-private state and cannot be reached through this type — `nextInt`
+ * is the only way to consume randomness.
  */
 export interface Stream {
-  /** @internal pure-rand generator; do not touch outside rng.ts. */
-  readonly gen: JumpableRandomGenerator;
+  readonly label: StreamLabel;
 }
 
 /** All five streams for one match, keyed by label. */
 export type Streams = Record<StreamLabel, Stream>;
 
+/** Module-private handle → generator map: the opacity mechanism. */
+const generators = new WeakMap<Stream, JumpableRandomGenerator>();
+
 /**
- * Derives the closed stream set from a 32-bit match seed (AD-10).
- * Each stream's generator is seeded with a label-keyed FNV-1a mix of the
- * label bytes and the seed, so streams are mutually independent: knowing
- * one stream's values does not yield another's, and the raw seed itself
- * never seeds a generator.
+ * Derives the closed stream set from a 32-bit unsigned match seed (AD-10).
+ *
+ * Each stream's generator seed is an avalanche-mixed (murmur3 fmix32)
+ * combination of the label hash and the match seed, followed by warm-up
+ * draws, so streams show no structural correlation across labels or seeds:
+ * unlike plain FNV mixing, no fixed XOR-delta relates one stream to another.
+ * (With a 32-bit seed space, independence is necessarily computational —
+ * recovering the seed by brute force is inherent to FR20's design — but no
+ * shortcut beats that brute force.)
+ *
+ * @throws RangeError if `seed` is not an integer in [0, 2^32) — silent
+ * coercion would alias distinct seeds onto identical battles (FR20).
  */
 export function createStreams(seed: number): Streams {
-  const entries = STREAM_LABELS.map((label) => [label, { gen: xoroshiro128plus(deriveSeed(seed, label)) }]);
+  if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) {
+    throw new RangeError(`match seed must be a uint32, got ${seed}`);
+  }
+  const entries = STREAM_LABELS.map((label) => {
+    const gen = xoroshiro128plus(deriveSeed(seed, label));
+    for (let i = 0; i < 4; i++) gen.next(); // warm-up: mix the 128-bit state
+    const stream: Stream = { label };
+    generators.set(stream, gen);
+    return [label, stream];
+  });
   return Object.fromEntries(entries) as Streams;
 }
 
 /**
  * Draws a uniform integer in [from, to] (both inclusive) from the stream,
  * advancing it. The only sanctioned way to consume randomness (AD-10).
+ *
+ * @throws RangeError on non-integer or inverted bounds (pure-rand would
+ * silently return NaN or out-of-range values).
+ * @throws TypeError if `stream` did not come from `createStreams`.
  */
 export function nextInt(stream: Stream, from: number, to: number): number {
-  return uniformInt(stream.gen, from, to);
+  if (!Number.isInteger(from) || !Number.isInteger(to)) {
+    throw new RangeError(`bounds must be integers, got ${from}..${to}`);
+  }
+  if (from > to) {
+    throw new RangeError(`empty range ${from}..${to}`);
+  }
+  const gen = generators.get(stream);
+  if (gen === undefined) {
+    throw new TypeError('unknown stream: streams must come from createStreams');
+  }
+  return uniformInt(gen, from, to);
 }
 
 /**
- * Fixed element order for rolls — part of the determinism contract (FR20):
- * reordering this array is an engine API change that breaks replays.
- */
-const ELEMENT_ORDER: readonly Element[] = ['fire', 'water', 'wind', 'earth'];
-
-/**
- * Rolls one element (FR3). The draft flow calls this exactly once per drafted
- * unit on the owner's element stream; the result is stored in `MatchSetup`
- * as plain data and never re-derived (AD-9).
+ * Rolls one element (FR3), uniform over `ALL_ELEMENTS` in its fixed order.
+ * The draft flow calls this exactly once per drafted unit on the owner's
+ * element stream; the result is stored in `MatchSetup` as plain data and
+ * never re-derived (AD-9).
  */
 export function rollElement(stream: Stream): Element {
-  return ELEMENT_ORDER[nextInt(stream, 0, ELEMENT_ORDER.length - 1)] as Element;
+  return ALL_ELEMENTS[nextInt(stream, 0, ALL_ELEMENTS.length - 1)] as Element;
 }
 
 /**
  * Label-keyed seed derivation (AD-10): FNV-1a over the label's characters,
- * mixed with the match seed. 32-bit integer math only.
+ * XORed with the seed, then avalanche-finalized (murmur3 fmix32) with the
+ * label hash folded in between rounds. The avalanche breaks both the
+ * low-bit dependence of the raw combination and the affine cross-label
+ * structure plain FNV would leave. 32-bit integer math only.
  */
 function deriveSeed(seed: number, label: StreamLabel): number {
-  let hash = 0x811c9dc5;
+  let labelHash = 0x811c9dc5;
   for (let i = 0; i < label.length; i++) {
-    hash ^= label.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
+    labelHash ^= label.charCodeAt(i);
+    labelHash = Math.imul(labelHash, 0x01000193) >>> 0;
   }
-  hash ^= seed >>> 0;
-  hash = Math.imul(hash, 0x01000193) >>> 0;
-  return hash | 0;
+  const mixed = fmix32((seed ^ labelHash) >>> 0);
+  return fmix32((mixed + Math.imul(labelHash, 0x9e3779b9)) >>> 0) | 0;
+}
+
+/** murmur3's 32-bit avalanche finalizer: every input bit affects every output bit. */
+function fmix32(x: number): number {
+  x ^= x >>> 16;
+  x = Math.imul(x, 0x85ebca6b);
+  x ^= x >>> 13;
+  x = Math.imul(x, 0xc2b2ae35);
+  x ^= x >>> 16;
+  return x >>> 0;
 }

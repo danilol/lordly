@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/balance';
-import type { UnitClass } from '../src/types';
-
-const ALL_CLASSES: UnitClass[] = ['knight', 'mercenary', 'archer', 'mage', 'cleric', 'witch'];
+import type { Ratio } from '../src/balance';
+import { ALL_CLASSES } from '../src/types';
 
 describe('balance data (FR14, FR15, FR16, AD-4)', () => {
   it('declares a positive integer balanceVersion', () => {
@@ -19,9 +18,28 @@ describe('balance data (FR14, FR15, FR16, AD-4)', () => {
         expect(c[attr], `${cls}.${attr}`).toBeGreaterThan(0);
       }
       for (const row of ['front', 'mid', 'back'] as const) {
+        expect(Number.isInteger(c.actions[row]), `${cls}.actions.${row} integer`).toBe(true);
         expect(c.actions[row], `${cls}.actions.${row}`).toBeGreaterThanOrEqual(1);
       }
     }
+  });
+
+  it('structural invariants survive tuning: ratios are positive-integer fractions', () => {
+    const ratios: Record<string, Ratio> = {
+      rpsAdvantage: BALANCE.formulas.rpsAdvantage,
+      rpsDisadvantage: BALANCE.formulas.rpsDisadvantage,
+      heal: BALANCE.formulas.heal,
+      confusionMisfire: BALANCE.formulas.confusionMisfire,
+    };
+    for (const [name, ratio] of Object.entries(ratios)) {
+      expect(Number.isInteger(ratio.num), `${name}.num integer`).toBe(true);
+      expect(Number.isInteger(ratio.den), `${name}.den integer`).toBe(true);
+      expect(ratio.num, `${name}.num >= 0`).toBeGreaterThanOrEqual(0);
+      expect(ratio.den, `${name}.den > 0 (division by zero)`).toBeGreaterThan(0);
+    }
+    expect(BALANCE.armySize).toBeGreaterThan(0);
+    expect(BALANCE.engagementCap).toBeGreaterThan(0);
+    expect(BALANCE.formulas.minDamage).toBeGreaterThanOrEqual(1);
   });
 
   it('spot-checks PRD FR15 values', () => {

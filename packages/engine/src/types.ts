@@ -6,36 +6,59 @@
  * made of one **engagement** (MVP mode) or several (until-wipeout mode);
  * an engagement resolves in **passes** on the AGI initiative timeline, each
  * unit spending **actions**. New domain words go to the PRD Glossary first.
+ *
+ * Runtime enumerations are exported as `ALL_*` const arrays and the unions
+ * derive from them — apps and tests iterate the arrays instead of
+ * redeclaring the sets (AD-4).
  */
 
-/** The six unit classes (FR1, FR15). RPS triangle: mage > knight > archer > mage (FR14). */
-export type UnitClass = 'knight' | 'mercenary' | 'archer' | 'mage' | 'cleric' | 'witch';
+/** The six unit classes (FR1, FR15), in PRD table order. */
+export const ALL_CLASSES = ['knight', 'mercenary', 'archer', 'mage', 'cleric', 'witch'] as const;
+
+/** One of the six unit classes. RPS triangle: mage > knight > archer > mage (FR14). */
+export type UnitClass = (typeof ALL_CLASSES)[number];
 
 /**
- * The four elements (FR3), rolled per unit at draft from the owner's element
- * stream. A Witch's prepared spell is keyed to her element (FR16); for every
- * other class the element is cosmetic in the MVP.
+ * The four elements (FR3) in FIXED roll order — this order is part of the
+ * determinism contract (FR20): `rollElement` indexes into it, so reordering
+ * is an engine API change that breaks replays.
  */
-export type Element = 'fire' | 'water' | 'wind' | 'earth';
+export const ALL_ELEMENTS = ['fire', 'water', 'wind', 'earth'] as const;
 
 /**
- * The two sides of a battle (AD-11). The engine knows only 'A' and 'B';
+ * One of the four elements (FR3), rolled per unit at draft from the owner's
+ * element stream. A Witch's prepared spell is keyed to her element (FR16);
+ * for every other class the element is cosmetic in the MVP.
+ */
+export type Element = (typeof ALL_ELEMENTS)[number];
+
+/** Both sides of a battle (AD-11). */
+export const ALL_SIDES = ['A', 'B'] as const;
+
+/**
+ * A side of the battle (AD-11). The engine knows only 'A' and 'B';
  * in vs-AI play the human is always side 'A'.
  */
-export type Side = 'A' | 'B';
+export type Side = (typeof ALL_SIDES)[number];
+
+/** Grid rows in near-to-far order from the owner's perspective (AD-11). */
+export const ALL_ROWS = ['front', 'mid', 'back'] as const;
 
 /**
- * Grid rows, owner-local (AD-11): 'front' is the row nearest the enemy from
+ * A grid row, owner-local (AD-11): 'front' is the row nearest the enemy from
  * the owner's own perspective. Lane mirroring is renderer math, never data.
  */
-export type Row = 'front' | 'mid' | 'back';
+export type Row = (typeof ALL_ROWS)[number];
+
+/** Grid columns in left-to-right order from the owner's perspective (AD-11). */
+export const ALL_COLS = ['left', 'center', 'right'] as const;
 
 /**
- * Grid columns, owner-local (AD-11), from the owner's own perspective.
+ * A grid column, owner-local (AD-11), from the owner's own perspective.
  * A unit's **facing column** is the enemy column directly across its lane;
  * its **reach** is that column plus adjacent ones (FR7).
  */
-export type Col = 'left' | 'center' | 'right';
+export type Col = (typeof ALL_COLS)[number];
 
 /** Battle mode (FR17, FR19): one engagement, or engagements until wipeout. */
 export type Mode = 'single' | 'wipeout';

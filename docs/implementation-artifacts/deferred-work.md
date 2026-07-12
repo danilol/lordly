@@ -12,3 +12,7 @@
 - CI's corepack bootstrap depends on the runner image's preinstalled Node still bundling corepack; corepack has been removed from newer Node distributions, so a future ubuntu-latest image bump could break the `corepack enable` step. Revisit if/when CI fails with "corepack: command not found".
 - `pnpm -r typecheck` silently skips any workspace package that lacks a `typecheck` script (it only hard-fails when no package has it). No clean guard exists; recheck when a third workspace package is added.
 - Template cruft in apps/web: `phasermsg` marketing banner in the prod Vite config (also prints its success banner even when the build fails), `Game.ts` demo text containing a phaser.io address, and duplicated dev/prod Vite configs carrying dead keys (`manualChunks` unused by the dev server, `server.port` unused by `vite build`). The demo scene and template structure are replaced in stories 1.2/2.x.
+
+## Deferred from: code review of story-1.3 (2026-07-12)
+
+- The engine purity guard is regex-based and inherently bypassable (e.g. computed member access, aliased imports). An ESLint `no-restricted-globals`/`no-restricted-imports` config or AST-based import-graph check would be categorically stronger; fold into the lint-tooling decision already deferred from story 1.1's review.

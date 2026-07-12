@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ALL_CLASSES, ALL_COLS, ALL_ELEMENTS, ALL_ROWS, ALL_SIDES } from '../src/types';
 import type { Element, MatchSetup, Placement, Side, Unit, UnitClass, UnitId } from '../src/types';
 
 describe('domain types (AD-4, AD-9, AD-11)', () => {
@@ -43,12 +44,24 @@ describe('domain types (AD-4, AD-9, AD-11)', () => {
     expect(other.startsWith('B')).toBe(true);
   });
 
-  it('closed unions carry the PRD vocabulary', () => {
-    const classes: UnitClass[] = ['knight', 'mercenary', 'archer', 'mage', 'cleric', 'witch'];
-    const elements: Element[] = ['fire', 'water', 'wind', 'earth'];
-    const sides: Side[] = ['A', 'B'];
-    expect(classes).toHaveLength(6);
-    expect(elements).toHaveLength(4);
-    expect(sides).toHaveLength(2);
+  it('exports the runtime enumerations the unions derive from (AD-4)', () => {
+    expect(ALL_CLASSES).toEqual(['knight', 'mercenary', 'archer', 'mage', 'cleric', 'witch']);
+    expect(ALL_ELEMENTS).toEqual(['fire', 'water', 'wind', 'earth']);
+    expect(ALL_SIDES).toEqual(['A', 'B']);
+    expect(ALL_ROWS).toEqual(['front', 'mid', 'back']);
+    expect(ALL_COLS).toEqual(['left', 'center', 'right']);
+  });
+
+  it('the closed unions reject invalid members (compile-time, via @ts-expect-error)', () => {
+    // @ts-expect-error — 'paladin' is not a UnitClass
+    const badClass: UnitClass = 'paladin';
+    // @ts-expect-error — 'void' is not an Element
+    const badElement: Element = 'void';
+    // @ts-expect-error — 'C' is not a Side
+    const badSide: Side = 'C';
+    // @ts-expect-error — UnitId requires the side:index shape
+    const badId: UnitId = 'first-knight';
+    // Runtime no-op: the assertions above live in the type system.
+    expect([badClass, badElement, badSide, badId]).toBeDefined();
   });
 });

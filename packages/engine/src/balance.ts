@@ -33,8 +33,12 @@ export interface BalanceData {
   engagementCap: number;
   /** The FR15 class table. Initial tuning values — the rules are the requirements. */
   classes: Record<UnitClass, ClassStats>;
-  /** The FR14 triangle: attacker class → the class it deals ×1.5 to (and takes ×0.75 from... see formulas). */
-  rpsBeats: { mage: 'knight'; knight: 'archer'; archer: 'mage' };
+  /**
+   * The FR14 triangle: attacker class → the class it deals ×1.5 damage to
+   * (the reverse direction takes ×0.75). Tunable data — classes absent from
+   * the map (mercenary, cleric, witch in the MVP) have no RPS relation.
+   */
+  rpsBeats: Partial<Record<UnitClass, UnitClass>>;
   /** Element → the Witch's prepared spell (FR16). Flavor pairing, swappable during UX. */
   elementSpells: Record<Element, SpellKind>;
   /** Formula constants (FR15/FR16), integer ratios floored in fixed order. */
