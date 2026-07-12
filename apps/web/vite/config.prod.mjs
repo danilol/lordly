@@ -18,12 +18,12 @@ const phasermsg = () => {
 
 export default defineConfig({
     base: './',
-    logLevel: 'warning',
+    logLevel: 'warn',
     build: {
         rollupOptions: {
             output: {
                 manualChunks(id) {
-                    if (id.includes('phaser')) return 'phaser';
+                    if (id.includes('node_modules/phaser/')) return 'phaser';
                 }
             }
         },

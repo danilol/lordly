@@ -7,7 +7,8 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel main runs — every main commit keeps a completed CI verdict.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -15,8 +16,9 @@ permissions:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       # corepack reads `packageManager` from the root package.json and fetches
       # that exact pnpm. (pnpm/action-setup v6 was tried first: its bootstrap
@@ -28,7 +30,7 @@ jobs:
           echo "$RUNNER_TEMP/corepack-bin" >> "$GITHUB_PATH"
 
       # Must come after pnpm is on PATH so the pnpm store cache resolves.
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: 24
           cache: "pnpm"
@@ -39,8 +41,8 @@ jobs:
 
       - run: pnpm -r typecheck
 
-      - run: pnpm test
-
+      # `pnpm coverage` runs the identical full suite with instrumentation,
+      # so a separate `pnpm test` step would run everything twice.
       - run: pnpm coverage
 
       - run: pnpm --filter web build

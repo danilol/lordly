@@ -4,7 +4,7 @@ A pass-and-play tactics game: draft a warband, place it on the field, then watch
 
 ## Prerequisites
 
-- Node 24 (`.nvmrc`-free; check with `node --version`)
+- Node 24 (`.nvmrc` provided — `nvm use`; check with `node --version`)
 - pnpm 11 (`npm install -g pnpm@11.12.0`, or `corepack enable`)
 
 ## Install
