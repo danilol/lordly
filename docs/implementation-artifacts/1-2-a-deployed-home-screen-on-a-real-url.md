@@ -4,7 +4,7 @@ baseline_commit: fb45ff6f94ec56c0f114848da2abc66a793ce017
 
 # Story 1.2: A deployed home screen on a real URL
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -41,10 +41,10 @@ so that from day one there is a real, reachable game to grow.
 - [x] Task 4: README deploy section (AC: 3)
   - [x] Add a "Deploy" section: prerequisites (free Cloudflare account, API token from the Edit-Workers template, Account ID), the two `gh secret set` commands, "merge to main deploys automatically", local alternative (`pnpm --filter web exec wrangler login` then `pnpm --filter web run deploy`), and the production URL
   - [x] Update the workspace-layout snippet if paths changed (src/scenes/ replaces src/game/scenes/)
-- [ ] Task 5: Verify end-to-end (AC: 1, 2, 3)
+- [x] Task 5: Verify end-to-end (AC: 1, 2, 3)
   - [x] Full local gate green: `pnpm -r typecheck`, `pnpm coverage`, `pnpm --filter web build`
   - [x] Push to main → CI green → deploy job green → `curl` the production URL returns the Home page HTML with the game title — run 29199599778 (`ci` + `deploy` both success); `curl` returned HTTP 200 with `<title>Lord Battle Tactics</title>` (initial SSL failures were the new subdomain's cert provisioning, resolved within minutes)
-  - [ ] ASK USER to open the URL in Android Chrome and confirm: portrait layout, title visible, greyed "Play vs AI" button (agent cannot operate a phone — user confirmation is the AC2 evidence; a desktop-browser screenshot is supporting evidence only)
+  - [x] ASK USER to open the URL in Android Chrome and confirm: portrait layout, title visible, greyed "Play vs AI" button (agent cannot operate a phone — user confirmation is the AC2 evidence; a desktop-browser screenshot is supporting evidence only) — CONFIRMED by Danilo 2026-07-12 on Android Chrome ("looks great, like old school Ogre Battle 64"); exposed first API token also deleted by user
   - [x] Record the production URL + deploy run link in Dev Agent Record
 
 ## Dev Notes
