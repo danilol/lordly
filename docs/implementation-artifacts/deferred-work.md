@@ -20,3 +20,8 @@
 ## Deferred from: code review of story-1.3 (2026-07-12)
 
 - The engine purity guard is regex-based and inherently bypassable (e.g. computed member access, aliased imports). An ESLint `no-restricted-globals`/`no-restricted-imports` config or AST-based import-graph check would be categorically stronger; fold into the lint-tooling decision already deferred from story 1.1's review.
+
+## Deferred from: code review of story-1.4 (2026-07-12)
+
+- Chassis `BattleEnded`/`hpPct`/`EngagementEnded.hp` are hardcoded stubs (all-full-HP draw) type-indistinguishable from real judged output. Story 1.5 makes them real; no shell consumes the log until 1.9. Revisit only if a consumer appears before 1.5.
+- Seed-range bound `0xffffffff` is duplicated in `validate.ts` and `rng.ts` with divergent error types (InvalidMatchSetupError vs RangeError). Validate-first ordering makes it correct today; fold into a shared constant when rng.ts is next touched.

@@ -41,8 +41,17 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
   const units = buildUnits(setup);
   events.push({ type: 'BattleStarted', units: units.map((u) => ({ ...u.snapshot })) });
 
-  // FR13: one coin flip per engagement decides which side wins exact ties.
-  // mode 'wipeout' resolves as a single engagement here — its loop is story 1.10.
+  // The single engagement (FR17). Story 1.10 wraps this in a per-engagement
+  // loop for wipeout mode (currently rejected by validation until then), so
+  // the tie coin flip is drawn INSIDE engagement scope — one draw per
+  // engagement (FR13), not once per battle.
+  const engagement = 1;
+
+  // STREAM-ORDERING INVARIANT (FR20 replay stability): the tie coin flip must
+  // remain the FIRST draw from `streams.battle` in an engagement. Stories
+  // 1.5/1.6 draw damage/confusion from this stream AFTER this point — inserting
+  // any battle-stream draw before the flip changes every existing seed's
+  // outcome. The determinism-anchor test guards the observable result.
   const tieWinner: Side = nextInt(streams.battle, 0, 1) === 0 ? 'A' : 'B';
   const order = timelineComparator(tieWinner);
 
@@ -50,9 +59,19 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
   while (units.some((u) => u.alive && u.actionsLeft > 0)) {
     pass += 1;
     events.push({ type: 'PassStarted', pass });
+    // Re-filter and re-sort every pass: this is the load-bearing mechanism for
+    // mid-pass deaths in stories 1.5+ (a unit killed earlier in the pass is
+    // gone from the next pass). Do NOT cache the order.
     const acting = units.filter((u) => u.alive && u.actionsLeft > 0).sort(order);
     for (const unit of acting) {
-      if (!unit.alive) continue; // deaths (1.5+) void queued turns mid-pass
+      if (!unit.alive) {
+        // A unit killed earlier THIS pass loses its queued turn (FR13). Nothing
+        // dies in the chassis, but stories 1.5+ reach here — the type promises
+        // this event, so emit it rather than dropping the turn silently.
+        unit.actionsLeft -= 1;
+        events.push({ type: 'ActionSkipped', unit: unit.id, reason: 'dead' });
+        continue;
+      }
       unit.actionsLeft -= 1;
       events.push({ type: 'ActionSkipped', unit: unit.id, reason: 'idle' });
     }
@@ -60,13 +79,28 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
 
   const hp: Record<UnitId, number> = {};
   for (const u of units) hp[u.id] = u.snapshot.hp;
-  events.push({ type: 'EngagementEnded', engagement: 1, hp });
+  events.push({ type: 'EngagementEnded', engagement, hp });
 
   // No damage in the chassis: exact tie → draw (FR18 real judging is 1.5).
   events.push({ type: 'BattleEnded', winner: 'draw', hpPct: { A: 100, B: 100 } });
 
-  const log: BattleLog = { logVersion: LOG_VERSION, events: Object.freeze(events) };
-  return Object.freeze(log);
+  const log: BattleLog = { logVersion: LOG_VERSION, events };
+  return deepFreeze(log);
+}
+
+/**
+ * Recursively freezes the log so the immutable-narration contract (AD-1/AD-2)
+ * holds all the way down — a shell consumer cannot mutate a nested event
+ * field (e.g. a unit's hp or the hp snapshot). Plain data only (no cycles).
+ */
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const key of Object.keys(value)) {
+      deepFreeze((value as Record<string, unknown>)[key]);
+    }
+  }
+  return value;
 }
 
 /** Builds initial unit states from armies + placements + balance data (AD-11 ids). */

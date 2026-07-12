@@ -4,15 +4,22 @@ import type { MatchSetup, Side } from './types';
 
 /** Discriminant codes for every way a `MatchSetup` can be malformed (AC2). */
 export type MatchSetupViolation =
+  | 'not-an-object'
   | 'invalid-seed'
   | 'balance-version-mismatch'
   | 'invalid-mode'
+  | 'mode-not-implemented'
   | 'wrong-army-size'
   | 'unknown-class'
   | 'unknown-element'
   | 'placements-mismatch'
   | 'out-of-grid'
   | 'overlapping-placement';
+
+/** True for a non-null plain object — used to reject malformed runtime input as a typed error. */
+function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
+}
 
 /**
  * The engine's ONLY error type (spine errors convention): thrown by
@@ -34,57 +41,80 @@ const SIDES: readonly Side[] = ['A', 'B'];
 
 /**
  * Validates a `MatchSetup` against the AD-9 contract and the balance data,
- * in a fixed documented order: seed → balanceVersion → mode → army sizes →
- * classes/elements → placement parallelism → grid membership → same-side
- * overlaps. Throws `InvalidMatchSetupError` naming the first violation;
- * returns nothing on success. Runtime callers are not bound by the TS
- * unions, so every closed set is re-checked here (AC2).
+ * in a fixed documented order: structure → seed → balanceVersion → mode →
+ * army sizes → classes/elements → placement parallelism → grid membership →
+ * same-side overlaps. Throws `InvalidMatchSetupError` naming the first
+ * violation; returns nothing on success. Runtime callers are not bound by
+ * the TS unions, so both the STRUCTURE (objects present, not null) and every
+ * closed set are re-checked here — the engine's sole error type must cover
+ * malformed input, never leaking a raw `TypeError` (AC2, spine errors convention).
  */
 export function validateMatchSetup(setup: MatchSetup): void {
-  const { seed, balanceVersion, mode, armies, placements } = setup;
+  if (!isObject(setup)) {
+    throw new InvalidMatchSetupError('not-an-object', `setup must be an object, got ${setup === null ? 'null' : typeof setup}`);
+  }
+  const { seed, balanceVersion, mode, armies, placements } = setup as unknown as Record<string, unknown>;
 
-  if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) {
-    throw new InvalidMatchSetupError('invalid-seed', `seed must be a uint32, got ${seed}`);
+  if (!Number.isInteger(seed) || (seed as number) < 0 || (seed as number) > 0xffffffff) {
+    throw new InvalidMatchSetupError('invalid-seed', `seed must be a uint32, got ${String(seed)}`);
   }
   if (balanceVersion !== BALANCE.version) {
     throw new InvalidMatchSetupError(
       'balance-version-mismatch',
-      `setup balanceVersion ${balanceVersion} does not match engine balance version ${BALANCE.version}`,
+      `setup balanceVersion ${String(balanceVersion)} does not match engine balance version ${BALANCE.version}`,
     );
   }
   if (mode !== 'single' && mode !== 'wipeout') {
     throw new InvalidMatchSetupError('invalid-mode', `unknown mode '${String(mode)}'`);
   }
+  if (mode === 'wipeout') {
+    // Honest rejection until story 1.10 implements the multi-engagement loop:
+    // accepting it would return a confident single-engagement wrong answer.
+    throw new InvalidMatchSetupError('mode-not-implemented', `mode 'wipeout' is not implemented yet (story 1.10)`);
+  }
+  if (!isObject(armies) || !isObject(placements)) {
+    throw new InvalidMatchSetupError(
+      'not-an-object',
+      `armies and placements must be objects, got armies=${typeof armies}, placements=${typeof placements}`,
+    );
+  }
 
   for (const side of SIDES) {
-    const army = armies[side];
+    const army = (armies as Record<string, unknown>)[side];
     if (!Array.isArray(army) || army.length !== BALANCE.armySize) {
       throw new InvalidMatchSetupError(
         'wrong-army-size',
         `side ${side} must field exactly ${BALANCE.armySize} units, got ${Array.isArray(army) ? army.length : typeof army}`,
       );
     }
-    army.forEach((unit, i) => {
-      if (!(ALL_CLASSES as readonly string[]).includes(unit.class)) {
+    army.forEach((unit: unknown, i) => {
+      if (!isObject(unit)) {
+        throw new InvalidMatchSetupError('unknown-class', `side ${side} unit ${i} is not an object (got ${unit === null ? 'null' : typeof unit})`);
+      }
+      if (!(ALL_CLASSES as readonly string[]).includes(unit.class as string)) {
         throw new InvalidMatchSetupError('unknown-class', `side ${side} unit ${i} has unknown class '${String(unit.class)}'`);
       }
-      if (!(ALL_ELEMENTS as readonly string[]).includes(unit.element)) {
+      if (!(ALL_ELEMENTS as readonly string[]).includes(unit.element as string)) {
         throw new InvalidMatchSetupError('unknown-element', `side ${side} unit ${i} has unknown element '${String(unit.element)}'`);
       }
     });
   }
 
   for (const side of SIDES) {
-    const cells = placements[side];
-    if (!Array.isArray(cells) || cells.length !== armies[side].length) {
+    const cells = (placements as Record<string, unknown>)[side];
+    const army = (armies as Record<string, unknown>)[side] as unknown[];
+    if (!Array.isArray(cells) || cells.length !== army.length) {
       throw new InvalidMatchSetupError(
         'placements-mismatch',
-        `side ${side} placements must parallel its army (${armies[side].length} units, got ${Array.isArray(cells) ? cells.length : typeof cells})`,
+        `side ${side} placements must parallel its army (${army.length} units, got ${Array.isArray(cells) ? cells.length : typeof cells})`,
       );
     }
     const seen = new Set<string>();
-    cells.forEach((cell, i) => {
-      if (!(ALL_ROWS as readonly string[]).includes(cell.row) || !(ALL_COLS as readonly string[]).includes(cell.col)) {
+    cells.forEach((cell: unknown, i) => {
+      if (!isObject(cell)) {
+        throw new InvalidMatchSetupError('out-of-grid', `side ${side} unit ${i} placement is not an object (got ${cell === null ? 'null' : typeof cell})`);
+      }
+      if (!(ALL_ROWS as readonly string[]).includes(cell.row as string) || !(ALL_COLS as readonly string[]).includes(cell.col as string)) {
         throw new InvalidMatchSetupError(
           'out-of-grid',
           `side ${side} unit ${i} placed outside the grid at '${String(cell.row)}/${String(cell.col)}'`,

@@ -26,7 +26,10 @@ const placementsArb = fc
 export const matchSetupArb: fc.Arbitrary<MatchSetup> = fc.record({
   seed: fc.integer({ min: 0, max: 0xffffffff }),
   balanceVersion: fc.constant(BALANCE.version),
-  mode: fc.constantFrom('single', 'wipeout'),
+  // Only 'single' is implemented; 'wipeout' is rejected by validation until
+  // story 1.10, so generating it here would just exercise the rejection path
+  // and mask the real single-engagement behavior.
+  mode: fc.constant('single'),
   armies: fc.record({ A: armyArb, B: armyArb }),
   placements: fc.record({ A: placementsArb, B: placementsArb }),
 });

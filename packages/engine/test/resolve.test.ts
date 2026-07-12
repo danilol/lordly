@@ -334,11 +334,33 @@ describe('chassis properties (NFR2, FR20)', () => {
     expect(s).toEqual(before);
   });
 
-  it('returns a frozen log (immutability)', () => {
+  it('returns a DEEP-frozen log — nested event fields cannot be mutated (AD-1/AD-2)', () => {
     const [s] = fc.sample(matchSetupArb, { numRuns: 1, seed: 42 });
     const log = resolveBattle(s as MatchSetup);
     expect(Object.isFrozen(log)).toBe(true);
     expect(Object.isFrozen(log.events)).toBe(true);
+
+    const started = log.events[0];
+    expect(started?.type).toBe('BattleStarted');
+    if (started?.type === 'BattleStarted') {
+      expect(Object.isFrozen(started)).toBe(true);
+      expect(Object.isFrozen(started.units)).toBe(true);
+      expect(Object.isFrozen(started.units[0])).toBe(true);
+      // Mutation of a nested field is silently ignored in a frozen object
+      // (or throws in strict mode) — either way, hp must be unchanged.
+      const before = started.units[0]?.hp;
+      try {
+        (started.units[0] as { hp: number }).hp = 999;
+      } catch {
+        /* strict-mode TypeError is also acceptable */
+      }
+      expect(started.units[0]?.hp).toBe(before);
+    }
+
+    const ended = log.events.find((e) => e.type === 'EngagementEnded');
+    if (ended?.type === 'EngagementEnded') {
+      expect(Object.isFrozen(ended.hp)).toBe(true);
+    }
   });
 
   it('determinism anchor: pinned event-type sequence for a known setup', () => {

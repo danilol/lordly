@@ -50,9 +50,26 @@ function expectViolation(setup: MatchSetup, violation: string, messagePart: stri
 }
 
 describe('validateMatchSetup (AC2, spine errors convention)', () => {
-  it('accepts a valid setup (both modes)', () => {
+  it('accepts a valid single-mode setup', () => {
     expect(() => validateMatchSetup(validSetup())).not.toThrow();
-    expect(() => validateMatchSetup({ ...validSetup(), mode: 'wipeout' })).not.toThrow();
+  });
+
+  it('rejects malformed runtime structure as InvalidMatchSetupError, never a raw TypeError', () => {
+    // Runtime callers are not bound by the TS unions; null/undefined shapes
+    // must surface as the engine's one typed error, not a bare TypeError.
+    expectViolation(null as unknown as MatchSetup, 'not-an-object', /object/);
+    expectViolation(undefined as unknown as MatchSetup, 'not-an-object', /object/);
+    expectViolation({ ...validSetup(), armies: undefined as never }, 'not-an-object', /armies/);
+    const nullUnit = validSetup();
+    (nullUnit.armies.A as unknown[])[0] = null;
+    expectViolation(nullUnit, 'unknown-class', /not an object/);
+    const nullCell = validSetup();
+    (nullCell.placements.B as unknown[])[1] = null;
+    expectViolation(nullCell, 'out-of-grid', /not an object/);
+  });
+
+  it('rejects wipeout mode until story 1.10 (honest error, not a wrong answer)', () => {
+    expectViolation({ ...validSetup(), mode: 'wipeout' }, 'mode-not-implemented', /wipeout.*1\.10/);
   });
 
   it('rejects a non-uint32 seed, naming the value', () => {
