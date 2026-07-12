@@ -1,6 +1,10 @@
+---
+baseline_commit: 2586cfdd4cffe96331b974935d015c52176d964b
+---
+
 # Story 1.4: Battle timeline and the BattleLog chassis
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -18,37 +22,37 @@ so that every combat mechanic lands on a proven, deterministic chassis.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: BattleLog event types in `packages/engine/src/types.ts` (AC: 1)
-  - [ ] `BattleLog = { logVersion: number; events: readonly BattleEvent[] }` with `LOG_VERSION = 1` exported; `BattleEvent` is a closed discriminated union on `type` (past-tense names, one event per (actor, action), carrying all render data — AD-12)
-  - [ ] Chassis events (the full 12-member union completes by story 1.6; extending it bumps `LOG_VERSION` per AD-12):
+- [x] Task 1: BattleLog event types in `packages/engine/src/types.ts` (AC: 1)
+  - [x] `BattleLog = { logVersion: number; events: readonly BattleEvent[] }` with `LOG_VERSION = 1` exported; `BattleEvent` is a closed discriminated union on `type` (past-tense names, one event per (actor, action), carrying all render data — AD-12)
+  - [x] Chassis events (the full 12-member union completes by story 1.6; extending it bumps `LOG_VERSION` per AD-12):
     - `BattleStarted` — carries the full initial roster the UI renders from: per unit `{ id: UnitId, side, class, element, placement, hp, maxHp }` (the player never re-derives state)
     - `PassStarted` — `{ pass: number }` (1-based; makes FR13's multihit split visible)
     - `ActionSkipped` — `{ unit: UnitId, reason: 'dead' | 'asleep' | 'idle' }` (see design decision in Dev Notes: in the chassis every taken turn emits `ActionSkipped { reason: 'idle' }` — stories 1.5/1.6 replace acted turns with real `UnitAttacked`/`UnitHealed`/... events; `'asleep'` is reserved for 1.6, `'dead'` documents units that lost unspent actions)
     - `EngagementEnded` — `{ engagement: number; hp: Record<UnitId, number> }` (snapshot for FR18/FR19 later)
     - `BattleEnded` — `{ winner: Side | 'draw'; hpPct: { A: number; B: number } }`
-  - [ ] Doc comments per export (NFR3), PRD Glossary vocabulary (pass, action, engagement, judging)
-- [ ] Task 2: Validation in `packages/engine/src/validate.ts` (AC: 2)
-  - [ ] `export class InvalidMatchSetupError extends Error` with a `violation` discriminant code and a message NAMING the violation (e.g. which side/unit index/cell) — the engine's ONLY throw path (spine errors convention)
-  - [ ] `validateMatchSetup(setup)` checks, in a fixed documented order: seed is a uint32 integer (pre-empting rng.ts's RangeError so callers see one error type); `balanceVersion === BALANCE.version`; each army length `=== BALANCE.armySize`; every unit class in `ALL_CLASSES` and element in `ALL_ELEMENTS` (runtime callers are not bound by TS unions); placements parallel to armies (same length); every placement row/col in `ALL_ROWS`/`ALL_COLS`; no two units of the SAME side on the same cell (opposing sides never share a grid)
-  - [ ] One unit test per violation case (7+) asserting both the error type and that the message names the offender; plus a valid setup passes
-- [ ] Task 3: `resolveBattle` chassis in `packages/engine/src/resolve.ts` (AC: 1)
-  - [ ] `resolveBattle(setup: MatchSetup): BattleLog` — validates first (Task 2), derives streams via `createStreams(setup.seed)` using ONLY the `battle` stream in this story
-  - [ ] Initial unit state built from `armies` + `placements` + `BALANCE`: id `side:index` (AD-11), hp = maxHp = class hp, actions budget = `BALANCE.classes[class].actions[placement.row]` (units never move; the budget is fixed by starting row)
-  - [ ] Timeline per FR13/FR17: while any living unit has actions remaining → emit `PassStarted`; within a pass every living unit with actions remaining takes exactly ONE action in order: AGI descending → front row before mid before back (`ALL_ROWS` order) → left before center before right (`ALL_COLS` order) → seeded coin flip **rolled once per engagement** from the `battle` stream deciding which SIDE goes first on exact cross-side ties; the acting turn decrements the unit's remaining actions and emits its event (chassis: `ActionSkipped { reason: 'idle' }`)
-  - [ ] Engagement end when all actions spent → `EngagementEnded` with hp snapshot; `mode: 'single'` → exactly one engagement (FR17); `mode: 'wipeout'` also resolves single-engagement in this story with a `// story 1.10` note (its loop is out of scope, but the mode must not throw — it's valid input per AD-9)
-  - [ ] `BattleEnded`: with no damage mechanics yet, every battle is an exact tie → `{ winner: 'draw', hpPct: { A: 100, B: 100 } }` (FR18's real judging is story 1.5)
-  - [ ] Immutability: the returned log and its events array are `Object.freeze`d; the input `setup` is never mutated (assert via deep-clone comparison in tests)
-- [ ] Task 4: Chassis test suite (AC: 3)
-  - [ ] `test/arbitraries.ts` — reusable fast-check arbitrary for VALID `MatchSetup`s (armies of `BALANCE.armySize` sampled from `ALL_CLASSES`×`ALL_ELEMENTS`, placements as distinct cells per side, uint32 seed, both modes) — stories 1.5/1.6 inherit this
-  - [ ] FR13 ordering unit tests reading the event stream: descending-AGI order across both armies within a pass (e.g. Witch 26 → Archer 22 → Mercenary 14 → Mage 12 → Cleric 10 → Knight 8); front-before-back and left-before-right tiebreaks (same-class same-side setups); cross-side exact tie decided by the per-engagement coin flip — pin BOTH outcomes with two seeds chosen to flip each way
-  - [ ] Multihit split test: a front-row Knight (2 actions) acts exactly once in pass 1 and once in pass 2, never twice in one pass; back-row Knight (1 action) appears only in pass 1
-  - [ ] Envelope shape test: exactly one `BattleStarted` first and one `BattleEnded` last; `PassStarted` count equals the max per-unit action budget; every unit's turn count equals its row's action budget
-  - [ ] Property tests (fast-check over the arbitrary): termination (resolves, event count bounded by a computable ceiling); seed identity — same setup → deep-equal (bit-identical) log; input non-mutation — setup deep-equals its pre-call clone; determinism anchor: one pinned full event-type sequence for a known setup/seed (golden-lite; full golden battles arrive in 1.5)
-- [ ] Task 5: Integration, purity, docs (AC: 1, 2, 3)
-  - [ ] Export `resolveBattle`, `validateMatchSetup`, `InvalidMatchSetupError`, `LOG_VERSION`, and the event types from `src/index.ts` with doc comments
-  - [ ] UPDATE `test/purity.test.ts`'s expected file list to include the new src modules (`resolve.ts`, `validate.ts`) — the guard asserts the exact list and WILL fail otherwise (this is by design from 1.3's review)
-  - [ ] New src files must pass the purity patterns (no `Date`, no `Math.random`, no `Intl`, etc. — see the FORBIDDEN list)
-  - [ ] Full gate green: `pnpm -r typecheck`, `pnpm coverage`, `pnpm --filter web build`
+  - [x] Doc comments per export (NFR3), PRD Glossary vocabulary (pass, action, engagement, judging)
+- [x] Task 2: Validation in `packages/engine/src/validate.ts` (AC: 2)
+  - [x] `export class InvalidMatchSetupError extends Error` with a `violation` discriminant code and a message NAMING the violation (e.g. which side/unit index/cell) — the engine's ONLY throw path (spine errors convention)
+  - [x] `validateMatchSetup(setup)` checks, in a fixed documented order: seed is a uint32 integer (pre-empting rng.ts's RangeError so callers see one error type); `balanceVersion === BALANCE.version`; each army length `=== BALANCE.armySize`; every unit class in `ALL_CLASSES` and element in `ALL_ELEMENTS` (runtime callers are not bound by TS unions); placements parallel to armies (same length); every placement row/col in `ALL_ROWS`/`ALL_COLS`; no two units of the SAME side on the same cell (opposing sides never share a grid)
+  - [x] One unit test per violation case (7+) asserting both the error type and that the message names the offender; plus a valid setup passes
+- [x] Task 3: `resolveBattle` chassis in `packages/engine/src/resolve.ts` (AC: 1)
+  - [x] `resolveBattle(setup: MatchSetup): BattleLog` — validates first (Task 2), derives streams via `createStreams(setup.seed)` using ONLY the `battle` stream in this story
+  - [x] Initial unit state built from `armies` + `placements` + `BALANCE`: id `side:index` (AD-11), hp = maxHp = class hp, actions budget = `BALANCE.classes[class].actions[placement.row]` (units never move; the budget is fixed by starting row)
+  - [x] Timeline per FR13/FR17: while any living unit has actions remaining → emit `PassStarted`; within a pass every living unit with actions remaining takes exactly ONE action in order: AGI descending → front row before mid before back (`ALL_ROWS` order) → left before center before right (`ALL_COLS` order) → seeded coin flip **rolled once per engagement** from the `battle` stream deciding which SIDE goes first on exact cross-side ties; the acting turn decrements the unit's remaining actions and emits its event (chassis: `ActionSkipped { reason: 'idle' }`)
+  - [x] Engagement end when all actions spent → `EngagementEnded` with hp snapshot; `mode: 'single'` → exactly one engagement (FR17); `mode: 'wipeout'` also resolves single-engagement in this story with a `// story 1.10` note (its loop is out of scope, but the mode must not throw — it's valid input per AD-9)
+  - [x] `BattleEnded`: with no damage mechanics yet, every battle is an exact tie → `{ winner: 'draw', hpPct: { A: 100, B: 100 } }` (FR18's real judging is story 1.5)
+  - [x] Immutability: the returned log and its events array are `Object.freeze`d; the input `setup` is never mutated (assert via deep-clone comparison in tests)
+- [x] Task 4: Chassis test suite (AC: 3)
+  - [x] `test/arbitraries.ts` — reusable fast-check arbitrary for VALID `MatchSetup`s (armies of `BALANCE.armySize` sampled from `ALL_CLASSES`×`ALL_ELEMENTS`, placements as distinct cells per side, uint32 seed, both modes) — stories 1.5/1.6 inherit this
+  - [x] FR13 ordering unit tests reading the event stream: descending-AGI order across both armies within a pass (e.g. Witch 26 → Archer 22 → Mercenary 14 → Mage 12 → Cleric 10 → Knight 8); front-before-back and left-before-right tiebreaks (same-class same-side setups); cross-side exact tie decided by the per-engagement coin flip — pin BOTH outcomes with two seeds chosen to flip each way
+  - [x] Multihit split test: a front-row Knight (2 actions) acts exactly once in pass 1 and once in pass 2, never twice in one pass; back-row Knight (1 action) appears only in pass 1
+  - [x] Envelope shape test: exactly one `BattleStarted` first and one `BattleEnded` last; `PassStarted` count equals the max per-unit action budget; every unit's turn count equals its row's action budget
+  - [x] Property tests (fast-check over the arbitrary): termination (resolves, event count bounded by a computable ceiling); seed identity — same setup → deep-equal (bit-identical) log; input non-mutation — setup deep-equals its pre-call clone; determinism anchor: one pinned full event-type sequence for a known setup/seed (golden-lite; full golden battles arrive in 1.5)
+- [x] Task 5: Integration, purity, docs (AC: 1, 2, 3)
+  - [x] Export `resolveBattle`, `validateMatchSetup`, `InvalidMatchSetupError`, `LOG_VERSION`, and the event types from `src/index.ts` with doc comments
+  - [x] UPDATE `test/purity.test.ts`'s expected file list to include the new src modules (`resolve.ts`, `validate.ts`) — the guard asserts the exact list and WILL fail otherwise (this is by design from 1.3's review)
+  - [x] New src files must pass the purity patterns (no `Date`, no `Math.random`, no `Intl`, etc. — see the FORBIDDEN list)
+  - [x] Full gate green: `pnpm -r typecheck`, `pnpm coverage`, `pnpm --filter web build`
 
 ## Dev Notes
 
@@ -110,8 +114,43 @@ AC1 scaffolds only envelope events, but AC3 requires FR13 ordering/ties/multihit
 
 ### Agent Model Used
 
+claude-fable-5 (Claude Fable 5)
+
 ### Debug Log References
+
+- TDD reds proven per task: events test failed (missing LOG_VERSION), validate test failed (missing module), resolve test failed (missing module). The purity guard fired twice on new src files exactly as 1.3's review designed — expected-list updated for `validate.ts` then `resolve.ts`.
+- Two of my typecheck errors self-caught in test code (`seed === NaN` always-false; over-narrow mode cast) — fixed before any commit.
+- Coin-flip pin lesson: seeds 1–6 all flip the same way (probe `00000010111101011011` across seeds 1–20) — the both-outcomes assertion samples 20 seeds. First pin also named the wrong units (knights instead of the AGI-22 archers who act first in the mirror setup) — the failing test caught my wrong expectation, the implementation was right.
+- Determinism anchor pinned for seed 0xbeef and hand-verified against FR13: Witch(26) → Archer(22) → Merc(14) → Mage(12) → Cleric(10) → Knight(8), identical order both passes.
+
+### Implementation Plan
+
+- `types.ts` grew the 5-member chassis union (`LOG_VERSION = 1`) with `UnitSnapshot` carried by `BattleStarted` (AD-2).
+- `validate.ts`: `InvalidMatchSetupError` with 9 violation codes, fixed check order, messages naming side/index/value.
+- `resolve.ts`: module-private mutable `UnitState`; single total-order comparator implementing the FR13 chain (AGI desc → row → col → per-engagement coin-flip side); pass loop until all actions spent; `mode: 'wipeout'` resolves single-engagement with a story-1.10 note; log + events array frozen.
+- `test/arbitraries.ts`: shared valid-MatchSetup arbitrary (distinct same-side cells via `fc.shuffledSubarray` over the 9 grid cells).
 
 ### Completion Notes List
 
+- All 5 tasks complete: 24 new tests (63 total) — envelope shape, roster snapshot, AGI ordering, row/col tiebreaks, coin flip both ways + pinned per-seed, multihit split, per-row action budgets, 9+ validation violation cases, termination/seed-identity/non-mutation properties, frozen-log check, pinned event-trace anchor.
+- Engine line coverage 94.7% (threshold still off until 1.6 as planned).
+- The chassis design decision (ActionSkipped 'idle' for taken turns) worked as specified — FR13 fully testable via the event stream with zero non-union events.
+- `alive` flag and `reason: 'dead'/'asleep'` are in place as dormant seams for 1.5/1.6.
+
 ### File List
+
+- packages/engine/src/types.ts (modified — BattleLog/event union, LOG_VERSION, UnitSnapshot)
+- packages/engine/src/validate.ts (new)
+- packages/engine/src/resolve.ts (new)
+- packages/engine/src/index.ts (modified — new exports)
+- packages/engine/test/events.test.ts (new)
+- packages/engine/test/validate.test.ts (new)
+- packages/engine/test/resolve.test.ts (new)
+- packages/engine/test/arbitraries.ts (new)
+- packages/engine/test/purity.test.ts (modified — expected file list)
+- docs/implementation-artifacts/1-4-battle-timeline-and-the-battlelog-chassis.md (story tracking)
+- docs/implementation-artifacts/sprint-status.yaml (status tracking)
+
+## Change Log
+
+- 2026-07-12: Story 1.4 implemented. `resolveBattle` chassis: FR13 AGI timeline with multihit split and full tie chain (row → col → per-engagement seeded coin flip), FR17 single engagement, typed `InvalidMatchSetupError` validation (9 violation codes, each tested), closed 5-member BattleLog event union at logVersion 1, frozen immutable output, shared fast-check MatchSetup arbitrary. 24 new tests incl. termination/seed-identity/non-mutation properties and a pinned event-trace anchor. Full gate green.

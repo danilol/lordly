@@ -107,3 +107,85 @@ export interface MatchSetup {
   armies: { A: Unit[]; B: Unit[] };
   placements: { A: Placement[]; B: Placement[] };
 }
+
+/**
+ * Version of the `BattleEvent` union below (AD-12). Extending the union —
+ * as stories 1.5/1.6 will with combat events — bumps this integer.
+ */
+export const LOG_VERSION = 1;
+
+/**
+ * One unit's full initial render state, carried by `BattleStarted` so the
+ * shell never re-derives anything (AD-2, AD-12).
+ */
+export interface UnitSnapshot {
+  id: UnitId;
+  side: Side;
+  class: UnitClass;
+  element: Element;
+  placement: Placement;
+  hp: number;
+  maxHp: number;
+}
+
+/** The battle began; carries the complete initial roster (AD-2). */
+export interface BattleStarted {
+  type: 'BattleStarted';
+  units: UnitSnapshot[];
+}
+
+/**
+ * A new **pass** of the initiative timeline began (FR13). Multihit units act
+ * once per pass, so the pass boundaries make the multihit split visible.
+ */
+export interface PassStarted {
+  type: 'PassStarted';
+  pass: number;
+}
+
+/**
+ * A unit's turn came up and no acted event was produced. In the chassis
+ * (story 1.4) every taken turn is `'idle'` — combat stories replace acted
+ * turns with real events; `'asleep'` (Sleep status, FR16) and `'dead'`
+ * (lost unspent actions, FR13) keep their meanings from 1.5/1.6 on.
+ */
+export interface ActionSkipped {
+  type: 'ActionSkipped';
+  unit: UnitId;
+  reason: 'dead' | 'asleep' | 'idle';
+}
+
+/**
+ * An **engagement** finished: every unit spent its actions (FR17). Carries
+ * the per-unit HP snapshot judging and the wipeout loop will read (FR18/19).
+ */
+export interface EngagementEnded {
+  type: 'EngagementEnded';
+  engagement: number;
+  hp: Record<UnitId, number>;
+}
+
+/** The battle is decided (FR18 **judging**): winner or draw with both HP percentages. */
+export interface BattleEnded {
+  type: 'BattleEnded';
+  winner: Side | 'draw';
+  hpPct: { A: number; B: number };
+}
+
+/**
+ * The closed, versioned battle event union (AD-12): past-tense, one event
+ * per (actor, action), carrying everything the UI renders. The chassis
+ * declares 5 members; the full set (UnitAttacked, UnitHealed, StatusApplied,
+ * ActionMisfired, ActionFizzled, PoisonTicked, UnitDied) completes by story
+ * 1.6, each extension bumping `LOG_VERSION`.
+ */
+export type BattleEvent = BattleStarted | PassStarted | ActionSkipped | EngagementEnded | BattleEnded;
+
+/**
+ * The engine's entire output (AD-1, AD-2): an immutable ordered narration of
+ * the battle. The shell replays it; it never evaluates a combat rule.
+ */
+export interface BattleLog {
+  logVersion: number;
+  events: readonly BattleEvent[];
+}

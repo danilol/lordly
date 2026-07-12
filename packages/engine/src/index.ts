@@ -7,8 +7,21 @@
 /** Package identity constant; also proves workspace wiring (story 1.1). */
 export const ENGINE_NAME = 'lordly-engine';
 
-export { ALL_CLASSES, ALL_COLS, ALL_ELEMENTS, ALL_ROWS, ALL_SIDES } from './types';
+export { ALL_CLASSES, ALL_COLS, ALL_ELEMENTS, ALL_ROWS, ALL_SIDES, LOG_VERSION } from './types';
 export type { Col, Element, MatchSetup, Mode, Placement, Row, Side, SpellKind, Unit, UnitClass, UnitId } from './types';
+export type {
+  ActionSkipped,
+  BattleEnded,
+  BattleEvent,
+  BattleLog,
+  BattleStarted,
+  EngagementEnded,
+  PassStarted,
+  UnitSnapshot,
+} from './types';
+export { resolveBattle } from './resolve';
+export { InvalidMatchSetupError, validateMatchSetup } from './validate';
+export type { MatchSetupViolation } from './validate';
 export { BALANCE } from './balance';
 export type { BalanceData, ClassStats, Ratio } from './balance';
 export { contentHash } from './hash';
