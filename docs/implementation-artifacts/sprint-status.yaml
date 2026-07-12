@@ -52,7 +52,7 @@ development_status:
   epic-1: in-progress
   1-1-monorepo-scaffold-and-the-ci-quality-gate: done
   1-2-a-deployed-home-screen-on-a-real-url: done
-  1-3-engine-foundation-types-balance-data-and-seed-streams: backlog
+  1-3-engine-foundation-types-balance-data-and-seed-streams: ready-for-dev
   1-4-battle-timeline-and-the-battlelog-chassis: backlog
   1-5-melee-combat-damage-and-judging: backlog
   1-6-full-class-roster-archer-mage-cleric-and-witch: backlog
