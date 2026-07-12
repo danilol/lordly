@@ -4,7 +4,7 @@ baseline_commit: fb45ff6f94ec56c0f114848da2abc66a793ce017
 
 # Story 1.2: A deployed home screen on a real URL
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
