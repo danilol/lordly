@@ -47,6 +47,15 @@ so that from day one there is a real, reachable game to grow.
   - [x] ASK USER to open the URL in Android Chrome and confirm: portrait layout, title visible, greyed "Play vs AI" button (agent cannot operate a phone — user confirmation is the AC2 evidence; a desktop-browser screenshot is supporting evidence only) — CONFIRMED by Danilo 2026-07-12 on Android Chrome ("looks great, like old school Ogre Battle 64"); exposed first API token also deleted by user
   - [x] Record the production URL + deploy run link in Dev Agent Record
 
+### Review Findings
+
+_Reviewed 2026-07-12 via `/code-review` (8 finder angles + adversarial verification, diff scoped to the story's 17 changed files). 2 candidate correctness risks were REFUTED with evidence (Phaser Scale.FIT parent-sizing concern — the flex container shrink-wraps the canvas correctly, confirmed on-device; disabled-button non-interactivity — explicitly specified behavior). 4 findings confirmed, all fixed same day:_
+
+- [x] [Review][Patch] `deploy` job duplicated the `ci` job's corepack bootstrap + setup-node steps verbatim [.github/workflows/ci.yml] — fixed: extracted `.github/actions/setup-workspace` composite action (with optional `install-filter` input); both jobs now use it, so the story-1.1 workaround has a single fix point for the CI jobs stories 1.3+ will add
+- [x] [Review][Patch] `deploy` re-ran the full workspace install and web build already done by `ci` in the same run [.github/workflows/ci.yml] — fixed: `ci` uploads `apps/web/dist` as a `web-dist` artifact (main pushes only); `deploy` downloads it and does a scoped `--filter web` install just for wrangler — production now ships exactly the bytes CI verified
+- [x] [Review][Patch] HomeScene hardcoded hex colors + button dimensions inline; `#1a1a2e` duplicated between HomeScene and main.ts [apps/web/src/scenes/HomeScene.ts] — fixed: `PALETTE`, `BUTTON_WIDTH`, `BUTTON_HEIGHT` added to `src/config/constants.ts`; both files reference them
+- [x] [Review][Patch] "coming soon" sub-label was unrequested UI beyond AC2's title + disabled button [apps/web/src/scenes/HomeScene.ts] — fixed: removed
+
 ## Dev Notes
 
 ### Architecture constraints that bind THIS story (from ARCHITECTURE-SPINE.md)
@@ -148,4 +157,5 @@ claude-fable-5 (Claude Fable 5)
 
 ## Change Log
 
-- 2026-07-12: Story 1.2 implemented. Template demo replaced by portrait HomeScene (title + disabled Play vs AI); assets-only Cloudflare Workers deploy via wrangler from CI on main; README deploy docs. First deploy live at https://lordly.lol-gaming.workers.dev after resolving token scope (Workers Scripts:Edit), secret paste formatting, and one-time workers.dev subdomain registration. Awaiting user phone confirmation for AC2.
+- 2026-07-12: Story 1.2 implemented. Template demo replaced by portrait HomeScene (title + disabled Play vs AI); assets-only Cloudflare Workers deploy via wrangler from CI on main; README deploy docs. First deploy live at https://lordly.lol-gaming.workers.dev after resolving token scope (Workers Scripts:Edit), secret paste formatting, and one-time workers.dev subdomain registration. AC2 confirmed by user on Android Chrome.
+- 2026-07-12: Code review (8-angle + verification): 4 findings fixed — CI bootstrap extracted to `.github/actions/setup-workspace` composite action, deploy now reuses ci's build via artifact handoff + scoped install, UI palette centralized in constants.ts, unrequested "coming soon" label removed. 2 candidate correctness risks refuted with evidence. Full regression green.

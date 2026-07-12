@@ -1,0 +1,34 @@
+name: Setup workspace
+description: >
+  corepack-pinned pnpm (reads packageManager from root package.json) + Node 24
+  + frozen install. The corepack bootstrap must run BEFORE setup-node so its
+  pnpm-store cache probe finds pnpm on PATH — see story 1.1 debug log for why
+  pnpm/action-setup is not used.
+
+inputs:
+  install-filter:
+    description: Optional pnpm --filter for a scoped install (e.g. "web"); empty installs the whole workspace.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - run: |
+        mkdir -p "$RUNNER_TEMP/corepack-bin"
+        corepack enable --install-directory "$RUNNER_TEMP/corepack-bin"
+        echo "$RUNNER_TEMP/corepack-bin" >> "$GITHUB_PATH"
+      shell: bash
+
+    - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+      with:
+        node-version: 24
+        cache: "pnpm"
+
+    - run: |
+        if [ -n "${{ inputs.install-filter }}" ]; then
+          pnpm install --frozen-lockfile --filter "${{ inputs.install-filter }}"
+        else
+          pnpm install --frozen-lockfile
+        fi
+      shell: bash

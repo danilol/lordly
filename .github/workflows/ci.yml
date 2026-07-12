@@ -20,24 +20,9 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
-      # corepack reads `packageManager` from the root package.json and fetches
-      # that exact pnpm. (pnpm/action-setup v6 was tried first: its bootstrap
-      # + self-update path crashes or leaves a broken binary when the pinned
-      # version differs from the bundled one — see story 1.1 debug log.)
-      - run: |
-          mkdir -p "$RUNNER_TEMP/corepack-bin"
-          corepack enable --install-directory "$RUNNER_TEMP/corepack-bin"
-          echo "$RUNNER_TEMP/corepack-bin" >> "$GITHUB_PATH"
-
-      # Must come after pnpm is on PATH so the pnpm store cache resolves.
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
-        with:
-          node-version: 24
-          cache: "pnpm"
+      - uses: ./.github/actions/setup-workspace
 
       - run: node --version && pnpm --version
-
-      - run: pnpm install --frozen-lockfile
 
       - run: pnpm -r typecheck
 
@@ -47,6 +32,13 @@ jobs:
 
       - run: pnpm --filter web build
 
+      # Hand the built site to the deploy job — it must ship exactly what CI verified.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        with:
+          name: web-dist
+          path: apps/web/dist
+
   deploy:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -55,19 +47,15 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
-      - run: |
-          mkdir -p "$RUNNER_TEMP/corepack-bin"
-          corepack enable --install-directory "$RUNNER_TEMP/corepack-bin"
-          echo "$RUNNER_TEMP/corepack-bin" >> "$GITHUB_PATH"
-
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+      # Scoped install: only apps/web (+ its workspace deps) — enough for wrangler.
+      - uses: ./.github/actions/setup-workspace
         with:
-          node-version: 24
-          cache: "pnpm"
+          install-filter: web
 
-      - run: pnpm install --frozen-lockfile
-
-      - run: pnpm --filter web build
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: web-dist
+          path: apps/web/dist
 
       # `run` is required: bare `pnpm deploy` invokes pnpm's builtin, not this script.
       - run: pnpm --filter web run deploy
