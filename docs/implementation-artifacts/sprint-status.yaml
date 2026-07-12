@@ -50,7 +50,7 @@ story_location: docs/implementation-artifacts
 
 development_status:
   epic-1: in-progress
-  1-1-monorepo-scaffold-and-the-ci-quality-gate: in-progress
+  1-1-monorepo-scaffold-and-the-ci-quality-gate: review
   1-2-a-deployed-home-screen-on-a-real-url: backlog
   1-3-engine-foundation-types-balance-data-and-seed-streams: backlog
   1-4-battle-timeline-and-the-battlelog-chassis: backlog

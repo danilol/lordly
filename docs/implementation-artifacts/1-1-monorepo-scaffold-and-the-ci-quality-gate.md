@@ -4,7 +4,7 @@ baseline_commit: NO_VCS
 
 # Story 1.1: Monorepo scaffold and the CI quality gate
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -44,18 +44,18 @@ so that all later work lands on rails from the first commit.
   - [x] Root `vitest.config.ts` with `test.projects: ['packages/*', 'apps/*']` (the old `vitest.workspace` file is DEPRECATED since 3.2)
   - [x] Coverage: `@vitest/coverage-v8@^4.1.10` at root. GOTCHA (verified): the `coverage` block is ROOT-ONLY — never valid inside project configs. Configure `coverage.thresholds` at root with a commented placeholder for the engine glob threshold, e.g. `// activates in story 1.6: 'packages/engine/**': { lines: 90 }`
   - [x] `pnpm test` and `pnpm coverage` green from the repo root
-- [ ] Task 5: GitHub Actions CI gate (AC: 2)
-  - [ ] `.github/workflows/ci.yml` on `push` + `pull_request`: `actions/checkout@v6` → `pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d # v6.0.5` with NO `version` input (the action reads `packageManager` from root package.json; supplying both errors with "Multiple versions of pnpm specified") → `actions/setup-node@v6` with `node-version: 24`, `cache: "pnpm"` (action-setup MUST precede setup-node for the cache) → `pnpm install --frozen-lockfile` (pnpm defaults to frozen in CI; be explicit) → `pnpm -r typecheck` → `pnpm test` → `pnpm coverage`
-  - [ ] Create the GitHub repo and push (`gh repo create lordly` — if `gh` is unauthenticated, pause and ask the user to run `gh auth login`)
-  - [ ] "Red blocks merge" = branch-protection/ruleset on `main` requiring the CI check — a GitHub SETTINGS step (`gh api` or manual). If the token can't set it, PAUSE and ask the user to enable it (Settings → Rules) before Task 7 — the red-test verification below depends on protection being active; do not silently defer it to documentation
-- [ ] Task 6: README + ADR-001 (AC: 3)
-  - [ ] Project intro (one paragraph, link to PRD/spine paths), prerequisites (Node 24, pnpm 11), then exactly: install → test → run-locally steps; note that deploy arrives in story 1.2
-  - [ ] Seed `docs/adr/ADR-001-engine-consumed-as-source.md`: engine exported as raw TS source (`exports` → `src/index.ts`), no composite/project references, `tsc --noEmit` per package — with the TS6304 rationale from Task 2 (also solves git's inability to track an empty `docs/adr/`)
-  - [ ] Verify by following your own README from a clean checkout state
-- [ ] Task 7: Verify everything end-to-end (AC: 1, 2, 3)
-  - [ ] Fresh `pnpm install` → `pnpm -r typecheck` → `pnpm test` → `pnpm coverage` all green locally
-  - [ ] `pnpm --filter web dev` serves the template game on :8080 (template default) in a browser
-  - [ ] Push a commit and confirm the GitHub Actions run goes green; confirm a deliberately red test blocks merge (requires Task 5's branch protection active — pause for the user if it isn't), then remove the red test
+- [x] Task 5: GitHub Actions CI gate (AC: 2)
+  - [x] `.github/workflows/ci.yml` on `push` + `pull_request`: `actions/checkout@v6` → `pnpm/action-setup@8912a9102ac27614460f54aedde9e1e7f9aec20d # v6.0.5` with NO `version` input (the action reads `packageManager` from root package.json; supplying both errors with "Multiple versions of pnpm specified") → `actions/setup-node@v6` with `node-version: 24`, `cache: "pnpm"` (action-setup MUST precede setup-node for the cache) → `pnpm install --frozen-lockfile` (pnpm defaults to frozen in CI; be explicit) → `pnpm -r typecheck` → `pnpm test` → `pnpm coverage` — DEVIATION (recorded): pnpm/action-setup v6 is broken for packageManager-pinned versions newer than its bundled pnpm (bootstrap crash / broken @pnpm/exe stub — see Debug Log); replaced with `corepack enable`, which reads the SAME `packageManager` field. All other steps as specified.
+  - [x] Create the GitHub repo and push (`gh repo create lordly` — if `gh` is unauthenticated, pause and ask the user to run `gh auth login`) — created as private (user choice), then made public (user choice) to enable branch protection on the free plan
+  - [x] "Red blocks merge" = branch-protection/ruleset on `main` requiring the CI check — a GitHub SETTINGS step (`gh api` or manual). If the token can't set it, PAUSE and ask the user to enable it (Settings → Rules) before Task 7 — the red-test verification below depends on protection being active; do not silently defer it to documentation — set via `gh api`: required status check `ci`, `enforce_admins: true`
+- [x] Task 6: README + ADR-001 (AC: 3)
+  - [x] Project intro (one paragraph, link to PRD/spine paths), prerequisites (Node 24, pnpm 11), then exactly: install → test → run-locally steps; note that deploy arrives in story 1.2
+  - [x] Seed `docs/adr/ADR-001-engine-consumed-as-source.md`: engine exported as raw TS source (`exports` → `src/index.ts`), no composite/project references, `tsc --noEmit` per package — with the TS6304 rationale from Task 2 (also solves git's inability to track an empty `docs/adr/`)
+  - [x] Verify by following your own README from a clean checkout state
+- [x] Task 7: Verify everything end-to-end (AC: 1, 2, 3)
+  - [x] Fresh `pnpm install` → `pnpm -r typecheck` → `pnpm test` → `pnpm coverage` all green locally
+  - [x] `pnpm --filter web dev` serves the template game on :8080 (template default) in a browser
+  - [x] Push a commit and confirm the GitHub Actions run goes green; confirm a deliberately red test blocks merge (requires Task 5's branch protection active — pause for the user if it isn't), then remove the red test — green run 29178059820; red-test PR #1 reported `mergeStateStatus: BLOCKED`; PR closed unmerged and branch deleted
 
 ## Dev Notes
 
@@ -123,8 +123,55 @@ lordly/
 
 ### Agent Model Used
 
+claude-fable-5 (Claude Fable 5)
+
 ### Debug Log References
+
+- Local toolchain: system Node was v20; used nvm's Node v24.16.0 and installed pnpm 11.12.0 into it. `gh` was absent; installed via `brew install gh` (v2.96.0).
+- pnpm 11 `allowBuilds` prompt appeared in `pnpm-workspace.yaml` on first install; approved esbuild, sharp, workerd postinstall scripts.
+- Red-phase proof: with `ENGINE_NAME` deliberately set to `'broken'`, `pnpm test` failed 1/2 — confirms the engine test is real and both projects are wired into the root runner. Restored → 2/2 green.
+- Clean-checkout verification: wiped all `node_modules`, `pnpm install --frozen-lockfile` → typecheck, test, coverage all green; `pnpm --filter web dev` served the template game on :8080 (verified via curl).
+- CI failure saga (pnpm/action-setup v6 is broken for pinned versions): (1) v6.0.5 bundles a pnpm 11.0.0-rc.5 bootstrap that crashes on ANY command with "Cannot use 'in' operator to search for 'integrity' in undefined" before self-updating to the packageManager-pinned 11.12.0 (upstream fix landed in v6.0.7). (2) v6.0.9's bootstrap (11.7.0) crashes in `lockfileToDepGraph` during the self-update install of 11.12.0. (3) v6.0.9 with `standalone: true` leaves a broken text-stub at `@pnpm/exe/pnpm`, killing setup-node's `pnpm store path` cache probe. Resolution: replaced the action with `corepack enable` (+ `mkdir -p` for its install dir — corepack errors on a missing `--install-directory`), which reads the same `packageManager` field and fetched exactly 11.12.0. CI green in run 29178160242's predecessor (run 29178059820).
+- Red-blocks-merge verification: PR #1 with a deliberately failing engine test → CI red → GitHub API `mergeStateStatus: BLOCKED` (the field the merge button consults; `enforce_admins: true` so no bypass). PR closed unmerged, branch deleted.
+
+### Implementation Plan
+
+- Engine test dirs resolve `vitest` types via Node-style walk-up to the root `node_modules` (vitest is a root devDep); no per-package vitest devDep needed.
+- Web smoke-test module `src/config/constants.ts` is imported by `src/main.ts` (sets `document.title`), satisfying "used by the app" without touching Phaser in tests.
+- Coverage config at root only, report-only; commented threshold glob left for story 1.6 to uncomment.
 
 ### Completion Notes List
 
+- All 7 tasks complete. Repo: https://github.com/danilol/lordly (public — user's choice, made after learning branch protection needs GitHub Pro on private repos). Branch protection on `main` requires the `ci` check with `enforce_admins: true`; verified end-to-end with a red-test PR that GitHub reported as BLOCKED.
+- Recorded deviation from Task 5's prescribed tooling: `pnpm/action-setup` v6 replaced with `corepack enable` in ci.yml — the action's bootstrap/self-update mechanism is broken when `packageManager` pins a version newer than its bundled pnpm (three distinct failure modes documented in Debug Log). corepack preserves the single-source-of-truth intent (reads the same `packageManager` field).
+- Telemetry fully stripped: `log.js` deleted, plain `dev`/`build` scripts kept; remaining `phaser.io` strings are a doc-comment, demo-scene text, and a local stdout build message — no network calls.
+- All pinned versions verified installed: phaser 4.2.1, vite 8.1.4, typescript 5.9.3, vitest/@vitest/coverage-v8 4.1.10, fast-check 4.9.0, @fast-check/vitest 0.4.1, pure-rand 8.4.2, vite-plugin-pwa 1.3.0, wrangler 4.110.0.
+
 ### File List
+
+- .gitignore
+- package.json
+- pnpm-workspace.yaml
+- pnpm-lock.yaml
+- vitest.config.ts
+- README.md
+- .github/workflows/ci.yml
+- docs/adr/ADR-001-engine-consumed-as-source.md
+- packages/engine/package.json
+- packages/engine/tsconfig.json
+- packages/engine/src/index.ts
+- packages/engine/test/placeholder.test.ts
+- apps/web/package.json (template, modified)
+- apps/web/tsconfig.json (template, modified)
+- apps/web/src/main.ts (template, modified)
+- apps/web/src/config/constants.ts
+- apps/web/test/constants.test.ts
+- apps/web/log.js (deleted)
+- apps/web/package-lock.json (deleted)
+- apps/web/* (remaining files scaffolded verbatim from phaserjs/template-vite-ts)
+- docs/implementation-artifacts/1-1-monorepo-scaffold-and-the-ci-quality-gate.md (story tracking)
+- docs/implementation-artifacts/sprint-status.yaml (status tracking)
+
+## Change Log
+
+- 2026-07-12: Story 1.1 implemented end-to-end. Monorepo scaffold (pnpm workspace, `@lordly/engine`, `apps/web` from phaserjs/template-vite-ts with telemetry stripped), root Vitest projects + report-only coverage, README + ADR-001, GitHub Actions CI gate. Deviation: ci.yml uses `corepack enable` instead of the broken `pnpm/action-setup` v6 (see Debug Log). Repo made public (user decision) to enable branch protection; red-run-blocks-merge verified via PR #1 (BLOCKED, closed unmerged). All tasks complete; status → review.
