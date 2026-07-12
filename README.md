@@ -29,13 +29,32 @@ pnpm --filter web dev
 
 Then open http://localhost:8080.
 
-> Deployment to a real URL arrives in story 1.2 (Cloudflare, via wrangler).
+## Deploy
+
+Production runs as static assets on Cloudflare Workers at the `lordly.<account-subdomain>.workers.dev` URL. Every push to `main` deploys automatically from CI once these one-time secrets exist:
+
+1. Create a free [Cloudflare](https://dash.cloudflare.com) account.
+2. Create an API token from the **"Edit Cloudflare Workers"** template (My Profile → API Tokens).
+3. Find your **Account ID** (Workers & Pages → right sidebar, or the dashboard URL path).
+4. Set both as repo secrets:
+
+```sh
+gh secret set CLOUDFLARE_API_TOKEN   # paste the token when prompted
+gh secret set CLOUDFLARE_ACCOUNT_ID  # paste the account id
+```
+
+Manual deploy from your machine (note the `run` — bare `pnpm deploy` is a pnpm builtin):
+
+```sh
+pnpm --filter web exec wrangler login
+pnpm --filter web run deploy
+```
 
 ## Workspace layout
 
 ```text
 packages/engine/   # @lordly/engine — pure TS rules engine, no I/O (ADR-001)
-apps/web/          # Phaser 4 + Vite shell, telemetry stripped
+apps/web/          # Phaser 4 + Vite shell (src/scenes/, deployed via wrangler)
 docs/adr/          # architecture decision records
 docs/              # planning + implementation artifacts (BMad)
 ```

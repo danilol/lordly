@@ -1,3 +1,7 @@
+---
+baseline_commit: fb45ff6f94ec56c0f114848da2abc66a793ce017
+---
+
 # Story 1.2: A deployed home screen on a real URL
 
 Status: ready-for-dev
@@ -18,25 +22,25 @@ so that from day one there is a real, reachable game to grow.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Replace the template demo with the real Home scene (AC: 2)
-  - [ ] Restructure to the spine layout (AD-5 seed): create `apps/web/src/scenes/HomeScene.ts`; DELETE the template's `src/game/` tree entirely (`src/game/main.ts`, `src/game/scenes/Boot.ts`, `Preloader.ts`, `MainMenu.ts`, `Game.ts`, `GameOver.ts`) — story 1.1 deliberately kept it as boot-proof; this story retires it
-  - [ ] Extract UI strings/dimensions into a pure module `apps/web/src/config/constants.ts` (extend the existing file): `GAME_NAME` (exists), plus `HOME_PLAY_LABEL = 'Play vs AI'`, `BASE_WIDTH = 360`, `BASE_HEIGHT = 640` — tests assert on this module, never on Phaser objects
-  - [ ] New Phaser game config in `src/main.ts`: `Phaser.Scale.FIT` + `autoCenter: CENTER_BOTH` with 360×640 base resolution (FR30: portrait phone-first, desktop gets a centered functional layout for free), scene list = `[HomeScene]` only
-  - [ ] HomeScene renders: game title text (from `GAME_NAME`) and a visually-disabled "Play vs AI" button (greyed, non-interactive — it does NOTHING this story; enabling it is story 1.8) — plain Phaser text/rectangle, no sprites, no assets
-  - [ ] Remove now-unused template assets from `public/assets/` (bg.png, logo.png) and the template's `screenshot.png`; keep `favicon.png` and `style.css`
-  - [ ] `pnpm --filter web dev` shows the Home scene; `pnpm --filter web build` stays green (the manualChunks fix from 1.1 review must not regress — build runs in CI)
-- [ ] Task 2: Wrangler config for assets-only Workers deploy (AC: 1)
-  - [ ] `apps/web/wrangler.jsonc`: `name: "lordly"`, `compatibility_date` = today, `assets: { directory: "./dist", not_found_handling: "single-page-application" }` — NO `main` field (assets-only Worker, no server code; verified supported July 2026)
-  - [ ] Add script `"deploy": "wrangler deploy"` to `apps/web/package.json` (wrangler 4.110.0 already installed as devDep by story 1.1 — do NOT reinstall or bump). GOTCHA: `pnpm deploy` is a pnpm BUILT-IN command — `pnpm --filter web deploy` invokes the builtin, not the script. Always call it as `pnpm --filter web run deploy` (everywhere: CI, README, local)
+- [x] Task 1: Replace the template demo with the real Home scene (AC: 2)
+  - [x] Restructure to the spine layout (AD-5 seed): create `apps/web/src/scenes/HomeScene.ts`; DELETE the template's `src/game/` tree entirely (`src/game/main.ts`, `src/game/scenes/Boot.ts`, `Preloader.ts`, `MainMenu.ts`, `Game.ts`, `GameOver.ts`) — story 1.1 deliberately kept it as boot-proof; this story retires it
+  - [x] Extract UI strings/dimensions into a pure module `apps/web/src/config/constants.ts` (extend the existing file): `GAME_NAME` (exists), plus `HOME_PLAY_LABEL = 'Play vs AI'`, `BASE_WIDTH = 360`, `BASE_HEIGHT = 640` — tests assert on this module, never on Phaser objects
+  - [x] New Phaser game config in `src/main.ts`: `Phaser.Scale.FIT` + `autoCenter: CENTER_BOTH` with 360×640 base resolution (FR30: portrait phone-first, desktop gets a centered functional layout for free), scene list = `[HomeScene]` only
+  - [x] HomeScene renders: game title text (from `GAME_NAME`) and a visually-disabled "Play vs AI" button (greyed, non-interactive — it does NOTHING this story; enabling it is story 1.8) — plain Phaser text/rectangle, no sprites, no assets
+  - [x] Remove now-unused template assets from `public/assets/` (bg.png, logo.png) and the template's `screenshot.png`; keep `favicon.png` and `style.css`
+  - [x] `pnpm --filter web dev` shows the Home scene; `pnpm --filter web build` stays green (the manualChunks fix from 1.1 review must not regress — build runs in CI)
+- [x] Task 2: Wrangler config for assets-only Workers deploy (AC: 1)
+  - [x] `apps/web/wrangler.jsonc`: `name: "lordly"`, `compatibility_date` = today, `assets: { directory: "./dist", not_found_handling: "single-page-application" }` — NO `main` field (assets-only Worker, no server code; verified supported July 2026) — validated via `wrangler deploy --dry-run` (6 asset files read, no bindings)
+  - [x] Add script `"deploy": "wrangler deploy"` to `apps/web/package.json` (wrangler 4.110.0 already installed as devDep by story 1.1 — do NOT reinstall or bump). GOTCHA: `pnpm deploy` is a pnpm BUILT-IN command — `pnpm --filter web deploy` invokes the builtin, not the script. Always call it as `pnpm --filter web run deploy` (everywhere: CI, README, local)
   - [ ] The deployed URL will be `https://lordly.<account-subdomain>.workers.dev` — record the actual URL in this story's Dev Agent Record and the README once known
 - [ ] Task 3: Deploy job in CI (AC: 1)
-  - [ ] Extend `.github/workflows/ci.yml` with a `deploy` job: `needs: ci`, `if: github.ref == 'refs/heads/main' && github.event_name == 'push'`, `timeout-minutes: 10`, same corepack bootstrap + setup-node steps as the `ci` job (each job needs its own copies) → `pnpm install --frozen-lockfile` → `pnpm --filter web build` → `pnpm --filter web run deploy` (note `run` — see Task 2 gotcha) with `env: CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}` and `CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}`
-  - [ ] Use the repo's pinned wrangler via pnpm (NOT `cloudflare/wrangler-action` — it installs its own wrangler, drifting from the devDep pin; recorded choice)
-  - [ ] Keep `permissions: contents: read` (secrets are not permissions; no change needed); do not widen triggers
-  - [ ] PAUSE FOR USER (one-time Cloudflare setup — like 1.1's `gh auth login`): user creates a free Cloudflare account, then an API token from the **"Edit Cloudflare Workers"** template (dash.cloudflare.com → My Profile → API Tokens), and provides token + Account ID; set repo secrets via `gh secret set CLOUDFLARE_API_TOKEN` and `gh secret set CLOUDFLARE_ACCOUNT_ID`. Do not proceed to Task 5 verification until secrets exist
-- [ ] Task 4: README deploy section (AC: 3)
-  - [ ] Add a "Deploy" section: prerequisites (free Cloudflare account, API token from the Edit-Workers template, Account ID), the two `gh secret set` commands, "merge to main deploys automatically", local alternative (`pnpm --filter web exec wrangler login` then `pnpm --filter web run deploy`), and the production URL
-  - [ ] Update the workspace-layout snippet if paths changed (src/scenes/ replaces src/game/scenes/)
+  - [x] Extend `.github/workflows/ci.yml` with a `deploy` job: `needs: ci`, `if: github.ref == 'refs/heads/main' && github.event_name == 'push'`, `timeout-minutes: 10`, same corepack bootstrap + setup-node steps as the `ci` job (each job needs its own copies) → `pnpm install --frozen-lockfile` → `pnpm --filter web build` → `pnpm --filter web run deploy` (note `run` — see Task 2 gotcha) with `env: CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}` and `CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}`
+  - [x] Use the repo's pinned wrangler via pnpm (NOT `cloudflare/wrangler-action` — it installs its own wrangler, drifting from the devDep pin; recorded choice)
+  - [x] Keep `permissions: contents: read` (secrets are not permissions; no change needed); do not widen triggers
+  - [ ] PAUSE FOR USER (one-time Cloudflare setup — like 1.1's `gh auth login`): user creates a free Cloudflare account, then an API token from the **"Edit Cloudflare Workers"** template (dash.cloudflare.com → My Profile → API Tokens), and provides token + Account ID; set repo secrets via `gh secret set CLOUDFLARE_API_TOKEN` and `gh secret set CLOUDFLARE_ACCOUNT_ID`. Do not proceed to Task 5 verification until secrets exist — TOKEN secret set 2026-07-12 (user supplied; rotation recommended, see Debug Log); ACCOUNT_ID pending
+- [x] Task 4: README deploy section (AC: 3)
+  - [x] Add a "Deploy" section: prerequisites (free Cloudflare account, API token from the Edit-Workers template, Account ID), the two `gh secret set` commands, "merge to main deploys automatically", local alternative (`pnpm --filter web exec wrangler login` then `pnpm --filter web run deploy`), and the production URL
+  - [x] Update the workspace-layout snippet if paths changed (src/scenes/ replaces src/game/scenes/)
 - [ ] Task 5: Verify end-to-end (AC: 1, 2, 3)
   - [ ] Full local gate green: `pnpm -r typecheck`, `pnpm coverage`, `pnpm --filter web build`
   - [ ] Push to main → CI green → deploy job green → `curl` the production URL returns the Home page HTML with the game title
