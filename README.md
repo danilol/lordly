@@ -31,7 +31,7 @@ Then open http://localhost:8080.
 
 ## Deploy
 
-Production runs as static assets on Cloudflare Workers at the `lordly.<account-subdomain>.workers.dev` URL. Every push to `main` deploys automatically from CI once these one-time secrets exist:
+Production runs as static assets on Cloudflare Workers at **https://lordly.lol-gaming.workers.dev**. Every push to `main` deploys automatically from CI once these one-time secrets exist:
 
 1. Create a free [Cloudflare](https://dash.cloudflare.com) account.
 2. Create an API token from the **"Edit Cloudflare Workers"** template (My Profile → API Tokens).

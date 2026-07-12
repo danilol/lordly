@@ -32,20 +32,20 @@ so that from day one there is a real, reachable game to grow.
 - [x] Task 2: Wrangler config for assets-only Workers deploy (AC: 1)
   - [x] `apps/web/wrangler.jsonc`: `name: "lordly"`, `compatibility_date` = today, `assets: { directory: "./dist", not_found_handling: "single-page-application" }` — NO `main` field (assets-only Worker, no server code; verified supported July 2026) — validated via `wrangler deploy --dry-run` (6 asset files read, no bindings)
   - [x] Add script `"deploy": "wrangler deploy"` to `apps/web/package.json` (wrangler 4.110.0 already installed as devDep by story 1.1 — do NOT reinstall or bump). GOTCHA: `pnpm deploy` is a pnpm BUILT-IN command — `pnpm --filter web deploy` invokes the builtin, not the script. Always call it as `pnpm --filter web run deploy` (everywhere: CI, README, local)
-  - [ ] The deployed URL will be `https://lordly.<account-subdomain>.workers.dev` — record the actual URL in this story's Dev Agent Record and the README once known
-- [ ] Task 3: Deploy job in CI (AC: 1)
+  - [x] The deployed URL will be `https://lordly.<account-subdomain>.workers.dev` — record the actual URL in this story's Dev Agent Record and the README once known — LIVE: https://lordly.lol-gaming.workers.dev
+- [x] Task 3: Deploy job in CI (AC: 1)
   - [x] Extend `.github/workflows/ci.yml` with a `deploy` job: `needs: ci`, `if: github.ref == 'refs/heads/main' && github.event_name == 'push'`, `timeout-minutes: 10`, same corepack bootstrap + setup-node steps as the `ci` job (each job needs its own copies) → `pnpm install --frozen-lockfile` → `pnpm --filter web build` → `pnpm --filter web run deploy` (note `run` — see Task 2 gotcha) with `env: CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}` and `CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}`
   - [x] Use the repo's pinned wrangler via pnpm (NOT `cloudflare/wrangler-action` — it installs its own wrangler, drifting from the devDep pin; recorded choice)
   - [x] Keep `permissions: contents: read` (secrets are not permissions; no change needed); do not widen triggers
-  - [ ] PAUSE FOR USER (one-time Cloudflare setup — like 1.1's `gh auth login`): user creates a free Cloudflare account, then an API token from the **"Edit Cloudflare Workers"** template (dash.cloudflare.com → My Profile → API Tokens), and provides token + Account ID; set repo secrets via `gh secret set CLOUDFLARE_API_TOKEN` and `gh secret set CLOUDFLARE_ACCOUNT_ID`. Do not proceed to Task 5 verification until secrets exist — TOKEN secret set 2026-07-12 (user supplied; rotation recommended, see Debug Log); ACCOUNT_ID pending
+  - [x] PAUSE FOR USER (one-time Cloudflare setup — like 1.1's `gh auth login`): user creates a free Cloudflare account, then an API token from the **"Edit Cloudflare Workers"** template (dash.cloudflare.com → My Profile → API Tokens), and provides token + Account ID; set repo secrets via `gh secret set CLOUDFLARE_API_TOKEN` and `gh secret set CLOUDFLARE_ACCOUNT_ID`. Do not proceed to Task 5 verification until secrets exist — RESOLVED after three iterations (see Debug Log): custom token needed Workers Scripts:Edit added, a clean re-paste of the value, and a one-time workers.dev subdomain registration (`lol-gaming`)
 - [x] Task 4: README deploy section (AC: 3)
   - [x] Add a "Deploy" section: prerequisites (free Cloudflare account, API token from the Edit-Workers template, Account ID), the two `gh secret set` commands, "merge to main deploys automatically", local alternative (`pnpm --filter web exec wrangler login` then `pnpm --filter web run deploy`), and the production URL
   - [x] Update the workspace-layout snippet if paths changed (src/scenes/ replaces src/game/scenes/)
 - [ ] Task 5: Verify end-to-end (AC: 1, 2, 3)
-  - [ ] Full local gate green: `pnpm -r typecheck`, `pnpm coverage`, `pnpm --filter web build`
-  - [ ] Push to main → CI green → deploy job green → `curl` the production URL returns the Home page HTML with the game title
+  - [x] Full local gate green: `pnpm -r typecheck`, `pnpm coverage`, `pnpm --filter web build`
+  - [x] Push to main → CI green → deploy job green → `curl` the production URL returns the Home page HTML with the game title — run 29199599778 (`ci` + `deploy` both success); `curl` returned HTTP 200 with `<title>Lord Battle Tactics</title>` (initial SSL failures were the new subdomain's cert provisioning, resolved within minutes)
   - [ ] ASK USER to open the URL in Android Chrome and confirm: portrait layout, title visible, greyed "Play vs AI" button (agent cannot operate a phone — user confirmation is the AC2 evidence; a desktop-browser screenshot is supporting evidence only)
-  - [ ] Record the production URL + deploy run link in Dev Agent Record
+  - [x] Record the production URL + deploy run link in Dev Agent Record
 
 ## Dev Notes
 
@@ -106,8 +106,46 @@ so that from day one there is a real, reachable game to grow.
 
 ### Agent Model Used
 
+claude-fable-5 (Claude Fable 5)
+
 ### Debug Log References
+
+- Red-green: constants test for `HOME_PLAY_LABEL`/`BASE_WIDTH`/`BASE_HEIGHT` written first and confirmed failing (1 failed / 3 passed), then constants + HomeScene implemented → 4/4 green.
+- `wrangler deploy --dry-run` validated the assets-only config offline before any push (6 files, no bindings).
+- SECURITY NOTE: the user pasted the first Cloudflare API token directly into the chat (against org policy); it was used to set the initial secret and MUST be deleted in the Cloudflare dash — it is exposed in the conversation transcript. The replacement token was set via the GitHub web UI and never touched the chat.
+- Cloudflare auth saga (three deploy failures before green): (1) the user's token was a custom "Workers AI" token lacking `Workers Scripts:Edit` → API error 10000 on `/workers/services/lordly` (diagnosed by probing the API directly: token verify OK, services call denied); (2) the replacement token was pasted into the GitHub secret with a formatting problem → error 9109 "Invalid access token"; clean re-paste fixed it; (3) the fresh account had no workers.dev subdomain registered — wrangler prompts interactively for this but CI auto-answers "no"; user registered `lol-gaming` in the dash.
+- Post-deploy, the URL returned SSL errors (curl exit 35) for a few minutes — normal TLS cert provisioning for a brand-new workers.dev subdomain; resolved on its own.
+- `pnpm --filter web deploy` (without `run`) invokes pnpm's BUILT-IN deploy command — the story's gotcha held; `run` is used everywhere.
+
+### Implementation Plan
+
+- HomeScene at `src/scenes/` (spine AD-5 seed); template `src/game/` tree deleted wholesale, template assets (bg/logo/screenshot) removed; favicon + style.css kept.
+- Pure `src/config/constants.ts` carries all testable UI facts; tests never import Phaser (1.1 convention).
+- `Phaser.Scale.FIT` + `CENTER_BOTH` on a 360×640 base = FR30 portrait baseline + free centered desktop layout.
+- Assets-only `wrangler.jsonc` (no `main`); deploy job reuses the 1.1 corepack bootstrap verbatim, `needs: ci`, main-push-only guard.
 
 ### Completion Notes List
 
+- All tasks complete except the final user phone confirmation (AC2 evidence) — pending Danilo opening https://lordly.lol-gaming.workers.dev on Android Chrome.
+- Production URL: **https://lordly.lol-gaming.workers.dev** — deploy run 29199599778 (jobs `ci` and `deploy` both green); curl verification: HTTP 200, `<title>Lord Battle Tactics</title>`.
+- ACTION ITEM for user: delete the first (exposed) API token in Cloudflare dash → My Profile → API Tokens; the active secret uses the replacement token.
+
 ### File List
+
+- apps/web/src/scenes/HomeScene.ts (new)
+- apps/web/src/config/constants.ts (modified — HOME_PLAY_LABEL, BASE_WIDTH, BASE_HEIGHT added)
+- apps/web/src/main.ts (modified — Phaser game config, FIT scale, HomeScene)
+- apps/web/test/constants.test.ts (modified — new smoke assertions)
+- apps/web/wrangler.jsonc (new)
+- apps/web/package.json (modified — deploy script)
+- apps/web/src/game/main.ts (deleted)
+- apps/web/src/game/scenes/Boot.ts, Game.ts, GameOver.ts, MainMenu.ts, Preloader.ts (deleted)
+- apps/web/public/assets/bg.png, apps/web/public/assets/logo.png, apps/web/screenshot.png (deleted)
+- .github/workflows/ci.yml (modified — deploy job)
+- README.md (modified — Deploy section, layout snippet, production URL)
+- docs/implementation-artifacts/1-2-a-deployed-home-screen-on-a-real-url.md (story tracking)
+- docs/implementation-artifacts/sprint-status.yaml (status tracking)
+
+## Change Log
+
+- 2026-07-12: Story 1.2 implemented. Template demo replaced by portrait HomeScene (title + disabled Play vs AI); assets-only Cloudflare Workers deploy via wrangler from CI on main; README deploy docs. First deploy live at https://lordly.lol-gaming.workers.dev after resolving token scope (Workers Scripts:Edit), secret paste formatting, and one-time workers.dev subdomain registration. Awaiting user phone confirmation for AC2.
