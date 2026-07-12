@@ -34,10 +34,19 @@ describe('FR8 melee target selection', () => {
     expect(selectMeleeTarget(0, candidates)).toBe(1); // col 2 = facing
   });
 
-  it('then prefers the column closer to center', () => {
-    // Attacker at own left (0): reach {1,2}; facing col 2 empty; col 1 (center) vs nothing else.
+  it('nearest row dominates the column chain (row decides before any column key)', () => {
+    // Attacker at own left (0): reach {1,2}; the facing col 2 unit is in a
+    // FARTHER row, so the nearer center-column unit wins on the row key.
     const candidates = [at(0, 1), at(1, 2)];
-    expect(selectMeleeTarget(0, candidates)).toBe(0); // front row first anyway; center col
+    expect(selectMeleeTarget(0, candidates)).toBe(0);
+  });
+
+  it('corner attacker, facing column empty in the nearest row → takes the adjacent center', () => {
+    // Attacker at own left (0): reach {1,2}; nearest row has only col 1.
+    // (FR8 priority ② is provably inert at 3 columns — see targeting.ts note —
+    // so this pins the facing-empty branch outcome, not the center-distance key.)
+    const candidates = [at(0, 1), at(1, 2), at(2, 2)];
+    expect(selectMeleeTarget(0, candidates)).toBe(0);
   });
 
   it("breaks the center-attacker adjacency tie with the ATTACKER'S-view left (enemy owner-local right)", () => {

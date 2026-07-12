@@ -39,6 +39,16 @@ export function reachableEnemyCols(ownColIndex: number): readonly number[] {
  * Returns the index into `candidates` of the chosen target, or `undefined`
  * when no living reachable enemy exists (the attack is spent with no effect).
  * Re-evaluated per attack (FR8): callers invoke this for every swing.
+ *
+ * CONTRACT: the returned index is positional into the `candidates` array as
+ * passed — callers projecting their own unit list must keep the projection
+ * parallel (same order, no filtering) to map the index back safely.
+ *
+ * NOTE on priority ②: at 3-column geometry it is PROVABLY INERT — a corner
+ * attacker's only non-facing reachable column is the center, and a center
+ * attacker's two non-facing columns are equidistant from center — so the
+ * center-distance key can never break a tie the earlier keys haven't. It is
+ * kept for fidelity to FR8's stated chain (and future-proofing wider grids).
  */
 export function selectMeleeTarget(attackerColIndex: number, candidates: readonly MeleeCandidate[]): number | undefined {
   const reach = reachableEnemyCols(attackerColIndex);

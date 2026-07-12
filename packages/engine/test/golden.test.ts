@@ -46,6 +46,12 @@ describe('golden battles (story 1.5 — melee era)', () => {
         0xdead,
       ),
     );
+    // Hand-verified verdict (audit 2026-07-12): 4×24 kills B:0; B ends 180/270.
+    const verdict = log.events[log.events.length - 1];
+    if (verdict?.type === 'BattleEnded') {
+      expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 100, B: 66 } });
+    }
+    expect(log.events.some((e) => e.type === 'UnitDied' && e.unit === 'B:0')).toBe(true);
     expect(log).toMatchSnapshot();
   });
 
@@ -81,6 +87,11 @@ describe('golden battles (story 1.5 — melee era)', () => {
         0xcafe,
       ),
     );
+    // Hand-verified verdict (audit 2026-07-12): A 304/340 = 89%, B 233/305 = 76%.
+    const verdict = log.events[log.events.length - 1];
+    if (verdict?.type === 'BattleEnded') {
+      expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 89, B: 76 } });
+    }
     expect(log).toMatchSnapshot();
   });
 

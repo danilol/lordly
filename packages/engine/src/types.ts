@@ -160,6 +160,12 @@ export interface ActionSkipped {
  * One target's share of an attack: the **damage** dealt (post-RPS, post-clamp
  * integer — FR14/FR15) and the target's HP after it landed. The shell renders
  * these numbers directly and never recomputes them (AD-2).
+ *
+ * OVERKILL SEMANTICS: `damage` is the attack's full computed value — on a
+ * killing blow it may exceed the HP actually removed (a 24-damage hit on an
+ * 18-hp unit reports `damage: 24, hpAfter: 0`). Popup numbers render
+ * `damage` (OB64 style); HP bars are driven by `hpAfter`, which is
+ * authoritative.
  */
 export interface AttackTarget {
   unit: UnitId;

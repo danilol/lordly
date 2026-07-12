@@ -4,7 +4,7 @@ baseline_commit: 0fa6b390a61f78593f3be6fec065d4ea4e959c38
 
 # Story 1.5: Melee combat, damage, and judging
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -53,6 +53,23 @@ so that the battle core exists end to end before the full roster arrives.
   - [x] ≥3 golden-battle snapshots (vitest snapshots of the full `BattleLog`): (1) a wipe, (2) an HP-% decision, (3) an exact-tie draw — knight/mercenary armies, fixed seeds, committed snapshot files
   - [x] Termination/seed-identity/non-mutation properties keep passing over the shared arbitrary (all classes — non-melee stay idle)
   - [x] Full gate green: `pnpm -r typecheck`, `pnpm coverage`, `pnpm --filter web build`
+
+### Review Findings
+
+_Reviewed 2026-07-12 via `bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor, diff 0fa6b39..HEAD, run on Opus 4.8). Acceptance Auditor: full pass — all pinned damage numbers re-derived, all 3 golden battles verified internally consistent (targeting/RPS/hpAfter reconcile), scope fences hold, 90/90 tests green. No correctness bugs in current behavior; findings below are one product ratification + hardening._
+
+- [x] [Review][Decision] FR8's "③ left over right" tiebreak has no stated frame of reference in the PRD; the story chose ATTACKER'S-VIEW left (= higher enemy owner-local column). The equally-natural owner-local reading gives the opposite target for every center-attacker adjacency tie. The implementer's spec decision is recorded and tested but should be PO-ratified since targeting rules are balance-relevant [packages/engine/src/targeting.ts].
+- [x] [Review][Patch] FR8 priority ② "column closer to center" is PROVABLY INERT at 3-column geometry (non-facing reachable columns never differ in center distance), and its test is mislabeled — the row key decides that test's outcome. Fix: comment the inertness (key kept for spec fidelity), rename/fix the test to what it verifies, add the missing corner-attacker facing-column-empty test [targeting.ts, test/targeting.test.ts].
+- [x] [Review][Patch] `physicalDamage` is not directly unit-tested and the min-1 clamp is never exercised as a clamp (no melee matchup in balance v1 goes below 1; the property asserts a tautology). Fix: export it and add a table-driven damage test including a real clamp case (the function is class-agnostic — cleric→knight = 8−14 → clamp 1) and both RPS branches [resolve.ts → export, new test/damage.test.ts].
+- [x] [Review][Patch] Mutual wipe (reachable in 1.6 via end-of-engagement poison) mis-awards the win: `wipedSide` returns the first fully-dead side ('A') → judge declares B the winner instead of a draw. Fix: detect both-wiped → draw; also add the latent zero-guards (empty side in `wipedSide`'s vacuous `.every()`, zero-total division in `hpPct`) with unit tests [judging.ts, test/judging.test.ts].
+- [x] [Review][Patch] Overkill semantics undocumented: a 24-damage hit on an 18-hp unit emits `{damage: 24, hpAfter: 0}` — the full computed damage, not HP removed. Keep (OB64 shows the attack's number; hpAfter drives bars) but DOCUMENT it in `AttackTarget`'s doc comment and pin an overkill test [types.ts, test/combat.test.ts].
+- [x] [Review][Patch] Wipe check runs after every turn including idle ones that cannot change the alive-set. Gate it behind "a UnitDied was just emitted" [resolve.ts].
+- [x] [Review][Patch] Golden #1/#2 rely on snapshot-only assertions; add explicit verdict assertions (winner + died-unit / exact hpPct — values already hand-verified by the audit: #1 winner A, B hpPct 66; #2 winner A, 89/76) so initial correctness is asserted, not just frozen [test/golden.test.ts].
+- [x] [Review][Patch] Cosmetics batch: document `selectMeleeTarget`'s index-correspondence contract (returned index is positional into the passed projection — callers must keep it parallel); fix "Stories 1.6 adds" grammar; `MELEE_CLASSES` as a Set-like closed check [targeting.ts, resolve.ts].
+- [x] [Review][Defer] Per-swing allocation churn (candidate projection each attack, `judgedView` twice at battle end) — harmless at 6 units, relevant to NFR4's sim-harness throughput later — deferred to the PO's pre-epic-2 tech-debt story (already logged in deferred-work.md).
+- [x] [Review][Defer] The judging-symmetry property's mirror-tie filter means symmetry is proven only for asymmetric rosters; a complementary invariant ("the coin flip is the SOLE source of mirror-match asymmetry") needs a harness that can control the flip — deferred to the tech-debt story with the design note.
+
+**Resolution (2026-07-12):** Decision RATIFIED by PO: FR8 "left" = attacker's-view left (current implementation stands; zero rework). All 7 patches applied and verified: mutual wipe now judges as a draw (`WipeState 'both'`) with vacuous-empty and zero-total guards + tests; `physicalDamage` exported with an 11-case table-driven test including two REAL min-1 clamp cases (cleric→knight −6→1, mage→knight −8→advantage→−12→1); priority-② inertness documented in code with the mislabeled test fixed and the corner-facing-empty branch pinned; overkill semantics documented on `AttackTarget` and pinned (damage 24 on 18 hp → hpAfter 0); wipe scan gated behind UnitDied emission; goldens #1/#2 carry hand-verified verdict assertions (A 100/66 with B:0 dying; A 89/76) that passed against the UNCHANGED snapshots — behavior identical; index-correspondence contract documented, cosmetics fixed. 106 tests green (16 added), engine 94.97% lines.
 
 ## Dev Notes
 
@@ -162,4 +179,5 @@ claude-fable-5 (Claude Fable 5)
 
 ## Change Log
 
+- 2026-07-12: `bmad-code-review` (Opus 4.8) — Acceptance Auditor FULL PASS (every damage pin re-derived, all 3 goldens verified event-by-event). 1 decision + 7 patches: PO ratified FR8 attacker's-view-left tiebreak; mutual-wipe now draws (1.6 poison seam); real min-1 clamp tests via exported physicalDamage; priority-② proven inert and documented; overkill semantics documented + pinned; wipe scan death-gated; golden verdict assertions; contract docs. 2 items deferred to the pre-epic-2 tech-debt story. 106 tests green, snapshots unchanged (behavior identical). Status → done.
 - 2026-07-12: Story 1.5 implemented. Melee combat lands: FR7 mirrored-lane reach + FR8 targeting (nearest-row shielding, facing/center/attacker-view-left priority, per-attack re-evaluation), FR14/FR15 integer damage with RPS, deaths + FR18 instant wipe, exact cross-multiplied judging with floored hpPct reporting. UnitAttacked (multi-target shape) + UnitDied at LOG_VERSION 2. Judging extracted pure (wipe unreachable in melee-only battles — documented). 25 new tests incl. judging-symmetry property and 3 golden battles. Full gate green.

@@ -16,6 +16,16 @@ describe('FR18 wipe detection', () => {
     const units = [unit('A', 50, 140), unit('B', 0, 90), unit('B', 1, 90)];
     expect(wipedSide(units)).toBeUndefined();
   });
+
+  it("mutual wipe is 'both', not first-checked side (1.6 poison seam)", () => {
+    const units = [unit('A', 0, 140), unit('B', 0, 90)];
+    expect(wipedSide(units)).toBe('both');
+  });
+
+  it('an absent side is not vacuously wiped', () => {
+    const units = [unit('A', 50, 140)];
+    expect(wipedSide(units)).toBeUndefined();
+  });
 });
 
 describe('FR18 judging', () => {
@@ -38,6 +48,19 @@ describe('FR18 judging', () => {
   it('exact tie → draw', () => {
     const units = [unit('A', 70, 140), unit('B', 45, 90)]; // both exactly 50%
     expect(judge(units, undefined).winner).toBe('draw');
+  });
+
+  it("mutual wipe → draw with both sides at 0%", () => {
+    const units = [unit('A', 0, 140), unit('B', 0, 90)];
+    const verdict = judge(units, 'both');
+    expect(verdict.winner).toBe('draw');
+    expect(verdict.hpPct).toEqual({ A: 0, B: 0 });
+  });
+
+  it('zero starting total reports 0%, never NaN (latent guard; unreachable via validation)', () => {
+    const verdict = judge([unit('A', 0, 0), unit('B', 45, 90)], undefined);
+    expect(verdict.hpPct.A).toBe(0);
+    expect(Number.isNaN(verdict.hpPct.A)).toBe(false);
   });
 
   it('reports floored percentages', () => {

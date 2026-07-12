@@ -27,3 +27,8 @@
 
 - Chassis `BattleEnded`/`hpPct`/`EngagementEnded.hp` are hardcoded stubs (all-full-HP draw) type-indistinguishable from real judged output. Story 1.5 makes them real; no shell consumes the log until 1.9. Revisit only if a consumer appears before 1.5.
 - Seed-range bound `0xffffffff` is duplicated in `validate.ts` and `rng.ts` with divergent error types (InvalidMatchSetupError vs RangeError). Validate-first ordering makes it correct today; fold into a shared constant when rng.ts is next touched.
+
+## Deferred from: code review of story-1.5 (2026-07-12)
+
+- Engine hot-path allocation churn: per-swing candidate projection in `takeTurn`, `judgedView` materialized on every turn and twice at battle end. Harmless at 6 units; matters for NFR4's headless sim-harness throughput (story 1.7 runs thousands of battles). Input for the pre-epic-2 tech-debt story.
+- Judging-symmetry property proves symmetry only for asymmetric rosters (mirror-tie setups are filtered because the coin flip is not side-symmetric). A complementary invariant — "the coin flip is the SOLE source of mirror-match asymmetry" — needs a test harness that can control/inject the flip. Design note for the tech-debt story.

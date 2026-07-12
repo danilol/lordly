@@ -172,7 +172,9 @@ describe('FR18 deaths, wipe, and judging', () => {
       const prev = log.events[i - 1];
       expect(prev?.type).toBe('UnitAttacked');
       if (prev?.type === 'UnitAttacked') {
-        expect(prev.targets.some((t) => t.unit === death.unit && t.hpAfter === 0)).toBe(true);
+        // OVERKILL SEMANTICS: the killing blow lands on 18 remaining hp but
+        // reports the full computed damage (24); hpAfter (0) is authoritative.
+        expect(prev.targets).toEqual([{ unit: 'B:0', damage: 24, hpAfter: 0 }]);
       }
     }
     // The dead cleric's hp snapshot is 0; A:2 (front/right, reach {0,1}) found no target and idled.

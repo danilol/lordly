@@ -1,5 +1,6 @@
 import { BALANCE } from './balance';
 import { judge, wipedSide } from './judging';
+import type { WipeState } from './judging';
 import { createStreams, nextInt } from './rng';
 import { selectMeleeTarget } from './targeting';
 import { ALL_COLS, ALL_ROWS, LOG_VERSION } from './types';
@@ -21,7 +22,7 @@ interface UnitState {
 }
 
 /** The two melee classes (FR8); every other class stays idle until story 1.6. */
-const MELEE_CLASSES: readonly UnitClass[] = ['knight', 'mercenary'];
+const MELEE_CLASSES: ReadonlySet<UnitClass> = new Set(['knight', 'mercenary']);
 
 /**
  * Resolves an entire **battle** from a validated `MatchSetup` into an
@@ -61,7 +62,7 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
   const tieWinner: Side = nextInt(streams.battle, 0, 1) === 0 ? 'A' : 'B';
   const order = timelineComparator(tieWinner);
 
-  let wiped: Side | undefined;
+  let wiped: WipeState;
   let pass = 0;
   battle: while (units.some((u) => u.alive && u.actionsLeft > 0)) {
     pass += 1;
@@ -79,9 +80,13 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
         continue;
       }
       unit.actionsLeft -= 1;
-      events.push(...takeTurn(unit, units));
-      wiped = wipedSide(judgedView(units));
-      if (wiped !== undefined) break battle; // FR18: wipe = instant win, unspent actions lost
+      const turnEvents = takeTurn(unit, units);
+      events.push(...turnEvents);
+      // Only a death can change the alive-set — skip the wipe scan otherwise.
+      if (turnEvents.some((e) => e.type === 'UnitDied')) {
+        wiped = wipedSide(judgedView(units));
+        if (wiped !== undefined) break battle; // FR18: wipe ends it, unspent actions lost
+      }
     }
   }
 
@@ -107,7 +112,7 @@ function judgedView(units: readonly UnitState[]) {
  * Targeting is re-evaluated per attack (FR8) — this runs fresh every swing.
  */
 function takeTurn(unit: UnitState, units: UnitState[]): BattleEvent[] {
-  if (!MELEE_CLASSES.includes(unit.class)) {
+  if (!MELEE_CLASSES.has(unit.class)) {
     return [{ type: 'ActionSkipped', unit: unit.id, reason: 'idle' }];
   }
 
@@ -138,8 +143,10 @@ function takeTurn(unit: UnitState, units: UnitState[]): BattleEvent[] {
  * FR14/FR15 physical damage, integer math in FIXED order (FR20):
  * base = STR − floor(VIT/2) → RPS floor (×3/2 advantage, ×3/4 disadvantage,
  * ×1 neutral) → [status modifiers, story 1.6] → min-damage clamp LAST.
+ * Class-agnostic pure arithmetic (exported for direct table-driven tests);
+ * combat callers only ever pass melee attackers.
  */
-function physicalDamage(attacker: UnitClass, defender: UnitClass): number {
+export function physicalDamage(attacker: UnitClass, defender: UnitClass): number {
   const { formulas, rpsBeats, classes } = BALANCE;
   const base = classes[attacker].str - Math.floor(classes[defender].vit / 2);
   const rps = rpsBeats[attacker] === defender ? formulas.rpsAdvantage : rpsBeats[defender] === attacker ? formulas.rpsDisadvantage : undefined;
