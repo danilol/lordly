@@ -20,6 +20,8 @@ jobs:
           node-version: 24
           cache: "pnpm"
 
+      - run: node --version && pnpm --version
+
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm -r typecheck
