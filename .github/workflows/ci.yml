@@ -14,7 +14,10 @@ jobs:
       # that exact pnpm. (pnpm/action-setup v6 was tried first: its bootstrap
       # + self-update path crashes or leaves a broken binary when the pinned
       # version differs from the bundled one — see story 1.1 debug log.)
-      - run: corepack enable --install-directory "$RUNNER_TEMP/corepack-bin" && echo "$RUNNER_TEMP/corepack-bin" >> "$GITHUB_PATH"
+      - run: |
+          mkdir -p "$RUNNER_TEMP/corepack-bin"
+          corepack enable --install-directory "$RUNNER_TEMP/corepack-bin"
+          echo "$RUNNER_TEMP/corepack-bin" >> "$GITHUB_PATH"
 
       # Must come after pnpm is on PATH so the pnpm store cache resolves.
       - uses: actions/setup-node@v6
