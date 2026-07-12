@@ -10,18 +10,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # No `version` input: the action reads `packageManager` from the root
-      # package.json; supplying both errors ("Multiple versions of pnpm specified").
-      # v6.0.9 minimum: earlier v6 pins ship a broken pnpm bootstrap that crashes
-      # before self-updating to the packageManager-pinned version (fixed in v6.0.7).
-      # standalone: the npm-bootstrap + self-update path crashes in
-      # lockfileToDepGraph while installing the pinned version; the standalone
-      # binary download uses the exact packageManager version directly.
-      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-        with:
-          standalone: true
+      # corepack reads `packageManager` from the root package.json and fetches
+      # that exact pnpm. (pnpm/action-setup v6 was tried first: its bootstrap
+      # + self-update path crashes or leaves a broken binary when the pinned
+      # version differs from the bundled one — see story 1.1 debug log.)
+      - run: corepack enable --install-directory "$RUNNER_TEMP/corepack-bin" && echo "$RUNNER_TEMP/corepack-bin" >> "$GITHUB_PATH"
 
-      # Must come after pnpm/action-setup so the pnpm store cache resolves.
+      # Must come after pnpm is on PATH so the pnpm store cache resolves.
       - uses: actions/setup-node@v6
         with:
           node-version: 24
