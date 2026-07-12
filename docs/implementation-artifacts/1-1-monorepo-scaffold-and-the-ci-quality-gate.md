@@ -4,7 +4,7 @@ baseline_commit: NO_VCS
 
 # Story 1.1: Monorepo scaffold and the CI quality gate
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -61,15 +61,15 @@ so that all later work lands on rails from the first commit.
 
 _Reviewed 2026-07-12 via `bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor, diff scoped to the 16 authored/modified files, empty-tree baseline)._
 
-- [ ] [Review][Patch] Production build is broken under the pinned Vite 8.x stack — `manualChunks` legacy object syntax rejected by Rolldown [apps/web/vite/config.prod.mjs:25]
-- [ ] [Review][Patch] CI runs twice per PR push — `push`/`pull_request` triggers have no branch filter or concurrency group [.github/workflows/ci.yml:3]
-- [ ] [Review][Patch] ci.yml has no `permissions:` block (default, broader `GITHUB_TOKEN` scope) [.github/workflows/ci.yml:7]
-- [ ] [Review][Patch] Node version is enforced only by README prose — no `.npmrc` `engine-strict` or `.nvmrc` [package.json]
-- [ ] [Review][Patch] `terser` is listed under `dependencies` instead of `devDependencies` (it's a build-time-only minifier) [apps/web/package.json:14]
-- [ ] [Review][Patch] `.gitignore` has no secret-related patterns (`.env*`, `*.pem`, etc.) [.gitignore]
-- [ ] [Review][Patch] Static `<title>Phaser - Template</title>` in index.html was never updated to match the dynamic `document.title = GAME_NAME` set in main.ts [apps/web/index.html:8]
-- [ ] [Review][Patch] `@lordly/engine` is declared as a dependency but never imported anywhere in apps/web — the riskiest cross-package resolution path in ADR-001 is unexercised by any test [apps/web/package.json:12]
-- [ ] [Review][Patch] `packages/engine/tsconfig.json` and `apps/web/tsconfig.json` duplicate identical compiler options with no shared base config [packages/engine/tsconfig.json:1]
+- [x] [Review][Patch] Production build is broken under the pinned Vite 8.x stack — `manualChunks` legacy object syntax rejected by Rolldown [apps/web/vite/config.prod.mjs:25] — fixed: converted to function form in both vite configs; verified `pnpm --filter web build` succeeds locally and in CI (run 29195604738)
+- [x] [Review][Patch] CI runs twice per PR push — `push`/`pull_request` triggers have no branch filter or concurrency group [.github/workflows/ci.yml:3] — fixed: `push` filtered to `branches: [main]`, added a `concurrency` group with `cancel-in-progress`
+- [x] [Review][Patch] ci.yml has no `permissions:` block (default, broader `GITHUB_TOKEN` scope) [.github/workflows/ci.yml:7] — fixed: added `permissions: contents: read`
+- [x] [Review][Patch] Node version is enforced only by README prose — no `.npmrc` `engine-strict` or `.nvmrc` [package.json] — fixed: added `.npmrc` (`engine-strict=true`) and `.nvmrc` (`24`)
+- [x] [Review][Patch] `terser` is listed under `dependencies` instead of `devDependencies` (it's a build-time-only minifier) [apps/web/package.json:14] — fixed: moved to devDependencies
+- [x] [Review][Patch] `.gitignore` has no secret-related patterns (`.env*`, `*.pem`, etc.) [.gitignore] — fixed: added `.env`, `.env.*`, `*.pem`, `*.key`
+- [x] [Review][Patch] Static `<title>Phaser - Template</title>` in index.html was never updated to match the dynamic `document.title = GAME_NAME` set in main.ts [apps/web/index.html:8] — fixed: static title now reads "Lord Battle Tactics"
+- [x] [Review][Patch] `@lordly/engine` is declared as a dependency but never imported anywhere in apps/web — the riskiest cross-package resolution path in ADR-001 is unexercised by any test [apps/web/package.json:12] — fixed: added `apps/web/test/engine-resolution.test.ts` importing `ENGINE_NAME` from `@lordly/engine`, proving the exports-map/bundler-resolution path works
+- [x] [Review][Patch] `packages/engine/tsconfig.json` and `apps/web/tsconfig.json` duplicate identical compiler options with no shared base config [packages/engine/tsconfig.json:1] — fixed: extracted `tsconfig.base.json` (module, moduleResolution, strict, skipLibCheck); both packages now `extends` it, package-specific options (target, lib, noUnusedLocals, etc.) left as-is
 - [x] [Review][Defer] No lint/format step in the CI quality gate — real gap, not required by this story's ACs [.github/workflows/ci.yml] — deferred, out of scope for this story
 - [x] [Review][Defer] `allowBuilds` in pnpm-workspace.yaml is a hand-maintained allowlist; a future dependency bump could introduce an unlisted native postinstall script and hard-fail CI [pnpm-workspace.yaml:4] — deferred, pre-existing risk pattern, not a current defect (verified `sharp`/`workerd` are legitimately required today by wrangler's dependency tree)
 - [x] [Review][Defer] `StartGame()` in main.ts has no try/catch or fallback UI if Phaser/WebGL init throws [apps/web/src/main.ts:8] — deferred, pre-existing vendored template code, explicitly out of scope per this story's scope fence ("keep the template's demo scene as-is")
@@ -196,3 +196,4 @@ claude-fable-5 (Claude Fable 5)
 ## Change Log
 
 - 2026-07-12: Story 1.1 implemented end-to-end. Monorepo scaffold (pnpm workspace, `@lordly/engine`, `apps/web` from phaserjs/template-vite-ts with telemetry stripped), root Vitest projects + report-only coverage, README + ADR-001, GitHub Actions CI gate. Deviation: ci.yml uses `corepack enable` instead of the broken `pnpm/action-setup` v6 (see Debug Log). Repo made public (user decision) to enable branch protection; red-run-blocks-merge verified via PR #1 (BLOCKED, closed unmerged). All tasks complete; status → review.
+- 2026-07-12: `bmad-code-review` run (Blind Hunter + Edge Case Hunter + Acceptance Auditor). Found the production build was actually broken (Vite 8/Rolldown rejects the template's `manualChunks` syntax) — not caught by Task 7 since only `dev` was verified, never `build`. 9 patch findings applied and verified (build fix + CI build step, CI double-trigger, `permissions:` block, Node version enforcement, `terser` placement, `.gitignore` secrets, stale index.html title, engine cross-package resolution test, shared tsconfig base); 4 low-severity items deferred to `docs/implementation-artifacts/deferred-work.md`; 11 findings dismissed as noise or already matching spec intent. Full regression (typecheck/test/coverage/build) green locally and in CI (run 29195604738). Status → done.
