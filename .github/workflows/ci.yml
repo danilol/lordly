@@ -14,7 +14,12 @@ jobs:
       # package.json; supplying both errors ("Multiple versions of pnpm specified").
       # v6.0.9 minimum: earlier v6 pins ship a broken pnpm bootstrap that crashes
       # before self-updating to the packageManager-pinned version (fixed in v6.0.7).
+      # standalone: the npm-bootstrap + self-update path crashes in
+      # lockfileToDepGraph while installing the pinned version; the standalone
+      # binary download uses the exact packageManager version directly.
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          standalone: true
 
       # Must come after pnpm/action-setup so the pnpm store cache resolves.
       - uses: actions/setup-node@v6
