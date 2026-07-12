@@ -57,6 +57,26 @@ so that all later work lands on rails from the first commit.
   - [x] `pnpm --filter web dev` serves the template game on :8080 (template default) in a browser
   - [x] Push a commit and confirm the GitHub Actions run goes green; confirm a deliberately red test blocks merge (requires Task 5's branch protection active — pause for the user if it isn't), then remove the red test — green run 29178059820; red-test PR #1 reported `mergeStateStatus: BLOCKED`; PR closed unmerged and branch deleted
 
+### Review Findings
+
+_Reviewed 2026-07-12 via `bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor, diff scoped to the 16 authored/modified files, empty-tree baseline)._
+
+- [ ] [Review][Patch] Production build is broken under the pinned Vite 8.x stack — `manualChunks` legacy object syntax rejected by Rolldown [apps/web/vite/config.prod.mjs:25]
+- [ ] [Review][Patch] CI runs twice per PR push — `push`/`pull_request` triggers have no branch filter or concurrency group [.github/workflows/ci.yml:3]
+- [ ] [Review][Patch] ci.yml has no `permissions:` block (default, broader `GITHUB_TOKEN` scope) [.github/workflows/ci.yml:7]
+- [ ] [Review][Patch] Node version is enforced only by README prose — no `.npmrc` `engine-strict` or `.nvmrc` [package.json]
+- [ ] [Review][Patch] `terser` is listed under `dependencies` instead of `devDependencies` (it's a build-time-only minifier) [apps/web/package.json:14]
+- [ ] [Review][Patch] `.gitignore` has no secret-related patterns (`.env*`, `*.pem`, etc.) [.gitignore]
+- [ ] [Review][Patch] Static `<title>Phaser - Template</title>` in index.html was never updated to match the dynamic `document.title = GAME_NAME` set in main.ts [apps/web/index.html:8]
+- [ ] [Review][Patch] `@lordly/engine` is declared as a dependency but never imported anywhere in apps/web — the riskiest cross-package resolution path in ADR-001 is unexercised by any test [apps/web/package.json:12]
+- [ ] [Review][Patch] `packages/engine/tsconfig.json` and `apps/web/tsconfig.json` duplicate identical compiler options with no shared base config [packages/engine/tsconfig.json:1]
+- [x] [Review][Defer] No lint/format step in the CI quality gate — real gap, not required by this story's ACs [.github/workflows/ci.yml] — deferred, out of scope for this story
+- [x] [Review][Defer] `allowBuilds` in pnpm-workspace.yaml is a hand-maintained allowlist; a future dependency bump could introduce an unlisted native postinstall script and hard-fail CI [pnpm-workspace.yaml:4] — deferred, pre-existing risk pattern, not a current defect (verified `sharp`/`workerd` are legitimately required today by wrangler's dependency tree)
+- [x] [Review][Defer] `StartGame()` in main.ts has no try/catch or fallback UI if Phaser/WebGL init throws [apps/web/src/main.ts:8] — deferred, pre-existing vendored template code, explicitly out of scope per this story's scope fence ("keep the template's demo scene as-is")
+- [x] [Review][Defer] tsconfig strictness flags differ between packages (`noUnusedLocals`/`noUnusedParameters` only in web, `noUncheckedIndexedAccess` only in engine) with no documented rationale [packages/engine/tsconfig.json, apps/web/tsconfig.json] — deferred, stylistic asymmetry, low urgency
+
+**Dismissed as noise / false positive / already handled by spec intent (11):** empty coverage thresholds (by design, activates story 1.6 per AC2); corepack-workaround rationale "unverifiable" (it's documented in this story's own Debug Log, just outside the reviewed file scope); "local onboarding will hit the same corepack bug" (premise wrong — `corepack enable` is the working fix, not the broken path); `fast-check`/`@fast-check/vitest`/`wrangler` as "speculative" deps (explicitly specified as deliberate forward-installs in this story's own Dev Notes); missing trailing newline in apps/web/tsconfig.json (cosmetic, no formatter configured); main.ts blank-line formatting (cosmetic); corepack step lacking custom error handling (already fails loudly with corepack's own stderr, observed directly during Task 5 debugging); `@lordly/engine` not importable from plain Node (by design per ADR-001 — bundler-only resolution is the intended architecture); missing per-package `test` scripts in apps/web/packages/engine (deliberately omitted per Task 1's explicit "never `pnpm -r test`" instruction); "dead" `allowBuilds` entries for sharp/workerd (refuted — `pnpm why` confirms both are required by wrangler); `enforce_admins` relaxed to `false` post-verification (already a deliberate, twice-confirmed user decision with rationale recorded in this story's Debug Log; re-verified empirically just now — a fresh red-test PR still reports `mergeStateStatus: BLOCKED` under the current setting).
+
 ## Dev Notes
 
 ### Architecture constraints that bind THIS story (from ARCHITECTURE-SPINE.md)
