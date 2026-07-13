@@ -13,16 +13,34 @@ function setup(partial: Pick<MatchSetup, 'armies' | 'placements'>, seed = 7): Ma
 }
 
 /**
- * The ordered actor ids of every taken turn, grouped by pass. Since story 1.5
- * a turn is either an `ActionSkipped` (idle/dead) or a `UnitAttacked` (melee)
- * — both count as the actor's one action.
+ * The ordered actor ids of every taken turn, grouped by pass. A turn's FIRST
+ * event identifies the actor: `ActionSkipped`/`ActionFizzled`/`ActionMisfired`
+ * or an effect event (`UnitAttacked`/`UnitHealed`/`StatusApplied`). An effect
+ * event immediately following an `ActionMisfired` for the same actor is that
+ * SAME turn's redirect, not a new turn (marker + effect pair — story 1.6).
  */
 function turnsByPass(log: ReturnType<typeof resolveBattle>): UnitId[][] {
   const passes: UnitId[][] = [];
+  let misfiredActor: UnitId | undefined;
   for (const e of log.events) {
-    if (e.type === 'PassStarted') passes.push([]);
-    if (e.type === 'ActionSkipped') passes[passes.length - 1]?.push(e.unit);
-    if (e.type === 'UnitAttacked') passes[passes.length - 1]?.push(e.source);
+    if (e.type === 'PassStarted') {
+      passes.push([]);
+      misfiredActor = undefined;
+      continue;
+    }
+    const actor =
+      e.type === 'ActionSkipped' || e.type === 'ActionFizzled' || e.type === 'ActionMisfired'
+        ? e.unit
+        : e.type === 'UnitAttacked' || e.type === 'UnitHealed' || e.type === 'StatusApplied'
+          ? e.source
+          : undefined;
+    if (actor === undefined) continue;
+    if (misfiredActor !== undefined && actor === misfiredActor && e.type !== 'ActionMisfired') {
+      misfiredActor = undefined; // the redirect effect of the marked misfire
+      continue;
+    }
+    passes[passes.length - 1]?.push(actor);
+    misfiredActor = e.type === 'ActionMisfired' ? e.unit : undefined;
   }
   return passes;
 }
@@ -325,9 +343,10 @@ describe('resolveBattle chassis (FR13, FR17, AD-1, AD-12)', () => {
 describe('chassis properties (NFR2, FR20)', () => {
   test.prop([matchSetupArb])('terminates with a bounded, well-formed log', (s) => {
     const log = resolveBattle(s);
-    // Ceiling: 1 BattleStarted + passes(≤2) + turns(≤ 6 units × 2 actions)
-    // + deaths(≤6 UnitDied) + 1 EngagementEnded + 1 BattleEnded
-    expect(log.events.length).toBeLessThanOrEqual(1 + 2 + 12 + 6 + 1 + 1);
+    // Ceiling: 1 BattleStarted + passes(≤2) + turns(≤ 6 units × 2 actions,
+    // each ≤2 events: misfire marker + effect) + deaths(≤6 UnitDied)
+    // + poison ticks(≤6) + 1 EngagementEnded + 1 BattleEnded
+    expect(log.events.length).toBeLessThanOrEqual(1 + 2 + 24 + 6 + 6 + 1 + 1);
     expect(log.events[0]?.type).toBe('BattleStarted');
     expect(log.events[log.events.length - 1]?.type).toBe('BattleEnded');
   });
@@ -403,37 +422,48 @@ describe('chassis properties (NFR2, FR20)', () => {
     );
     const log = resolveBattle(s);
     const trace = log.events.map((e) => {
-      if (e.type === 'ActionSkipped') return `turn:${e.unit}`;
+      if (e.type === 'ActionSkipped') return `skip:${e.unit}:${e.reason}`;
+      if (e.type === 'ActionFizzled') return `fizzle:${e.unit}`;
+      if (e.type === 'ActionMisfired') return `misfire:${e.unit}`;
       if (e.type === 'UnitAttacked') return `atk:${e.source}>${e.targets.map((t) => `${t.unit}-${t.damage}`).join(',')}`;
+      if (e.type === 'UnitHealed') return `heal:${e.source}>${e.target}+${e.amount}`;
+      if (e.type === 'StatusApplied') return `cast:${e.source}>${e.target}:${e.spell}`;
       if (e.type === 'UnitDied') return `died:${e.unit}`;
+      if (e.type === 'PoisonTicked') return `poison:${e.unit}-${e.damage}`;
       if (e.type === 'PassStarted') return `pass:${e.pass}`;
       return e.type;
     });
-    // Pinned at implementation time (re-pinned in 1.5: melee actors now emit
-    // UnitAttacked — an engine behavior change with a LOG_VERSION bump); any
-    // change here means ordering, derivation, or the envelope changed.
+    // Pinned at implementation time (re-pinned in 1.6: the full roster acts —
+    // an engine behavior change with the LOG_VERSION 3 bump). Hand-verified:
+    // the wind witch confuses the facing cleric then (prefer-unaffected) the
+    // mage; the blast multi-targets A's back row with per-target RPS (18/20);
+    // the confused cleric's pass-2 misfire heals the ENEMY knight capped +24.
     expect(trace).toEqual([
       'BattleStarted',
       'pass:1',
-      'turn:A:2',
-      'turn:A:1',
+      'cast:A:2>B:1:confusion',
+      'atk:A:1>B:0-30',
       'atk:B:2>A:0-12',
-      'turn:B:0',
-      'turn:B:1',
+      'atk:B:0>A:1-18,A:2-20',
+      'heal:B:1>B:0+30',
       'atk:A:0>B:2-20',
       'pass:2',
-      'turn:A:2',
-      'turn:A:1',
+      'cast:A:2>B:0:confusion',
+      'atk:A:1>B:0-30',
       'atk:B:2>A:0-12',
-      'turn:B:0',
-      'turn:B:1',
+      'atk:B:0>A:1-18,A:2-20',
+      'misfire:B:1',
+      'heal:B:1>A:0+24',
       'atk:A:0>B:2-20',
       'EngagementEnded',
       'BattleEnded',
     ]);
     const verdict = log.events[log.events.length - 1];
     if (verdict?.type === 'BattleEnded') {
-      expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 92, B: 85 } });
+      // A 239/315 vs B 210/280: both floor to 75% but the EXACT comparison
+      // (239×280 = 66920 > 210×315 = 66150) gives A the win — the
+      // false-tie-floor judging rule visible in a real battle.
+      expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 75, B: 75 } });
     }
   });
 });

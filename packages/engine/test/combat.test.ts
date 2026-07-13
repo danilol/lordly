@@ -127,13 +127,12 @@ describe('FR14/FR15 damage (integer math, fixed order, pinned to balance v1)', (
 
 describe('FR18 deaths, wipe, and judging', () => {
   /**
-   * Concentrated fire: all clerics stacked in the enemy's right column so the
-   * two knights that reach it (A:0 left→{1,2}, A:1 center→all) pour 4 × 24
-   * into the front cleric (90 hp) — it dies on the 4th hit. A full WIPE is
-   * arithmetically unreachable with 1.5's melee-only roster (max 6 melee
-   * actions × 39 max damage = 234 < 240 min team HP), so the instant-wipe
-   * branch is unit-tested directly in judging.test.ts and becomes integration-
-   * reachable with 1.6's casters.
+   * Concentrated fire (migrated in 1.6: cleric victims now heal themselves
+   * out of danger, so archers — who shoot back but cannot heal — take their
+   * place): all archers stacked in the enemy's right column. The two knights
+   * that reach it (A:0 left→{1,2}, A:1 center→all) pour 36s into the front
+   * archer (90 hp): pass 1 → 54 → 18; A:0's pass-2 hit is a 36-damage
+   * overkill on 18 hp.
    */
   const concentrated = () =>
     setup({
@@ -144,9 +143,9 @@ describe('FR18 deaths, wipe, and judging', () => {
           { class: 'knight', element: 'wind' },
         ],
         B: [
-          { class: 'cleric', element: 'earth' },
-          { class: 'cleric', element: 'fire' },
-          { class: 'cleric', element: 'water' },
+          { class: 'archer', element: 'earth' },
+          { class: 'archer', element: 'fire' },
+          { class: 'archer', element: 'water' },
         ],
       },
       placements: {
@@ -166,18 +165,18 @@ describe('FR18 deaths, wipe, and judging', () => {
   it('deaths emit UnitDied right after the killing hit with hpAfter 0', () => {
     const log = resolveBattle(concentrated());
     const deaths = log.events.filter((e): e is UnitDied => e.type === 'UnitDied');
-    expect(deaths).toEqual([{ type: 'UnitDied', unit: 'B:0' }]); // front cleric, 4 × 24 = 96 > 90
+    expect(deaths).toEqual([{ type: 'UnitDied', unit: 'B:0' }]); // front archer: 36+36, then the overkill
     for (const death of deaths) {
       const i = log.events.indexOf(death);
       const prev = log.events[i - 1];
       expect(prev?.type).toBe('UnitAttacked');
       if (prev?.type === 'UnitAttacked') {
         // OVERKILL SEMANTICS: the killing blow lands on 18 remaining hp but
-        // reports the full computed damage (24); hpAfter (0) is authoritative.
-        expect(prev.targets).toEqual([{ unit: 'B:0', damage: 24, hpAfter: 0 }]);
+        // reports the full computed damage (36); hpAfter (0) is authoritative.
+        expect(prev.targets).toEqual([{ unit: 'B:0', damage: 36, hpAfter: 0 }]);
       }
     }
-    // The dead cleric's hp snapshot is 0; A:2 (front/right, reach {0,1}) found no target and idled.
+    // The dead archer's hp snapshot is 0; A:2 (front/right, reach {0,1}) found no target and idled.
     const engEnd = log.events.find((e) => e.type === 'EngagementEnded');
     if (engEnd?.type === 'EngagementEnded') expect(engEnd.hp['B:0']).toBe(0);
     expect(ended(log).winner).toBe('A');
@@ -198,7 +197,10 @@ describe('FR18 deaths, wipe, and judging', () => {
   });
 
   it('judging: higher HP-percentage side wins (exact comparison, not floored)', () => {
-    // Asymmetric: A knight+2 clerics-back vs B mercenary+2 clerics-back, melee only in front.
+    // Asymmetric knight-vs-merc trade with active cleric support on both
+    // sides (1.6 migration: clerics heal/staff now). Placements chosen with
+    // NO cross-side AGI tie on the same cell, so the battle is deterministic
+    // without the coin flip.
     const log = resolveBattle(
       setup({
         armies: {
@@ -221,18 +223,18 @@ describe('FR18 deaths, wipe, and judging', () => {
           ],
           B: [
             { row: 'front', col: 'right' },
-            { row: 'back', col: 'left' },
-            { row: 'back', col: 'center' },
+            { row: 'mid', col: 'left' },
+            { row: 'back', col: 'right' },
           ],
         },
       }),
     );
-    // knight deals 2×20=40 to merc (30 − floor(20/2), ×1); merc deals 2×12=24 to knight.
-    // A remaining: (140-24)+90+90 = 296/320; B: (110-40)+90+90 = 250/290. 296×290 vs 250×320 → A wins.
+    // Hand-verified from the event trace: A's clerics fully heal the knight
+    // (140) and self-heal the staff scratches → A ends 320/320 = 100%.
+    // B's merc takes 3×20 with one +20 heal → 90; B ends 270/290 = 93%.
     const verdict = ended(log);
     expect(verdict.winner).toBe('A');
-    expect(verdict.hpPct.A).toBe(Math.floor((296 * 100) / 320)); // 92
-    expect(verdict.hpPct.B).toBe(Math.floor((250 * 100) / 290)); // 86
+    expect(verdict.hpPct).toEqual({ A: 100, B: 93 });
   });
 
   it('exact tie → draw: mirrored triple knights, symmetric damage, nobody dies', () => {

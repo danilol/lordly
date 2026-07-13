@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { reachableEnemyCols, selectMeleeTarget } from '../src/targeting';
+import { reachableEnemyCols, selectBlastRow, selectMeleeTarget, selectRearmostTarget } from '../src/targeting';
 import type { MeleeCandidate } from '../src/targeting';
 
 /** Shorthand: candidate at enemy owner-local (rowIndex, colIndex). */
@@ -65,5 +65,48 @@ describe('FR8 melee target selection', () => {
   it('returns undefined when no living reachable enemy exists', () => {
     // Attacker at own left (0): reach {1,2}; only enemy alive is at col 0 (unreachable).
     expect(selectMeleeTarget(0, [at(0, 0), at(1, 0, false)])).toBeUndefined();
+  });
+});
+
+describe('FR9 ranged/magic target selection (rearmost)', () => {
+  it('picks only from the rearmost occupied reachable row (arcs over the front line)', () => {
+    // Attacker at own left (0): reach {1,2}. Front unit does NOT shield.
+    const candidates = [at(0, 1), at(2, 2)];
+    expect(selectRearmostTarget(0, candidates)).toBe(1); // back row wins
+  });
+
+  it('an unreachable rear unit does not extend eligibility', () => {
+    // Attacker at own right (2): reach {0,1}; rearmost REACHABLE is mid.
+    const candidates = [at(2, 2), at(1, 0)]; // back/right unreachable
+    expect(selectRearmostTarget(2, candidates)).toBe(1);
+  });
+
+  it('applies the ratified FR8 column chain within the rearmost row', () => {
+    // Attacker at own left (0): facing enemy col 2. Both in back row.
+    const candidates = [at(2, 1), at(2, 2)];
+    expect(selectRearmostTarget(0, candidates)).toBe(1); // facing wins
+    // Center attacker adjacency tie: attacker-view left = enemy col 2.
+    expect(selectRearmostTarget(1, [at(2, 0), at(2, 2)])).toBe(1);
+  });
+
+  it('ignores dead units and returns undefined with no living reachable enemy', () => {
+    expect(selectRearmostTarget(0, [at(2, 2, false), at(0, 0)])).toBeUndefined();
+  });
+});
+
+describe('FR10 blast row selection', () => {
+  it('picks the row with most living units, ignoring reach', () => {
+    const candidates = [at(0, 0), at(1, 1), at(1, 2)];
+    expect(selectBlastRow(candidates)).toBe(1); // mid has 2
+  });
+
+  it('breaks count ties toward the rearmost row', () => {
+    const candidates = [at(0, 0), at(2, 2)];
+    expect(selectBlastRow(candidates)).toBe(2);
+  });
+
+  it('counts only living units; undefined when none live', () => {
+    expect(selectBlastRow([at(0, 0, false), at(2, 1)])).toBe(2);
+    expect(selectBlastRow([at(0, 0, false)])).toBeUndefined();
   });
 });

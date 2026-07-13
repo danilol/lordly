@@ -6,10 +6,10 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['packages/*/src/**', 'apps/*/src/**'],
-      // Coverage reports from story 1.1 on; the engine threshold
-      // activates in story 1.6 by uncommenting the glob below.
+      // Coverage reports from story 1.1 on; the engine ≥90% line gate
+      // activated in story 1.6 (AD-7/NFR2).
       thresholds: {
-        // 'packages/engine/**': { lines: 90 },
+        'packages/engine/**': { lines: 90 },
       },
     },
   },

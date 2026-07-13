@@ -73,6 +73,58 @@ export function selectMeleeTarget(attackerColIndex: number, candidates: readonly
   return best;
 }
 
+/**
+ * FR9 ranged / FR11-FR12 "magic" selection: among LIVING candidates in
+ * reachable columns (same FR7 reach), only those in the REARMOST occupied
+ * row are eligible — arrows arc over the front line to snipe the artillery.
+ * Column priority within the row is the ratified FR8 chain (facing → center
+ * → attacker's-view left). Same positional-index CONTRACT and per-attack
+ * re-evaluation as `selectMeleeTarget`; the priority-② inertness note
+ * applies identically. Used by Archer attacks, the Cleric's staff fallback,
+ * and Witch casts.
+ */
+export function selectRearmostTarget(attackerColIndex: number, candidates: readonly MeleeCandidate[]): number | undefined {
+  const reach = reachableEnemyCols(attackerColIndex);
+  const facing = 2 - attackerColIndex;
+
+  let best: number | undefined;
+  let bestRank: readonly number[] | undefined;
+  candidates.forEach((c, i) => {
+    if (!c.alive || !reach.includes(c.colIndex)) return;
+    const rank = [
+      -c.rowIndex, // REARMOST row first (higher rowIndex → smaller key)
+      c.colIndex === facing ? 0 : 1,
+      Math.abs(c.colIndex - 1),
+      2 - c.colIndex,
+    ];
+    if (bestRank === undefined || lexLess(rank, bestRank)) {
+      best = i;
+      bestRank = rank;
+    }
+  });
+  return best;
+}
+
+/**
+ * FR10 blast row selection: the row containing the MOST living candidates,
+ * ties broken toward the REARMOST row; reach is ignored entirely. Returns
+ * the winning rowIndex, or `undefined` when no candidate lives. Reused with
+ * own-side candidates for a confused Mage's "own fullest row" (FR16).
+ */
+export function selectBlastRow(candidates: readonly MeleeCandidate[]): number | undefined {
+  const counts = [0, 0, 0];
+  for (const c of candidates) {
+    if (c.alive) counts[c.rowIndex] = (counts[c.rowIndex] ?? 0) + 1;
+  }
+  let best: number | undefined;
+  for (let row = 0; row < 3; row++) {
+    const count = counts[row] as number;
+    if (count === 0) continue;
+    if (best === undefined || count >= (counts[best] as number)) best = row; // >= → rearmost wins ties
+  }
+  return best;
+}
+
 /** True when `a` precedes `b` lexicographically. */
 function lexLess(a: readonly number[], b: readonly number[]): boolean {
   for (let i = 0; i < a.length; i++) {

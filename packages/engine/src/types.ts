@@ -110,10 +110,11 @@ export interface MatchSetup {
 
 /**
  * Version of the `BattleEvent` union below (AD-12). Extending the union
- * bumps this integer: v1 = chassis envelope (story 1.4), v2 = +UnitAttacked,
- * +UnitDied (story 1.5). Story 1.6 completes the set with another bump.
+ * bumps this integer: v1 = chassis envelope (story 1.4); v2 = +UnitAttacked,
+ * +UnitDied (story 1.5); v3 = the full closed set (+UnitHealed,
+ * +StatusApplied, +ActionMisfired, +ActionFizzled, +PoisonTicked — story 1.6).
  */
-export const LOG_VERSION = 2;
+export const LOG_VERSION = 3;
 
 /**
  * One unit's full initial render state, carried by `BattleStarted` so the
@@ -192,6 +193,64 @@ export interface UnitDied {
 }
 
 /**
+ * A heal landed (FR11). Unlike `AttackTarget.damage` (which reports the full
+ * computed value even on overkill), `amount` is the EFFECTIVE hp restored —
+ * FR11 explicitly caps healing at max HP, so the cap is part of the rule,
+ * not a rendering concern. `hpAfter` is authoritative for bars either way.
+ */
+export interface UnitHealed {
+  type: 'UnitHealed';
+  source: UnitId;
+  target: UnitId;
+  amount: number;
+  hpAfter: number;
+}
+
+/** A Witch spell landed on a unit (FR12/FR16). Same spell never stacks. */
+export interface StatusApplied {
+  type: 'StatusApplied';
+  source: UnitId;
+  target: UnitId;
+  spell: SpellKind;
+}
+
+/**
+ * A confused unit's action misfired onto its own side (FR16 Wind→Confusion).
+ * MARKER + EFFECT PAIR (recorded spec decision, story 1.6): this event is
+ * immediately followed by the redirected effect event(s) — a `UnitAttacked`
+ * on an ally, a `UnitHealed` on an enemy, a `StatusApplied` on an ally, or
+ * an `ActionFizzled` when no valid misfire target exists. AD-12's "one event
+ * per (actor, action)" governs blast fan-out, not this narration pair.
+ */
+export interface ActionMisfired {
+  type: 'ActionMisfired';
+  unit: UnitId;
+}
+
+/**
+ * A spent action with no valid effect (FR16): a misfire with no target on
+ * the required side, or a Witch cast whose every reachable enemy already
+ * bears her spell (no-stack — the application is wasted).
+ */
+export interface ActionFizzled {
+  type: 'ActionFizzled';
+  unit: UnitId;
+}
+
+/**
+ * Poison damage at the natural end of an engagement, before judging
+ * (FR16 Earth→Poison). Kills emit `UnitDied` after; an instant wipe
+ * short-circuits the engagement and skips poison entirely (recorded spec
+ * decision — FR18's "instant win"; FR19's wipeout mode revisits in 1.10).
+ */
+export interface PoisonTicked {
+  type: 'PoisonTicked';
+  unit: UnitId;
+  damage: number;
+  hpAfter: number;
+}
+
+/**
  * An **engagement** finished: every unit spent its actions (FR17). Carries
  * the per-unit HP snapshot judging and the wipeout loop will read (FR18/19).
  */
@@ -210,17 +269,22 @@ export interface BattleEnded {
 
 /**
  * The closed, versioned battle event union (AD-12): past-tense, one event
- * per (actor, action), carrying everything the UI renders. v2 declares 7
- * members; the remaining set (UnitHealed, StatusApplied, ActionMisfired,
- * ActionFizzled, PoisonTicked) completes in story 1.6 with another
- * `LOG_VERSION` bump.
+ * per (actor, action) — blast fan-out lives inside `UnitAttacked.targets`,
+ * and a confusion redirect is an `ActionMisfired` marker + its effect event.
+ * v3 is the COMPLETE set narrating every observable rule of PRD Features
+ * 3–5; the shell renders from these and never re-derives state (AD-2).
  */
 export type BattleEvent =
   | BattleStarted
   | PassStarted
   | UnitAttacked
-  | UnitDied
+  | UnitHealed
+  | StatusApplied
+  | ActionMisfired
+  | ActionFizzled
   | ActionSkipped
+  | PoisonTicked
+  | UnitDied
   | EngagementEnded
   | BattleEnded;
 

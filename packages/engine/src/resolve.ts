@@ -2,9 +2,11 @@ import { BALANCE } from './balance';
 import { judge, wipedSide } from './judging';
 import type { WipeState } from './judging';
 import { createStreams, nextInt } from './rng';
-import { selectMeleeTarget } from './targeting';
+import type { Stream } from './rng';
+import { selectBlastRow, selectMeleeTarget, selectRearmostTarget } from './targeting';
+import type { MeleeCandidate } from './targeting';
 import { ALL_COLS, ALL_ROWS, LOG_VERSION } from './types';
-import type { BattleEvent, BattleLog, MatchSetup, Side, UnitClass, UnitId, UnitSnapshot } from './types';
+import type { AttackTarget, BattleEvent, BattleLog, MatchSetup, Side, SpellKind, UnitClass, UnitId, UnitSnapshot } from './types';
 import { validateMatchSetup } from './validate';
 
 /** Mutable per-unit resolution state (module-private; AD-1: never escapes). */
@@ -18,11 +20,12 @@ interface UnitState {
   alive: boolean;
   hp: number;
   actionsLeft: number;
+  /** Active Witch spells on this unit (FR16); same spell never stacks. */
+  statuses: Set<SpellKind>;
+  /** The spell this unit casts if it is a Witch (keyed to her element — FR16). */
+  witchSpell: SpellKind;
   snapshot: UnitSnapshot;
 }
-
-/** The two melee classes (FR8); every other class stays idle until story 1.6. */
-const MELEE_CLASSES: ReadonlySet<UnitClass> = new Set(['knight', 'mercenary']);
 
 /**
  * Resolves an entire **battle** from a validated `MatchSetup` into an
@@ -31,10 +34,9 @@ const MELEE_CLASSES: ReadonlySet<UnitClass> = new Set(['knight', 'mercenary']);
  * logs on any platform (FR20) — all randomness comes from the setup's seed
  * via the named streams (AD-10).
  *
- * Story 1.5 scope: melee combat (Knight, Mercenary — FR7/FR8 targeting,
- * FR14/FR15 damage), deaths and the FR18 instant wipe, and real judging.
- * Ranged/magic/heal/status classes stay `ActionSkipped { reason: 'idle' }`
- * until story 1.6.
+ * Story 1.6: the full roster acts — melee (FR8), Archer (FR9), Mage blast
+ * (FR10), Cleric heal/staff (FR11), Witch spells (FR12/FR16: sleep, poison,
+ * weaken, confusion) — over the FR13 timeline with FR18 judging.
  *
  * @throws InvalidMatchSetupError on malformed input — the engine's only
  * throw path (spine errors convention).
@@ -54,11 +56,11 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
   // engagement (FR13), not once per battle.
   const engagement = 1;
 
-  // STREAM-ORDERING INVARIANT (FR20 replay stability): the tie coin flip must
-  // remain the FIRST draw from `streams.battle` in an engagement. Story 1.6
-  // draws confusion misfires from this stream AFTER this point — inserting
-  // any battle-stream draw before the flip changes every existing seed's
-  // outcome. Melee damage (1.5) is fully deterministic and draws nothing.
+  // STREAM-ORDERING INVARIANT (FR20 replay stability): battle-stream draws
+  // happen in EXACTLY this order — ① the engagement tie flip (always first),
+  // then ② per confused action in timeline order: one misfire draw, then
+  // (only when the misfire needs a uniform pick) one target draw. Nothing
+  // else draws. Reordering ANY of these changes every existing seed's battle.
   const tieWinner: Side = nextInt(streams.battle, 0, 1) === 0 ? 'A' : 'B';
   const order = timelineComparator(tieWinner);
 
@@ -73,14 +75,19 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
     const acting = units.filter((u) => u.alive && u.actionsLeft > 0).sort(order);
     for (const unit of acting) {
       if (!unit.alive) {
-        // A unit killed earlier THIS pass loses its queued turn (FR13). The
-        // type promises this event — emit it rather than dropping the turn.
+        // A unit killed earlier THIS pass loses its queued turn (FR13).
         unit.actionsLeft -= 1;
         events.push({ type: 'ActionSkipped', unit: unit.id, reason: 'dead' });
         continue;
       }
+      if (unit.statuses.has('sleep')) {
+        // Sleep voids remaining actions (FR16), narrated turn by turn (FR13).
+        unit.actionsLeft -= 1;
+        events.push({ type: 'ActionSkipped', unit: unit.id, reason: 'asleep' });
+        continue;
+      }
       unit.actionsLeft -= 1;
-      const turnEvents = takeTurn(unit, units);
+      const turnEvents = takeTurn(unit, units, streams.battle);
       events.push(...turnEvents);
       // Only a death can change the alive-set — skip the wipe scan otherwise.
       if (turnEvents.some((e) => e.type === 'UnitDied')) {
@@ -88,6 +95,25 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
         if (wiped !== undefined) break battle; // FR18: wipe ends it, unspent actions lost
       }
     }
+  }
+
+  // Poison ticks at the NATURAL end of the engagement only, before judging
+  // (FR16; recorded spec decision: an instant wipe short-circuits per FR18's
+  // "instant win" and skips poison — FR19's wipeout mode revisits in 1.10).
+  // Ticks run in unit order; the EngagementEnded snapshot includes them.
+  // A poison mutual wipe becomes WipeState 'both' → judge() returns a draw.
+  if (wiped === undefined) {
+    for (const unit of units) {
+      if (!unit.alive || !unit.statuses.has('poison')) continue;
+      const damage = BALANCE.formulas.poisonDamage;
+      unit.hp = Math.max(0, unit.hp - damage);
+      events.push({ type: 'PoisonTicked', unit: unit.id, damage, hpAfter: unit.hp });
+      if (unit.hp === 0) {
+        unit.alive = false;
+        events.push({ type: 'UnitDied', unit: unit.id });
+      }
+    }
+    wiped = wipedSide(judgedView(units));
   }
 
   const hp: Record<UnitId, number> = {};
@@ -106,51 +132,209 @@ function judgedView(units: readonly UnitState[]) {
   return units.map((u) => ({ side: u.side, alive: u.alive, hp: u.hp, maxHp: u.snapshot.maxHp }));
 }
 
+/** Projects units onto the targeting-candidate shape (parallel by contract). */
+function candidatesOf(units: readonly UnitState[]): MeleeCandidate[] {
+  return units.map((u) => ({ rowIndex: u.rowIndex, colIndex: u.colIndex, alive: u.alive }));
+}
+
 /**
- * One unit's action (FR13): melee classes attack per FR7/FR8; every other
- * class idles until story 1.6. Returns the events the turn produced.
- * Targeting is re-evaluated per attack (FR8) — this runs fresh every swing.
+ * One unit's action (FR13). A confused unit first draws the misfire check
+ * (FR16); on a calm draw (and for everyone else) it acts by class: melee
+ * (FR8), Archer (FR9), Mage blast (FR10), Cleric heal/staff (FR11), Witch
+ * cast (FR12). Targeting is re-evaluated per attack — this runs fresh each
+ * turn.
  */
-function takeTurn(unit: UnitState, units: UnitState[]): BattleEvent[] {
-  if (!MELEE_CLASSES.has(unit.class)) {
-    return [{ type: 'ActionSkipped', unit: unit.id, reason: 'idle' }];
+function takeTurn(unit: UnitState, units: UnitState[], battle: Stream): BattleEvent[] {
+  if (unit.statuses.has('confusion')) {
+    const misfires = nextInt(battle, 0, 1) === 1;
+    if (misfires) {
+      return [{ type: 'ActionMisfired', unit: unit.id }, ...misfire(unit, units, battle)];
+    }
   }
+  return act(unit, units);
+}
 
+/** The unit's NORMAL action by class. */
+function act(unit: UnitState, units: UnitState[]): BattleEvent[] {
   const enemies = units.filter((u) => u.side !== unit.side);
-  const targetIdx = selectMeleeTarget(
-    unit.colIndex,
-    enemies.map((e) => ({ rowIndex: e.rowIndex, colIndex: e.colIndex, alive: e.alive })),
-  );
-  if (targetIdx === undefined) {
-    // No living reachable enemy (FR8 no-bypass): the action is spent unused.
-    return [{ type: 'ActionSkipped', unit: unit.id, reason: 'idle' }];
-  }
 
-  const target = enemies[targetIdx] as UnitState;
-  const damage = physicalDamage(unit.class, target.class);
-  target.hp = Math.max(0, target.hp - damage);
-  const out: BattleEvent[] = [
-    { type: 'UnitAttacked', source: unit.id, targets: [{ unit: target.id, damage, hpAfter: target.hp }] },
-  ];
-  if (target.hp === 0) {
-    target.alive = false;
-    out.push({ type: 'UnitDied', unit: target.id });
+  switch (unit.class) {
+    case 'knight':
+    case 'mercenary': {
+      const idx = selectMeleeTarget(unit.colIndex, candidatesOf(enemies));
+      if (idx === undefined) return skip(unit);
+      return strike(unit, [enemies[idx] as UnitState], physicalDamage);
+    }
+    case 'archer': {
+      const idx = selectRearmostTarget(unit.colIndex, candidatesOf(enemies));
+      if (idx === undefined) return skip(unit);
+      return strike(unit, [enemies[idx] as UnitState], physicalDamage);
+    }
+    case 'mage': {
+      const row = selectBlastRow(candidatesOf(enemies));
+      if (row === undefined) return skip(unit);
+      const targets = enemies.filter((e) => e.alive && e.rowIndex === row);
+      return strike(unit, targets, magicDamage);
+    }
+    case 'cleric': {
+      const allies = units.filter((u) => u.side === unit.side && u.alive);
+      const patient = lowestHpFraction(allies);
+      if (patient !== undefined && patient.hp < patient.snapshot.maxHp) {
+        const amount = Math.min(healAmount(unit.class), patient.snapshot.maxHp - patient.hp);
+        patient.hp += amount;
+        return [{ type: 'UnitHealed', source: unit.id, target: patient.id, amount, hpAfter: patient.hp }];
+      }
+      // Nobody damaged: the weak STR staff attack with magic targeting (FR11).
+      const idx = selectRearmostTarget(unit.colIndex, candidatesOf(enemies));
+      if (idx === undefined) return skip(unit);
+      return strike(unit, [enemies[idx] as UnitState], physicalDamage);
+    }
+    case 'witch': {
+      // Prefer unaffected targets (FR12): magic targeting over the unaffected
+      // pool first; if every reachable enemy already bears her spell, the
+      // cast is wasted — no stack (FR16) — and fizzles (recorded decision).
+      const unaffected = enemies.map((e) => ({
+        rowIndex: e.rowIndex,
+        colIndex: e.colIndex,
+        alive: e.alive && !e.statuses.has(unit.witchSpell),
+      }));
+      const preferredIdx = selectRearmostTarget(unit.colIndex, unaffected);
+      if (preferredIdx !== undefined) {
+        const target = enemies[preferredIdx] as UnitState;
+        target.statuses.add(unit.witchSpell);
+        return [{ type: 'StatusApplied', source: unit.id, target: target.id, spell: unit.witchSpell }];
+      }
+      const anyIdx = selectRearmostTarget(unit.colIndex, candidatesOf(enemies));
+      if (anyIdx === undefined) return skip(unit);
+      return [{ type: 'ActionFizzled', unit: unit.id }];
+    }
   }
-  return out;
+}
+
+/**
+ * FR16 Wind→Confusion misfire redirects, per the confused unit's class.
+ * The caller has already emitted the `ActionMisfired` marker and consumed
+ * the misfire draw; a uniform target pick (when needed) is the SECOND draw.
+ * Misfire ally picks EXCLUDE the confused unit itself; the cleric's enemy
+ * pick is any living enemy (recorded decisions).
+ */
+function misfire(unit: UnitState, units: UnitState[], battle: Stream): BattleEvent[] {
+  const allies = units.filter((u) => u.side === unit.side && u.alive && u.id !== unit.id);
+  const enemies = units.filter((u) => u.side !== unit.side && u.alive);
+
+  switch (unit.class) {
+    case 'knight':
+    case 'mercenary':
+    case 'archer': {
+      if (allies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
+      const target = allies[nextInt(battle, 0, allies.length - 1)] as UnitState;
+      return strike(unit, [target], physicalDamage);
+    }
+    case 'mage': {
+      // Blasts its OWN fullest row (recorded decision: the mage itself counts
+      // and can be struck by its own blast).
+      const own = units.filter((u) => u.side === unit.side);
+      const row = selectBlastRow(candidatesOf(own));
+      if (row === undefined) return [{ type: 'ActionFizzled', unit: unit.id }];
+      const targets = own.filter((u) => u.alive && u.rowIndex === row);
+      return strike(unit, targets, magicDamage);
+    }
+    case 'cleric': {
+      if (enemies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
+      const patient = enemies[nextInt(battle, 0, enemies.length - 1)] as UnitState;
+      const amount = Math.min(healAmount(unit.class), patient.snapshot.maxHp - patient.hp);
+      patient.hp += amount;
+      return [{ type: 'UnitHealed', source: unit.id, target: patient.id, amount, hpAfter: patient.hp }];
+    }
+    case 'witch': {
+      if (allies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
+      const target = allies[nextInt(battle, 0, allies.length - 1)] as UnitState;
+      if (target.statuses.has(unit.witchSpell)) return [{ type: 'ActionFizzled', unit: unit.id }]; // no stack
+      target.statuses.add(unit.witchSpell);
+      return [{ type: 'StatusApplied', source: unit.id, target: target.id, spell: unit.witchSpell }];
+    }
+  }
+}
+
+/** An action spent with no valid target (FR8/FR9 no-bypass). */
+function skip(unit: UnitState): BattleEvent[] {
+  return [{ type: 'ActionSkipped', unit: unit.id, reason: 'idle' }];
+}
+
+/**
+ * Applies one attack from `source` to `targets` (one entry for melee/ranged/
+ * staff; the whole struck row for a blast — AD-12 one event per action).
+ * Damage runs the FIXED pipeline with the source's Weaken status; each kill
+ * appends a `UnitDied` after the single `UnitAttacked`, in target order.
+ */
+function strike(
+  source: UnitState,
+  targets: UnitState[],
+  formula: (a: UnitClass, d: UnitClass, weakened?: boolean) => number,
+): BattleEvent[] {
+  const weakened = source.statuses.has('weaken');
+  const hits: AttackTarget[] = [];
+  const deaths: BattleEvent[] = [];
+  for (const target of targets) {
+    const damage = formula(source.class, target.class, weakened);
+    target.hp = Math.max(0, target.hp - damage);
+    hits.push({ unit: target.id, damage, hpAfter: target.hp });
+    if (target.hp === 0 && target.alive) {
+      target.alive = false;
+      deaths.push({ type: 'UnitDied', unit: target.id });
+    }
+  }
+  return [{ type: 'UnitAttacked', source: source.id, targets: hits }, ...deaths];
+}
+
+/**
+ * FR11's patient: the living ally with the LOWEST exact HP fraction —
+ * compared by integer cross-multiplication (hp_i × maxHp_j vs hp_j × maxHp_i),
+ * never floored percents; ties go to the lowest unit order (recorded decision).
+ */
+function lowestHpFraction(allies: readonly UnitState[]): UnitState | undefined {
+  let best: UnitState | undefined;
+  for (const u of allies) {
+    if (best === undefined || u.hp * best.snapshot.maxHp < best.hp * u.snapshot.maxHp) {
+      best = u;
+    }
+  }
+  return best;
 }
 
 /**
  * FR14/FR15 physical damage, integer math in FIXED order (FR20):
  * base = STR − floor(VIT/2) → RPS floor (×3/2 advantage, ×3/4 disadvantage,
- * ×1 neutral) → [status modifiers, story 1.6] → min-damage clamp LAST.
- * Class-agnostic pure arithmetic (exported for direct table-driven tests);
- * combat callers only ever pass melee attackers.
+ * ×1 neutral) → Weaken halving if the attacker is weakened (FR16, floor) →
+ * min-damage clamp LAST. Class-agnostic pure arithmetic (exported for
+ * direct table-driven tests).
  */
-export function physicalDamage(attacker: UnitClass, defender: UnitClass): number {
+export function physicalDamage(attacker: UnitClass, defender: UnitClass, weakened = false): number {
+  return damagePipeline(BALANCE.classes[attacker].str, attacker, defender, weakened, 'vit');
+}
+
+/**
+ * FR10 magic damage: INT − floor(MEN/2), then the same FIXED order as
+ * physical (RPS → Weaken → min-1). Per-target — the Mage blast calls this
+ * once per unit in the struck row.
+ */
+export function magicDamage(attacker: UnitClass, defender: UnitClass, weakened = false): number {
+  return damagePipeline(BALANCE.classes[attacker].int, attacker, defender, weakened, 'men');
+}
+
+/** FR11 heal amount: floor(INT × 5/4); the EFFECTIVE restore is capped at max HP by the caller. */
+export function healAmount(healer: UnitClass): number {
+  const { heal } = BALANCE.formulas;
+  return Math.floor((BALANCE.classes[healer].int * heal.num) / heal.den);
+}
+
+/** Shared FIXED-order damage pipeline (FR15/FR16/FR20): base → RPS → weaken → min clamp. */
+function damagePipeline(power: number, attacker: UnitClass, defender: UnitClass, weakened: boolean, mitigation: 'vit' | 'men'): number {
   const { formulas, rpsBeats, classes } = BALANCE;
-  const base = classes[attacker].str - Math.floor(classes[defender].vit / 2);
+  const base = power - Math.floor(classes[defender][mitigation] / 2);
   const rps = rpsBeats[attacker] === defender ? formulas.rpsAdvantage : rpsBeats[defender] === attacker ? formulas.rpsDisadvantage : undefined;
-  const modified = rps === undefined ? base : Math.floor((base * rps.num) / rps.den);
+  let modified = rps === undefined ? base : Math.floor((base * rps.num) / rps.den);
+  if (weakened) modified = Math.floor(modified / 2);
   return Math.max(formulas.minDamage, modified);
 }
 
@@ -171,6 +355,8 @@ function buildUnits(setup: MatchSetup): UnitState[] {
         alive: true,
         hp: stats.hp,
         actionsLeft: stats.actions[placement.row],
+        statuses: new Set(),
+        witchSpell: BALANCE.elementSpells[unit.element],
         snapshot: {
           id: `${side}:${index}`,
           side,

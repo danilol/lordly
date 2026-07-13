@@ -10,6 +10,8 @@ export const ENGINE_NAME = 'lordly-engine';
 export { ALL_CLASSES, ALL_COLS, ALL_ELEMENTS, ALL_ROWS, ALL_SIDES, LOG_VERSION } from './types';
 export type { Col, Element, MatchSetup, Mode, Placement, Row, Side, SpellKind, Unit, UnitClass, UnitId } from './types';
 export type {
+  ActionFizzled,
+  ActionMisfired,
   ActionSkipped,
   AttackTarget,
   BattleEnded,
@@ -18,11 +20,14 @@ export type {
   BattleStarted,
   EngagementEnded,
   PassStarted,
+  PoisonTicked,
+  StatusApplied,
   UnitAttacked,
   UnitDied,
+  UnitHealed,
   UnitSnapshot,
 } from './types';
-export { resolveBattle } from './resolve';
+export { healAmount, magicDamage, physicalDamage, resolveBattle } from './resolve';
 export { InvalidMatchSetupError, validateMatchSetup } from './validate';
 export type { MatchSetupViolation } from './validate';
 export { BALANCE } from './balance';
