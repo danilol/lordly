@@ -81,7 +81,7 @@ action_items:
   - epic: 1
     action: "Commit & deploy story 1.10 (wipeout + review patches, uncommitted at retro time) — CI green, wipeout playable on prod URL"
     owner: "Amelia (dev)"
-    status: open
+    status: done  # 2026-07-13: commits b904b03 + beca2c6 pushed, CI run 29260695290 green incl. deploy job
   - epic: 1
     action: "Create & sequence the pre-epic-2 tech-debt story (correct-course commitment): lint/format gate, blurry-text ACCESSIBILITY investigation (HIGH, acceptance on Danilo's device), template cruft, engine allocation churn, tsconfig asymmetry"
     owner: "John (scoping) -> Amelia (dev)"
