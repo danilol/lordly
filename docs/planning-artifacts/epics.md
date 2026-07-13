@@ -111,6 +111,8 @@ FR28: Epic 3 - Battle history + replay
 FR29: Epic 3 - PWA install/offline
 FR30: Epic 1 - Mobile-first portrait touch layout
 FR31: Epic 2 - CC pixel-art assets + credits screen
+FR32: Epic 4 (post-MVP) - Per-row move variety
+FR33: Epic 4 (post-MVP) - Defensive "Guard" move type
 
 ## Epic List
 
@@ -126,7 +128,9 @@ The OB64 fantasy lands: CC pixel-art sprites with idle/attack/hurt/death animati
 The game becomes a real PWA: installable, fully offline for vs-AI, verified against the performance budget on a mid-range phone — and battle history arrives: last 10 matches on-device, replayable tick-for-tick via determinism.
 **FRs covered:** FR28, FR29 (+ NFR1 verification)
 
-**Future (outside MVP breakdown):** Link-play 1v1 via shareable URL — its engine seam (AD-1/AD-3/AD-11) is already fixed; broken down when the epic is scheduled.
+**Future (outside MVP breakdown):**
+- Link-play 1v1 via shareable URL — its engine seam (AD-1/AD-3/AD-11) is already fixed; broken down when the epic is scheduled.
+- **Epic 4: Position-dependent move variety** — per-row move-*kind* variation per class (FR32/FR33), including a new defensive "Guard" move type. Touches AD-4 (new domain vocabulary), AD-12 (BattleEvent union extension → logVersion bump), and AD-8 (balance-table schema → balanceVersion bump) — a PM/Architect design pass at scoping time, not a Direct Adjustment to Epic 1-3's shipped/planned stories. Broken down into stories when scheduled.
 
 ## Epic 1: Play a complete match against the AI on your phone
 
@@ -372,8 +376,8 @@ So that Clerics and Witches get room to shine.
 **And** `EngagementEnded` events delimit engagements in the log; determinism, termination, and golden-battle tests cover the mode (NFR2).
 
 **Given** the MVP UI
-**When** mode is selected
-**Then** single-engagement remains the default; wipeout is reachable behind a dev/debug toggle only — surfacing it as a player-facing option is a product decision deferred past this epic.
+**When** a player starts a match
+**Then** they can choose between two modes before drafting — **Standard** (single engagement, FR17, the default) and **Wipeout** (engagements repeat until one side falls, FR19, capped at 5 engagements) — surfaced as a real, player-facing toggle (e.g. on Home or Draft), not a dev/debug-only affordance. (Product decision made — see PRD Open Item 2.)
 
 ## Epic 2: The battle becomes a show
 
@@ -418,6 +422,11 @@ So that watching my plan succeed or collapse is the payoff of the match.
 **Given** the animation runs on a Pixel 6a-class phone
 **When** the busiest battle plays
 **Then** the scene sustains the 60 fps target / 30 floor (NFR1; full-budget verification happens in Epic 3).
+
+**Given** the Battle scene is playing
+**When** the player taps a "Log" toggle
+**Then** a collapsible panel beneath the board expands to show a scrolling text narration of the same `BattleLog` events already driving the animation (e.g. "Knight A:0 struck Archer B:1 for 12 — 78→66 HP"), collapsing again on a second tap
+**And** the panel reads directly from the log the scene already holds — no new data, no re-derivation (AD-2) — and does not pause or alter the animated playback.
 
 ### Story 2.3: Watchability controls and a worthy result screen
 

@@ -2,7 +2,7 @@
 title: "PRD: Lord Battle Tactics"
 status: final
 created: 2026-07-11
-updated: 2026-07-12
+updated: 2026-07-13
 ---
 
 # PRD: Lord Battle Tactics
@@ -109,6 +109,11 @@ The two grids face each other: front rows adjacent, and each column directly fac
 - **FR23.** A battle-speed control (at minimum: normal / fast ×2) and a skip-to-result affordance. `[ASSUMPTION: watching is the payoff, but rematch grinding needs fast-forward]`
 - **FR31. Art direction.** All visuals come from **free/CC fantasy pixel-art sprite packs** (itch.io, OpenGameArt, Kenney) — retro, OB64-adjacent feel with zero custom art production in the MVP. Every unit needs at minimum: idle, attack/cast, hurt, and death representations (frame animation or tween-based). License attributions are tracked in the repo and shown on an in-game credits screen.
 
+### Feature 6b — Position-dependent move variety (post-MVP, Epic 4)
+
+- **FR32. Per-row move variety.** For a class whose row already varies its *action count* (FR15), the row may also vary the *kind* of action taken, not just how many. Illustrative examples volunteered by the creator (not exhaustive — the full per-class table is an Epic 4 design task): a Knight in the front row throws 2× a melee "Sword Slash" (today's FR8 behavior); in the back row it instead performs a defensive move ("Shield Cover") in place of attacking. A Mage in the front row makes a weak physical "Staff Attack" instead of its row blast (mirroring the Cleric's existing no-target fallback, FR11); in the back row it casts its full row blast (FR10) at increased frequency. `[ASSUMPTION: the complete per-class, per-row move table — including Archer/Cleric/Witch variants — is undesigned; Epic 4 scoping defines it]`
+- **FR33. Defensive move type ("Guard").** At least one class/row combination (e.g. back-row Knight) substitutes an attack action for a new defensive action category not present in the MVP ruleset: raising the unit's damage mitigation for the remainder of the engagement, *or* negating one incoming attack outright. `[ASSUMPTION: which of the two mechanics — or both — is undecided; this is the core new-mechanic design question for Epic 4, including its interaction with RPS (FR14) and the engine's closed BattleEvent union (AD-12)]`
+
 ### Feature 7 — AI Opponent
 
 - **FR24.** The AI plays by the exact rules a human does: it commits a composition, placement, and Witch spells with **no knowledge of the player's hidden choices**.
@@ -152,13 +157,15 @@ The two grids face each other: front rows adjacent, and each column directly fac
 - **Parries** (paired with the DEX mechanics)
 - **Squad-leader mechanics** (leader unit, leader-death rout — a 5-slot-era candidate)
 - Additional classes and 5-slot squads (top post-MVP priority)
+- **Position-dependent move variety (FR32/FR33)** — per-row move-*kind* variation building on FR15's per-row action *counts*; landing zone: Epic 4 (post-MVP).
 
 ## 7. Open Items
 
 1. **Balance numbers** (FR14–FR16) are unproven until the NFR4 harness and playtests run — expected to change; not a phase blocker.
-2. **Until-wipeout mode** (FR19): decide during epic planning whether it makes MVP or ships after; single-engagement is the committed mode.
+2. **Until-wipeout mode** (FR19): the UI-exposure decision is made — when story 1.10 ships, mode is a real player-facing choice (Standard vs. Wipeout), not a dev-only toggle. Whether 1.10 itself lands in MVP scope or ships after remains the epic-planning call; single-engagement stays the default either way.
 3. **Battle speed/skip default** (FR23): watch first-time vs. grind behavior in playtests.
 4. **Fifth-class-era point budgets, tactics orders, large monsters:** parked in the brief addendum's post-MVP roadmap; not PRD concerns.
+5. **Position-dependent move variety (FR32/FR33):** the full per-class per-row move table and the exact Guard mechanic are undesigned — a design pass at Epic 4 scoping, not a current-epic concern.
 
 ## 8. Glossary
 

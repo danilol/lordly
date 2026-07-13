@@ -42,7 +42,7 @@
 # - Story 1-10 (until-wipeout) is a STRETCH story: ship only if cheap (PRD FR19)
 
 generated: 2026-07-12T03:18:30
-last_updated: 2026-07-13T12:52:00
+last_updated: 2026-07-13T13:15:00
 project: lordly
 project_key: NOKEY
 tracking_system: file-system
@@ -73,3 +73,4 @@ development_status:
   3-3-install-it-play-it-offline: backlog
   3-4-the-performance-verdict: backlog
   epic-3-retrospective: optional
+  epic-4: backlog  # Position-dependent move variety (FR32/FR33) — post-MVP, added via correct-course 2026-07-13. Stories pending a PM/Architect design pass; see sprint-change-proposal-2026-07-13.md.
