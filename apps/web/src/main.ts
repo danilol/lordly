@@ -1,6 +1,9 @@
 import { AUTO, Game, Scale } from 'phaser';
 import { BASE_HEIGHT, BASE_WIDTH, GAME_NAME, PALETTE } from './config/constants';
 import { HomeScene } from './scenes/HomeScene';
+import { DraftScene } from './scenes/DraftScene';
+import { PlacementScene } from './scenes/PlacementScene';
+import { RevealScene } from './scenes/RevealScene';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -16,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mode: Scale.FIT,
             autoCenter: Scale.CENTER_BOTH,
         },
-        scene: [HomeScene],
+        scene: [HomeScene, DraftScene, PlacementScene, RevealScene],
     });
 
 });

@@ -14,7 +14,37 @@ export const PALETTE = {
     buttonFill: 0x3a3a4e,
     buttonStroke: 0x55556a,
     buttonTextDisabled: '#77778a',
+    // Enabled-button + scene UI (story 1.8).
+    buttonText: '#e8d5a3',
+    buttonFillEnabled: 0x4a6a4e,
+    buttonStrokeEnabled: 0x7ab07f,
+    cardFill: 0x24243a,
+    cardStroke: 0x44445e,
+    cardSelected: 0x4a6a4e,
+    bodyText: '#c8c8d8',
+    mutedText: '#88889a',
+    gridCellFill: 0x20203a,
+    gridCellStroke: 0x44445e,
+    unitFill: 0x3a3a5e,
+    unitStroke: 0x7a7ab0,
 } as const;
 
 export const BUTTON_WIDTH = 220;
 export const BUTTON_HEIGHT = 56;
+
+// Scene labels (story 1.8) — kept here so tests and scenes share one source.
+export const DRAFT_TITLE = 'Draft your army';
+export const DRAFT_CONTINUE_LABEL = 'Continue';
+export const DRAFT_HINT = 'Tap a class to draft (3 units, duplicates allowed)';
+export const PLACEMENT_TITLE = 'Place your units';
+export const PLACEMENT_SUBMIT_LABEL = 'Ready';
+export const PLACEMENT_SUBMIT_HINT = 'place all 3 units';
+export const REVEAL_PLACEHOLDER = 'Both armies committed.\nReveal, battle & result arrive in story 1.9.';
+
+// FR3 element badge colors (cosmetic; the witch's spell keys off element — FR16).
+export const ELEMENT_COLORS: Record<'fire' | 'water' | 'wind' | 'earth', number> = {
+    fire: 0xc0563a,
+    water: 0x3a76c0,
+    wind: 0x6ab08a,
+    earth: 0xa98a52,
+} as const;

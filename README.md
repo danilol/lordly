@@ -27,7 +27,11 @@ pnpm typecheck     # typecheck every workspace package
 pnpm --filter web dev
 ```
 
-Then open http://localhost:8080.
+Then open http://localhost:8080. **Play vs AI** now leads through the playable
+draft → placement flow: tap class cards to draft three units (each rolls its
+element), continue to the grid, drag units into your 3×3 formation, and submit
+to lock in your board against the AI's hidden commit. Reveal, battle, and
+result arrive in a later story.
 
 ## Balancing harness
 

@@ -8,6 +8,7 @@ import {
     HOME_PLAY_LABEL,
     PALETTE,
 } from '../config/constants';
+import { MatchFlow } from '../flow/MatchFlow';
 
 export class HomeScene extends Scene {
     constructor() {
@@ -27,17 +28,27 @@ export class HomeScene extends Scene {
             })
             .setOrigin(0.5);
 
-        // Disabled until story 1.8 wires the Draft scene.
+        // Enabled (story 1.8): starts a fresh match and enters the Draft scene.
         const button = this.add
-            .rectangle(BASE_WIDTH / 2, BASE_HEIGHT * 0.62, BUTTON_WIDTH, BUTTON_HEIGHT, PALETTE.buttonFill)
-            .setStrokeStyle(2, PALETTE.buttonStroke);
+            .rectangle(BASE_WIDTH / 2, BASE_HEIGHT * 0.62, BUTTON_WIDTH, BUTTON_HEIGHT, PALETTE.buttonFillEnabled)
+            .setStrokeStyle(2, PALETTE.buttonStrokeEnabled)
+            .setInteractive({ useHandCursor: true });
 
         this.add
             .text(button.x, button.y, HOME_PLAY_LABEL, {
                 fontFamily: 'Arial',
                 fontSize: '20px',
-                color: PALETTE.buttonTextDisabled,
+                color: PALETTE.buttonText,
             })
             .setOrigin(0.5);
+
+        button.on('pointerup', () => {
+            // MatchFlow owns match truth and is passed EXPLICITLY between scenes
+            // (AD-5) — never via the Phaser registry. A fresh flow per Play tap;
+            // story 1.9's Result→Rematch reuses the flow and calls startMatch again.
+            const flow = new MatchFlow();
+            flow.startMatch();
+            this.scene.start('Draft', { flow });
+        });
     }
 }
