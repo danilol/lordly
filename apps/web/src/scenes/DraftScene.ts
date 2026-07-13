@@ -1,7 +1,17 @@
 import { GameObjects, Scene } from 'phaser';
 import { ALL_CLASSES, BALANCE } from '@lordly/engine';
 import type { UnitClass } from '@lordly/engine';
-import { BASE_WIDTH, DRAFT_CONTINUE_LABEL, DRAFT_HINT, DRAFT_TITLE, ELEMENT_COLORS, PALETTE, MIN_FONT_PX } from '../config/constants';
+import {
+  BASE_WIDTH,
+  DRAFT_CONTINUE_LABEL,
+  DRAFT_HINT,
+  DRAFT_TITLE,
+  ELEMENT_COLORS,
+  PALETTE,
+  MIN_FONT_PX,
+  CARD_CLASS_FONT_PX,
+  CLASS_ABBREVIATIONS,
+} from '../config/constants';
 import { canAddUnit, canContinue, classRulesCard } from '../flow/draftModel';
 import type { MatchFlow } from '../flow/MatchFlow';
 import { addHomeBack, crispText } from '../config/ui';
@@ -121,7 +131,11 @@ export class DraftScene extends Scene {
       this.dynamic.push(slot);
       if (unit) {
         const badge = this.add.rectangle(x + slotW - 14, trayY + 14, 16, 16, ELEMENT_COLORS[unit.element]).setOrigin(0.5);
-        const name = crispText(this, x + 8, trayY + 10, unit.class, { fontFamily: 'Arial Black', fontSize: '11px', color: PALETTE.title });
+        const name = crispText(this, x + 8, trayY + 10, CLASS_ABBREVIATIONS[unit.class], {
+          fontFamily: 'Arial Black',
+          fontSize: `${CARD_CLASS_FONT_PX}px`,
+          color: PALETTE.title,
+        });
         const el = crispText(this, x + 8, trayY + 28, unit.element, { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.bodyText });
         const hint = crispText(this, x + 8, trayY + 42, 'tap to remove', { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.mutedText });
         slot.setInteractive({ useHandCursor: true }).on('pointerup', () => {

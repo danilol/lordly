@@ -10,6 +10,8 @@ import {
   PLACEMENT_SUBMIT_LABEL,
   PLACEMENT_TITLE,
   MIN_FONT_PX,
+  CARD_CLASS_FONT_PX,
+  CLASS_ABBREVIATIONS,
 } from '../config/constants';
 import { addHomeBack, crispText } from '../config/ui';
 import { placedCount } from '../flow/placement';
@@ -122,7 +124,11 @@ export class PlacementScene extends Scene {
       const cell = state.playerPlacements[i] ?? null;
       const { x, y } = cell ? this.cellCenter(cell) : this.trayCenter(i);
       const body = this.add.rectangle(0, 0, 72, 60, PALETTE.unitFill).setStrokeStyle(2, PALETTE.unitStroke);
-      const name = crispText(this, 0, -12, unit.class, { fontFamily: 'Arial Black', fontSize: '11px', color: PALETTE.title }).setOrigin(0.5);
+      const name = crispText(this, 0, -12, CLASS_ABBREVIATIONS[unit.class], {
+        fontFamily: 'Arial Black',
+        fontSize: `${CARD_CLASS_FONT_PX}px`,
+        color: PALETTE.title,
+      }).setOrigin(0.5);
       const el = crispText(this, 0, 4, unit.element, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
       const badge = this.add.rectangle(24, -18, 12, 12, ELEMENT_COLORS[unit.element]).setOrigin(0.5);
       const c = this.add.container(x, y, [body, name, el, badge]);

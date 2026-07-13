@@ -1,4 +1,4 @@
-import type { Element } from '@lordly/engine';
+import type { Element, UnitClass } from '@lordly/engine';
 
 export const GAME_NAME = 'Lord Battle Tactics';
 
@@ -52,6 +52,23 @@ export const TEXT_RESOLUTION = 3;
 // comfortable reading size on a real phone (Danilo's device is the acceptance
 // test). The full type scale is the epic-2 UX spec's job — this is a FLOOR.
 export const MIN_FONT_PX = 10;
+
+// Class labels on the COMPACT unit cards (story 2.0 AC2 — accessibility,
+// confirmed by multiple readers on real devices): the full words cannot fit
+// a ~48px card at a readable size ('mercenary' overflows at 10px already),
+// so compact cards show 3-letter codes at CARD_CLASS_FONT_PX instead — 30%
+// bigger AND they fit. Keyed by the engine union (AD-4): a new class is a
+// compile error here, never a missing label. Full names remain where space
+// allows (the Draft class picker); 2.1's sprites make the word secondary.
+export const CLASS_ABBREVIATIONS: Record<UnitClass, string> = {
+  knight: 'KNI',
+  mercenary: 'MER',
+  archer: 'ARC',
+  mage: 'MAG',
+  cleric: 'CLE',
+  witch: 'WIT',
+} as const;
+export const CARD_CLASS_FONT_PX = 13;
 
 export const BUTTON_WIDTH = 220;
 export const BUTTON_HEIGHT = 56;

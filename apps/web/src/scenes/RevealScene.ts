@@ -12,6 +12,8 @@ import {
   REVEAL_HINT,
   REVEAL_TITLE,
   MIN_FONT_PX,
+  CARD_CLASS_FONT_PX,
+  CLASS_ABBREVIATIONS,
 } from '../config/constants';
 import { addHomeBack, crispText } from '../config/ui';
 import { screenCellCenter, toScreenCell } from '../flow/battleView';
@@ -80,7 +82,9 @@ export class RevealScene extends Scene {
     const stroke = unit.side === 'A' ? PALETTE.buttonStrokeEnabled : PALETTE.enemyLine;
     const nameColor = unit.side === 'A' ? PALETTE.playerText : PALETTE.enemyText;
     this.add.rectangle(x, y, 48, 40, PALETTE.unitFill).setStrokeStyle(2, stroke);
-    crispText(this, x, y - 6, unit.class, { fontFamily: 'Arial Black', fontSize: `${MIN_FONT_PX}px`, color: nameColor }).setOrigin(0.5);
+    crispText(this, x, y - 6, CLASS_ABBREVIATIONS[unit.class], { fontFamily: 'Arial Black', fontSize: `${CARD_CLASS_FONT_PX}px`, color: nameColor }).setOrigin(
+      0.5,
+    );
     crispText(this, x, y + 7, unit.element, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
     this.add.rectangle(x + 17, y - 12, 8, 8, ELEMENT_COLORS[unit.element]).setOrigin(0.5);
   }
