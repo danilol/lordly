@@ -4,7 +4,7 @@ baseline_commit: c15e25969c0007266ac3782e80cd1721596ec4be
 
 # Story 1.6: Full class roster — Archer, Mage, Cleric, and Witch
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -63,6 +63,13 @@ so that the rock-paper-scissors mind-game is complete.
 - [x] Task 8: Activate the ≥90% engine coverage gate (AC: 5, AD-7)
   - [x] Uncomment the prepared glob in root `vitest.config.ts` → `'packages/engine/**': { lines: 90 }` (the 1.1 placeholder exists for exactly this moment); verify `pnpm coverage` enforces it (engine sits ~95%)
   - [x] Full gate green: `pnpm -r typecheck`, `pnpm coverage`, `pnpm --filter web build`
+
+### Review Findings
+
+_Reviewed 2026-07-13 via `/code-review` at high effort (8 finder angles over diff f366c3b, run on Opus 4.8). No correctness bugs found: damage pipeline order re-derived against the Dev Notes worked examples, targeting semantics (rearmost-reachable, blast tie→rearmost, prefer-unaffected), poison/wipe short-circuit, and the battle-stream draw invariant all verified against the story spec. 2 findings, 1 applied._
+
+- [x] [Review][Patch] Confusion misfire chance was hardcoded (`nextInt(battle, 0, 1) === 1`) instead of reading `BALANCE.formulas.confusionMisfire` — the balance field was dead data: tuning it (+ version bump) would pass the AD-8 hash guard yet silently change nothing. Fix: draw `nextInt(battle, 0, den-1) >= den - num` — P(misfire) = num/den, and at the shipped {1,2} tuning bit-identical to the historical draw (same stream consumption, same outcome), so all goldens and confusion seed pins hold unchanged [packages/engine/src/resolve.ts].
+- [ ] [Review][Skipped] Witch cast's fizzle-vs-idle distinction computes a full `selectRearmostTarget` ranking and discards the index (boolean use only); a direct reachable-living-enemy existence check would state the intent. Cosmetic — deliberately not applied [packages/engine/src/resolve.ts].
 
 ## Dev Notes
 
@@ -172,3 +179,4 @@ claude-fable-5 (Claude Fable 5)
 ## Change Log
 
 - 2026-07-12: Story 1.6 implemented. The full roster acts: Archer rearmost sniping (FR9), Mage row blasts with per-target RPS and multi-kill fan-out (FR10), Cleric exact-fraction healing with cap + staff fallback (FR11), Witch casts with prefer-unaffected and all four spells (FR12/FR16) — sleep narrated, poison ticking at natural engagement end (can kill after the last action; mutual wipe → draw), weaken in the fixed damage order, confusion with per-class seeded misfires as marker+effect pairs. LOG_VERSION 3 completes the closed 12-event union (AD-12). 35 new tests, 5 goldens covering every class, engine 97.28% lines with the ≥90% coverage gate NOW ENFORCED (AD-7). All 7 spec decisions recorded in code.
+- 2026-07-13: Code review (2 findings, no correctness bugs). Applied: confusion misfire draw now reads `BALANCE.formulas.confusionMisfire` instead of a hardcoded 50% — bit-identical at the shipped {1,2} tuning, so goldens and seed pins unchanged (141 tests green, typecheck clean). Skipped as cosmetic: witch fizzle-check discarded-index cleanup. Story → done.

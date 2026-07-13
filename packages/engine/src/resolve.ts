@@ -146,7 +146,13 @@ function candidatesOf(units: readonly UnitState[]): MeleeCandidate[] {
  */
 function takeTurn(unit: UnitState, units: UnitState[], battle: Stream): BattleEvent[] {
   if (unit.statuses.has('confusion')) {
-    const misfires = nextInt(battle, 0, 1) === 1;
+    // Data-driven misfire chance (AD-8): P(misfire) = num/den. The draw spans
+    // [0, den-1] and misfires on the TOP `num` values, so at the shipped 1/2
+    // tuning this is bit-identical to the historical `nextInt(0,1) === 1` —
+    // same stream consumption, same outcome — and existing goldens/seed pins
+    // hold. Tuning the ratio now actually changes the roll (was hardcoded).
+    const { num, den } = BALANCE.formulas.confusionMisfire;
+    const misfires = nextInt(battle, 0, den - 1) >= den - num;
     if (misfires) {
       return [{ type: 'ActionMisfired', unit: unit.id }, ...misfire(unit, units, battle)];
     }
