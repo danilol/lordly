@@ -31,8 +31,12 @@ Then open http://localhost:8080.
 
 ## Balancing harness
 
-A headless AI-vs-AI sweep over the engine's strategy pool (NFR4) — the tool
-for spotting dominant strategies after any balance or pool change:
+A headless AI-vs-AI sweep over the engine's curated `STRATEGY_POOL` (NFR4) —
+the tool for spotting a dominant *AI archetype* after any balance or pool
+change. It only sweeps the boards the AI can pick; it says nothing about
+compositions a human player could draft but the AI pool doesn't cover — that
+broader balance question is a playtesting concern (PRD Open Item 1), not
+something this band certifies:
 
 ```sh
 pnpm --filter @lordly/engine sim                  # defaults: --runs=20 --seed=1 --threshold=0.65

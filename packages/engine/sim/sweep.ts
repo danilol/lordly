@@ -78,13 +78,23 @@ function compositionKey(archetype: StrategyArchetype): string {
 export function runSweep(pool: readonly StrategyArchetype[], config: SweepConfig): SweepReport {
   const tally = new Map<string, ArchetypeStats>();
   for (const a of pool) {
+    if (tally.has(a.id)) throw new Error(`runSweep: duplicate archetype id "${a.id}"`);
     tally.set(a.id, { id: a.id, name: a.name, composition: compositionKey(a), games: 0, wins: 0, draws: 0, winRate: 0 });
   }
 
   let totalGames = 0;
-  pool.forEach((archA, ai) => {
-    pool.forEach((archB, bi) => {
-      const pairIndex = ai * pool.length + bi;
+  pool.forEach((archA, indexA) => {
+    pool.forEach((archB, indexB) => {
+      const pairIndex = indexA * pool.length + indexB;
+      // A self-pairing (archA.id === archB.id) shares ONE tally entry for
+      // both "sides" (`tally.get` returns the identical object). Its
+      // "winner" is an artifact of tie-breaks/positional asymmetry between
+      // two IDENTICAL archetypes — it says nothing about dominance over
+      // OTHER strategies, so it is credited as a draw (0.5) unconditionally,
+      // as ONE game (review-caught defect: the original code counted it as
+      // TWO games, which happened to still average to a neutral 0.5 only by
+      // arithmetic coincidence — see the fixed test's derivation).
+      const selfPair = archA.id === archB.id;
       for (let run = 0; run < config.runsPerPair; run++) {
         // Deterministic uint32 seed schedule; >>> 0 keeps createStreams' contract.
         const seed = (config.baseSeed + pairIndex * config.runsPerPair + run) >>> 0;
@@ -94,6 +104,10 @@ export function runSweep(pool: readonly StrategyArchetype[], config: SweepConfig
         const statsA = tally.get(archA.id) as ArchetypeStats;
         const statsB = tally.get(archB.id) as ArchetypeStats;
         statsA.games += 1;
+        if (selfPair) {
+          statsA.draws += 1;
+          continue;
+        }
         statsB.games += 1;
         if (winner === 'A') statsA.wins += 1;
         else if (winner === 'B') statsB.wins += 1;

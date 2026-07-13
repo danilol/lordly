@@ -12,21 +12,59 @@ import { STRATEGY_POOL } from '../src/ai';
 import { runSweep } from './sweep';
 import type { SweepConfig } from './sweep';
 
+/** Dev-tool sanity cap: pool² × runs stays a manual-run-friendly size. */
+const MAX_RUNS = 500;
+
+/**
+ * Parses `--name=value`. Rejects (exit 2, clear message) rather than
+ * silently coercing: an empty value (`Number('') === 0`, not NaN), a
+ * non-finite value, or the flag repeated more than once.
+ */
 function arg(name: string, fallback: number): number {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  if (hit === undefined) return fallback;
-  const value = Number(hit.split('=')[1]);
-  if (!Number.isFinite(value)) {
-    console.error(`invalid --${name}: ${hit}`);
+  const hits = process.argv.filter((a) => a.startsWith(`--${name}=`));
+  if (hits.length > 1) {
+    console.error(`--${name} passed ${hits.length} times — pass it once`);
+    process.exit(2);
+  }
+  if (hits.length === 0) return fallback;
+  const raw = hits[0]!.split('=')[1] ?? '';
+  const value = Number(raw);
+  if (raw === '' || !Number.isFinite(value)) {
+    console.error(`invalid --${name}: ${hits[0]}`);
     process.exit(2);
   }
   return value;
 }
 
+const seedArg = arg('seed', 1);
+if (!Number.isInteger(seedArg) || seedArg < 0 || seedArg > 0xffffffff) {
+  // Matches createStreams' own uint32 contract (rng.ts) instead of silently
+  // wrapping via `>>> 0` — the engine throws on an out-of-range seed
+  // elsewhere; the CLI should be no more permissive than what it wraps.
+  console.error(`--seed must be a uint32 (0..4294967295), got ${seedArg}`);
+  process.exit(2);
+}
+
+const runsArg = arg('runs', 20);
+if (!Number.isFinite(runsArg) || runsArg < 1) {
+  console.error(`--runs must be a positive number, got ${runsArg}`);
+  process.exit(2);
+}
+if (runsArg > MAX_RUNS) {
+  console.error(`--runs must be at most ${MAX_RUNS} (pool² × runs stays manual-run-sized), got ${runsArg}`);
+  process.exit(2);
+}
+
+const thresholdArg = arg('threshold', 0.65);
+if (thresholdArg < 0 || thresholdArg > 1) {
+  console.error(`--threshold must be within [0, 1], got ${thresholdArg}`);
+  process.exit(2);
+}
+
 const config: SweepConfig = {
-  baseSeed: arg('seed', 1) >>> 0,
-  runsPerPair: Math.max(1, Math.floor(arg('runs', 20))),
-  threshold: arg('threshold', 0.65),
+  baseSeed: seedArg,
+  runsPerPair: Math.floor(runsArg),
+  threshold: thresholdArg,
 };
 
 const pool = STRATEGY_POOL;

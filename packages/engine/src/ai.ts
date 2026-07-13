@@ -46,11 +46,15 @@ export interface ChooseSetupOptions {
  * blast massacres stacked rows) roles. Curated EMPIRICALLY against the sim
  * harness (NFR4): matchups between fixed boards are near-deterministic, so
  * the pool was selected from a ~20-candidate matchup matrix to keep every
- * member's pool-relative aggregate win rate inside ~38–60% — the 65%
- * acceptance band in test/sim.test.ts is the tripwire. Deliberately absent:
- * the dominant knight/archer/mage full-RPS spread family (92% aggregate in
- * probing; only one hard counter exists in the candidate space) — left as
- * discoverable player tech rather than an AI board no pool could balance.
+ * member's pool-relative aggregate win rate inside a reasonable band. At
+ * the CI-pinned config (test/sim.test.ts, 285 games/archetype — a sample
+ * large enough to have converged past small-sample noise) that's verified
+ * as ~35–61%, comfortably under the 65% acceptance band. Deliberately
+ * absent: the dominant knight/archer/mage full-RPS spread family (92%
+ * aggregate in probing; only one hard counter exists in the candidate
+ * space) — left as discoverable player tech rather than an AI board no
+ * pool could balance (see README's Balancing harness section for the
+ * scope of what this band certifies).
  */
 export const STRATEGY_POOL: readonly StrategyArchetype[] = [
   {
@@ -177,17 +181,24 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
  * variety per archetype while preserving its row intent.
  */
 export function chooseSetup(pool: readonly StrategyArchetype[], stream: Stream, options?: ChooseSetupOptions): AiChoice {
+  if (pool.length === 0) {
+    throw new Error('chooseSetup: pool must be non-empty');
+  }
+
   const remaining = pool.filter((a) => a.id !== options?.exclude);
   const eligible = remaining.length > 0 ? remaining : pool;
 
   const picked = eligible[nextInt(stream, 0, eligible.length - 1)] as StrategyArchetype;
   const mirrored = nextInt(stream, 0, 1) === 1;
 
-  const placement = picked.placement.map(({ row, col }) => ({
-    row,
+  const placement = picked.placement.map(({ row, col }) => {
     // Owner-local left↔right mirror: col index i → 2 − i (center is its own mirror).
-    col: mirrored ? (ALL_COLS[ALL_COLS.length - 1 - ALL_COLS.indexOf(col)] as Placement['col']) : col,
-  })) as AiChoice['placement'];
+    const colIndex = ALL_COLS.indexOf(col);
+    if (colIndex === -1) {
+      throw new Error(`chooseSetup: archetype "${picked.id}" has invalid col "${String(col)}"`);
+    }
+    return { row, col: mirrored ? (ALL_COLS[ALL_COLS.length - 1 - colIndex] as Placement['col']) : col };
+  }) as AiChoice['placement'];
 
   return { archetypeId: picked.id, classes: [...picked.classes], placement };
 }

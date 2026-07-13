@@ -49,6 +49,18 @@ describe('STRATEGY_POOL curation (FR25)', () => {
   });
 });
 
+describe('chooseSetup guards (review-caught defensive gaps)', () => {
+  it('throws a clear, attributable error on an empty pool rather than a cryptic rng.ts RangeError', () => {
+    expect(() => chooseSetup([], aiStream(1))).toThrow(/chooseSetup: pool must be non-empty/);
+  });
+
+  it('throws a clear error if an archetype placement has a col outside ALL_COLS', () => {
+    const bad = { ...(STRATEGY_POOL[0] as (typeof STRATEGY_POOL)[number]) };
+    const badArchetype = { ...bad, placement: [{ row: 'front', col: 'nowhere' }, bad.placement[1], bad.placement[2]] } as unknown as (typeof STRATEGY_POOL)[number];
+    expect(() => chooseSetup([badArchetype], aiStream(1))).toThrow(/invalid col/);
+  });
+});
+
 describe('chooseSetup (FR24/FR25, AD-6, AD-10)', () => {
   it('is deterministic: the same seed and stream label give the identical choice', () => {
     const first = chooseSetup(STRATEGY_POOL, aiStream(0xc0ffee));
