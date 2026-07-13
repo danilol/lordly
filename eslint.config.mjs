@@ -35,7 +35,12 @@ export default tseslint.config(
     // list and the source-file census — keep both). The engine imports
     // nothing but pure-rand and its own modules, and touches no ambient
     // platform state.
-    files: ['packages/engine/src/**/*.ts'],
+    // `.mts`/`.cts` included so a future engine source can't escape via
+    // extension. This AST layer is NOT a full superset of the regex sieve in
+    // purity.test.ts — `localeCompare`, computed member access (`Math['random']`),
+    // and dynamic `import()`/`require()` can't be expressed cleanly here, so
+    // the sieve REMAINS the authority for those (both run; keep both).
+    files: ['packages/engine/src/**/*.{ts,mts,cts}'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -52,6 +57,7 @@ export default tseslint.config(
         'error',
         ...[
           'window',
+          'self', // worker/browser alias for window — self.crypto etc.
           'document',
           'localStorage',
           'fetch',
@@ -70,6 +76,8 @@ export default tseslint.config(
         'error',
         { object: 'Math', property: 'random', message: 'Use the named rng streams (AD-10) — Math.random breaks determinism (FR20).' },
         { object: 'Date', property: 'now', message: 'No wall clock in the engine (AD-1/FR20).' },
+        { object: 'Date', property: 'parse', message: 'Date.parse is locale/timezone-dependent — no wall clock in the engine (AD-1/FR20).' },
+        { object: 'Date', property: 'UTC', message: 'No wall clock in the engine (AD-1/FR20).' },
       ],
       'no-restricted-syntax': [
         'error',

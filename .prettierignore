@@ -1,0 +1,18 @@
+# Generated / vendored / non-code — keep Prettier scoped to source + tooling
+# config (story 2.0). Prose, markup, and workspace/deploy configs are left as
+# authored; reformatting them was out of scope for the lint-gate story.
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+pnpm-workspace.yaml
+docs
+_bmad
+.claude
+.github
+**/*.md
+**/*.html
+**/*.css
+**/*.yml
+**/*.yaml
+**/*.jsonc

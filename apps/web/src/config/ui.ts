@@ -2,29 +2,41 @@ import { GameObjects, Scene, Types } from 'phaser';
 import { BASE_HEIGHT, BASE_WIDTH, HOME_BACK_LABEL, PALETTE, TEXT_RESOLUTION } from './constants';
 
 /**
- * The text render resolution, resolved ONCE per page load (story 2.0 AC2 —
- * the accessibility fix for the real-device blur). A glyph texture is only
- * sharp when it carries at least one texture pixel per PHYSICAL screen pixel,
- * and the physical magnification of the 360×640 base is `Scale.FIT zoom ×
- * devicePixelRatio` — NOT devicePixelRatio alone. (The 1.8 fixed ×3 was blind
- * to both; a DPR-only fix still blurs on a large window, where FIT zoom runs
- * well past 1 — exactly what Danilo saw on his laptop.) `TEXT_RESOLUTION`
- * stays as the floor and 8 caps texture memory. The `?textres=N` query
- * override is the on-device comparison diagnostic, not a player setting.
+ * The text render resolution (story 2.0 AC2 — the accessibility fix for the
+ * real-device blur). A glyph texture is only sharp when it carries at least
+ * one texture pixel per PHYSICAL screen pixel, and the physical magnification
+ * of the 360×640 base ≈ `Scale.FIT zoom × devicePixelRatio` — NOT DPR alone.
+ * (The 1.8 fixed ×3 was blind to both; a DPR-only fix still blurs on a large
+ * window, where FIT zoom runs well past 1 — Danilo's laptop.) `TEXT_RESOLUTION`
+ * is the floor, 8 caps texture memory. `?textres=N` overrides for on-device
+ * comparison (a diagnostic, not a player setting).
+ *
+ * Resolved LAZILY on first use and memoized: `crispText` first runs inside a
+ * scene's `create()`, which is well after layout, so `innerWidth/innerHeight`
+ * are real. Computing at module-import time (before layout) risked a 0×0
+ * viewport flooring `fitZoom` to 1 and locking a blurry resolution for the
+ * session. `fitZoom` is approximated from the viewport rather than the Phaser
+ * parent element; any error is in the safe direction (over-estimate → sharper,
+ * capped at 8 — never blur). NOTE: memoized once — a resize/rotation that
+ * changes the zoom does not re-sharpen existing labels (deferred; see
+ * deferred-work.md → story-2.0 review).
  */
-function resolveTextResolution(): number {
-  if (typeof window === 'undefined') return TEXT_RESOLUTION;
+let cachedResolution: number | undefined;
+function textResolution(): number {
+  if (cachedResolution !== undefined) return cachedResolution;
+  if (typeof window === 'undefined') return TEXT_RESOLUTION; // SSR/test: don't memoize
   const param = new URLSearchParams(window.location.search).get('textres');
   const override = param === null ? NaN : Number(param);
   const fitZoom = Math.max(1, Math.min(window.innerWidth / BASE_WIDTH, window.innerHeight / BASE_HEIGHT));
   const dpr = window.devicePixelRatio || 1;
-  const resolution = Number.isFinite(override) && override >= 1 && override <= 8 ? override : Math.min(8, Math.max(TEXT_RESOLUTION, fitZoom * dpr));
-  // One-line boot diagnostic — the device comparison reads its numbers here.
-  console.info(`[lordly] textResolution=${resolution.toFixed(2)} (devicePixelRatio=${dpr}, fitZoom=${fitZoom.toFixed(2)})`);
-  return resolution;
+  cachedResolution = Number.isFinite(override) && override >= 1 && override <= 8 ? override : Math.min(8, Math.max(TEXT_RESOLUTION, fitZoom * dpr));
+  // Diagnostic gated behind ?textres so the device comparison keeps its
+  // readout without polluting the normal production console (story 2.0 review).
+  if (param !== null) {
+    console.info(`[lordly] textResolution=${cachedResolution.toFixed(2)} (devicePixelRatio=${dpr}, fitZoom=${fitZoom.toFixed(2)})`);
+  }
+  return cachedResolution;
 }
-
-const ACTIVE_TEXT_RESOLUTION = resolveTextResolution();
 
 /**
  * Adds a text object rendered at the resolved resolution so it stays sharp
@@ -33,7 +45,7 @@ const ACTIVE_TEXT_RESOLUTION = resolveTextResolution();
  * its labels through this so the crispness fix lives in exactly one place.
  */
 export function crispText(scene: Scene, x: number, y: number, text: string | string[], style?: Types.GameObjects.Text.TextStyle): GameObjects.Text {
-  return scene.add.text(x, y, text, style).setResolution(ACTIVE_TEXT_RESOLUTION);
+  return scene.add.text(x, y, text, style).setResolution(textResolution());
 }
 
 /**

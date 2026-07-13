@@ -47,10 +47,11 @@ export const PALETTE = {
 // Applied via `crispText` (config/ui.ts) so every label shares one setting.
 export const TEXT_RESOLUTION = 3;
 
-// Minimum label font size (story 2.0 AC2 — accessibility): no crispText label
-// renders below this. Epic 1 accumulated 8–9px micro-labels that were below
-// comfortable reading size on a real phone (Danilo's device is the acceptance
-// test). The full type scale is the epic-2 UX spec's job — this is a FLOOR.
+// Minimum label font size (story 2.0 AC2 — accessibility). Callers pass this
+// for their smallest labels; it is a shared floor CONSTANT, not enforced by
+// crispText (larger sizes stay their own literals). Epic 1 accumulated 8–9px
+// micro-labels below comfortable reading size on a real phone (Danilo's device
+// is the acceptance test). The full type scale is the epic-2 UX spec's job.
 export const MIN_FONT_PX = 10;
 
 // Class labels on the COMPACT unit cards (story 2.0 AC2 — accessibility,
@@ -67,7 +68,7 @@ export const CLASS_ABBREVIATIONS: Record<UnitClass, string> = {
   mage: 'MAG',
   cleric: 'CLE',
   witch: 'WIT',
-} as const;
+};
 export const CARD_CLASS_FONT_PX = 13;
 
 export const BUTTON_WIDTH = 220;

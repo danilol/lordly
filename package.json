@@ -10,8 +10,8 @@
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
-    "lint": "eslint . && prettier --check \"packages/**/*.{ts,mjs}\" \"apps/**/*.{ts,mjs}\" \"*.mjs\"",
-    "lint:fix": "eslint . --fix && prettier --write \"packages/**/*.{ts,mjs}\" \"apps/**/*.{ts,mjs}\" \"*.mjs\""
+    "lint": "eslint . && prettier --check .",
+    "lint:fix": "eslint . --fix && prettier --write ."
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

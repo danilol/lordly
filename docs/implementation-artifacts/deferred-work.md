@@ -18,6 +18,10 @@
 
 - ~~**Font still reads as blurry on Danilo's actual Android device**~~ **ADDRESSED (story 2.0 AC2, reclassified ACCESSIBILITY at the epic-1 retro):** `crispText` is now `devicePixelRatio`-aware (floor `TEXT_RESOLUTION = 3`, `?textres=N` diagnostic override for on-device comparison) and a `MIN_FONT_PX = 10` floor raised the ten 8–9px micro-labels. **Final sign-off = Danilo reading his own phone** (the story's acceptance gate); if it still reads blurry there, reopen with the on-device `?textres` comparison data.
 
+## Deferred from: code review of story-2.0 (2026-07-13)
+
+- **Text resolution never recomputes on resize / orientation change** — `crispText`'s resolution is resolved once (lazily, after the story-2.0-review patch) and applied per-label at creation; a window resize or phone rotation that materially changes the `Scale.FIT` zoom leaves existing labels at the boot resolution until reload. A proper fix needs a live-label registry (or a resize handler that re-`setResolution`s every text object) — presentation-layer infrastructure that the epic-2 UX/animation stories (2.2/2.3) are the natural home for. Portrait-baseline game (FR30), so rotation is not a primary flow; low urgency.
+
 ## Deferred from: story-1.10 dev (2026-07-13)
 
 - **Sim-harness wipeout sweep** — `sim/sweep.ts` stays `mode: 'single'` (story 1.10 scope fence). Wipeout shifts balance dynamics for real: poison archetypes gain value (dots persist across engagements and tick at every natural end — FR19's Witch synergy), and sustain comps (Cleric equilibria) hit the engagement cap instead of losing. The NFR4 dominance-band verification (≤65%) has never been run under wipeout. Add a mode knob to the sweep and re-verify when balance work is next scoped (natural bundle: the archer-vs-casters FR14 item above, which already requires a sweep).

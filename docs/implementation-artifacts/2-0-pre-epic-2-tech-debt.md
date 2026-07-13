@@ -4,7 +4,7 @@ baseline_commit: 8fbabfb1660d0680d1e9dab6a08853641c4ec87e
 
 # Story 2.0: The pre-epic-2 tech-debt story — quality gate, crisp text, and ground-clearing
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -180,10 +180,32 @@ Claude Opus 4.8 — via `bmad-dev-story`.
 - `packages/engine/sim/run.ts` — consumes `MAX_SEED`
 - `packages/engine/test/{combat,resolve,roster}.test.ts` — dead imports removed (+ format)
 - `packages/engine/test/{ai,arbitraries,judging}.test.ts` — format sweep only
-- `docs/implementation-artifacts/deferred-work.md` — 8 annotations
+- `apps/web/src/flow/initFallback.ts` — NEW, Phaser-free init fallback (extracted from main.ts in review)
+- `apps/web/test/init-fallback.test.ts` — NEW, 3 AC5 regression tests
+- `.prettierignore` — NEW, scopes the format gate
+- `docs/implementation-artifacts/deferred-work.md` — 8 annotations + story-2.0-review defer (resize/rotate resolution)
 - `docs/implementation-artifacts/sprint-status.yaml` — status transitions
+
+## Review Findings
+
+_Code review 2026-07-13 (bmad-code-review, 3 adversarial layers). No high/critical. The critical change — the `candidatesOf`/`judgedView` deletion in resolve.ts — was independently verified behavior-preserving by all three layers AND the orchestrator: goldens byte-identical since baseline, targeting/judging are read-only consumers (no mutation, no reference escape), `UnitState.maxHp === snapshot.maxHp` invariant holds. 1 decision-needed, 7 patch, 1 defer, 2 dismissed._
+
+- [x] [Review][Decision→Accepted] **Prettier unified web scenes 4-space → 2-space wholesale instead of per-package overrides** — Task 1 steered toward per-package overrides to minimize the diff; the dev unified on 2-space instead. **Resolved (Danilo, 2026-07-13): keep repo-wide 2-space** — one style engine+web, already applied and green; reverting would churn every web file again and re-split the style. The diff-inflation was a one-time cost, now paid. (auditor)
+
+- [x] [Review][Patch] **Phaser init fallback only catches synchronous constructor throws** [apps/web/src/main.ts] — `new Game(...)` boots asynchronously (WebGL context acquisition, scene `create()`), so the most common "silent blank page" modes escape the sync try/catch; and if `#game-container` is missing the catch renders nothing. Add a `window.addEventListener('error', …)` backstop and fall back to `document.body` when the container is absent — then actually trigger it once (temporary throw) to verify, closing the AC5 verification the story left "scheduled." (blind+edge+auditor)
+- [x] [Review][Patch] **Text resolution computed at module import, before layout** [apps/web/src/config/ui.ts] — `ACTIVE_TEXT_RESOLUTION` resolves at import; if `innerWidth/innerHeight` are 0 then (hidden tab / pre-layout) `fitZoom` floors to 1 and locks resolution at `TEXT_RESOLUTION` for the session. Make it lazy+memoized (resolve on first `crispText` call, which runs in scene `create()` — after layout). (edge)
+- [x] [Review][Patch] **`console.info` boot diagnostic ships unconditionally to production** [apps/web/src/config/ui.ts] — logs on every page load; the story scoped it as a temporary device-comparison instrument, and AC2 is now accepted. Gate it behind the `?textres` param so the diagnostic stays usable without polluting the normal prod console. (blind+auditor)
+- [x] [Review][Patch] **Engine AST purity layer is not a superset of the regex sieve** [eslint.config.mjs] — `self` (window alias) and `Date.parse`/`Date.UTC` (locale/timezone → nondeterminism) escape the AST rules; the glob is `src/**/*.ts` so `.mts/.cts` would escape. Add `self` to `no-restricted-globals`, `Date.parse`/`Date.UTC` to `no-restricted-properties`, widen to `{ts,mts,cts}`, and comment that the regex sieve (purity.test.ts) remains the authority for `localeCompare`/computed-member/dynamic-import (which AST rules can't cleanly express). Both run today, so no live gap — this prevents a silent regression if the sieve is ever retired. (blind+edge)
+- [x] [Review][Patch] **`prettier --check` scoped to globs, leaving config files ungated** [package.json] — root/JSON/YAML/`.github` formatting isn't checked. Switch to `prettier --check .` with a `.prettierignore` (node_modules, dist, coverage, pnpm-lock.yaml, docs) so configs are gated without docs churn. (auditor)
+- [x] [Review][Patch] **`MIN_FONT_PX` comment overstates enforcement** [apps/web/src/config/constants.ts] — comment says "no crispText label renders below this," but `crispText` enforces no floor; it holds only by caller discipline (sibling 10/11/12/15px literals don't reference the constant). Soften the comment to state it's a caller-applied floor. (blind)
+- [x] [Review][Patch] **Inert `as const` on `CLASS_ABBREVIATIONS`** [apps/web/src/config/constants.ts] — the `Record<UnitClass, string>` annotation already widens the type, so `as const` adds nothing. Drop it. (blind, nit)
+
+- [x] [Review][Defer] **Text resolution never recomputes on resize / orientation change** [apps/web/src/config/ui.ts] — deferred, needs a live-label registry to re-apply resolution to existing text; presentation-layer infrastructure the epic-2 UX/animation work owns. Portrait-baseline game (FR30), so rotation isn't a primary flow. Logged to deferred-work.md. (blind+edge)
+
+_Dismissed: (1) ESLint `**/test/**` + `**/sim/**` relaxation "too broad" — it disables only the `no-non-null-assertion` STYLE rule, and no production code lives under a `test/`/`sim/` path in this repo; (2) Dev Agent Record claims "unverifiable from the static diff" — corroborated directly by the orchestrator (goldens untouched, gate re-run bites, 227 tests green) and the auditor's repo checks; no contradiction._
 
 ## Change Log
 
+- 2026-07-13 (review patches): applied all 7 code-review patches. Phaser init hardened — fallback extracted to a Phaser-free `initFallback.ts` (async `window.error` backstop + `document.body` fallback + idempotent guard) and covered by 3 unit tests (the AC5 verification, now a permanent regression check). Text resolution made lazy+memoized (resolves after layout, not at import); `console.info` diagnostic gated behind `?textres`. Engine AST purity layer strengthened (`self`, `Date.parse`/`Date.UTC`, `.mts/.cts` glob — proven to bite). `prettier --check .` + scoped `.prettierignore`. `MIN_FONT_PX` comment softened; inert `as const` dropped. Decision resolved: repo-wide 2-space kept (Danilo). Gate: lint 0, typecheck 0, **230 tests** (+3), coverage ≥90%, build 0, goldens still byte-identical. Status → done.
 - 2026-07-13 (AC2 closure): two on-device iterations — zoom-aware text resolution (fitZoom × DPR; the laptop blur), then 3-letter class codes at 13px on compact cards (the phone size problem, confirmed by multiple readers). Accepted by Danilo ("we won't make it perfect now"); typography refinement carried to the epic-2 UX spec. Status → review.
 - 2026-07-13: Story 2.0 implemented — lint/format gate in CI (ESLint flat + AST purity layer + Prettier, gate proven to bite), DPR-aware text rendering + MIN_FONT_PX floor (device sign-off pending), vite/tsconfig/seed-bound hygiene, allocation projections deleted with throughput measured at parity (hypothesis falsified, recorded), Phaser init fallback. Gate green: lint 0, typecheck 0, 227 tests, coverage 99.7%, goldens zero re-records.
