@@ -42,7 +42,7 @@
 # - Story 1-10 (until-wipeout) is a STRETCH story: ship only if cheap (PRD FR19)
 
 generated: 2026-07-12T03:18:30
-last_updated: 2026-07-13T13:15:00
+last_updated: 2026-07-13T13:40:00
 project: lordly
 project_key: NOKEY
 tracking_system: file-system
@@ -59,7 +59,7 @@ development_status:
   1-7-the-ai-opponent-and-the-balancing-harness: done
   1-8-draft-and-placement-on-the-phone: done
   1-9-reveal-battle-playback-and-result-the-loop-closes: done
-  1-10-until-wipeout-mode-stretch: backlog
+  1-10-until-wipeout-mode-stretch: ready-for-dev
   epic-1-retrospective: optional
   epic-2: backlog
   2-1-real-units-sprite-packs-atlases-and-animations: backlog
