@@ -18,6 +18,23 @@ describe('MatchState serializability (AD-5)', () => {
     const roundTripped = JSON.parse(JSON.stringify(state)) as MatchState;
     expect(roundTripped).toEqual(state);
   });
+
+  it('the COMMITTED state — the actual story-1.9 hand-off, with a nested MatchSetup — round-trips unchanged', () => {
+    const flow = flowWithSeed(0xabcdef);
+    flow.startMatch();
+    flow.draftUnit('knight');
+    flow.draftUnit('archer');
+    flow.draftUnit('mage');
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    flow.placeUnit(1, { row: 'back', col: 'left' });
+    flow.placeUnit(2, { row: 'back', col: 'right' });
+    flow.commit();
+    const state = flow.getState();
+    expect(state.phase).toBe('committed');
+    expect(state.committedSetup).toBeDefined();
+    const roundTripped = JSON.parse(JSON.stringify(state)) as MatchState;
+    expect(roundTripped).toEqual(state); // nested MatchSetup and all
+  });
 });
 
 describe('MatchFlow draft (FR1/FR3, AD-9/AD-10)', () => {
@@ -132,6 +149,30 @@ describe('MatchFlow commit (FR5/FR24, AD-6/AD-9/AD-11/AD-13)', () => {
     flow.placeUnit(0, { row: 'front', col: 'center' });
     // only 1 of 3 placed
     expect(() => flow.commit()).toThrow(/place all 3|incomplete|not placed/i);
+  });
+
+  it('is idempotent: a second commit returns the SAME board, never re-deriving a different AI', () => {
+    const flow = readyToCommit(0xd00d);
+    const first = flow.commit();
+    const second = flow.commit();
+    expect(second).toBe(first); // same object — no re-pick
+    expect(flow.getState().committedSetup).toBe(first);
+  });
+
+  it('rejects draft/remove/place after commit — the board is locked (phase guard)', () => {
+    const flow = readyToCommit(0xf00d);
+    flow.commit();
+    expect(() => flow.draftUnit('witch')).toThrow(/already committed/i);
+    expect(() => flow.removeUnit(0)).toThrow(/already committed/i);
+    expect(() => flow.placeUnit(0, { row: 'mid', col: 'center' })).toThrow(/already committed/i);
+  });
+
+  it('placeUnit bounds-checks its unit index (guards bad drag data)', () => {
+    const flow = flowWithSeed(1);
+    flow.startMatch();
+    flow.draftUnit('knight');
+    expect(() => flow.placeUnit(5, { row: 'front', col: 'center' })).toThrow(/out of range/i);
+    expect(() => flow.placeUnit(-1, { row: 'front', col: 'center' })).toThrow(/out of range/i);
   });
 });
 

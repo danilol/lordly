@@ -1,5 +1,5 @@
 import { GameObjects, Scene } from 'phaser';
-import { ALL_CLASSES } from '@lordly/engine';
+import { ALL_CLASSES, BALANCE } from '@lordly/engine';
 import type { UnitClass } from '@lordly/engine';
 import {
   BASE_WIDTH,
@@ -67,6 +67,12 @@ export class DraftScene extends Scene {
       .setStrokeStyle(1, PALETTE.cardStroke)
       .setInteractive({ useHandCursor: true });
 
+    // Sprite placeholder (FR2 / story 2.1 replaces with real art): a colored
+    // square bearing the class initial, top-right of the card.
+    const glyph = 26;
+    this.add.rectangle(x + w - glyph - 8, y + 8, glyph, glyph, PALETTE.unitFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.unitStroke);
+    crispText(this, x + w - glyph / 2 - 8, y + 8 + glyph / 2, card.name.charAt(0).toUpperCase(), { fontFamily: 'Arial Black', fontSize: '15px', color: PALETTE.title }).setOrigin(0.5);
+
     const rps = card.beats ? `beats ${card.beats}` : card.beatenBy ? `weak vs ${card.beatenBy}` : 'neutral';
     const a = card.actions;
     crispText(this, x + 8, y + 6, card.name.toUpperCase(), { fontFamily: 'Arial Black', fontSize: '13px', color: PALETTE.title });
@@ -89,13 +95,13 @@ export class DraftScene extends Scene {
 
     const army = this.flow.getState().playerArmy;
     const trayY = 360;
-    this.dynamic.push(crispText(this, BASE_WIDTH / 2, trayY - 22, `Your army  (${army.length}/3)`, { fontFamily: 'Arial', fontSize: '12px', color: PALETTE.bodyText }).setOrigin(0.5));
+    this.dynamic.push(crispText(this, BASE_WIDTH / 2, trayY - 22, `Your army  (${army.length}/${BALANCE.armySize})`, { fontFamily: 'Arial', fontSize: '12px', color: PALETTE.bodyText }).setOrigin(0.5));
 
     const slotW = 96;
     const gap = 12;
-    const totalW = 3 * slotW + 2 * gap;
+    const totalW = BALANCE.armySize * slotW + (BALANCE.armySize - 1) * gap;
     const startX = (BASE_WIDTH - totalW) / 2;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < BALANCE.armySize; i++) {
       const x = startX + i * (slotW + gap);
       const unit = army[i];
       const slot = this.add.rectangle(x, trayY, slotW, 60, PALETTE.gridCellFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.gridCellStroke);

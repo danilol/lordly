@@ -1,3 +1,5 @@
+import type { Element } from '@lordly/engine';
+
 export const GAME_NAME = 'Lord Battle Tactics';
 
 export const HOME_PLAY_LABEL = 'Play vs AI';
@@ -20,7 +22,6 @@ export const PALETTE = {
     buttonStrokeEnabled: 0x7ab07f,
     cardFill: 0x24243a,
     cardStroke: 0x44445e,
-    cardSelected: 0x4a6a4e,
     bodyText: '#c8c8d8',
     mutedText: '#88889a',
     gridCellFill: 0x20203a,
@@ -52,7 +53,9 @@ export const ENEMY_ARMY_LABEL = '▲  ENEMY ARMY  ▲';
 export const REVEAL_PLACEHOLDER = 'Both armies committed.\nReveal, battle & result arrive in story 1.9.';
 
 // FR3 element badge colors (cosmetic; the witch's spell keys off element — FR16).
-export const ELEMENT_COLORS: Record<'fire' | 'water' | 'wind' | 'earth', number> = {
+// Keyed by the engine's `Element` union (AD-4) so a new element is a compile
+// error here, never a runtime `undefined` fill.
+export const ELEMENT_COLORS: Record<Element, number> = {
     fire: 0xc0563a,
     water: 0x3a76c0,
     wind: 0x6ab08a,

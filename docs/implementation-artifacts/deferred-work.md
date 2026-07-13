@@ -32,3 +32,7 @@
 
 - Engine hot-path allocation churn: per-swing candidate projection in `takeTurn`, `judgedView` materialized on every turn and twice at battle end. Harmless at 6 units; matters for NFR4's headless sim-harness throughput (story 1.7 runs thousands of battles). Input for the pre-epic-2 tech-debt story.
 - Judging-symmetry property proves symmetry only for asymmetric rosters (mirror-tie setups are filtered because the coin flip is not side-symmetric). A complementary invariant — "the coin flip is the SOLE source of mirror-match asymmetry" — needs a test harness that can control/inject the flip. Design note for the tech-debt story.
+
+## Deferred from: code review of story-1.8 (2026-07-13)
+
+- Navigation is one-way with a dead-end: Home→Draft→Placement→Reveal has no back-navigation, and the Reveal placeholder has no exit (the player is stranded until a tab reload). Explicitly deferred to story 1.9, which owns the real post-submit screens (Reveal/Battle/Result) and the Result→Rematch→Home navigation. 1.8 ships as a demoable one-way milestone. When 1.9 lands, ensure: a Home/back affordance exists from every scene, and Placement→Draft back-nav (if wanted) accounts for the forward-only element stream (re-adding re-rolls).

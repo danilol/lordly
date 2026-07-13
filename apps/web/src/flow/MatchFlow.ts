@@ -61,6 +61,7 @@ export class MatchFlow {
    * FR3, AD-9). Duplicates are allowed; throws if the army is already full.
    */
   draftUnit(cls: UnitClass): DraftedUnit {
+    if (this.state.phase === 'committed') throw new Error('cannot draft: match already committed');
     if (this.state.playerArmy.length >= BALANCE.armySize) {
       throw new Error(`cannot draft: army is full (${BALANCE.armySize})`);
     }
@@ -72,6 +73,7 @@ export class MatchFlow {
 
   /** Removes the drafted unit at `index`; its element is discarded (forward-only — the counter is not rewound). */
   removeUnit(index: number): void {
+    if (this.state.phase === 'committed') throw new Error('cannot remove: match already committed');
     if (index < 0 || index >= this.state.playerArmy.length) {
       throw new Error(`removeUnit: index ${index} out of range`);
     }
@@ -81,18 +83,12 @@ export class MatchFlow {
 
   /** Places (or moves/swaps) the unit at `unitIndex` onto `target` via the pure placement model (FR4). */
   placeUnit(unitIndex: number, target: Placement): void {
+    if (this.state.phase === 'committed') throw new Error('cannot place: match already committed');
+    if (unitIndex < 0 || unitIndex >= this.state.playerArmy.length) {
+      throw new Error(`placeUnit: index ${unitIndex} out of range`);
+    }
     this.state.playerPlacements = placeUnit(this.state.playerPlacements, unitIndex, target);
     this.state.phase = 'placement';
-  }
-
-  /** Returns the unit at `unitIndex` to the tray (unplaced). */
-  unplaceUnit(unitIndex: number): void {
-    if (unitIndex < 0 || unitIndex >= this.state.playerPlacements.length) {
-      throw new Error(`unplaceUnit: index ${unitIndex} out of range`);
-    }
-    const next = [...this.state.playerPlacements];
-    next[unitIndex] = null;
-    this.state.playerPlacements = next;
   }
 
   /** How many player units are currently placed on the grid (drives submit gating — FR4/AC4). */
@@ -108,6 +104,12 @@ export class MatchFlow {
    * board is incomplete (submit gating must have prevented this).
    */
   commit(): MatchSetup {
+    // Idempotent: a double-tap must not re-run the AI pick — a second call
+    // would read this match's own archetype as `exclude` and derive a
+    // DIFFERENT opponent, overwriting the committed board.
+    if (this.state.phase === 'committed' && this.state.committedSetup) {
+      return this.state.committedSetup;
+    }
     if (this.state.playerArmy.length !== BALANCE.armySize || this.placedCount() !== BALANCE.armySize) {
       throw new Error('cannot commit: place all 3 units first');
     }
@@ -126,7 +128,7 @@ export class MatchFlow {
       mode: 'single',
       armies: {
         A: this.state.playerArmy.map((u) => ({ class: u.class, element: u.element })),
-        B: ai.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/B']) as Element })),
+        B: ai.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/B']) })),
       },
       placements: { A: placementsA, B: [...ai.placement] },
     };
