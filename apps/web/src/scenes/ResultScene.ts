@@ -12,6 +12,7 @@ import {
   RESULT_LOSE_LABEL,
   RESULT_REMATCH_LABEL,
   RESULT_WIN_LABEL,
+  MIN_FONT_PX,
 } from '../config/constants';
 import { crispText } from '../config/ui';
 import type { MatchFlow } from '../flow/MatchFlow';
@@ -81,7 +82,7 @@ export class ResultScene extends Scene {
       const cy = y + 34;
       this.add.rectangle(x, cy, chipW, 40, PALETTE.cardFill).setStrokeStyle(1, PALETTE.cardStroke);
       crispText(this, x - 8, cy - 8, unit.class, { fontFamily: 'Arial Black', fontSize: '10px', color: PALETTE.title }).setOrigin(0.5);
-      crispText(this, x - 8, cy + 8, unit.element, { fontFamily: 'Arial', fontSize: '9px', color: PALETTE.bodyText }).setOrigin(0.5);
+      crispText(this, x - 8, cy + 8, unit.element, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
       this.add.rectangle(x + chipW / 2 - 12, cy, 10, 10, ELEMENT_COLORS[unit.element]).setOrigin(0.5);
     });
   }

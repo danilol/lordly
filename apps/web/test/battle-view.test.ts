@@ -2,12 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_COLS, ALL_ROWS, ALL_SIDES } from '@lordly/engine';
 import type { BattleEvent, Placement } from '@lordly/engine';
 import { BATTLE_BEAT_MS, BATTLE_FAST_FORWARD } from '../src/config/constants';
-import {
-  buildBeatSchedule,
-  fastForwardMs,
-  screenCellCenter,
-  toScreenCell,
-} from '../src/flow/battleView';
+import { buildBeatSchedule, fastForwardMs, screenCellCenter, toScreenCell } from '../src/flow/battleView';
 
 /** Every owner-local cell, for exhaustive transform checks. */
 const ALL_CELLS: Placement[] = ALL_ROWS.flatMap((row) => ALL_COLS.map((col) => ({ row, col })));

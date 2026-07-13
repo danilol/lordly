@@ -56,7 +56,10 @@ describe('chooseSetup guards (review-caught defensive gaps)', () => {
 
   it('throws a clear error if an archetype placement has a col outside ALL_COLS', () => {
     const bad = { ...(STRATEGY_POOL[0] as (typeof STRATEGY_POOL)[number]) };
-    const badArchetype = { ...bad, placement: [{ row: 'front', col: 'nowhere' }, bad.placement[1], bad.placement[2]] } as unknown as (typeof STRATEGY_POOL)[number];
+    const badArchetype = {
+      ...bad,
+      placement: [{ row: 'front', col: 'nowhere' }, bad.placement[1], bad.placement[2]],
+    } as unknown as (typeof STRATEGY_POOL)[number];
     expect(() => chooseSetup([badArchetype], aiStream(1))).toThrow(/invalid col/);
   });
 });
@@ -103,29 +106,26 @@ describe('chooseSetup (FR24/FR25, AD-6, AD-10)', () => {
     expect(choice.placement[0]).not.toBe(solo[0]!.placement[0]);
   });
 
-  test.prop([fc.integer({ min: 0, max: 0xffffffff })])(
-    'its output + caller-rolled elements always assemble into a VALID MatchSetup (AD-9 flow)',
-    (seed) => {
-      const streams = createStreams(seed);
-      const a = chooseSetup(STRATEGY_POOL, streams['ai/A']);
-      const b = chooseSetup(STRATEGY_POOL, streams['ai/B']);
-      const setup: MatchSetup = {
-        seed,
-        balanceVersion: BALANCE.version,
-        mode: 'single',
-        armies: {
-          A: a.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/A']) })),
-          B: b.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/B']) })),
-        },
-        placements: { A: a.placement, B: b.placement },
-      };
-      expect(() => validateMatchSetup(setup)).not.toThrow();
-      // ...and RESOLVES: termination holds over the AI assembly path, and the
-      // log ends with a verdict (AD-12) — the sim/MatchFlow consumption contract.
-      const log = resolveBattle(setup);
-      expect(log.events.at(-1)?.type).toBe('BattleEnded');
-    },
-  );
+  test.prop([fc.integer({ min: 0, max: 0xffffffff })])('its output + caller-rolled elements always assemble into a VALID MatchSetup (AD-9 flow)', (seed) => {
+    const streams = createStreams(seed);
+    const a = chooseSetup(STRATEGY_POOL, streams['ai/A']);
+    const b = chooseSetup(STRATEGY_POOL, streams['ai/B']);
+    const setup: MatchSetup = {
+      seed,
+      balanceVersion: BALANCE.version,
+      mode: 'single',
+      armies: {
+        A: a.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/A']) })),
+        B: b.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/B']) })),
+      },
+      placements: { A: a.placement, B: b.placement },
+    };
+    expect(() => validateMatchSetup(setup)).not.toThrow();
+    // ...and RESOLVES: termination holds over the AI assembly path, and the
+    // log ends with a verdict (AD-12) — the sim/MatchFlow consumption contract.
+    const log = resolveBattle(setup);
+    expect(log.events.at(-1)?.type).toBe('BattleEnded');
+  });
 
   // DETERMINISM ANCHORS (rng-lessons convention): expectations hand-derived
   // from the PROBED raw draws (seed 1 ai/A → pick 6, flip 0; seed 2 ai/A →

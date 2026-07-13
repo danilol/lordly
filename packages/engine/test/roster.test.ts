@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/balance';
 import { resolveBattle } from '../src/resolve';
-import type { BattleEvent, MatchSetup, UnitAttacked, UnitDied, UnitHealed } from '../src/types';
+import type { BattleEvent, MatchSetup } from '../src/types';
 
 function setup(partial: Pick<MatchSetup, 'armies' | 'placements'>, seed = 7): MatchSetup {
   return { seed, balanceVersion: BALANCE.version, mode: 'single', ...partial };
@@ -93,7 +93,9 @@ describe('FR10 Mage — row blast, reach ignored, per-target RPS, multi-kill', (
     // pass1: archers 30 each (80→50), A mage 19 (→31); pass2: archers (→1),
     // A mage's blast kills BOTH at 1 hp. (A:2 also falls afterwards — B's
     // mages + knight poured 19s into A's stacked back row; crossfire is real.)
-    const deaths = byType(log, 'UnitDied').map((d) => d.unit).sort();
+    const deaths = byType(log, 'UnitDied')
+      .map((d) => d.unit)
+      .sort();
     expect(deaths).toEqual(['A:2', 'B:0', 'B:1']);
     const killingBlast = byType(log, 'UnitAttacked').filter((a) => a.source === 'A:2')[1];
     expect(killingBlast?.targets.every((t) => t.hpAfter === 0)).toBe(true);
@@ -169,9 +171,7 @@ describe('FR11 Cleric — heal lowest exact HP fraction, cap, staff fallback', (
 
   it('staff-bonks (clamped to 1) while all allies are at full HP, then heals once damage lands', () => {
     const log = resolveBattle(clericBattle());
-    const clericTurnEvents = log.events.filter(
-      (e) => (e.type === 'UnitAttacked' && e.source === 'A:1') || (e.type === 'UnitHealed' && e.source === 'A:1'),
-    );
+    const clericTurnEvents = log.events.filter((e) => (e.type === 'UnitAttacked' && e.source === 'A:1') || (e.type === 'UnitHealed' && e.source === 'A:1'));
     expect(clericTurnEvents.length).toBe(2); // back row: 2 actions
     // Pass 1: cleric (AGI 10) acts before the knights (AGI 8) — nobody damaged yet → staff.
     const first = clericTurnEvents[0];

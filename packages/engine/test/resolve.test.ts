@@ -4,7 +4,7 @@ import { BALANCE } from '../src/balance';
 import { resolveBattle } from '../src/resolve';
 import { InvalidMatchSetupError } from '../src/validate';
 import { LOG_VERSION } from '../src/types';
-import type { ActionSkipped, MatchSetup, PassStarted, UnitId } from '../src/types';
+import type { MatchSetup, UnitId } from '../src/types';
 import { matchSetupArb } from './arbitraries';
 
 /** Build a setup with explicit armies/placements; other fields sane defaults. */

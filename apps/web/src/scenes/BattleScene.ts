@@ -1,14 +1,6 @@
 import { GameObjects, Scene, Time } from 'phaser';
 import type { BattleEvent, BattleStarted, UnitId, UnitSnapshot } from '@lordly/engine';
-import {
-  BASE_HEIGHT,
-  BASE_WIDTH,
-  BATTLE_BEAT_MS,
-  BATTLE_HINT,
-  ELEMENT_COLORS,
-  engagementEndedLabel,
-  PALETTE,
-} from '../config/constants';
+import { BASE_HEIGHT, BASE_WIDTH, BATTLE_BEAT_MS, BATTLE_HINT, ELEMENT_COLORS, engagementEndedLabel, PALETTE, MIN_FONT_PX } from '../config/constants';
 import { addHomeBack, crispText } from '../config/ui';
 import { buildBeatSchedule, fastForwardMs, screenCellCenter, toScreenCell } from '../flow/battleView';
 import type { Beat } from '../flow/battleView';
@@ -102,8 +94,8 @@ export class BattleScene extends Scene {
     const nameColor = unit.side === 'A' ? PALETTE.playerText : PALETTE.enemyText;
 
     const body = this.add.rectangle(0, 0, UNIT_W, UNIT_H, PALETTE.unitFill).setStrokeStyle(2, stroke);
-    const name = crispText(this, 0, -6, unit.class, { fontFamily: 'Arial Black', fontSize: '9px', color: nameColor }).setOrigin(0.5);
-    const el = crispText(this, 0, 7, unit.element, { fontFamily: 'Arial', fontSize: '8px', color: PALETTE.bodyText }).setOrigin(0.5);
+    const name = crispText(this, 0, -6, unit.class, { fontFamily: 'Arial Black', fontSize: `${MIN_FONT_PX}px`, color: nameColor }).setOrigin(0.5);
+    const el = crispText(this, 0, 7, unit.element, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
     const badge = this.add.rectangle(UNIT_W / 2 - 7, -UNIT_H / 2 + 6, 8, 8, ELEMENT_COLORS[unit.element]).setOrigin(0.5);
     const container = this.add.container(x, y, [body, name, el, badge]);
 

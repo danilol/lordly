@@ -1,4 +1,4 @@
-import { fc, test } from '@fast-check/vitest';
+import { test } from '@fast-check/vitest';
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/balance';
 import { resolveBattle } from '../src/resolve';

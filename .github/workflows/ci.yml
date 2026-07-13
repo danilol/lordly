@@ -26,6 +26,10 @@ jobs:
 
       - run: pnpm -r typecheck
 
+      # Lint gate (story 2.0): ESLint (incl. the engine AST purity layer) +
+      # Prettier check. Mechanizes the epic-1 recurring review findings.
+      - run: pnpm lint
+
       # `pnpm coverage` runs the identical full suite with instrumentation,
       # so a separate `pnpm test` step would run everything twice.
       - run: pnpm coverage

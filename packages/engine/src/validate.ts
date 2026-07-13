@@ -1,4 +1,5 @@
 import { BALANCE } from './balance';
+import { MAX_SEED } from './rng';
 import { ALL_CLASSES, ALL_COLS, ALL_ELEMENTS, ALL_ROWS } from './types';
 import type { MatchSetup, Side } from './types';
 
@@ -54,7 +55,7 @@ export function validateMatchSetup(setup: MatchSetup): void {
   }
   const { seed, balanceVersion, mode, armies, placements } = setup as unknown as Record<string, unknown>;
 
-  if (!Number.isInteger(seed) || (seed as number) < 0 || (seed as number) > 0xffffffff) {
+  if (!Number.isInteger(seed) || (seed as number) < 0 || (seed as number) > MAX_SEED) {
     throw new InvalidMatchSetupError('invalid-seed', `seed must be a uint32, got ${String(seed)}`);
   }
   if (balanceVersion !== BALANCE.version) {
@@ -67,10 +68,7 @@ export function validateMatchSetup(setup: MatchSetup): void {
     throw new InvalidMatchSetupError('invalid-mode', `unknown mode '${String(mode)}'`);
   }
   if (!isObject(armies) || !isObject(placements)) {
-    throw new InvalidMatchSetupError(
-      'not-an-object',
-      `armies and placements must be objects, got armies=${typeof armies}, placements=${typeof placements}`,
-    );
+    throw new InvalidMatchSetupError('not-an-object', `armies and placements must be objects, got armies=${typeof armies}, placements=${typeof placements}`);
   }
 
   for (const side of SIDES) {
@@ -109,10 +107,7 @@ export function validateMatchSetup(setup: MatchSetup): void {
         throw new InvalidMatchSetupError('out-of-grid', `side ${side} unit ${i} placement is not an object (got ${cell === null ? 'null' : typeof cell})`);
       }
       if (!(ALL_ROWS as readonly string[]).includes(cell.row as string) || !(ALL_COLS as readonly string[]).includes(cell.col as string)) {
-        throw new InvalidMatchSetupError(
-          'out-of-grid',
-          `side ${side} unit ${i} placed outside the grid at '${String(cell.row)}/${String(cell.col)}'`,
-        );
+        throw new InvalidMatchSetupError('out-of-grid', `side ${side} unit ${i} placed outside the grid at '${String(cell.row)}/${String(cell.col)}'`);
       }
       const key = `${cell.row}/${cell.col}`;
       if (seen.has(key)) {

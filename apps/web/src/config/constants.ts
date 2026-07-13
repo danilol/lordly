@@ -11,34 +11,34 @@ export const BASE_HEIGHT = 640;
 // Shared UI palette — the single source for colors used across scenes and
 // the Phaser game config. Hex strings for text/config, numbers for shapes.
 export const PALETTE = {
-    background: '#1a1a2e',
-    title: '#e8d5a3',
-    buttonFill: 0x3a3a4e,
-    buttonStroke: 0x55556a,
-    buttonTextDisabled: '#77778a',
-    // Enabled-button + scene UI (story 1.8).
-    buttonText: '#e8d5a3',
-    buttonFillEnabled: 0x4a6a4e,
-    buttonStrokeEnabled: 0x7ab07f,
-    cardFill: 0x24243a,
-    cardStroke: 0x44445e,
-    bodyText: '#c8c8d8',
-    mutedText: '#88889a',
-    gridCellFill: 0x20203a,
-    gridCellStroke: 0x44445e,
-    unitFill: 0x3a3a5e,
-    unitStroke: 0x7a7ab0,
-    // Enemy-side marker on the placement grid (FR6 groundwork; first-time legibility).
-    enemyText: '#e06a6a',
-    enemyLine: 0xc0433a,
-    // Battle/result (story 1.9). Player = side A (green family); enemy = side B (red family).
-    playerText: '#7ab07f',
-    hpBarBack: 0x2a2a3e,
-    hpBarPlayer: 0x4a6a4e,
-    hpBarEnemy: 0x8a3a3a,
-    winText: '#7ab07f',
-    loseText: '#e06a6a',
-    drawText: '#c8c8d8',
+  background: '#1a1a2e',
+  title: '#e8d5a3',
+  buttonFill: 0x3a3a4e,
+  buttonStroke: 0x55556a,
+  buttonTextDisabled: '#77778a',
+  // Enabled-button + scene UI (story 1.8).
+  buttonText: '#e8d5a3',
+  buttonFillEnabled: 0x4a6a4e,
+  buttonStrokeEnabled: 0x7ab07f,
+  cardFill: 0x24243a,
+  cardStroke: 0x44445e,
+  bodyText: '#c8c8d8',
+  mutedText: '#88889a',
+  gridCellFill: 0x20203a,
+  gridCellStroke: 0x44445e,
+  unitFill: 0x3a3a5e,
+  unitStroke: 0x7a7ab0,
+  // Enemy-side marker on the placement grid (FR6 groundwork; first-time legibility).
+  enemyText: '#e06a6a',
+  enemyLine: 0xc0433a,
+  // Battle/result (story 1.9). Player = side A (green family); enemy = side B (red family).
+  playerText: '#7ab07f',
+  hpBarBack: 0x2a2a3e,
+  hpBarPlayer: 0x4a6a4e,
+  hpBarEnemy: 0x8a3a3a,
+  winText: '#7ab07f',
+  loseText: '#e06a6a',
+  drawText: '#c8c8d8',
 } as const;
 
 // Text render resolution multiplier: the game renders at the 360×640 base and
@@ -46,6 +46,12 @@ export const PALETTE = {
 // higher-resolution texture keeps them crisp when the canvas is scaled up.
 // Applied via `crispText` (config/ui.ts) so every label shares one setting.
 export const TEXT_RESOLUTION = 3;
+
+// Minimum label font size (story 2.0 AC2 — accessibility): no crispText label
+// renders below this. Epic 1 accumulated 8–9px micro-labels that were below
+// comfortable reading size on a real phone (Danilo's device is the acceptance
+// test). The full type scale is the epic-2 UX spec's job — this is a FLOOR.
+export const MIN_FONT_PX = 10;
 
 export const BUTTON_WIDTH = 220;
 export const BUTTON_HEIGHT = 56;
@@ -98,19 +104,19 @@ export const BATTLE_FAST_FORWARD = 4;
 // front rows. Reveal and Battle scenes project cells through this one source
 // (via battleView.screenCellCenter) so both stay pixel-consistent.
 export const BATTLE_BOARD = {
-    cell: 56,
-    gap: 4,
-    top: 120,
-    /** Extra vertical space between B.front (row 2) and A.front (row 3) — the "no man's land". */
-    midGap: 16,
+  cell: 56,
+  gap: 4,
+  top: 120,
+  /** Extra vertical space between B.front (row 2) and A.front (row 3) — the "no man's land". */
+  midGap: 16,
 } as const;
 
 // FR3 element badge colors (cosmetic; the witch's spell keys off element — FR16).
 // Keyed by the engine's `Element` union (AD-4) so a new element is a compile
 // error here, never a runtime `undefined` fill.
 export const ELEMENT_COLORS: Record<Element, number> = {
-    fire: 0xc0563a,
-    water: 0x3a76c0,
-    wind: 0x6ab08a,
-    earth: 0xa98a52,
+  fire: 0xc0563a,
+  water: 0x3a76c0,
+  wind: 0x6ab08a,
+  earth: 0xa98a52,
 } as const;

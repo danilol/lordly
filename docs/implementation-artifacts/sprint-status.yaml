@@ -42,7 +42,7 @@
 # - Story 1-10 (until-wipeout) is a STRETCH story: ship only if cheap (PRD FR19)
 
 generated: 2026-07-12T03:18:30
-last_updated: 2026-07-13T17:10:00
+last_updated: 2026-07-13T17:40:00
 project: lordly
 project_key: NOKEY
 tracking_system: file-system
@@ -61,7 +61,8 @@ development_status:
   1-9-reveal-battle-playback-and-result-the-loop-closes: done
   1-10-until-wipeout-mode-stretch: done
   epic-1-retrospective: done
-  epic-2: backlog
+  epic-2: in-progress
+  2-0-pre-epic-2-tech-debt: in-progress  # From epic-1 retro action item 2 + sprint-change-proposal-2026-07-13; MUST complete before 2-1 (no epics.md entry — sources: epic-1-retro-2026-07-13.md, deferred-work.md).
   2-1-real-units-sprite-packs-atlases-and-animations: backlog
   2-2-the-animated-battle-scene: backlog
   2-3-watchability-controls-and-a-worthy-result-screen: backlog
@@ -85,7 +86,7 @@ action_items:
   - epic: 1
     action: "Create & sequence the pre-epic-2 tech-debt story (correct-course commitment): lint/format gate, blurry-text ACCESSIBILITY investigation (HIGH, acceptance on Danilo's device), template cruft, engine allocation churn, tsconfig asymmetry"
     owner: "John (scoping) -> Amelia (dev)"
-    status: open
+    status: done  # 2026-07-13: story 2-0-pre-epic-2-tech-debt created ready-for-dev, sequenced before 2-1 (implementation tracked by the story itself)
   - epic: 1
     action: "UX spec via bmad-ux before 2.1 — camera perspective, sprite-pack direction, layouts, minimum-text-size rule"
     owner: "Sally (UX)"

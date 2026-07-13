@@ -9,6 +9,7 @@ import {
   PLACEMENT_SUBMIT_HINT,
   PLACEMENT_SUBMIT_LABEL,
   PLACEMENT_TITLE,
+  MIN_FONT_PX,
 } from '../config/constants';
 import { addHomeBack, crispText } from '../config/ui';
 import { placedCount } from '../flow/placement';
@@ -47,7 +48,13 @@ export class PlacementScene extends Scene {
     this.gridLeft = (BASE_WIDTH - (3 * CELL + 2 * GAP)) / 2;
 
     crispText(this, BASE_WIDTH / 2, 28, PLACEMENT_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
-    crispText(this, BASE_WIDTH / 2, 54, 'Drag your units onto the grid. Front row faces the enemy (top).', { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.mutedText, align: 'center', wordWrap: { width: BASE_WIDTH - 24 } }).setOrigin(0.5);
+    crispText(this, BASE_WIDTH / 2, 54, 'Drag your units onto the grid. Front row faces the enemy (top).', {
+      fontFamily: 'Arial',
+      fontSize: '10px',
+      color: PALETTE.mutedText,
+      align: 'center',
+      wordWrap: { width: BASE_WIDTH - 24 },
+    }).setOrigin(0.5);
 
     // FR6 groundwork + first-time legibility: mark the enemy-facing side (top
     // of the grid) so a new player knows where the opponent will appear.
@@ -66,7 +73,7 @@ export class PlacementScene extends Scene {
       ALL_COLS.forEach((col) => {
         const { x, y } = this.cellCenter({ row, col });
         this.add.rectangle(x, y, CELL, CELL, PALETTE.gridCellFill).setStrokeStyle(1, PALETTE.gridCellStroke);
-        crispText(this, x, y + CELL / 2 - 9, `${row}/${col}`, { fontFamily: 'Arial', fontSize: '8px', color: PALETTE.mutedText }).setOrigin(0.5);
+        crispText(this, x, y + CELL / 2 - 9, `${row}/${col}`, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.mutedText }).setOrigin(0.5);
         const zone = this.add.zone(x, y, CELL, CELL).setRectangleDropZone(CELL, CELL);
         zone.setData('cell', { row, col } satisfies Placement);
       });
@@ -116,7 +123,7 @@ export class PlacementScene extends Scene {
       const { x, y } = cell ? this.cellCenter(cell) : this.trayCenter(i);
       const body = this.add.rectangle(0, 0, 72, 60, PALETTE.unitFill).setStrokeStyle(2, PALETTE.unitStroke);
       const name = crispText(this, 0, -12, unit.class, { fontFamily: 'Arial Black', fontSize: '11px', color: PALETTE.title }).setOrigin(0.5);
-      const el = crispText(this, 0, 4, unit.element, { fontFamily: 'Arial', fontSize: '9px', color: PALETTE.bodyText }).setOrigin(0.5);
+      const el = crispText(this, 0, 4, unit.element, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
       const badge = this.add.rectangle(24, -18, 12, 12, ELEMENT_COLORS[unit.element]).setOrigin(0.5);
       const c = this.add.container(x, y, [body, name, el, badge]);
       c.setSize(72, 60); // sets the centered rectangular hit area for input
@@ -137,8 +144,14 @@ export class PlacementScene extends Scene {
     const placed = placedCount(state.playerPlacements);
     const ready = placed === state.playerArmy.length && state.playerArmy.length > 0;
     const btnY = 596;
-    const btn = this.add.rectangle(BASE_WIDTH / 2, btnY, 200, 50, ready ? PALETTE.buttonFillEnabled : PALETTE.buttonFill).setStrokeStyle(2, ready ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke);
-    const label = crispText(this, BASE_WIDTH / 2, btnY, ready ? PLACEMENT_SUBMIT_LABEL : PLACEMENT_SUBMIT_HINT, { fontFamily: 'Arial', fontSize: ready ? '18px' : '13px', color: ready ? PALETTE.buttonText : PALETTE.buttonTextDisabled }).setOrigin(0.5);
+    const btn = this.add
+      .rectangle(BASE_WIDTH / 2, btnY, 200, 50, ready ? PALETTE.buttonFillEnabled : PALETTE.buttonFill)
+      .setStrokeStyle(2, ready ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke);
+    const label = crispText(this, BASE_WIDTH / 2, btnY, ready ? PLACEMENT_SUBMIT_LABEL : PLACEMENT_SUBMIT_HINT, {
+      fontFamily: 'Arial',
+      fontSize: ready ? '18px' : '13px',
+      color: ready ? PALETTE.buttonText : PALETTE.buttonTextDisabled,
+    }).setOrigin(0.5);
     this.dynamic.push(btn, label);
     if (ready) {
       btn.setInteractive({ useHandCursor: true }).on('pointerup', () => {

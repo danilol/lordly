@@ -9,10 +9,17 @@
   "scripts": {
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "lint": "eslint . && prettier --check \"packages/**/*.{ts,mjs}\" \"apps/**/*.{ts,mjs}\" \"*.mjs\"",
+    "lint:fix": "eslint . --fix && prettier --write \"packages/**/*.{ts,mjs}\" \"apps/**/*.{ts,mjs}\" \"*.mjs\""
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.5",
+    "typescript-eslint": "^8.63.0",
     "vitest": "^4.1.10"
   }
 }

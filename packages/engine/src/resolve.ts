@@ -4,12 +4,19 @@ import type { WipeState } from './judging';
 import { createStreams, nextInt } from './rng';
 import type { Stream } from './rng';
 import { selectBlastRow, selectMeleeTarget, selectRearmostTarget } from './targeting';
-import type { MeleeCandidate } from './targeting';
 import { ALL_COLS, ALL_ROWS, LOG_VERSION } from './types';
 import type { AttackTarget, BattleEvent, BattleLog, MatchSetup, Side, SpellKind, UnitClass, UnitId, UnitSnapshot } from './types';
 import { validateMatchSetup } from './validate';
 
-/** Mutable per-unit resolution state (module-private; AD-1: never escapes). */
+/**
+ * Mutable per-unit resolution state (module-private; AD-1: never escapes).
+ *
+ * Structurally satisfies BOTH `MeleeCandidate` (targeting) and `JudgedUnit`
+ * (judging), so units pass to those modules DIRECTLY — the per-action
+ * `candidatesOf` and per-scan `judgedView` projections were pure allocation
+ * churn on the sim harness's hot path and were removed (story 2.0 AC4,
+ * measured; behavior bit-identical — all goldens untouched).
+ */
 interface UnitState {
   id: UnitId;
   side: Side;
@@ -19,6 +26,8 @@ interface UnitState {
   colIndex: number;
   alive: boolean;
   hp: number;
+  /** Immutable copy of `snapshot.maxHp` so judging (FR18) reads this state directly. */
+  maxHp: number;
   actionsLeft: number;
   /** Active Witch spells on this unit (FR16); same spell never stacks. */
   statuses: Set<SpellKind>;
@@ -108,7 +117,7 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
         events.push(...turnEvents);
         // Only a death can change the alive-set — skip the wipe scan otherwise.
         if (turnEvents.some((e) => e.type === 'UnitDied')) {
-          wiped = wipedSide(judgedView(units));
+          wiped = wipedSide(units);
           if (wiped !== undefined) break battle; // FR18: wipe ends it, unspent actions lost
         }
       }
@@ -134,7 +143,7 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
           events.push({ type: 'UnitDied', unit: unit.id });
         }
       }
-      wiped = wipedSide(judgedView(units));
+      wiped = wipedSide(units);
     }
 
     const hp: Record<UnitId, number> = {};
@@ -146,21 +155,11 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
     if (wiped !== undefined) break;
   }
 
-  const verdict = judge(judgedView(units), wiped);
+  const verdict = judge(units, wiped);
   events.push({ type: 'BattleEnded', winner: verdict.winner, hpPct: verdict.hpPct });
 
   const log: BattleLog = { logVersion: LOG_VERSION, events };
   return deepFreeze(log);
-}
-
-/** Projects resolution state onto the minimal shape judging reads (FR18). */
-function judgedView(units: readonly UnitState[]) {
-  return units.map((u) => ({ side: u.side, alive: u.alive, hp: u.hp, maxHp: u.snapshot.maxHp }));
-}
-
-/** Projects units onto the targeting-candidate shape (parallel by contract). */
-function candidatesOf(units: readonly UnitState[]): MeleeCandidate[] {
-  return units.map((u) => ({ rowIndex: u.rowIndex, colIndex: u.colIndex, alive: u.alive }));
 }
 
 /**
@@ -193,17 +192,17 @@ function act(unit: UnitState, units: UnitState[]): BattleEvent[] {
   switch (unit.class) {
     case 'knight':
     case 'mercenary': {
-      const idx = selectMeleeTarget(unit.colIndex, candidatesOf(enemies));
+      const idx = selectMeleeTarget(unit.colIndex, enemies);
       if (idx === undefined) return skip(unit);
       return strike(unit, [enemies[idx] as UnitState], physicalDamage);
     }
     case 'archer': {
-      const idx = selectRearmostTarget(unit.colIndex, candidatesOf(enemies));
+      const idx = selectRearmostTarget(unit.colIndex, enemies);
       if (idx === undefined) return skip(unit);
       return strike(unit, [enemies[idx] as UnitState], physicalDamage);
     }
     case 'mage': {
-      const row = selectBlastRow(candidatesOf(enemies));
+      const row = selectBlastRow(enemies);
       if (row === undefined) return skip(unit);
       const targets = enemies.filter((e) => e.alive && e.rowIndex === row);
       return strike(unit, targets, magicDamage);
@@ -217,7 +216,7 @@ function act(unit: UnitState, units: UnitState[]): BattleEvent[] {
         return [{ type: 'UnitHealed', source: unit.id, target: patient.id, amount, hpAfter: patient.hp }];
       }
       // Nobody damaged: the weak STR staff attack with magic targeting (FR11).
-      const idx = selectRearmostTarget(unit.colIndex, candidatesOf(enemies));
+      const idx = selectRearmostTarget(unit.colIndex, enemies);
       if (idx === undefined) return skip(unit);
       return strike(unit, [enemies[idx] as UnitState], physicalDamage);
     }
@@ -236,7 +235,7 @@ function act(unit: UnitState, units: UnitState[]): BattleEvent[] {
         target.statuses.add(unit.witchSpell);
         return [{ type: 'StatusApplied', source: unit.id, target: target.id, spell: unit.witchSpell }];
       }
-      const anyIdx = selectRearmostTarget(unit.colIndex, candidatesOf(enemies));
+      const anyIdx = selectRearmostTarget(unit.colIndex, enemies);
       if (anyIdx === undefined) return skip(unit);
       return [{ type: 'ActionFizzled', unit: unit.id }];
     }
@@ -266,7 +265,7 @@ function misfire(unit: UnitState, units: UnitState[], battle: Stream): BattleEve
       // Blasts its OWN fullest row (recorded decision: the mage itself counts
       // and can be struck by its own blast).
       const own = units.filter((u) => u.side === unit.side);
-      const row = selectBlastRow(candidatesOf(own));
+      const row = selectBlastRow(own);
       if (row === undefined) return [{ type: 'ActionFizzled', unit: unit.id }];
       const targets = own.filter((u) => u.alive && u.rowIndex === row);
       return strike(unit, targets, magicDamage);
@@ -299,11 +298,7 @@ function skip(unit: UnitState): BattleEvent[] {
  * Damage runs the FIXED pipeline with the source's Weaken status; each kill
  * appends a `UnitDied` after the single `UnitAttacked`, in target order.
  */
-function strike(
-  source: UnitState,
-  targets: UnitState[],
-  formula: (a: UnitClass, d: UnitClass, weakened?: boolean) => number,
-): BattleEvent[] {
+function strike(source: UnitState, targets: UnitState[], formula: (a: UnitClass, d: UnitClass, weakened?: boolean) => number): BattleEvent[] {
   const weakened = source.statuses.has('weaken');
   const hits: AttackTarget[] = [];
   const deaths: BattleEvent[] = [];
@@ -386,6 +381,7 @@ function buildUnits(setup: MatchSetup): UnitState[] {
         colIndex: ALL_COLS.indexOf(placement.col),
         alive: true,
         hp: stats.hp,
+        maxHp: stats.hp,
         actionsLeft: stats.actions[placement.row],
         statuses: new Set(),
         witchSpell: BALANCE.elementSpells[unit.element],

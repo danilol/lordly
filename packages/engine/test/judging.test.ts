@@ -50,7 +50,7 @@ describe('FR18 judging', () => {
     expect(judge(units, undefined).winner).toBe('draw');
   });
 
-  it("mutual wipe → draw with both sides at 0%", () => {
+  it('mutual wipe → draw with both sides at 0%', () => {
     const units = [unit('A', 0, 140), unit('B', 0, 90)];
     const verdict = judge(units, 'both');
     expect(verdict.winner).toBe('draw');

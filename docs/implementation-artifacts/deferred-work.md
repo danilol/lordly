@@ -16,7 +16,7 @@
 
 - **Archer should be strong against ALL magical units — mage, cleric, AND witch** (Danilo, 2026-07-13, after losing to a witch comp while playtesting the story-1.10 wipeout build: "we need to make archer good against mage and cleric and witch, so magical units"). Today FR14's triangle gives the archer advantage over the **mage only** (×1.5); cleric and witch sit outside the triangle (×1.0 both ways) — though the archer already counters casters *positionally* via FR9's rearmost-row sniping. This is an FR14 **rules change**, not a number tweak: `BALANCE.rpsBeats` is a one-target-per-class map, so "archer beats three classes" changes the balance-data *shape* (→ `balanceVersion` bump + hash re-pin + golden re-records, AD-8 discipline) and the PRD's triangle definition. Design questions to settle when scoped: one-way advantage (archer deals ×1.5 to casters) vs. full pairs (casters also take ×0.75 disadvantage... i.e. deal less to archer)? Does "beats" stay reciprocal in wording ("Archer beats Mage" already exists — extend or generalize to "Archer beats casters")? And the NFR4 sim harness MUST re-verify the ≤65% dominance band afterward — a 3-class advantage could easily make archer dominant. Worth also checking whether the felt problem is archer weakness or **witch strength** (AGI 26 first-strike + sleep/confusion) — the sim sweep can distinguish. Formalize via `correct-course` (PRD FR14 amendment + a balance story).
 
-- **Font still reads as blurry on Danilo's actual Android device** (reported during the story-1.9 Android Chrome confirmation, despite the `crispText`/`TEXT_RESOLUTION = 3` fix shipped in story 1.8). Story 1.8's review explicitly dismissed `devicePixelRatio`-aware scaling as "a micro-opt" over the fixed `TEXT_RESOLUTION = 3` choice — this real-device report suggests the fixed multiplier may not be enough on Danilo's specific device/DPI, and is worth a closer look (rendering at `devicePixelRatio`-scaled resolution, or a higher fixed multiplier) rather than being re-dismissed. Candidate for the epic-1 retro or a quick investigation before epic 2's polish work.
+- ~~**Font still reads as blurry on Danilo's actual Android device**~~ **ADDRESSED (story 2.0 AC2, reclassified ACCESSIBILITY at the epic-1 retro):** `crispText` is now `devicePixelRatio`-aware (floor `TEXT_RESOLUTION = 3`, `?textres=N` diagnostic override for on-device comparison) and a `MIN_FONT_PX = 10` floor raised the ten 8–9px micro-labels. **Final sign-off = Danilo reading his own phone** (the story's acceptance gate); if it still reads blurry there, reopen with the on-device `?textres` comparison data.
 
 ## Deferred from: story-1.10 dev (2026-07-13)
 
@@ -24,29 +24,29 @@
 
 ## Deferred from: code review of story-1.1 (2026-07-12)
 
-- No lint/format step in the CI quality gate — only typecheck/test/coverage run today; adding ESLint/Prettier (or equivalent) is a scope decision for a future story, not required by story 1.1's ACs.
+- ~~No lint/format step in the CI quality gate~~ **RESOLVED (story 2.0):** ESLint (flat config, incl. an AST purity layer for the engine) + Prettier check run in CI between typecheck and coverage.
 - `pnpm-workspace.yaml`'s `allowBuilds` allowlist is hand-maintained (esbuild, sharp, workerd — currently all legitimately required by wrangler's dependency tree). A future dependency bump that introduces a new native postinstall script not yet listed will hard-fail `pnpm install --frozen-lockfile` in CI with `ERR_PNPM_IGNORED_BUILDS`, unrelated to any code change in that PR.
-- `apps/web/src/main.ts`'s `StartGame('game-container')` call has no try/catch or fallback UI if Phaser/WebGL initialization throws. This is pre-existing vendored template code (phaserjs/template-vite-ts), out of scope per story 1.1's scope fence ("keep the template's demo scene as-is for now... do NOT start building game scenes here").
-- `packages/engine/tsconfig.json` and `apps/web/tsconfig.json` differ in strictness flags (`noUnusedLocals`/`noUnusedParameters` only in web, `noUncheckedIndexedAccess` only in engine) with no documented rationale for the asymmetry. Low urgency; revisit if it causes friction.
+- ~~`apps/web/src/main.ts` has no try/catch or fallback UI if Phaser init throws~~ **RESOLVED (story 2.0):** init wrapped; plain-DOM fallback message on failure.
+- ~~engine/web tsconfig strictness asymmetry~~ **RESOLVED (story 2.0):** flags symmetrized both ways (zero new errors surfaced); the one remaining divergence (`strictPropertyInitialization: false` on web, for Phaser's init()/create() lifecycle) now carries a rationale comment in the config.
 
 ## Deferred from: code review of story-1.1, second pass (2026-07-12)
 
 - CI's corepack bootstrap depends on the runner image's preinstalled Node still bundling corepack; corepack has been removed from newer Node distributions, so a future ubuntu-latest image bump could break the `corepack enable` step. Revisit if/when CI fails with "corepack: command not found".
 - `pnpm -r typecheck` silently skips any workspace package that lacks a `typecheck` script (it only hard-fails when no package has it). No clean guard exists; recheck when a third workspace package is added.
-- Template cruft in apps/web: `phasermsg` marketing banner in the prod Vite config (also prints its success banner even when the build fails), `Game.ts` demo text containing a phaser.io address, and duplicated dev/prod Vite configs carrying dead keys (`manualChunks` unused by the dev server, `server.port` unused by `vite build`). The demo scene and template structure are replaced in stories 1.2/2.x.
+- ~~Template cruft in apps/web (phasermsg banner, duplicated vite configs, dead keys)~~ **RESOLVED (story 2.0):** configs consolidated onto `vite/config.base.mjs`, banner deleted, dead keys removed. (The `Game.ts` demo text was already gone before this story.)
 
 ## Deferred from: code review of story-1.3 (2026-07-12)
 
-- The engine purity guard is regex-based and inherently bypassable (e.g. computed member access, aliased imports). An ESLint `no-restricted-globals`/`no-restricted-imports` config or AST-based import-graph check would be categorically stronger; fold into the lint-tooling decision already deferred from story 1.1's review.
+- ~~The engine purity guard is regex-based and inherently bypassable~~ **RESOLVED (story 2.0):** AST layer added in `eslint.config.mjs` (no-restricted-imports/globals/properties/syntax scoped to `packages/engine/src/**`); the regex sieve stays as belt-and-suspenders (it also locks the dependency list and source-file census).
 
 ## Deferred from: code review of story-1.4 (2026-07-12)
 
 - Chassis `BattleEnded`/`hpPct`/`EngagementEnded.hp` are hardcoded stubs (all-full-HP draw) type-indistinguishable from real judged output. Story 1.5 makes them real; no shell consumes the log until 1.9. Revisit only if a consumer appears before 1.5.
-- Seed-range bound `0xffffffff` is duplicated in `validate.ts` and `rng.ts` with divergent error types (InvalidMatchSetupError vs RangeError). Validate-first ordering makes it correct today; fold into a shared constant when rng.ts is next touched.
+- ~~Seed-range bound `0xffffffff` duplicated in `validate.ts` and `rng.ts`~~ **RESOLVED (story 2.0):** one exported `MAX_SEED` in rng.ts, consumed by validate.ts and sim/run.ts (it had actually triplicated). Error types stay layer-appropriate by design.
 
 ## Deferred from: code review of story-1.5 (2026-07-12)
 
-- Engine hot-path allocation churn: per-swing candidate projection in `takeTurn`, `judgedView` materialized on every turn and twice at battle end. Harmless at 6 units; matters for NFR4's headless sim-harness throughput (story 1.7 runs thousands of battles). Input for the pre-epic-2 tech-debt story.
+- ~~Engine hot-path allocation churn (`candidatesOf`/`judgedView` projections)~~ **RESOLVED (story 2.0), with a finding:** projections deleted (UnitState now structurally satisfies MeleeCandidate/JudgedUnit) and throughput MEASURED — sweep median 812 ms before vs 792–819 ms after at runsPerPair=500: **no measurable gain**. The "matters for sim throughput" hypothesis was empirically false at 6 units (V8's generational GC absorbs short-lived projections); kept anyway as a net code deletion, goldens byte-identical.
 - Judging-symmetry property proves symmetry only for asymmetric rosters (mirror-tie setups are filtered because the coin flip is not side-symmetric). A complementary invariant — "the coin flip is the SOLE source of mirror-match asymmetry" — needs a test harness that can control/inject the flip. Design note for the tech-debt story.
 
 ## Deferred from: code review of story-1.8 (2026-07-13)

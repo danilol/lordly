@@ -3,7 +3,12 @@
   "compilerOptions": {
     "target": "ES2022",
     "noUncheckedIndexedAccess": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    // Symmetrized with apps/web (story 2.0 AC3): dead locals/params are the
+    // "dead code" review finding as compiler errors.
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
   },
   "include": ["src", "test", "sim"]
 }

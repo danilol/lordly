@@ -9,6 +9,7 @@
  * the threshold (CI-composable), mirroring test/sim.test.ts's band.
  */
 import { STRATEGY_POOL } from '../src/ai';
+import { MAX_SEED } from '../src/rng';
 import { runSweep } from './sweep';
 import type { SweepConfig } from './sweep';
 
@@ -37,11 +38,11 @@ function arg(name: string, fallback: number): number {
 }
 
 const seedArg = arg('seed', 1);
-if (!Number.isInteger(seedArg) || seedArg < 0 || seedArg > 0xffffffff) {
+if (!Number.isInteger(seedArg) || seedArg < 0 || seedArg > MAX_SEED) {
   // Matches createStreams' own uint32 contract (rng.ts) instead of silently
   // wrapping via `>>> 0` — the engine throws on an out-of-range seed
   // elsewhere; the CLI should be no more permissive than what it wraps.
-  console.error(`--seed must be a uint32 (0..4294967295), got ${seedArg}`);
+  console.error(`--seed must be a uint32 (0..${MAX_SEED}), got ${seedArg}`);
   process.exit(2);
 }
 
@@ -75,7 +76,9 @@ console.log(`lordly balancing sweep — ${pool.length} archetypes, ${report.tota
 
 console.log('ARCHETYPES (win rate = wins + draws/2, per games):');
 for (const a of report.archetypes) {
-  console.log(`  ${pct(a.winRate)}  ${a.id.padEnd(12)} w${String(a.wins).padStart(4)} d${String(a.draws).padStart(4)} g${String(a.games).padStart(4)}  [${a.composition}]`);
+  console.log(
+    `  ${pct(a.winRate)}  ${a.id.padEnd(12)} w${String(a.wins).padStart(4)} d${String(a.draws).padStart(4)} g${String(a.games).padStart(4)}  [${a.composition}]`,
+  );
 }
 
 console.log('\nCOMPOSITIONS (archetypes sharing a class multiset, merged):');

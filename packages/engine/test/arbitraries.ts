@@ -14,9 +14,7 @@ const unitArb: fc.Arbitrary<Unit> = fc.record({
 const armyArb = fc.array(unitArb, { minLength: BALANCE.armySize, maxLength: BALANCE.armySize });
 
 /** Distinct cells for one side: a shuffled subset of the 9 grid cells. */
-const placementsArb = fc
-  .shuffledSubarray(ALL_CELLS, { minLength: BALANCE.armySize, maxLength: BALANCE.armySize })
-  .map((cells) => cells.map((c) => ({ ...c })));
+const placementsArb = fc.shuffledSubarray(ALL_CELLS, { minLength: BALANCE.armySize, maxLength: BALANCE.armySize }).map((cells) => cells.map((c) => ({ ...c })));
 
 /**
  * A VALID `MatchSetup` (passes `validateMatchSetup`): armies of the balance

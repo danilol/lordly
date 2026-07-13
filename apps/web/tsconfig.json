@@ -1,27 +1,25 @@
 {
-    "extends": "../../tsconfig.base.json",
-    "compilerOptions": {
-        "target": "ES2022",
-        "useDefineForClassFields": true,
-        "lib": [
-            "ES2022",
-            "DOM",
-            "DOM.Iterable"
-        ],
-        /* Bundler mode */
-        "allowImportingTsExtensions": true,
-        "isolatedModules": true,
-        "moduleDetection": "force",
-        "noEmit": true,
-        /* Linting */
-        "strictPropertyInitialization": false,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "noFallthroughCasesInSwitch": true,
-        "noUncheckedSideEffectImports": true
-    },
-    "include": [
-        "src",
-        "test"
-    ]
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    /* Bundler mode */
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    /* Linting — symmetrized with packages/engine (story 2.0 AC3) */
+    // DELIBERATE divergence: Phaser scenes initialize fields in init()/create()
+    // (Phaser's lifecycle, not the constructor), so definite-assignment checks
+    // would force `!` on every scene field. Documented rationale, not drift.
+    "strictPropertyInitialization": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src", "test"]
 }

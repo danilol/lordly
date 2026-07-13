@@ -12,6 +12,13 @@ import type { Element } from './types';
  */
 export const STREAM_LABELS = ['elements/A', 'elements/B', 'ai/A', 'ai/B', 'battle'] as const;
 
+/**
+ * The inclusive uint32 ceiling every match seed must satisfy (FR20). The ONE
+ * source for the bound (story 2.0 AC3) — validate.ts and the sim CLI consume
+ * this instead of re-typing the literal (they had drifted into triplication).
+ */
+export const MAX_SEED = 0xffffffff;
+
 /** A named stream's label (AD-10 closed set). */
 export type StreamLabel = (typeof STREAM_LABELS)[number];
 
@@ -47,7 +54,7 @@ const generators = new WeakMap<Stream, JumpableRandomGenerator>();
  * coercion would alias distinct seeds onto identical battles (FR20).
  */
 export function createStreams(seed: number): Streams {
-  if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) {
+  if (!Number.isInteger(seed) || seed < 0 || seed > MAX_SEED) {
     throw new RangeError(`match seed must be a uint32, got ${seed}`);
   }
   const entries = STREAM_LABELS.map((label) => {

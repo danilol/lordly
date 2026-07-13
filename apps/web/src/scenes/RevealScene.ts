@@ -11,6 +11,7 @@ import {
   REVEAL_FIGHT_LABEL,
   REVEAL_HINT,
   REVEAL_TITLE,
+  MIN_FONT_PX,
 } from '../config/constants';
 import { addHomeBack, crispText } from '../config/ui';
 import { screenCellCenter, toScreenCell } from '../flow/battleView';
@@ -44,11 +45,19 @@ export class RevealScene extends Scene {
     // commits before starting this scene — but cheap insurance against a
     // future navigation change): resolve() throws if reached uncommitted.
     if (this.flow.getState().phase !== 'committed') {
-      crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.4, 'No match committed.', { fontFamily: 'Arial', fontSize: '16px', color: PALETTE.bodyText }).setOrigin(0.5);
+      crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.4, 'No match committed.', { fontFamily: 'Arial', fontSize: '16px', color: PALETTE.bodyText }).setOrigin(
+        0.5,
+      );
       return;
     }
 
-    crispText(this, BASE_WIDTH / 2, 52, REVEAL_HINT, { fontFamily: 'Arial', fontSize: '11px', color: PALETTE.mutedText, align: 'center', wordWrap: { width: BASE_WIDTH - 24 } }).setOrigin(0.5);
+    crispText(this, BASE_WIDTH / 2, 52, REVEAL_HINT, {
+      fontFamily: 'Arial',
+      fontSize: '11px',
+      color: PALETTE.mutedText,
+      align: 'center',
+      wordWrap: { width: BASE_WIDTH - 24 },
+    }).setOrigin(0.5);
     crispText(this, BASE_WIDTH / 2, 92, ENEMY_ARMY_LABEL, { fontFamily: 'Arial Black', fontSize: '12px', color: PALETTE.enemyText }).setOrigin(0.5);
 
     // resolve() runs the engine EXACTLY ONCE (AD-13); the Battle scene replays
@@ -71,8 +80,8 @@ export class RevealScene extends Scene {
     const stroke = unit.side === 'A' ? PALETTE.buttonStrokeEnabled : PALETTE.enemyLine;
     const nameColor = unit.side === 'A' ? PALETTE.playerText : PALETTE.enemyText;
     this.add.rectangle(x, y, 48, 40, PALETTE.unitFill).setStrokeStyle(2, stroke);
-    crispText(this, x, y - 6, unit.class, { fontFamily: 'Arial Black', fontSize: '9px', color: nameColor }).setOrigin(0.5);
-    crispText(this, x, y + 7, unit.element, { fontFamily: 'Arial', fontSize: '8px', color: PALETTE.bodyText }).setOrigin(0.5);
+    crispText(this, x, y - 6, unit.class, { fontFamily: 'Arial Black', fontSize: `${MIN_FONT_PX}px`, color: nameColor }).setOrigin(0.5);
+    crispText(this, x, y + 7, unit.element, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
     this.add.rectangle(x + 17, y - 12, 8, 8, ELEMENT_COLORS[unit.element]).setOrigin(0.5);
   }
 }
