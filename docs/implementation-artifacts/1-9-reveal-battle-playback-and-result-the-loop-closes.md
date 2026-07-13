@@ -4,7 +4,7 @@ baseline_commit: 95bb4ba81813ecc0127ac2b77800fed56267b904
 
 # Story 1.9: Reveal, battle playback, and result — the loop closes
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -83,7 +83,7 @@ _Verbatim from [Source: docs/planning-artifacts/epics.md#Story-1.9]. epics.md is
 
 _Reviewed 2026-07-13 via `bmad-code-review` (Blind Hunter + Edge Case Hunter + Acceptance Auditor, uncommitted diff vs baseline 95bb4ba, run on Sonnet 5 — a different model than the Opus 4.8 implementer, per the recommended cross-model check). Acceptance Auditor: AD-2/AD-5/AD-11/AD-13 all correctly implemented and verified against actual engine source; scope fences respected; 212/212 tests independently re-confirmed green. 1 decision, 8 patches, ~6 topics dismissed as noise/by-design._
 
-- [ ] [Review][Decision] AC3's "the deployed production URL delivers this complete loop on Android Chrome" clause is unverified — nothing from this story has been pushed to `main` yet (all changes are uncommitted), so the current production URL cannot reflect this diff at all, and no Android Chrome confirmation has been obtained. Story 1.2 set the precedent for this exact AC shape: it required an explicit `ASK USER` step and Danilo's dated, on-device confirmation before the AC was considered satisfied — a desktop dev-server run was documented as supporting evidence only, never sufficient on its own. This story's Dev Agent Record only documents the local `pnpm --filter web dev` drive, with no deploy step and no phone confirmation.
+- [x] [Review][Decision] AC3's "the deployed production URL delivers this complete loop on Android Chrome" clause is unverified — nothing from this story has been pushed to `main` yet (all changes are uncommitted), so the current production URL cannot reflect this diff at all, and no Android Chrome confirmation has been obtained. Story 1.2 set the precedent for this exact AC shape: it required an explicit `ASK USER` step and Danilo's dated, on-device confirmation before the AC was considered satisfied — a desktop dev-server run was documented as supporting evidence only, never sufficient on its own. This story's Dev Agent Record only documents the local `pnpm --filter web dev` drive, with no deploy step and no phone confirmation. RESOLVED: commit 96a96ba pushed to `main`, `ci` + `deploy` both green, https://lordly.lol-gaming.workers.dev serving the new build — CONFIRMED by Danilo 2026-07-13 on Android Chrome ("it looks great, i love it"), full loop played end to end.
 
 - [x] [Review][Patch] `ActionMisfired` is rendered as an ordinary, isolated beat identical to any other event, with no visual/temporal link to the redirected effect event that immediately follows it — but the engine's own doc comment (`types.ts`) calls this a "MARKER + EFFECT PAIR", and Task 5 explicitly requires narrating it "with its following effect event as a pair." A player sees "misfire!" then, a full beat later, an unexplained hit/heal/status on some other unit [apps/web/src/scenes/BattleScene.ts:128-130].
 - [x] [Review][Patch] Press-and-hold fast-forward has up to a full beat (600 ms) of engage latency: `this.holding` is sampled only when the *next* `delayedCall` is scheduled, so pressing mid-beat doesn't speed up the current beat. For a feature literally named "fast-forward," this is noticeably sluggish and is the primary interaction AC2 calls for. Reschedule the pending timer for the remaining duration when the held-state changes instead of only sampling once per beat [apps/web/src/scenes/BattleScene.ts:68-69, 96-104].
@@ -212,6 +212,7 @@ Opus 4.8 (1M context) — via `bmad-dev-story`.
 
 - Gate: `pnpm -r typecheck` clean (engine + web); `pnpm test` → 25 files, **212 tests** green (was 195 at baseline; +17 new for `resolve()` and `battleView`); `pnpm --filter web build` succeeds (only the pre-existing Phaser chunk-size advisory).
 - Dev-run verification: started `pnpm --filter web dev`; confirmed the server serves and every new/changed module (`RevealScene`/`BattleScene`/`ResultScene`/`battleView`/`MatchFlow`/`constants`/`ui`) transforms HTTP 200 with no compile error. Interactive drag-drop + battle-playback visual drive on a 360×640 viewport is the human step (scene rendering is smoke-only by convention — the pure models carry the tested correctness).
+- Production verification (AC3): pushed commit 96a96ba to `main` → GitHub Actions run 29251321693, both `ci` and `deploy` jobs green → `curl` confirmed `https://lordly.lol-gaming.workers.dev` returns HTTP 200 with `<title>Lord Battle Tactics</title>` → **CONFIRMED by Danilo 2026-07-13 on Android Chrome**: "it looks great, i love it" — full loop (Home → Draft → Placement → Reveal → Battle → Result → Rematch/Home) played end to end on the actual production URL.
 
 ### Completion Notes List
 
@@ -244,3 +245,4 @@ Opus 4.8 (1M context) — via `bmad-dev-story`.
 
 - 2026-07-13: Implemented story 1.9 — Reveal/Battle/Result scenes closing the core match loop; `MatchFlow.resolve()` AD-13 seam; pure `battleView` transform/pacing module; Home affordance on every scene. Gate green (212 tests, typecheck, build). Status → review.
 - 2026-07-13: `bmad-code-review` (Sonnet 5, cross-model check) — 1 decision-needed (AC3's production-URL/Android-Chrome clause unverified), 8 patches. Danilo chose to apply every patch, then deploy and confirm on Android Chrome. All 8 patches applied to `BattleScene.ts`/`RevealScene.ts`/`constants.ts`/`ui.ts`; gate re-verified green.
+- 2026-07-13: Committed (96a96ba), pushed to `main`, CI + deploy green. Danilo confirmed the full loop on the production URL via Android Chrome. AC3 decision item resolved. Status → done. (Feedback from the demo — battle-log visibility, position-dependent move variety, move-name flavor text, a still-blurry font report, endless/limited-turn mode — logged in `deferred-work.md` for a future planning pass, not in this story's scope.)
