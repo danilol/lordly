@@ -1,5 +1,6 @@
 import { Scene } from 'phaser';
 import { BASE_HEIGHT, BASE_WIDTH, PALETTE, REVEAL_PLACEHOLDER } from '../config/constants';
+import { crispText } from '../config/ui';
 import type { MatchFlow } from '../flow/MatchFlow';
 
 /**
@@ -27,14 +28,12 @@ export class RevealScene extends Scene {
     // opponent's composition/placement (that is story 1.9's Reveal).
     const committed = this.flow.getState().phase === 'committed';
 
-    this.add
-      .text(BASE_WIDTH / 2, BASE_HEIGHT * 0.4, committed ? REVEAL_PLACEHOLDER : 'No match committed.', {
-        fontFamily: 'Arial',
-        fontSize: '16px',
-        color: PALETTE.bodyText,
-        align: 'center',
-        wordWrap: { width: BASE_WIDTH - 48 },
-      })
-      .setOrigin(0.5);
+    crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.4, committed ? REVEAL_PLACEHOLDER : 'No match committed.', {
+      fontFamily: 'Arial',
+      fontSize: '16px',
+      color: PALETTE.bodyText,
+      align: 'center',
+      wordWrap: { width: BASE_WIDTH - 48 },
+    }).setOrigin(0.5);
   }
 }

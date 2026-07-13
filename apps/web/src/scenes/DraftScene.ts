@@ -11,6 +11,7 @@ import {
 } from '../config/constants';
 import { canAddUnit, canContinue, classRulesCard } from '../flow/draftModel';
 import type { MatchFlow } from '../flow/MatchFlow';
+import { crispText } from '../config/ui';
 
 /**
  * Draft scene (FR1/FR2/FR3): six class cards to tap, the growing army with
@@ -35,8 +36,8 @@ export class DraftScene extends Scene {
   create() {
     this.cameras.main.setBackgroundColor(PALETTE.background);
 
-    this.add.text(BASE_WIDTH / 2, 26, DRAFT_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
-    this.add.text(BASE_WIDTH / 2, 50, DRAFT_HINT, { fontFamily: 'Arial', fontSize: '11px', color: PALETTE.mutedText, align: 'center', wordWrap: { width: BASE_WIDTH - 24 } }).setOrigin(0.5);
+    crispText(this, BASE_WIDTH / 2, 26, DRAFT_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
+    crispText(this, BASE_WIDTH / 2, 50, DRAFT_HINT, { fontFamily: 'Arial', fontSize: '11px', color: PALETTE.mutedText, align: 'center', wordWrap: { width: BASE_WIDTH - 24 } }).setOrigin(0.5);
 
     this.buildClassCards();
     this.redraw();
@@ -68,10 +69,10 @@ export class DraftScene extends Scene {
 
     const rps = card.beats ? `beats ${card.beats}` : card.beatenBy ? `weak vs ${card.beatenBy}` : 'neutral';
     const a = card.actions;
-    this.add.text(x + 8, y + 6, card.name.toUpperCase(), { fontFamily: 'Arial Black', fontSize: '13px', color: PALETTE.title });
-    this.add.text(x + 8, y + 24, card.role, { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.bodyText });
-    this.add.text(x + 8, y + 38, card.behavior, { fontFamily: 'Arial', fontSize: '9px', color: PALETTE.mutedText, wordWrap: { width: w - 16 } }).setResolution(2);
-    this.add.text(x + 8, y + h - 14, `${rps}  ·  act ${a.front}/${a.mid}/${a.back}`, { fontFamily: 'Arial', fontSize: '9px', color: PALETTE.mutedText });
+    crispText(this, x + 8, y + 6, card.name.toUpperCase(), { fontFamily: 'Arial Black', fontSize: '13px', color: PALETTE.title });
+    crispText(this, x + 8, y + 24, card.role, { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.bodyText });
+    crispText(this, x + 8, y + 38, card.behavior, { fontFamily: 'Arial', fontSize: '9px', color: PALETTE.mutedText, wordWrap: { width: w - 16 } });
+    crispText(this, x + 8, y + h - 14, `${rps}  ·  act ${a.front}/${a.mid}/${a.back}`, { fontFamily: 'Arial', fontSize: '9px', color: PALETTE.mutedText });
 
     bg.on('pointerup', () => {
       if (canAddUnit(this.flow.getState().playerArmy)) {
@@ -88,7 +89,7 @@ export class DraftScene extends Scene {
 
     const army = this.flow.getState().playerArmy;
     const trayY = 360;
-    this.dynamic.push(this.add.text(BASE_WIDTH / 2, trayY - 22, `Your army  (${army.length}/3)`, { fontFamily: 'Arial', fontSize: '12px', color: PALETTE.bodyText }).setOrigin(0.5));
+    this.dynamic.push(crispText(this, BASE_WIDTH / 2, trayY - 22, `Your army  (${army.length}/3)`, { fontFamily: 'Arial', fontSize: '12px', color: PALETTE.bodyText }).setOrigin(0.5));
 
     const slotW = 96;
     const gap = 12;
@@ -101,16 +102,16 @@ export class DraftScene extends Scene {
       this.dynamic.push(slot);
       if (unit) {
         const badge = this.add.rectangle(x + slotW - 14, trayY + 14, 16, 16, ELEMENT_COLORS[unit.element]).setOrigin(0.5);
-        const name = this.add.text(x + 8, trayY + 10, unit.class, { fontFamily: 'Arial Black', fontSize: '11px', color: PALETTE.title });
-        const el = this.add.text(x + 8, trayY + 28, unit.element, { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.bodyText });
-        const hint = this.add.text(x + 8, trayY + 42, 'tap to remove', { fontFamily: 'Arial', fontSize: '8px', color: PALETTE.mutedText });
+        const name = crispText(this, x + 8, trayY + 10, unit.class, { fontFamily: 'Arial Black', fontSize: '11px', color: PALETTE.title });
+        const el = crispText(this, x + 8, trayY + 28, unit.element, { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.bodyText });
+        const hint = crispText(this, x + 8, trayY + 42, 'tap to remove', { fontFamily: 'Arial', fontSize: '8px', color: PALETTE.mutedText });
         slot.setInteractive({ useHandCursor: true }).on('pointerup', () => {
           this.flow.removeUnit(i);
           this.redraw();
         });
         this.dynamic.push(badge, name, el, hint);
       } else {
-        this.dynamic.push(this.add.text(x + slotW / 2, trayY + 30, 'empty', { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.mutedText }).setOrigin(0.5));
+        this.dynamic.push(crispText(this, x + slotW / 2, trayY + 30, 'empty', { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.mutedText }).setOrigin(0.5));
       }
     }
 
@@ -119,7 +120,7 @@ export class DraftScene extends Scene {
     const btn = this.add
       .rectangle(BASE_WIDTH / 2, btnY, 200, 52, ready ? PALETTE.buttonFillEnabled : PALETTE.buttonFill)
       .setStrokeStyle(2, ready ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke);
-    const label = this.add.text(BASE_WIDTH / 2, btnY, DRAFT_CONTINUE_LABEL, { fontFamily: 'Arial', fontSize: '18px', color: ready ? PALETTE.buttonText : PALETTE.buttonTextDisabled }).setOrigin(0.5);
+    const label = crispText(this, BASE_WIDTH / 2, btnY, DRAFT_CONTINUE_LABEL, { fontFamily: 'Arial', fontSize: '18px', color: ready ? PALETTE.buttonText : PALETTE.buttonTextDisabled }).setOrigin(0.5);
     this.dynamic.push(btn, label);
     if (ready) {
       btn.setInteractive({ useHandCursor: true }).on('pointerup', () => this.scene.start('Placement', { flow: this.flow }));

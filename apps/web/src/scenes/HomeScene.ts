@@ -9,6 +9,7 @@ import {
     PALETTE,
 } from '../config/constants';
 import { MatchFlow } from '../flow/MatchFlow';
+import { crispText } from '../config/ui';
 
 export class HomeScene extends Scene {
     constructor() {
@@ -18,15 +19,13 @@ export class HomeScene extends Scene {
     create() {
         this.cameras.main.setBackgroundColor(PALETTE.background);
 
-        this.add
-            .text(BASE_WIDTH / 2, BASE_HEIGHT * 0.3, GAME_NAME, {
-                fontFamily: 'Arial Black',
-                fontSize: '32px',
-                color: PALETTE.title,
-                align: 'center',
-                wordWrap: { width: BASE_WIDTH - 40 },
-            })
-            .setOrigin(0.5);
+        crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.3, GAME_NAME, {
+            fontFamily: 'Arial Black',
+            fontSize: '32px',
+            color: PALETTE.title,
+            align: 'center',
+            wordWrap: { width: BASE_WIDTH - 40 },
+        }).setOrigin(0.5);
 
         // Enabled (story 1.8): starts a fresh match and enters the Draft scene.
         const button = this.add
@@ -34,13 +33,11 @@ export class HomeScene extends Scene {
             .setStrokeStyle(2, PALETTE.buttonStrokeEnabled)
             .setInteractive({ useHandCursor: true });
 
-        this.add
-            .text(button.x, button.y, HOME_PLAY_LABEL, {
-                fontFamily: 'Arial',
-                fontSize: '20px',
-                color: PALETTE.buttonText,
-            })
-            .setOrigin(0.5);
+        crispText(this, button.x, button.y, HOME_PLAY_LABEL, {
+            fontFamily: 'Arial',
+            fontSize: '20px',
+            color: PALETTE.buttonText,
+        }).setOrigin(0.5);
 
         button.on('pointerup', () => {
             // MatchFlow owns match truth and is passed EXPLICITLY between scenes

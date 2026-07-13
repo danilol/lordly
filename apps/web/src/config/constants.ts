@@ -27,7 +27,16 @@ export const PALETTE = {
     gridCellStroke: 0x44445e,
     unitFill: 0x3a3a5e,
     unitStroke: 0x7a7ab0,
+    // Enemy-side marker on the placement grid (FR6 groundwork; first-time legibility).
+    enemyText: '#e06a6a',
+    enemyLine: 0xc0433a,
 } as const;
+
+// Text render resolution multiplier: the game renders at the 360×640 base and
+// Scale.FIT upscales the canvas, which softens text. Rendering glyphs to a
+// higher-resolution texture keeps them crisp when the canvas is scaled up.
+// Applied via `crispText` (config/ui.ts) so every label shares one setting.
+export const TEXT_RESOLUTION = 3;
 
 export const BUTTON_WIDTH = 220;
 export const BUTTON_HEIGHT = 56;
@@ -39,6 +48,7 @@ export const DRAFT_HINT = 'Tap a class to draft (3 units, duplicates allowed)';
 export const PLACEMENT_TITLE = 'Place your units';
 export const PLACEMENT_SUBMIT_LABEL = 'Ready';
 export const PLACEMENT_SUBMIT_HINT = 'place all 3 units';
+export const ENEMY_ARMY_LABEL = '▲  ENEMY ARMY  ▲';
 export const REVEAL_PLACEHOLDER = 'Both armies committed.\nReveal, battle & result arrive in story 1.9.';
 
 // FR3 element badge colors (cosmetic; the witch's spell keys off element — FR16).
