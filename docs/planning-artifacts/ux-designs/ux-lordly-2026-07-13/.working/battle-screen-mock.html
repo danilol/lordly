@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lordly — Battle screen (\ diagonal)</title>
+<style>
+:root{--ground:#e8dcc0;--ground-2:#dccba3;--gold:#c9a227;--gold-deep:#8a6d1c;--gold-lite:#eacb5a;
+--you:#2f5fb0;--foe:#b03a3a;--ink:#2a2119;--ink-soft:#5c4f3d;
+--tile-you:#2f5fb0;--tile-foe:#b03a3a;--tile-empty:#d8c398;--tile-you-front:#5385d6;--tile-foe-front:#cf5c5c;
+--serif:Georgia,"Times New Roman",serif;--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:ui-monospace,Menlo,monospace;}
+:root[data-sk="night"]{--ground:#161a2e;--ground-2:#1f2438;--gold:#e3b64b;--gold-deep:#9c7c26;--gold-lite:#f4d074;
+--you:#4a8fe0;--foe:#e0533f;--ink:#e8e4d8;--ink-soft:#9a9db0;
+--tile-you:#2c4d80;--tile-foe:#7d2f2c;--tile-empty:#2a3050;--tile-you-front:#4a8fe0;--tile-foe-front:#c8483a;}
+*{box-sizing:border-box;}html,body{margin:0;}
+body{background:#0b0c12;color:#cfcbc0;font-family:var(--sans);padding:18px 12px 34px;display:flex;flex-direction:column;align-items:center;gap:12px;min-height:100vh;}
+.note{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7c7a86;text-align:center;}
+.toggle button{font-family:var(--mono);font-size:12px;border:1px solid #33313d;background:#17161e;color:#cfcbc0;padding:6px 12px;border-radius:6px;cursor:pointer;}
+.toggle button[aria-pressed=true]{background:var(--gold);color:#17140a;border-color:var(--gold-lite);font-weight:700;}
+.phone{width:100%;max-width:360px;aspect-ratio:9/19.5;background:linear-gradient(165deg,var(--ground),var(--ground-2));border-radius:24px;overflow:hidden;display:grid;grid-template-rows:auto 1fr auto;color:var(--ink);box-shadow:0 10px 40px rgba(0,0,0,.5),0 0 0 8px #17161e;}
+.beveled{background:linear-gradient(180deg,var(--gold-lite),var(--gold) 45%,var(--gold-deep));box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -2px 3px rgba(0,0,0,.25);}
+.topbar{margin:8px 8px 0;padding:3px;border-radius:9px;}.topbar__b{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:6px;background:color-mix(in srgb,var(--ground) 88%,#000 5%);}
+:root[data-sk=night] .topbar__b{background:#10131f;}
+.home{font-size:14px;font-weight:600;color:var(--ink-soft);}.pass{font-family:var(--serif);font-size:17px;font-weight:700;}
+.field{position:relative;overflow:hidden;}
+.lab{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;}
+.frontlab{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.14em;}
+.u{font-family:var(--sans);font-weight:800;font-size:9px;}
+.clash{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;opacity:.55;}
+.controls{margin:0 8px 10px;padding:3px;border-radius:10px;}.controls__b{display:flex;gap:6px;padding:8px;border-radius:7px;background:color-mix(in srgb,var(--ground) 88%,#000 5%);}
+:root[data-sk=night] .controls__b{background:#10131f;}
+.ctrl{flex:1;border-radius:6px;padding:7px 3px;text-align:center;background:color-mix(in srgb,var(--ground) 80%,#000 7%);}
+:root[data-sk=night] .ctrl{background:#171b2b;}
+.ctrl.on{background:linear-gradient(180deg,var(--gold-lite),var(--gold) 50%,var(--gold-deep));box-shadow:inset 0 1px 0 rgba(255,255,255,.5);}
+.ctrl .i{font-size:15px;}.ctrl .l{font-size:10px;font-weight:600;display:block;}.ctrl.on .i,.ctrl.on .l{color:#17140a;}
+.legend{max-width:360px;font-size:12.5px;line-height:1.5;color:#8d8b96;}.legend b{color:#cfcbc0;}
+</style></head>
+<body>
+<div class="note">Lordly · Battle · \ diagonal · 9 slots · front-to-front · fronts FACE the centre</div>
+<div class="toggle" role="group">
+  <button aria-pressed="true" onclick="document.documentElement.removeAttribute('data-sk');this.setAttribute('aria-pressed','true');this.nextElementSibling.setAttribute('aria-pressed','false')">Heritage</button>
+  <button aria-pressed="false" onclick="document.documentElement.setAttribute('data-sk','night');this.setAttribute('aria-pressed','true');this.previousElementSibling.setAttribute('aria-pressed','false')">Night</button>
+</div>
+<div class="phone">
+  <div class="topbar beveled"><div class="topbar__b"><span class="home">‹ Home</span><span class="pass">Engagement 2</span></div></div>
+  <div class="field"><svg viewBox="0 0 300 400" style="width:100%;display:block" role="img" aria-label="Battle boards, diagonal, fronts facing center">
+  <text x="12" y="26" class="lab foe" fill="var(--foe)">▲ ENEMY</text>
+  <g stroke="rgba(0,0,0,.35)" stroke-width="1"><polygon points="62,114 86,126 62,138 38,126" fill="var(--tile-foe)"/><polygon points="86,102 110,114 86,126 62,114" fill="var(--tile-empty)"/><polygon points="110,90 134,102 110,114 86,102" fill="var(--tile-foe)"/><polygon points="86,126 110,138 86,150 62,138" fill="var(--tile-empty)"/><polygon points="110,114 134,126 110,138 86,126" fill="var(--tile-foe)"/><polygon points="134,102 158,114 134,126 110,114" fill="var(--tile-empty)"/><polygon points="110,138 134,150 110,162 86,150" fill="var(--tile-foe-front)" stroke="var(--gold-lite)" stroke-width="1.6"/><polygon points="134,126 158,138 134,150 110,138" fill="var(--tile-foe-front)" stroke="var(--gold-lite)" stroke-width="1.6"/><polygon points="158,114 182,126 158,138 134,126" fill="var(--tile-foe-front)" stroke="var(--gold-lite)" stroke-width="1.6"/></g>
+  <g><rect x="125" y="120" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--foe)" stroke-width="2"/><text x="134" y="132" text-anchor="middle" class="u" fill="var(--ink)">KNI</text><rect x="53" y="108" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--foe)" stroke-width="2"/><text x="62" y="120" text-anchor="middle" class="u" fill="var(--ink)">WIT</text><rect x="149" y="108" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--foe)" stroke-width="2"/><text x="158" y="120" text-anchor="middle" class="u" fill="var(--ink)">MER</text></g>
+  <text x="150" y="205" text-anchor="middle" class="clash" fill="var(--ink-soft)">⟋ clash ⟍</text>
+  <g stroke="rgba(0,0,0,.35)" stroke-width="1"><polygon points="248,262 272,274 248,286 224,274" fill="var(--tile-you)"/><polygon points="224,274 248,286 224,298 200,286" fill="var(--tile-empty)"/><polygon points="200,286 224,298 200,310 176,298" fill="var(--tile-you)"/><polygon points="224,250 248,262 224,274 200,262" fill="var(--tile-empty)"/><polygon points="200,262 224,274 200,286 176,274" fill="var(--tile-you)"/><polygon points="176,274 200,286 176,298 152,286" fill="var(--tile-empty)"/><polygon points="200,238 224,250 200,262 176,250" fill="var(--tile-you-front)" stroke="var(--gold-lite)" stroke-width="1.6"/><polygon points="176,250 200,262 176,274 152,262" fill="var(--tile-you-front)" stroke="var(--gold-lite)" stroke-width="1.6"/><polygon points="152,262 176,274 152,286 128,274" fill="var(--tile-you-front)" stroke="var(--gold-lite)" stroke-width="1.6"/></g>
+  <g><rect x="167" y="244" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--you)" stroke-width="2"/><text x="176" y="256" text-anchor="middle" class="u" fill="var(--ink)">KNI</text><rect x="191" y="232" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--you)" stroke-width="2"/><text x="200" y="244" text-anchor="middle" class="u" fill="var(--ink)">ARC</text><rect x="191" y="280" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--you)" stroke-width="2"/><text x="200" y="292" text-anchor="middle" class="u" fill="var(--ink)">MAG</text></g>
+  <text x="164" y="160" fill="var(--foe)" class="frontlab" text-anchor="middle">FRONT ↘</text><text x="142" y="256" fill="var(--you)" class="frontlab" text-anchor="middle">↖ FRONT</text>
+  <text x="288" y="392" text-anchor="end" class="lab you" fill="var(--you)">YOUR ARMY ▼</text>
+  <g font-family="var(--mono)">
+    <rect x="158" y="268" width="36" height="11" rx="2" fill="rgba(0,0,0,.4)"/>
+    <rect x="159" y="268.5" width="26" height="10" fill="var(--you)"/>
+    <text x="176" y="276.5" text-anchor="middle" fill="#fff" style="font-size:8px;font-weight:700">101/140</text>
+  </g>
+  <text x="62" y="112" text-anchor="middle" fill="var(--foe)" style="font-family:var(--mono);font-weight:800;font-size:14px">−18</text>
+</svg></div>
+  <div class="controls beveled"><div class="controls__b">
+    <div class="ctrl on"><span class="i">▶</span><span class="l">1×</span></div>
+    <div class="ctrl"><span class="i">⏩</span><span class="l">2×</span></div>
+    <div class="ctrl"><span class="i">⏭</span><span class="l">Skip</span></div>
+    <div class="ctrl"><span class="i">≡</span><span class="l">Log</span></div>
+  </div></div>
+</div>
+<p class="legend"><b>\ diagonal Battle layout.</b> Enemy board upper-left, yours lower-right — like image4's corners. Each board is exactly <b>3×3 (9 slots)</b>; the <b>front row is highlighted</b> (brighter + gold edge + FRONT marker) and faces the enemy across the diagonal clash. Units fight straight front-to-front; the tilt is display-only. Toggle Heritage/Night above.</p>
+</body></html>

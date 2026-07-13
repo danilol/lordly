@@ -18,6 +18,10 @@
 
 - ~~**Font still reads as blurry on Danilo's actual Android device**~~ **ADDRESSED (story 2.0 AC2, reclassified ACCESSIBILITY at the epic-1 retro):** `crispText` is now `devicePixelRatio`-aware (floor `TEXT_RESOLUTION = 3`, `?textres=N` diagnostic override for on-device comparison) and a `MIN_FONT_PX = 10` floor raised the ten 8–9px micro-labels. **Final sign-off = Danilo reading his own phone** (the story's acceptance gate); if it still reads blurry there, reopen with the on-device `?textres` comparison data.
 
+## Deferred from: UX design (2026-07-13)
+
+- **Player-facing board-orientation toggle (| / \\ / /)** — the UX ships the `\\` diagonal battle view as the polished default, but the renderer's owner-local→screen mapping (`battleView.toScreenCell`, AD-11) is being built to accept an ORIENTATION parameter from the start (the "cheap seam"). Adding a Settings toggle that lets the player pick vertical `|` / diagonal `\\` / diagonal `/` is then a small, engine-safe addition — it rides the same `web/storage` settings gateway as theme + battle speed (story 2.3). Deferred because 3 orientations = ~3× layout/QA (sprite sizing, HUD fit, clash-animation direction per angle) and the MVP's job is to make one battle screen sing. Danilo's idea; revisit post-Epic-2 or as a 2.3 stretch.
+
 ## Deferred from: code review of story-2.0 (2026-07-13)
 
 - **Text resolution never recomputes on resize / orientation change** — `crispText`'s resolution is resolved once (lazily, after the story-2.0-review patch) and applied per-label at creation; a window resize or phone rotation that materially changes the `Scale.FIT` zoom leaves existing labels at the boot resolution until reload. A proper fix needs a live-label registry (or a resize handler that re-`setResolution`s every text object) — presentation-layer infrastructure that the epic-2 UX/animation stories (2.2/2.3) are the natural home for. Portrait-baseline game (FR30), so rotation is not a primary flow; low urgency.

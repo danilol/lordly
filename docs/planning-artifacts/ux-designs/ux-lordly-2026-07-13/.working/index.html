@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lordly — Visual Directions</title>
+</head>
+<body>
+<style>
+  :root {
+    --stage: #0e1018;
+    --stage-2: #141726;
+    --ink-on-stage: #d9d6cc;
+    --muted-on-stage: #8b8a94;
+    --hair: #2a2d3e;
+    --focus: #e3b64b;
+
+    /* Heritage Parchment */
+    --h-ground: #e8dcc0;
+    --h-ground-2: #dccba3;
+    --h-gold: #c9a227;
+    --h-gold-deep: #8a6d1c;
+    --h-blue: #2f5fb0;
+    --h-red: #b03a3a;
+    --h-ink: #2a2119;
+    --h-ink-soft: #5c4f3d;
+
+    /* Night Tactics */
+    --n-ground: #161a2e;
+    --n-ground-2: #1f2438;
+    --n-gold: #e3b64b;
+    --n-blue: #4a8fe0;
+    --n-red: #e0533f;
+    --n-bone: #e8e4d8;
+    --n-bone-soft: #9a9db0;
+
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+
+    --maxw: 1080px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(120% 80% at 50% -10%, #1a1e30 0%, var(--stage) 55%),
+      var(--stage);
+    color: var(--ink-on-stage);
+    font-family: var(--sans);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: clamp(28px, 5vw, 64px) clamp(18px, 4vw, 40px); }
+
+  /* ---- Masthead ---- */
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--focus);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: clamp(30px, 6vw, 52px);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0 0 16px;
+    color: #f2eee2;
+  }
+  .lede { max-width: 60ch; color: var(--muted-on-stage); font-size: clamp(15px, 2.2vw, 18px); margin: 0; }
+  .lede b { color: var(--ink-on-stage); font-weight: 600; }
+
+  .rule { height: 1px; background: linear-gradient(90deg, var(--focus), transparent); border: 0; margin: 40px 0; opacity: 0.5; }
+
+  /* ---- Direction cards ---- */
+  .directions { display: grid; gap: clamp(28px, 4vw, 44px); }
+  @media (min-width: 860px) { .directions { grid-template-columns: 1fr 1fr; } }
+
+  .card { display: flex; flex-direction: column; gap: 18px; }
+  .card__head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .card__num { font-family: var(--mono); font-size: 12px; color: var(--muted-on-stage); letter-spacing: 0.1em; }
+  .card__name { font-family: var(--serif); font-size: clamp(21px, 3vw, 27px); margin: 0; color: #f2eee2; }
+  .card__mood { font-size: 14px; color: var(--muted-on-stage); margin: 0; }
+
+  /* the specimen frame renders each direction in its OWN committed world */
+  .specimen { border-radius: 10px; overflow: hidden; border: 1px solid var(--hair); }
+  .specimen--heritage { background: linear-gradient(160deg, var(--h-ground) 0%, var(--h-ground-2) 100%); color: var(--h-ink); }
+  .specimen--night { background: linear-gradient(160deg, var(--n-ground) 0%, var(--n-ground-2) 100%); color: var(--n-bone); }
+
+  .specimen__inner { padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+
+  /* palette swatches */
+  .palette { display: flex; gap: 0; border-radius: 6px; overflow: hidden; }
+  .swatch { flex: 1; height: 46px; display: flex; align-items: flex-end; padding: 4px 5px; }
+  .swatch span { font-family: var(--mono); font-size: 9px; letter-spacing: 0.02em; opacity: 0.85; }
+  .swatch--light span { color: rgba(0,0,0,0.65); }
+  .swatch--dark span { color: rgba(255,255,255,0.85); }
+
+  /* iso board motif */
+  .board-wrap { display: flex; justify-content: center; padding: 6px 0 2px; }
+  .iso { width: 200px; height: 116px; }
+
+  /* framed unit-info panel — the OB64 "picture frame" + the real type scale */
+  .panel { border-radius: 8px; padding: 3px; }
+  .panel--heritage { background: linear-gradient(180deg, var(--h-gold) 0%, var(--h-gold-deep) 100%); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+  .panel--night { background: linear-gradient(180deg, var(--n-gold) 0%, #9c7c26 100%); box-shadow: 0 0 16px rgba(227,182,75,0.22); }
+  .panel__body { border-radius: 6px; padding: 14px 15px; display: flex; flex-direction: column; gap: 12px; }
+  .panel--heritage .panel__body { background: #f4ecd8; }
+  .panel--night .panel__body { background: #10131f; }
+
+  .roster { display: flex; gap: 8px; }
+  .unit {
+    flex: 1; border-radius: 6px; padding: 8px 4px 7px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    border: 2px solid transparent;
+  }
+  /* side identity — blue=you / red=enemy, load-bearing in both worlds */
+  .unit--you.u-h  { background: rgba(47,95,176,0.14);  border-color: var(--h-blue); }
+  .unit--you.u-n  { background: rgba(74,143,224,0.16); border-color: var(--n-blue); }
+  .unit--foe.u-h  { background: rgba(176,58,58,0.14);  border-color: var(--h-red); }
+  .unit--foe.u-n  { background: rgba(224,83,63,0.16);  border-color: var(--n-red); }
+
+  .unit__code { font-family: var(--sans); font-weight: 800; font-size: 15px; letter-spacing: 0.03em; }
+  .u-h .unit__code { color: var(--h-ink); }
+  .u-n .unit__code { color: var(--n-bone); }
+  .unit__el { font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; opacity: 0.75; }
+
+  /* element badge */
+  .badge { width: 12px; height: 12px; border-radius: 50%; display: inline-block; vertical-align: -1px; margin-right: 4px; }
+  .b-fire { background: #d1603b; } .b-water { background: #3f78c2; } .b-wind { background: #6bae8c; } .b-earth { background: #b0904f; }
+
+  /* hp bar */
+  .hp { display: flex; align-items: center; gap: 8px; }
+  .hp__track { flex: 1; height: 8px; border-radius: 4px; overflow: hidden; }
+  .panel--heritage .hp__track { background: rgba(42,33,25,0.18); }
+  .panel--night .hp__track { background: rgba(255,255,255,0.10); }
+  .hp__fill { height: 100%; border-radius: 4px; }
+  .hp__num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 13px; min-width: 58px; text-align: right; }
+
+  /* type scale specimen */
+  .type { display: flex; flex-direction: column; gap: 7px; padding-top: 2px; }
+  .type__row { display: flex; align-items: baseline; gap: 10px; }
+  .type__tag { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.5; min-width: 74px; }
+  .panel--night .type__tag, .specimen--night .type__tag { color: var(--n-bone-soft); }
+  .t-title { font-family: var(--serif); font-weight: 700; font-size: 26px; line-height: 1; }
+  .t-head  { font-family: var(--sans); font-weight: 700; font-size: 18px; }
+  .t-body  { font-family: var(--sans); font-weight: 400; font-size: 15px; }
+  .t-label { font-family: var(--sans); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; }
+  .t-data  { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 13px; }
+
+  .caption { font-size: 13px; color: var(--muted-on-stage); margin: 2px 0 0; }
+  .caption b { color: var(--ink-on-stage); font-weight: 600; }
+
+  /* readability callout */
+  .readnote {
+    margin-top: 10px; border-left: 2px solid var(--focus); padding: 10px 14px;
+    background: rgba(227,182,75,0.06); border-radius: 0 6px 6px 0;
+    font-size: 13.5px; color: var(--ink-on-stage);
+  }
+  .readnote b { color: #fff; }
+  .old { text-decoration: line-through; color: var(--muted-on-stage); }
+
+  .close { margin-top: 44px; }
+  .close h2 { font-family: var(--serif); font-size: clamp(20px, 3vw, 26px); margin: 0 0 10px; color: #f2eee2; }
+  .close p { color: var(--muted-on-stage); max-width: 62ch; margin: 0 0 6px; }
+  .askrow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  .chip { font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; border: 1px solid var(--hair); border-radius: 999px; padding: 7px 13px; color: var(--ink-on-stage); }
+  .chip b { color: var(--focus); }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Lordly · Visual Identity · pick a world</p>
+  <h1>Two ways Lordly could look — both grown from your Ogre Battle 64 shots.</h1>
+  <p class="lede">Same bones in both: the <b>isometric tiled board</b>, flat billboard sprites, ornate framed panels, and your load-bearing <b>blue = you / red = enemy</b>. What differs is the <b>ground and the mood</b> — and both fix the readability problem with a real type scale, shown live below. Nothing here needs custom art.</p>
+
+  <hr class="rule" />
+
+  <div class="directions">
+
+    <!-- ============ DIRECTION 1 — HERITAGE PARCHMENT ============ -->
+    <section class="card">
+      <div class="card__head">
+        <span class="card__num">01</span>
+        <h3 class="card__name">Heritage Parchment</h3>
+      </div>
+      <p class="card__mood">Warm, classic, box-art bright — aged parchment and gold, like the OB64 menus and unit-detail screens.</p>
+
+      <div class="specimen specimen--heritage">
+        <div class="specimen__inner">
+          <div class="palette">
+            <div class="swatch swatch--light" style="background:#e8dcc0">
+              <span>parchment</span></div>
+            <div class="swatch swatch--dark" style="background:#c9a227">
+              <span>gold</span></div>
+            <div class="swatch swatch--dark" style="background:#2f5fb0">
+              <span>you · blue</span></div>
+            <div class="swatch swatch--dark" style="background:#b03a3a">
+              <span>enemy · red</span></div>
+            <div class="swatch swatch--dark" style="background:#2a2119">
+              <span>ink</span></div>
+          </div>
+
+          <div class="board-wrap">
+            <svg class="iso" viewBox="0 0 200 116" role="img" aria-label="Isometric 3 by 3 board, blue tiles">
+              <!-- iso 3x3, checkered blue/parchment -->
+              <g stroke="#8a6d1c" stroke-width="1">
+                <!-- row/col diamonds: base at (100,18) stepping -->
+                <!-- helper: tile via polygon; hand-placed 3x3 -->
+                <polygon points="100,18 133,35 100,52 67,35" fill="#2f5fb0"/>
+                <polygon points="133,35 166,52 133,69 100,52" fill="#dccba3"/>
+                <polygon points="67,35 100,52 67,69 34,52" fill="#dccba3"/>
+                <polygon points="133,69 166,52 133,35 100,52" fill="#dccba3"/>
+                <polygon points="100,52 133,69 100,86 67,69" fill="#2f5fb0"/>
+                <polygon points="166,52 199,69 166,86 133,69" fill="#2f5fb0"/>
+                <polygon points="34,52 67,69 34,86 1,69" fill="#2f5fb0"/>
+                <polygon points="133,69 166,86 133,103 100,86" fill="#dccba3"/>
+                <polygon points="67,69 100,86 67,103 34,86" fill="#dccba3"/>
+              </g>
+              <!-- a couple of billboard "units" (flat tokens) -->
+              <g font-family="system-ui" font-weight="800" font-size="9" text-anchor="middle">
+                <rect x="90" y="20" width="20" height="20" rx="3" fill="#f4ecd8" stroke="#2f5fb0" stroke-width="2"/>
+                <text x="100" y="33" fill="#2a2119">KNI</text>
+                <rect x="123" y="54" width="20" height="20" rx="3" fill="#f4ecd8" stroke="#2f5fb0" stroke-width="2"/>
+                <text x="133" y="67" fill="#2a2119">ARC</text>
+              </g>
+            </svg>
+          </div>
+
+          <div class="panel panel--heritage">
+            <div class="panel__body">
+              <div class="roster">
+                <div class="unit unit--you u-h"><span class="unit__code">KNI</span><span class="unit__el"><i class="badge b-fire"></i>fire</span></div>
+                <div class="unit unit--you u-h"><span class="unit__code">MAG</span><span class="unit__el"><i class="badge b-water"></i>water</span></div>
+                <div class="unit unit--foe u-h"><span class="unit__code">WIT</span><span class="unit__el"><i class="badge b-earth"></i>earth</span></div>
+              </div>
+              <div class="hp">
+                <span class="unit__code" style="font-size:13px;color:#2f5fb0">KNI</span>
+                <div class="hp__track"><div class="hp__fill" style="width:72%;background:#2f5fb0"></div></div>
+                <span class="hp__num">101/140</span>
+              </div>
+              <div class="type">
+                <div class="type__row"><span class="type__tag">title</span><span class="t-title">Lordly</span></div>
+                <div class="type__row"><span class="type__tag">heading</span><span class="t-head">Reveal</span></div>
+                <div class="type__row"><span class="type__tag">body</span><span class="t-body">Both armies face off.</span></div>
+                <div class="type__row"><span class="type__tag">label</span><span class="t-label">Wipeout mode</span></div>
+                <div class="type__row"><span class="type__tag">data</span><span class="t-data">−18   48% · 0%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption"><b>Feel:</b> heroic, sunlit, storybook. Highest contrast for text on parchment — easiest read of the two.</p>
+    </section>
+
+    <!-- ============ DIRECTION 2 — NIGHT TACTICS ============ -->
+    <section class="card">
+      <div class="card__head">
+        <span class="card__num">02</span>
+        <h3 class="card__name">Night Tactics</h3>
+      </div>
+      <p class="card__mood">The dark world you already have, elevated — night slate and glowing gold, like the OB64 stone-cobble battlefields.</p>
+
+      <div class="specimen specimen--night">
+        <div class="specimen__inner">
+          <div class="palette">
+            <div class="swatch swatch--dark" style="background:#161a2e">
+              <span>night slate</span></div>
+            <div class="swatch swatch--dark" style="background:#e3b64b">
+              <span>gold glow</span></div>
+            <div class="swatch swatch--dark" style="background:#4a8fe0">
+              <span>you · blue</span></div>
+            <div class="swatch swatch--dark" style="background:#e0533f">
+              <span>enemy · red</span></div>
+            <div class="swatch swatch--dark" style="background:#e8e4d8">
+              <span class="swatch--light" style="color:rgba(0,0,0,.7)">bone</span></div>
+          </div>
+
+          <div class="board-wrap">
+            <svg class="iso" viewBox="0 0 200 116" role="img" aria-label="Isometric 3 by 3 board, night blue tiles">
+              <g stroke="#0c0f1a" stroke-width="1">
+                <polygon points="100,18 133,35 100,52 67,35" fill="#4a8fe0"/>
+                <polygon points="133,35 166,52 133,69 100,52" fill="#26304a"/>
+                <polygon points="67,35 100,52 67,69 34,52" fill="#26304a"/>
+                <polygon points="100,52 133,69 100,86 67,69" fill="#4a8fe0"/>
+                <polygon points="166,52 199,69 166,86 133,69" fill="#4a8fe0"/>
+                <polygon points="34,52 67,69 34,86 1,69" fill="#4a8fe0"/>
+                <polygon points="133,69 166,86 133,103 100,86" fill="#26304a"/>
+                <polygon points="67,69 100,86 67,103 34,86" fill="#26304a"/>
+                <polygon points="133,69 166,52 133,35 100,52" fill="#26304a"/>
+              </g>
+              <g font-family="system-ui" font-weight="800" font-size="9" text-anchor="middle">
+                <rect x="90" y="20" width="20" height="20" rx="3" fill="#10131f" stroke="#4a8fe0" stroke-width="2"/>
+                <text x="100" y="33" fill="#e8e4d8">KNI</text>
+                <rect x="123" y="54" width="20" height="20" rx="3" fill="#10131f" stroke="#4a8fe0" stroke-width="2"/>
+                <text x="133" y="67" fill="#e8e4d8">ARC</text>
+              </g>
+            </svg>
+          </div>
+
+          <div class="panel panel--night">
+            <div class="panel__body">
+              <div class="roster">
+                <div class="unit unit--you u-n"><span class="unit__code">KNI</span><span class="unit__el"><i class="badge b-fire"></i>fire</span></div>
+                <div class="unit unit--you u-n"><span class="unit__code">MAG</span><span class="unit__el"><i class="badge b-water"></i>water</span></div>
+                <div class="unit unit--foe u-n"><span class="unit__code">WIT</span><span class="unit__el"><i class="badge b-earth"></i>earth</span></div>
+              </div>
+              <div class="hp">
+                <span class="unit__code" style="font-size:13px;color:#4a8fe0">KNI</span>
+                <div class="hp__track"><div class="hp__fill" style="width:72%;background:#4a8fe0"></div></div>
+                <span class="hp__num" style="color:#e8e4d8">101/140</span>
+              </div>
+              <div class="type">
+                <div class="type__row"><span class="type__tag">title</span><span class="t-title" style="color:#e3b64b">Lordly</span></div>
+                <div class="type__row"><span class="type__tag">heading</span><span class="t-head">Reveal</span></div>
+                <div class="type__row"><span class="type__tag">body</span><span class="t-body">Both armies face off.</span></div>
+                <div class="type__row"><span class="type__tag">label</span><span class="t-label">Wipeout mode</span></div>
+                <div class="type__row"><span class="type__tag">data</span><span class="t-data">−18   48% · 0%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption"><b>Feel:</b> moody, cinematic, modern. Closest to what's already built — least rework.</p>
+    </section>
+
+  </div>
+
+  <div class="readnote">
+    <b>The readability fix, in both:</b> class labels move to a proper scale — the cramped <span class="old">10px word</span> becomes a <b>15px bold code (KNI/MER/…)</b>, headings 18px, HP as tabular monospace. This is the type scale that replaces the per-scene guesswork from story 2.0.
+  </div>
+
+  <div class="close">
+    <h2>Which world is Lordly?</h2>
+    <p>Pick a direction — or tell me to blend them (e.g. Night Tactics ground with Heritage's warmer gold). Nothing is locked; this is a mirror of your taste, and I'll build the DESIGN.md tokens from whatever you choose.</p>
+    <div class="askrow">
+      <span class="chip"><b>01</b> Heritage Parchment</span>
+      <span class="chip"><b>02</b> Night Tactics</span>
+      <span class="chip"><b>?</b> a blend / neither</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

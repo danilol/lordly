@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lordly — Battle layout A vs B</title>
+<style>
+  :root{
+    --ground:#e8dcc0; --ground-2:#dccba3; --gold:#c9a227; --gold-deep:#8a6d1c; --gold-lite:#eacb5a;
+    --you:#2f5fb0; --foe:#b03a3a; --ink:#2a2119; --ink-soft:#5c4f3d;
+    --tile-you:#2f5fb0; --tile-foe:#b03a3a; --tile-empty:#d8c398;
+    --tile-you-front:#4f7fd0; --tile-foe-front:#d05a5a;
+    --serif:Georgia,"Times New Roman",serif; --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; --mono:ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box;} html,body{margin:0;}
+  body{background:#0b0c12;color:#cfcbc0;font-family:var(--sans);padding:20px 12px 40px;}
+  h1{font-family:var(--serif);font-size:20px;color:#f2eee2;text-align:center;margin:0 0 4px;}
+  .sub{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:#7c7a86;text-align:center;text-transform:uppercase;margin:0 0 20px;}
+  .row{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;align-items:flex-start;}
+  .col{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:340px;}
+  .tag{font-family:var(--sans);font-weight:700;font-size:15px;color:#f2eee2;}
+  .tag b{color:var(--gold-lite);}
+  .note{font-size:12.5px;line-height:1.5;color:#8d8b96;text-align:center;max-width:320px;}
+
+  .phone{width:300px;aspect-ratio:9/19.5;background:linear-gradient(165deg,var(--ground),var(--ground-2));
+    border-radius:22px;overflow:hidden;display:grid;grid-template-rows:auto 1fr auto;color:var(--ink);
+    box-shadow:0 8px 30px rgba(0,0,0,.5),0 0 0 6px #17161e;}
+  .beveled{background:linear-gradient(180deg,var(--gold-lite),var(--gold) 45%,var(--gold-deep));box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -2px 3px rgba(0,0,0,.25);}
+  .topbar{margin:7px 7px 0;padding:3px;border-radius:9px;}
+  .topbar__b{display:flex;justify-content:space-between;align-items:center;padding:7px 11px;border-radius:6px;background:color-mix(in srgb,var(--ground) 88%,#000 5%);}
+  .home{font-size:13px;font-weight:600;color:var(--ink-soft);} .pass{font-family:var(--serif);font-size:16px;font-weight:700;}
+  .field{position:relative;overflow:hidden;}
+  .controls{margin:0 7px 9px;padding:3px;border-radius:10px;}
+  .controls__b{display:flex;gap:5px;padding:7px;border-radius:7px;background:color-mix(in srgb,var(--ground) 88%,#000 5%);}
+  .ctrl{flex:1;border-radius:6px;padding:6px 3px;text-align:center;background:color-mix(in srgb,var(--ground) 80%,#000 7%);}
+  .ctrl.on{background:linear-gradient(180deg,var(--gold-lite),var(--gold) 50%,var(--gold-deep));box-shadow:inset 0 1px 0 rgba(255,255,255,.5);}
+  .ctrl .i{font-size:14px;} .ctrl .l{font-size:10px;font-weight:600;display:block;}
+  .ctrl.on .i,.ctrl.on .l{color:#17140a;}
+
+  .lab{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;padding:5px 12px 0;}
+  .lab.foe{color:var(--foe);} .lab.you{color:var(--you);}
+  .front{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.12em;fill:currentColor;}
+  .u{font-family:var(--sans);font-weight:800;font-size:9px;}
+  .clash{font-family:var(--mono);font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft);text-align:center;opacity:.55;}
+</style>
+</head>
+<body>
+  <h1>Battle screen — which layout?</h1>
+  <p class="sub">Same 9-slot board · same front-to-front truth · iso is only a display twist · Heritage theme</p>
+
+  <div class="row">
+
+    <!-- ============ LAYOUT A — VERTICAL STACK ============ -->
+    <div class="col">
+      <div class="tag">A · <b>Vertical stack</b></div>
+      <div class="phone">
+        <div class="topbar beveled"><div class="topbar__b"><span class="home">‹ Home</span><span class="pass">Engagement 2</span></div></div>
+        <div class="field">
+          <div class="lab foe">▲ Enemy</div>
+          <!-- enemy board: front row = BOTTOM (nearest clash) -->
+          <svg viewBox="0 0 300 130" style="width:100%;display:block">
+            <g stroke="rgba(0,0,0,.35)" stroke-width="1">
+              <!-- back row -->
+              <polygon points="150,12 186,30 150,48 114,30" fill="var(--tile-foe)"/>
+              <polygon points="186,30 222,48 186,66 150,48" fill="var(--tile-empty)"/>
+              <polygon points="114,30 150,48 114,66 78,48" fill="var(--tile-empty)"/>
+              <!-- mid row -->
+              <polygon points="150,48 186,66 150,84 114,66" fill="var(--tile-foe)"/>
+              <polygon points="222,48 258,66 222,84 186,66" fill="var(--tile-foe)"/>
+              <polygon points="78,48 114,66 78,84 42,66" fill="var(--tile-foe)"/>
+              <!-- FRONT row (brighter + glow) -->
+              <polygon points="186,66 222,84 186,102 150,84" fill="var(--tile-foe-front)" stroke="var(--gold-lite)" stroke-width="1.5"/>
+              <polygon points="114,66 150,84 114,102 78,84" fill="var(--tile-foe-front)" stroke="var(--gold-lite)" stroke-width="1.5"/>
+              <polygon points="150,84 186,102 150,120 114,102" fill="var(--tile-foe-front)" stroke="var(--gold-lite)" stroke-width="1.5"/>
+            </g>
+            <text class="front foe" x="250" y="98" fill="var(--foe)">◂ FRONT</text>
+            <g class="u" text-anchor="middle">
+              <rect x="140" y="14" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--foe)" stroke-width="2"/><text x="149" y="26" fill="var(--ink)">WIT</text>
+              <rect x="176" y="68" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--foe)" stroke-width="2"/><text x="185" y="80" fill="var(--ink)">KNI</text>
+            </g>
+          </svg>
+          <div class="clash">— clash —</div>
+          <!-- your board: front row = TOP (nearest clash) -->
+          <svg viewBox="0 0 300 130" style="width:100%;display:block">
+            <g stroke="rgba(0,0,0,.35)" stroke-width="1">
+              <!-- FRONT row = top -->
+              <polygon points="150,12 186,30 150,48 114,30" fill="var(--tile-you-front)" stroke="var(--gold-lite)" stroke-width="1.5"/>
+              <polygon points="186,30 222,48 186,66 150,48" fill="var(--tile-you-front)" stroke="var(--gold-lite)" stroke-width="1.5"/>
+              <polygon points="114,30 150,48 114,66 78,48" fill="var(--tile-you-front)" stroke="var(--gold-lite)" stroke-width="1.5"/>
+              <polygon points="150,48 186,66 150,84 114,66" fill="var(--tile-you)"/>
+              <polygon points="222,48 258,66 222,84 186,66" fill="var(--tile-you)"/>
+              <polygon points="78,48 114,66 78,84 42,66" fill="var(--tile-you)"/>
+              <polygon points="186,66 222,84 186,102 150,84" fill="var(--tile-empty)"/>
+              <polygon points="114,66 150,84 114,102 78,84" fill="var(--tile-empty)"/>
+              <polygon points="150,84 186,102 150,120 114,102" fill="var(--tile-empty)"/>
+            </g>
+            <text class="front you" x="252" y="30" fill="var(--you)">◂ FRONT</text>
+            <g class="u" text-anchor="middle">
+              <rect x="140" y="14" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--you)" stroke-width="2"/><text x="149" y="26" fill="var(--ink)">KNI</text>
+              <rect x="176" y="32" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--you)" stroke-width="2"/><text x="185" y="44" fill="var(--ink)">ARC</text>
+            </g>
+          </svg>
+          <div class="lab you" style="text-align:right">Your army ▼</div>
+        </div>
+        <div class="controls beveled"><div class="controls__b">
+          <div class="ctrl on"><span class="i">▶</span><span class="l">1×</span></div>
+          <div class="ctrl"><span class="i">⏩</span><span class="l">2×</span></div>
+          <div class="ctrl"><span class="i">⏭</span><span class="l">Skip</span></div>
+          <div class="ctrl"><span class="i">≡</span><span class="l">Log</span></div>
+        </div></div>
+      </div>
+      <p class="note"><b>Boards full-width, front rows meet in the middle.</b> Biggest possible boards; front-to-front reads top-to-bottom. Very clear, a touch symmetrical.</p>
+    </div>
+
+    <!-- ============ LAYOUT B — DIAGONAL OFFSET ============ -->
+    <div class="col">
+      <div class="tag">B · <b>Diagonal offset</b> (your idea)</div>
+      <div class="phone">
+        <div class="topbar beveled"><div class="topbar__b"><span class="home">‹ Home</span><span class="pass">Engagement 2</span></div></div>
+        <div class="field">
+          <!-- one tall SVG: enemy pushed upper-LEFT, you lower-RIGHT, front rows facing across the diagonal -->
+          <svg viewBox="0 0 300 470" style="width:100%;display:block">
+            <!-- ENEMY board, upper-left, its front row toward lower-right -->
+            <text class="front foe" x="18" y="40" fill="var(--foe)" style="font-size:10px">▲ ENEMY</text>
+            <g stroke="rgba(0,0,0,.35)" stroke-width="1" transform="translate(-20,60)">
+              <polygon points="150,12 186,30 150,48 114,30" fill="var(--tile-foe)"/>
+              <polygon points="186,30 222,48 186,66 150,48" fill="var(--tile-empty)"/>
+              <polygon points="114,30 150,48 114,66 78,48" fill="var(--tile-foe)"/>
+              <polygon points="150,48 186,66 150,84 114,66" fill="var(--tile-foe)"/>
+              <polygon points="222,48 258,66 222,84 186,66" fill="var(--tile-empty)"/>
+              <polygon points="78,48 114,66 78,84 42,66" fill="var(--tile-foe)"/>
+              <!-- FRONT row = the lower-right edge (toward player) -->
+              <polygon points="186,66 222,84 186,102 150,84" fill="var(--tile-foe-front)" stroke="var(--gold-lite)" stroke-width="1.5"/>
+              <polygon points="222,84 258,102 222,120 186,102" fill="var(--tile-foe-front)" stroke="var(--gold-lite)" stroke-width="1.5"/>
+              <polygon points="150,84 186,102 150,120 114,102" fill="var(--tile-foe-front)" stroke="var(--gold-lite)" stroke-width="1.5"/>
+              <g class="u" text-anchor="middle">
+                <rect x="140" y="14" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--foe)" stroke-width="2"/><text x="149" y="26" fill="var(--ink)">WIT</text>
+                <rect x="212" y="86" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--foe)" stroke-width="2"/><text x="221" y="98" fill="var(--ink)">KNI</text>
+              </g>
+            </g>
+            <text class="front foe" x="240" y="185" fill="var(--foe)">FRONT ▸</text>
+
+            <!-- clash arrow across the diagonal -->
+            <text x="150" y="238" text-anchor="middle" class="clash" fill="var(--ink-soft)" style="font-size:11px">⟋ clash ⟍</text>
+
+            <!-- PLAYER board, lower-right, front row toward upper-left -->
+            <g stroke="rgba(0,0,0,.35)" stroke-width="1" transform="translate(40,250)">
+              <!-- FRONT row = the upper-left edge (toward enemy) -->
+              <polygon points="150,12 186,30 150,48 114,30" fill="var(--tile-you-front)" stroke="var(--gold-lite)" stroke-width="1.5"/>
+              <polygon points="114,30 150,48 114,66 78,48" fill="var(--tile-you-front)" stroke="var(--gold-lite)" stroke-width="1.5"/>
+              <polygon points="78,48 114,66 78,84 42,66" fill="var(--tile-you-front)" stroke="var(--gold-lite)" stroke-width="1.5"/>
+              <polygon points="186,30 222,48 186,66 150,48" fill="var(--tile-you)"/>
+              <polygon points="150,48 186,66 150,84 114,66" fill="var(--tile-you)"/>
+              <polygon points="114,66 150,84 114,102 78,84" fill="var(--tile-you)"/>
+              <polygon points="222,48 258,66 222,84 186,66" fill="var(--tile-empty)"/>
+              <polygon points="186,66 222,84 186,102 150,84" fill="var(--tile-empty)"/>
+              <polygon points="150,84 186,102 150,120 114,102" fill="var(--tile-empty)"/>
+              <g class="u" text-anchor="middle">
+                <rect x="140" y="14" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--you)" stroke-width="2"/><text x="149" y="26" fill="var(--ink)">KNI</text>
+                <rect x="104" y="32" width="18" height="18" rx="3" fill="var(--ground)" stroke="var(--you)" stroke-width="2"/><text x="113" y="44" fill="var(--ink)">ARC</text>
+              </g>
+            </g>
+            <text class="front you" x="18" y="290" fill="var(--you)">◂ FRONT</text>
+            <text class="front you" x="232" y="452" fill="var(--you)" style="font-size:10px">YOUR ARMY ▼</text>
+          </svg>
+        </div>
+        <div class="controls beveled"><div class="controls__b">
+          <div class="ctrl on"><span class="i">▶</span><span class="l">1×</span></div>
+          <div class="ctrl"><span class="i">⏩</span><span class="l">2×</span></div>
+          <div class="ctrl"><span class="i">⏭</span><span class="l">Skip</span></div>
+          <div class="ctrl"><span class="i">≡</span><span class="l">Log</span></div>
+        </div></div>
+      </div>
+      <p class="note"><b>Enemy upper-left, you lower-right — like image4's corners.</b> More OB64, more dynamic; front rows meet along the diagonal (marked). Boards a bit smaller than A to fit the offset.</p>
+    </div>
+
+  </div>
+</body>
+</html>

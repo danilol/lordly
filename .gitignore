@@ -7,3 +7,8 @@ coverage/
 !.env.example
 *.pem
 *.key
+
+# UX design: keep third-party reference imagery (e.g. OB64 screenshots) LOCAL —
+# copyrighted, and this repo is public. Design docs + original mockups commit; refs don't.
+docs/planning-artifacts/ux-designs/*/imports/
+.DS_Store
