@@ -7,7 +7,7 @@ import {
   STRATEGY_POOL,
   validateMatchSetup,
 } from '@lordly/engine';
-import type { BattleLog, Element, MatchSetup, Placement, UnitClass } from '@lordly/engine';
+import type { BattleLog, Element, MatchSetup, Mode, Placement, UnitClass } from '@lordly/engine';
 import { placeUnit } from './placement';
 import type { DraftedUnit, MatchState } from './MatchState';
 
@@ -39,9 +39,10 @@ export class MatchFlow {
     this.state = MatchFlow.emptyState(0);
   }
 
-  private static emptyState(seed: number, lastAiArchetypeId?: string): MatchState {
+  private static emptyState(seed: number, mode: Mode = 'single', lastAiArchetypeId?: string): MatchState {
     return {
       seed,
+      mode,
       playerArmy: [],
       playerPlacements: [],
       elementsRolled: 0,
@@ -53,10 +54,12 @@ export class MatchFlow {
   /**
    * Begins a new match with a FRESH seed (AD-10) — used for the first match
    * and every rematch. Carries `lastAiArchetypeId` forward so the next AI
-   * pick can exclude it (FR25 no-repeat); resets everything else.
+   * pick can exclude it (FR25 no-repeat), and carries the battle `mode` the
+   * same way (FR19/story 1.10): pass one to set it (Home's toggle), omit it
+   * to keep the current one (Result's Rematch). Resets everything else.
    */
-  startMatch(): void {
-    this.state = MatchFlow.emptyState(this.seedSource() >>> 0, this.state.lastAiArchetypeId);
+  startMatch(mode?: Mode): void {
+    this.state = MatchFlow.emptyState(this.seedSource() >>> 0, mode ?? this.state.mode, this.state.lastAiArchetypeId);
     this.log = undefined; // a rematch resolves its own battle (AD-13)
   }
 
@@ -134,7 +137,7 @@ export class MatchFlow {
     const setup: MatchSetup = {
       seed: this.state.seed,
       balanceVersion: BALANCE.version,
-      mode: 'single',
+      mode: this.state.mode,
       armies: {
         A: this.state.playerArmy.map((u) => ({ class: u.class, element: u.element })),
         B: ai.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/B']) })),

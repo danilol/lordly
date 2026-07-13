@@ -72,6 +72,21 @@ export const RESULT_HOME_LABEL = 'Home';
 // Back-to-Home affordance shown on every post-Home scene (closes the 1.8 dead-end).
 export const HOME_BACK_LABEL = '‹ Home';
 
+// Battle-mode toggle on Home (story 1.10, FR17/FR19): Standard vs Wipeout.
+export const MODE_HEADING = 'Battle mode';
+// Toggle-button metrics — metrics live here, not in scene code (same rule as
+// BUTTON_WIDTH/HEIGHT). 44px height meets the minimum tap-target size.
+export const MODE_BUTTON_WIDTH = 128;
+export const MODE_BUTTON_HEIGHT = 44;
+export const MODE_BUTTON_GAP = 12;
+export const MODE_STANDARD_LABEL = 'Standard';
+export const MODE_WIPEOUT_LABEL = 'Wipeout';
+export const MODE_STANDARD_HINT = 'one engagement — highest HP % wins';
+/** Wipeout hint; the cap is READ from BALANCE.engagementCap, never hardcoded. */
+export const modeWipeoutHint = (cap: number) => `fight until a side falls (max ${cap} engagements)`;
+/** Engagement-boundary marker in the Battle scene (multi-engagement wipeout playback). */
+export const engagementEndedLabel = (engagement: number) => `Engagement ${engagement} ended`;
+
 // Battle playback pacing (AC2): the default beat is a DATA tuning constant, not
 // inlined in scene code. ~600 ms per event at normal speed; press-and-hold
 // fast-forwards by BATTLE_FAST_FORWARD× (interim until FR23's controls, story 2.3).

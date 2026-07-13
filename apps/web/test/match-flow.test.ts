@@ -256,6 +256,55 @@ describe('MatchFlow resolve (AD-2/AD-13)', () => {
   });
 });
 
+describe('MatchFlow mode (FR19/story 1.10 — Standard vs Wipeout)', () => {
+  function draftAndPlace(flow: MatchFlow) {
+    flow.draftUnit('knight');
+    flow.draftUnit('archer');
+    flow.draftUnit('mage');
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    flow.placeUnit(1, { row: 'back', col: 'left' });
+    flow.placeUnit(2, { row: 'back', col: 'right' });
+  }
+
+  it("defaults to 'single' — Standard is the default mode", () => {
+    const flow = flowWithSeed(1);
+    flow.startMatch();
+    expect(flow.getState().mode).toBe('single');
+    draftAndPlace(flow);
+    expect(flow.commit().mode).toBe('single');
+  });
+
+  it("startMatch('wipeout') commits a wipeout setup that validates and resolves", () => {
+    const flow = flowWithSeed(0xd00d1);
+    flow.startMatch('wipeout');
+    expect(flow.getState().mode).toBe('wipeout');
+    draftAndPlace(flow);
+    const setup = flow.commit();
+    expect(setup.mode).toBe('wipeout');
+    expect(() => validateMatchSetup(setup)).not.toThrow();
+    const log = flow.resolve();
+    expect(log.events[log.events.length - 1]?.type).toBe('BattleEnded');
+  });
+
+  it('rematch carries the mode forward — startMatch() with no argument keeps wipeout', () => {
+    const seeds = [7, 8];
+    let i = 0;
+    const flow = new MatchFlow(() => seeds[i++] as number);
+    flow.startMatch('wipeout');
+    flow.startMatch(); // rematch — same pattern as lastAiArchetypeId
+    expect(flow.getState().mode).toBe('wipeout');
+  });
+
+  it('the committed wipeout state still survives a JSON round-trip (AD-5)', () => {
+    const flow = flowWithSeed(0xabc);
+    flow.startMatch('wipeout');
+    draftAndPlace(flow);
+    flow.commit();
+    const state = flow.getState();
+    expect(JSON.parse(JSON.stringify(state)) as MatchState).toEqual(state);
+  });
+});
+
 describe('MatchFlow rematch (AD-10)', () => {
   it('startMatch carries lastAiArchetypeId forward and rolls a FRESH seed', () => {
     const seeds = [11, 22];

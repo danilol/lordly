@@ -1,4 +1,4 @@
-import type { Element, MatchSetup, Placement, UnitClass } from '@lordly/engine';
+import type { Element, MatchSetup, Mode, Placement, UnitClass } from '@lordly/engine';
 
 /**
  * A drafted unit before the battle: its class and its once-rolled element
@@ -32,6 +32,12 @@ export type MatchPhase = 'draft' | 'placement' | 'committed';
 export interface MatchState {
   /** uint32 match seed (AD-10); fresh per match, rematches included. */
   seed: number;
+  /**
+   * Battle mode (FR17/FR19): 'single' (Standard, the default) or 'wipeout'.
+   * Chosen on Home before drafting (story 1.10); carried across rematches
+   * like `lastAiArchetypeId` — changing mode means returning Home.
+   */
+  mode: Mode;
   /** The player's drafted units (side A — AD-11), in draft order, length 0..3. */
   playerArmy: DraftedUnit[];
   /** Placement of each player unit, parallel to `playerArmy` by index; `null` = still in the tray. */

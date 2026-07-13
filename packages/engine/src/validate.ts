@@ -8,7 +8,6 @@ export type MatchSetupViolation =
   | 'invalid-seed'
   | 'balance-version-mismatch'
   | 'invalid-mode'
-  | 'mode-not-implemented'
   | 'wrong-army-size'
   | 'unknown-class'
   | 'unknown-element'
@@ -66,11 +65,6 @@ export function validateMatchSetup(setup: MatchSetup): void {
   }
   if (mode !== 'single' && mode !== 'wipeout') {
     throw new InvalidMatchSetupError('invalid-mode', `unknown mode '${String(mode)}'`);
-  }
-  if (mode === 'wipeout') {
-    // Honest rejection until story 1.10 implements the multi-engagement loop:
-    // accepting it would return a confident single-engagement wrong answer.
-    throw new InvalidMatchSetupError('mode-not-implemented', `mode 'wipeout' is not implemented yet (story 1.10)`);
   }
   if (!isObject(armies) || !isObject(placements)) {
     throw new InvalidMatchSetupError(

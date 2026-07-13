@@ -241,7 +241,9 @@ export interface ActionFizzled {
  * Poison damage at the natural end of an engagement, before judging
  * (FR16 Earth→Poison). Kills emit `UnitDied` after; an instant wipe
  * short-circuits the engagement and skips poison entirely (recorded spec
- * decision — FR18's "instant win"; FR19's wipeout mode revisits in 1.10).
+ * decision — FR18's "instant win"; confirmed for wipeout mode in 1.10: a
+ * wipe ends the whole battle, so the skip is coherent in both modes, and
+ * poison persists between engagements and ticks at every NATURAL end — FR19).
  */
 export interface PoisonTicked {
   type: 'PoisonTicked';

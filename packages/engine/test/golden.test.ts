@@ -9,8 +9,8 @@ import type { MatchSetup } from '../src/types';
  * intentional rules/balance change re-records these deliberately
  * (`vitest -u`) with the diff reviewed event by event.
  */
-function setup(partial: Pick<MatchSetup, 'armies' | 'placements'>, seed: number): MatchSetup {
-  return { seed, balanceVersion: BALANCE.version, mode: 'single', ...partial };
+function setup(partial: Pick<MatchSetup, 'armies' | 'placements'>, seed: number, mode: MatchSetup['mode'] = 'single'): MatchSetup {
+  return { seed, balanceVersion: BALANCE.version, mode, ...partial };
 }
 
 describe('golden battles', () => {
@@ -212,6 +212,139 @@ describe('golden battles (story 1.6 — full roster era)', () => {
     // four PoisonTicked events after the final action, B:0 dying at 0.
     expect(log.events.filter((e) => e.type === 'PoisonTicked').length).toBe(4);
     expect(log.events.some((e) => e.type === 'PoisonTicked' && e.hpAfter === 0)).toBe(true);
+    expect(log).toMatchSnapshot();
+  });
+});
+
+describe('golden battles (story 1.10 — until-wipeout mode)', () => {
+  it('golden #6: the multi-engagement wipe — knights grind mercs down over three engagements', () => {
+    const log = resolveBattle(
+      setup(
+        {
+          armies: {
+            A: [
+              { class: 'knight', element: 'fire' },
+              { class: 'knight', element: 'water' },
+              { class: 'knight', element: 'wind' },
+            ],
+            B: [
+              { class: 'mercenary', element: 'earth' },
+              { class: 'mercenary', element: 'fire' },
+              { class: 'mercenary', element: 'water' },
+            ],
+          },
+          placements: {
+            A: [
+              { row: 'front', col: 'left' },
+              { row: 'front', col: 'center' },
+              { row: 'front', col: 'right' },
+            ],
+            B: [
+              { row: 'front', col: 'left' },
+              { row: 'front', col: 'center' },
+              { row: 'front', col: 'right' },
+            ],
+          },
+        },
+        0xdead,
+        'wipeout',
+      ),
+    );
+    // Hand-verified: mercs take 2 × 20 per engagement (110 → 70 → 30 → wiped
+    // in engagement 3); knights take 2 × 12 (140 → 68). Winner A, 48% vs 0%.
+    expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(3);
+    const verdict = log.events[log.events.length - 1];
+    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 48, B: 0 } });
+    expect(log).toMatchSnapshot();
+  });
+
+  it('golden #7: the cap fallback — a healing equilibrium runs all five engagements, then FR18 judges', () => {
+    const log = resolveBattle(
+      setup(
+        {
+          armies: {
+            A: [
+              { class: 'knight', element: 'fire' },
+              { class: 'knight', element: 'water' },
+              { class: 'knight', element: 'wind' },
+            ],
+            B: [
+              { class: 'cleric', element: 'earth' },
+              { class: 'cleric', element: 'fire' },
+              { class: 'cleric', element: 'water' },
+            ],
+          },
+          placements: {
+            A: [
+              { row: 'front', col: 'left' },
+              { row: 'front', col: 'center' },
+              { row: 'front', col: 'right' },
+            ],
+            B: [
+              { row: 'front', col: 'right' },
+              { row: 'mid', col: 'right' },
+              { row: 'back', col: 'right' },
+            ],
+          },
+        },
+        0xdead,
+        'wipeout',
+      ),
+    );
+    // Hand-verified: golden #1's comp in wipeout settles into a steady state —
+    // the damaged cleric heals 24 → 90 and is beaten back to 24 every
+    // engagement (clerics at AGI 10 act before knights at AGI 8), so nobody
+    // ever wipes. The BALANCE.engagementCap (5) fires and FR18 judges A ahead.
+    expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(BALANCE.engagementCap);
+    expect(log.events.some((e) => e.type === 'UnitDied')).toBe(false);
+    const verdict = log.events[log.events.length - 1];
+    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 99, B: 75 } });
+    expect(log).toMatchSnapshot();
+  });
+
+  it('golden #8: persisting poison — the earth-witch duel across engagements (FR19 Witch synergy)', () => {
+    const log = resolveBattle(
+      setup(
+        {
+          armies: {
+            A: [
+              { class: 'archer', element: 'fire' },
+              { class: 'archer', element: 'water' },
+              { class: 'witch', element: 'earth' },
+            ],
+            B: [
+              { class: 'witch', element: 'earth' },
+              { class: 'knight', element: 'earth' },
+              { class: 'knight', element: 'water' },
+            ],
+          },
+          placements: {
+            A: [
+              { row: 'back', col: 'left' },
+              { row: 'back', col: 'right' },
+              { row: 'back', col: 'center' },
+            ],
+            B: [
+              { row: 'back', col: 'center' },
+              { row: 'front', col: 'left' },
+              { row: 'front', col: 'right' },
+            ],
+          },
+        },
+        5,
+        'wipeout',
+      ),
+    );
+    // Hand-verified: golden #5's comp in wipeout runs exactly 3 engagements.
+    // The witches poison each other's sides (A:2 dots B:0/B:1/B:2, B:0 dots
+    // A:1/A:2); the status persists between engagements and ticks 7 × 15 dmg
+    // across the natural engagement ends. B's witch falls to the mutual dots,
+    // but her knights (ending at 118/103 HP) wipe side A in engagement 3 —
+    // verdict B, 60% vs 0%. (wipeout.test.ts pins the structural properties;
+    // this snapshot pins the exact log.)
+    expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(3);
+    expect(log.events.filter((e) => e.type === 'PoisonTicked').length).toBe(7);
+    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'B', hpPct: { A: 0, B: 60 } });
     expect(log).toMatchSnapshot();
   });
 });

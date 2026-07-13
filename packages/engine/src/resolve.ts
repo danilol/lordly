@@ -50,75 +50,101 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
   const units = buildUnits(setup);
   events.push({ type: 'BattleStarted', units: units.map((u) => ({ ...u.snapshot })) });
 
-  // The single engagement (FR17). Story 1.10 wraps this in a per-engagement
-  // loop for wipeout mode (currently rejected by validation until then), so
-  // the tie coin flip is drawn INSIDE engagement scope — one draw per
-  // engagement (FR13), not once per battle.
-  const engagement = 1;
-
-  // STREAM-ORDERING INVARIANT (FR20 replay stability): battle-stream draws
-  // happen in EXACTLY this order — ① the engagement tie flip (always first),
-  // then ② per confused action in timeline order: one misfire draw, then
-  // (only when the misfire needs a uniform pick) one target draw. Nothing
-  // else draws. Reordering ANY of these changes every existing seed's battle.
-  const tieWinner: Side = nextInt(streams.battle, 0, 1) === 0 ? 'A' : 'B';
-  const order = timelineComparator(tieWinner);
-
-  let wiped: WipeState;
-  let pass = 0;
-  battle: while (units.some((u) => u.alive && u.actionsLeft > 0)) {
-    pass += 1;
-    events.push({ type: 'PassStarted', pass });
-    // Re-filter and re-sort every pass: this is the load-bearing mechanism for
-    // mid-pass deaths (a unit killed earlier in the pass is gone from the next
-    // pass). Do NOT cache the order.
-    const acting = units.filter((u) => u.alive && u.actionsLeft > 0).sort(order);
-    for (const unit of acting) {
-      if (!unit.alive) {
-        // A unit killed earlier THIS pass loses its queued turn (FR13).
-        unit.actionsLeft -= 1;
-        events.push({ type: 'ActionSkipped', unit: unit.id, reason: 'dead' });
-        continue;
-      }
-      if (unit.statuses.has('sleep')) {
-        // Sleep voids remaining actions (FR16), narrated turn by turn (FR13).
-        unit.actionsLeft -= 1;
-        events.push({ type: 'ActionSkipped', unit: unit.id, reason: 'asleep' });
-        continue;
-      }
-      unit.actionsLeft -= 1;
-      const turnEvents = takeTurn(unit, units, streams.battle);
-      events.push(...turnEvents);
-      // Only a death can change the alive-set — skip the wipe scan otherwise.
-      if (turnEvents.some((e) => e.type === 'UnitDied')) {
-        wiped = wipedSide(judgedView(units));
-        if (wiped !== undefined) break battle; // FR18: wipe ends it, unspent actions lost
+  // The engagement loop (FR17/FR19): 'single' runs exactly one engagement;
+  // 'wipeout' repeats until a side is wiped, bounded by BALANCE.engagementCap —
+  // the anti-stalemate TERMINATION guarantee, not just a judging rule (a
+  // Cleric can offset chip damage indefinitely). Engagement 1 consumes the
+  // exact same stream draws in both modes, so single-mode logs (and every
+  // golden/seed pin) are bit-identical to before the loop existed.
+  const maxEngagements = setup.mode === 'wipeout' ? BALANCE.engagementCap : 1;
+  let wiped: WipeState = undefined;
+  for (let engagement = 1; engagement <= maxEngagements; engagement++) {
+    if (engagement > 1) {
+      // FR19 between-engagement reset: living units replenish their per-row
+      // action counts and shed every status EXCEPT poison, which persists for
+      // the rest of the battle. HP, deaths, and placements carry over.
+      for (const u of units) {
+        u.actionsLeft = u.alive ? BALANCE.classes[u.class].actions[u.snapshot.placement.row] : 0;
+        const poisoned = u.statuses.has('poison');
+        u.statuses.clear();
+        if (poisoned) u.statuses.add('poison');
       }
     }
-  }
 
-  // Poison ticks at the NATURAL end of the engagement only, before judging
-  // (FR16; recorded spec decision: an instant wipe short-circuits per FR18's
-  // "instant win" and skips poison — FR19's wipeout mode revisits in 1.10).
-  // Ticks run in unit order; the EngagementEnded snapshot includes them.
-  // A poison mutual wipe becomes WipeState 'both' → judge() returns a draw.
-  if (wiped === undefined) {
-    for (const unit of units) {
-      if (!unit.alive || !unit.statuses.has('poison')) continue;
-      const damage = BALANCE.formulas.poisonDamage;
-      unit.hp = Math.max(0, unit.hp - damage);
-      events.push({ type: 'PoisonTicked', unit: unit.id, damage, hpAfter: unit.hp });
-      if (unit.hp === 0) {
-        unit.alive = false;
-        events.push({ type: 'UnitDied', unit: unit.id });
+    // STREAM-ORDERING INVARIANT (FR20 replay stability): battle-stream draws
+    // happen in EXACTLY this order — ① the engagement tie flip (always the
+    // first draw of EVERY engagement — FR13: one flip per engagement), then
+    // ② per confused action in timeline order: one misfire draw, then
+    // (only when the misfire needs a uniform pick) one target draw. Nothing
+    // else draws. Reordering ANY of these changes every existing seed's battle.
+    const tieWinner: Side = nextInt(streams.battle, 0, 1) === 0 ? 'A' : 'B';
+    const order = timelineComparator(tieWinner);
+
+    // Recorded decision (1.10): `PassStarted.pass` restarts at 1 each
+    // engagement — the shell disambiguates via `EngagementEnded.engagement`.
+    let pass = 0;
+    battle: while (units.some((u) => u.alive && u.actionsLeft > 0)) {
+      pass += 1;
+      events.push({ type: 'PassStarted', pass });
+      // Re-filter and re-sort every pass: this is the load-bearing mechanism for
+      // mid-pass deaths (a unit killed earlier in the pass is gone from the next
+      // pass). Do NOT cache the order.
+      const acting = units.filter((u) => u.alive && u.actionsLeft > 0).sort(order);
+      for (const unit of acting) {
+        if (!unit.alive) {
+          // A unit killed earlier THIS pass loses its queued turn (FR13).
+          unit.actionsLeft -= 1;
+          events.push({ type: 'ActionSkipped', unit: unit.id, reason: 'dead' });
+          continue;
+        }
+        if (unit.statuses.has('sleep')) {
+          // Sleep voids remaining actions (FR16), narrated turn by turn (FR13).
+          unit.actionsLeft -= 1;
+          events.push({ type: 'ActionSkipped', unit: unit.id, reason: 'asleep' });
+          continue;
+        }
+        unit.actionsLeft -= 1;
+        const turnEvents = takeTurn(unit, units, streams.battle);
+        events.push(...turnEvents);
+        // Only a death can change the alive-set — skip the wipe scan otherwise.
+        if (turnEvents.some((e) => e.type === 'UnitDied')) {
+          wiped = wipedSide(judgedView(units));
+          if (wiped !== undefined) break battle; // FR18: wipe ends it, unspent actions lost
+        }
       }
     }
-    wiped = wipedSide(judgedView(units));
-  }
 
-  const hp: Record<UnitId, number> = {};
-  for (const u of units) hp[u.id] = u.hp;
-  events.push({ type: 'EngagementEnded', engagement, hp });
+    // Poison ticks at the NATURAL end of an engagement only, before judging
+    // (FR16; recorded decision, confirmed for wipeout in 1.10: an instant wipe
+    // short-circuits per FR18's "instant win" and skips poison — coherent in
+    // BOTH modes, because a wipe ends the whole battle. Every engagement that
+    // reaches its natural end ticks — INCLUDING the cap-reached last one, whose
+    // ticks feed the FR18 verdict — so poison compounds across a wipeout
+    // battle, FR19's Witch synergy. Only a wipe ever skips the tick.)
+    // Ticks run in unit order; the EngagementEnded snapshot includes them.
+    // A poison mutual wipe becomes WipeState 'both' → judge() returns a draw.
+    if (wiped === undefined) {
+      for (const unit of units) {
+        if (!unit.alive || !unit.statuses.has('poison')) continue;
+        const damage = BALANCE.formulas.poisonDamage;
+        unit.hp = Math.max(0, unit.hp - damage);
+        events.push({ type: 'PoisonTicked', unit: unit.id, damage, hpAfter: unit.hp });
+        if (unit.hp === 0) {
+          unit.alive = false;
+          events.push({ type: 'UnitDied', unit: unit.id });
+        }
+      }
+      wiped = wipedSide(judgedView(units));
+    }
+
+    const hp: Record<UnitId, number> = {};
+    for (const u of units) hp[u.id] = u.hp;
+    events.push({ type: 'EngagementEnded', engagement, hp });
+
+    // A wipe (mid-pass or by poison) ends the battle; otherwise the next
+    // engagement begins — or the cap is reached and FR18 judges what remains.
+    if (wiped !== undefined) break;
+  }
 
   const verdict = judge(judgedView(units), wiped);
   events.push({ type: 'BattleEnded', winner: verdict.winner, hpPct: verdict.hpPct });

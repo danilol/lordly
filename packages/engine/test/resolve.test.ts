@@ -343,10 +343,17 @@ describe('resolveBattle chassis (FR13, FR17, AD-1, AD-12)', () => {
 describe('chassis properties (NFR2, FR20)', () => {
   test.prop([matchSetupArb])('terminates with a bounded, well-formed log', (s) => {
     const log = resolveBattle(s);
-    // Ceiling: 1 BattleStarted + passes(≤2) + turns(≤ 6 units × 2 actions,
-    // each ≤2 events: misfire marker + effect) + deaths(≤6 UnitDied)
-    // + poison ticks(≤6) + 1 EngagementEnded + 1 BattleEnded
-    expect(log.events.length).toBeLessThanOrEqual(1 + 2 + 24 + 6 + 6 + 1 + 1);
+    // Per-engagement ceiling: passes(≤2) + turns(≤ 6 units × 2 actions,
+    // each ≤2 events: misfire marker + effect) + poison ticks(≤6 — poisoned
+    // units tick at EVERY natural engagement end) + 1 EngagementEnded = 33.
+    // Deaths are BATTLE-wide, not per-engagement: a unit dies at most once,
+    // so ≤6 UnitDied total — multiplying them by the cap would balloon the
+    // bound ~5× and stop catching runaway event growth inside it. Single mode
+    // runs one engagement; wipeout is bounded by BALANCE.engagementCap (its
+    // termination guarantee). BattleStarted/BattleEnded bookend once.
+    const engagements = s.mode === 'wipeout' ? BALANCE.engagementCap : 1;
+    expect(log.events.length).toBeLessThanOrEqual(1 + engagements * (2 + 24 + 6 + 1) + 6 + 1);
+    expect(log.events.filter((e) => e.type === 'UnitDied').length).toBeLessThanOrEqual(6);
     expect(log.events[0]?.type).toBe('BattleStarted');
     expect(log.events[log.events.length - 1]?.type).toBe('BattleEnded');
   });

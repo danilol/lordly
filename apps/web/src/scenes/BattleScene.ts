@@ -6,6 +6,7 @@ import {
   BATTLE_BEAT_MS,
   BATTLE_HINT,
   ELEMENT_COLORS,
+  engagementEndedLabel,
   PALETTE,
 } from '../config/constants';
 import { addHomeBack, crispText } from '../config/ui';
@@ -184,8 +185,16 @@ export class BattleScene extends Scene {
         this.kill(event.unit);
         return true;
       case 'EngagementEnded':
-        // Defensive resync to the authoritative per-unit HP snapshot.
+        // Defensive resync to the authoritative per-unit HP snapshot, plus a
+        // visible boundary marker — wipeout battles (story 1.10) play several
+        // engagements back to back and the seam must read on screen. The marker
+        // only labels a real seam (another engagement follows): the final/only
+        // engagement flows straight into the verdict, so Standard mode — which
+        // has no player-facing engagement concept — never shows it.
         for (const [id, hp] of Object.entries(event.hp)) this.setHp(id as UnitId, hp);
+        if (this.beats[this.currentIndex + 1]?.event.type !== 'BattleEnded') {
+          this.passLabel.setText(engagementEndedLabel(event.engagement));
+        }
         return true;
       case 'BattleEnded':
         this.passLabel.setText(event.winner === 'draw' ? 'Draw' : `${event.winner === 'A' ? 'You' : 'Enemy'} won`);

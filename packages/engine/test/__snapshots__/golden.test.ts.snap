@@ -544,6 +544,1592 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
 }
 `;
 
+exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the multi-engagement wipe — knights grind mercs down over three engagements 1`] = `
+{
+  "events": [
+    {
+      "type": "BattleStarted",
+      "units": [
+        {
+          "class": "knight",
+          "element": "fire",
+          "hp": 140,
+          "id": "A:0",
+          "maxHp": 140,
+          "placement": {
+            "col": "left",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "knight",
+          "element": "water",
+          "hp": 140,
+          "id": "A:1",
+          "maxHp": 140,
+          "placement": {
+            "col": "center",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "knight",
+          "element": "wind",
+          "hp": 140,
+          "id": "A:2",
+          "maxHp": 140,
+          "placement": {
+            "col": "right",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "mercenary",
+          "element": "earth",
+          "hp": 110,
+          "id": "B:0",
+          "maxHp": 110,
+          "placement": {
+            "col": "left",
+            "row": "front",
+          },
+          "side": "B",
+        },
+        {
+          "class": "mercenary",
+          "element": "fire",
+          "hp": 110,
+          "id": "B:1",
+          "maxHp": 110,
+          "placement": {
+            "col": "center",
+            "row": "front",
+          },
+          "side": "B",
+        },
+        {
+          "class": "mercenary",
+          "element": "water",
+          "hp": 110,
+          "id": "B:2",
+          "maxHp": 110,
+          "placement": {
+            "col": "right",
+            "row": "front",
+          },
+          "side": "B",
+        },
+      ],
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 128,
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 128,
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 128,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 90,
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 90,
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 90,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 116,
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 116,
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 116,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 70,
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 70,
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 70,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "engagement": 1,
+      "hp": {
+        "A:0": 116,
+        "A:1": 116,
+        "A:2": 116,
+        "B:0": 70,
+        "B:1": 70,
+        "B:2": 70,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 104,
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 104,
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 104,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 50,
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 50,
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 50,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 92,
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 92,
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 92,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 30,
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 30,
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 30,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "engagement": 2,
+      "hp": {
+        "A:0": 92,
+        "A:1": 92,
+        "A:2": 92,
+        "B:0": 30,
+        "B:1": 30,
+        "B:2": 30,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 80,
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 80,
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 80,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 10,
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 10,
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 10,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 68,
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 68,
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 68,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 0,
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "B:2",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 0,
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "B:1",
+    },
+    {
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 0,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "B:0",
+    },
+    {
+      "engagement": 3,
+      "hp": {
+        "A:0": 68,
+        "A:1": 68,
+        "A:2": 68,
+        "B:0": 0,
+        "B:1": 0,
+        "B:2": 0,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "hpPct": {
+        "A": 48,
+        "B": 0,
+      },
+      "type": "BattleEnded",
+      "winner": "A",
+    },
+  ],
+  "logVersion": 3,
+}
+`;
+
+exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap fallback — a healing equilibrium runs all five engagements, then FR18 judges 1`] = `
+{
+  "events": [
+    {
+      "type": "BattleStarted",
+      "units": [
+        {
+          "class": "knight",
+          "element": "fire",
+          "hp": 140,
+          "id": "A:0",
+          "maxHp": 140,
+          "placement": {
+            "col": "left",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "knight",
+          "element": "water",
+          "hp": 140,
+          "id": "A:1",
+          "maxHp": 140,
+          "placement": {
+            "col": "center",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "knight",
+          "element": "wind",
+          "hp": 140,
+          "id": "A:2",
+          "maxHp": 140,
+          "placement": {
+            "col": "right",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "cleric",
+          "element": "earth",
+          "hp": 90,
+          "id": "B:0",
+          "maxHp": 90,
+          "placement": {
+            "col": "right",
+            "row": "front",
+          },
+          "side": "B",
+        },
+        {
+          "class": "cleric",
+          "element": "fire",
+          "hp": 90,
+          "id": "B:1",
+          "maxHp": 90,
+          "placement": {
+            "col": "right",
+            "row": "mid",
+          },
+          "side": "B",
+        },
+        {
+          "class": "cleric",
+          "element": "water",
+          "hp": 90,
+          "id": "B:2",
+          "maxHp": 90,
+          "placement": {
+            "col": "right",
+            "row": "back",
+          },
+          "side": "B",
+        },
+      ],
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 1,
+          "hpAfter": 139,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 1,
+          "hpAfter": 138,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 1,
+          "hpAfter": 137,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 66,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 42,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 72,
+      "source": "B:2",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 48,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 24,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "engagement": 1,
+      "hp": {
+        "A:0": 137,
+        "A:1": 140,
+        "A:2": 140,
+        "B:0": 24,
+        "B:1": 90,
+        "B:2": 90,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 54,
+      "source": "B:0",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 84,
+      "source": "B:1",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "amount": 6,
+      "hpAfter": 90,
+      "source": "B:2",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 66,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 42,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 72,
+      "source": "B:2",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 48,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 24,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "engagement": 2,
+      "hp": {
+        "A:0": 137,
+        "A:1": 140,
+        "A:2": 140,
+        "B:0": 24,
+        "B:1": 90,
+        "B:2": 90,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 54,
+      "source": "B:0",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 84,
+      "source": "B:1",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "amount": 6,
+      "hpAfter": 90,
+      "source": "B:2",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 66,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 42,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 72,
+      "source": "B:2",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 48,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 24,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "engagement": 3,
+      "hp": {
+        "A:0": 137,
+        "A:1": 140,
+        "A:2": 140,
+        "B:0": 24,
+        "B:1": 90,
+        "B:2": 90,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 54,
+      "source": "B:0",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 84,
+      "source": "B:1",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "amount": 6,
+      "hpAfter": 90,
+      "source": "B:2",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 66,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 42,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 72,
+      "source": "B:2",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 48,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 24,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "engagement": 4,
+      "hp": {
+        "A:0": 137,
+        "A:1": 140,
+        "A:2": 140,
+        "B:0": 24,
+        "B:1": 90,
+        "B:2": 90,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 54,
+      "source": "B:0",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 84,
+      "source": "B:1",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "amount": 6,
+      "hpAfter": 90,
+      "source": "B:2",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 66,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 42,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 72,
+      "source": "B:2",
+      "target": "B:0",
+      "type": "UnitHealed",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 48,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 24,
+          "hpAfter": 24,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "idle",
+      "type": "ActionSkipped",
+      "unit": "A:2",
+    },
+    {
+      "engagement": 5,
+      "hp": {
+        "A:0": 137,
+        "A:1": 140,
+        "A:2": 140,
+        "B:0": 24,
+        "B:1": 90,
+        "B:2": 90,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "hpPct": {
+        "A": 99,
+        "B": 75,
+      },
+      "type": "BattleEnded",
+      "winner": "A",
+    },
+  ],
+  "logVersion": 3,
+}
+`;
+
+exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persisting poison — the earth-witch duel across engagements (FR19 Witch synergy) 1`] = `
+{
+  "events": [
+    {
+      "type": "BattleStarted",
+      "units": [
+        {
+          "class": "archer",
+          "element": "fire",
+          "hp": 90,
+          "id": "A:0",
+          "maxHp": 90,
+          "placement": {
+            "col": "left",
+            "row": "back",
+          },
+          "side": "A",
+        },
+        {
+          "class": "archer",
+          "element": "water",
+          "hp": 90,
+          "id": "A:1",
+          "maxHp": 90,
+          "placement": {
+            "col": "right",
+            "row": "back",
+          },
+          "side": "A",
+        },
+        {
+          "class": "witch",
+          "element": "earth",
+          "hp": 85,
+          "id": "A:2",
+          "maxHp": 85,
+          "placement": {
+            "col": "center",
+            "row": "back",
+          },
+          "side": "A",
+        },
+        {
+          "class": "witch",
+          "element": "earth",
+          "hp": 85,
+          "id": "B:0",
+          "maxHp": 85,
+          "placement": {
+            "col": "center",
+            "row": "back",
+          },
+          "side": "B",
+        },
+        {
+          "class": "knight",
+          "element": "earth",
+          "hp": 140,
+          "id": "B:1",
+          "maxHp": 140,
+          "placement": {
+            "col": "left",
+            "row": "front",
+          },
+          "side": "B",
+        },
+        {
+          "class": "knight",
+          "element": "water",
+          "hp": 140,
+          "id": "B:2",
+          "maxHp": 140,
+          "placement": {
+            "col": "right",
+            "row": "front",
+          },
+          "side": "B",
+        },
+      ],
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "source": "A:2",
+      "spell": "poison",
+      "target": "B:0",
+      "type": "StatusApplied",
+    },
+    {
+      "source": "B:0",
+      "spell": "poison",
+      "target": "A:2",
+      "type": "StatusApplied",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 19,
+          "hpAfter": 66,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 19,
+          "hpAfter": 47,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 36,
+          "hpAfter": 54,
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 36,
+          "hpAfter": 54,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "source": "A:2",
+      "spell": "poison",
+      "target": "B:2",
+      "type": "StatusApplied",
+    },
+    {
+      "source": "B:0",
+      "spell": "poison",
+      "target": "A:1",
+      "type": "StatusApplied",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 19,
+          "hpAfter": 28,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 19,
+          "hpAfter": 9,
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 36,
+          "hpAfter": 18,
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 36,
+          "hpAfter": 18,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "damage": 15,
+      "hpAfter": 3,
+      "type": "PoisonTicked",
+      "unit": "A:1",
+    },
+    {
+      "damage": 15,
+      "hpAfter": 70,
+      "type": "PoisonTicked",
+      "unit": "A:2",
+    },
+    {
+      "damage": 15,
+      "hpAfter": 0,
+      "type": "PoisonTicked",
+      "unit": "B:0",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "B:0",
+    },
+    {
+      "damage": 15,
+      "hpAfter": 125,
+      "type": "PoisonTicked",
+      "unit": "B:2",
+    },
+    {
+      "engagement": 1,
+      "hp": {
+        "A:0": 18,
+        "A:1": 3,
+        "A:2": 70,
+        "B:0": 0,
+        "B:1": 140,
+        "B:2": 125,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "source": "A:2",
+      "spell": "poison",
+      "target": "B:1",
+      "type": "StatusApplied",
+    },
+    {
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 7,
+          "hpAfter": 118,
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 7,
+          "hpAfter": 133,
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 36,
+          "hpAfter": 0,
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "A:1",
+    },
+    {
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 36,
+          "hpAfter": 0,
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "A:0",
+    },
+    {
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "type": "ActionFizzled",
+      "unit": "A:2",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 25,
+          "hpAfter": 45,
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 25,
+          "hpAfter": 20,
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "damage": 15,
+      "hpAfter": 5,
+      "type": "PoisonTicked",
+      "unit": "A:2",
+    },
+    {
+      "damage": 15,
+      "hpAfter": 118,
+      "type": "PoisonTicked",
+      "unit": "B:1",
+    },
+    {
+      "damage": 15,
+      "hpAfter": 103,
+      "type": "PoisonTicked",
+      "unit": "B:2",
+    },
+    {
+      "engagement": 2,
+      "hp": {
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 5,
+        "B:0": 0,
+        "B:1": 118,
+        "B:2": 103,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "type": "ActionFizzled",
+      "unit": "A:2",
+    },
+    {
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 25,
+          "hpAfter": 0,
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "A:2",
+    },
+    {
+      "engagement": 3,
+      "hp": {
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 0,
+        "B:0": 0,
+        "B:1": 118,
+        "B:2": 103,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "hpPct": {
+        "A": 0,
+        "B": 60,
+      },
+      "type": "BattleEnded",
+      "winner": "B",
+    },
+  ],
+  "logVersion": 3,
+}
+`;
+
 exports[`golden battles > golden #1: knights grind through a healing cleric column (staff clamp + heal visible) 1`] = `
 {
   "events": [

@@ -68,8 +68,8 @@ describe('validateMatchSetup (AC2, spine errors convention)', () => {
     expectViolation(nullCell, 'out-of-grid', /not an object/);
   });
 
-  it('rejects wipeout mode until story 1.10 (honest error, not a wrong answer)', () => {
-    expectViolation({ ...validSetup(), mode: 'wipeout' }, 'mode-not-implemented', /wipeout.*1\.10/);
+  it('accepts wipeout mode (story 1.10 — the multi-engagement loop is implemented)', () => {
+    expect(() => validateMatchSetup({ ...validSetup(), mode: 'wipeout' })).not.toThrow();
   });
 
   it('rejects a non-uint32 seed, naming the value', () => {
