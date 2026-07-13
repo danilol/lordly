@@ -149,6 +149,9 @@ describe('MatchFlow commit (FR5/FR24, AD-6/AD-9/AD-11/AD-13)', () => {
     flow.placeUnit(0, { row: 'front', col: 'center' });
     // only 1 of 3 placed
     expect(() => flow.commit()).toThrow(/place all 3|incomplete|not placed/i);
+    // The count in the message is DERIVED from BALANCE.armySize, never hardcoded —
+    // a drifted literal is the exact class of bug the models avoid.
+    expect(() => flow.commit()).toThrow(new RegExp(`place all ${BALANCE.armySize} units`));
   });
 
   it('is idempotent: a second commit returns the SAME board, never re-deriving a different AI', () => {
@@ -173,6 +176,19 @@ describe('MatchFlow commit (FR5/FR24, AD-6/AD-9/AD-11/AD-13)', () => {
     flow.draftUnit('knight');
     expect(() => flow.placeUnit(5, { row: 'front', col: 'center' })).toThrow(/out of range/i);
     expect(() => flow.placeUnit(-1, { row: 'front', col: 'center' })).toThrow(/out of range/i);
+  });
+
+  it('placeUnit and removeUnit reject a non-integer index (NaN slips past a bare </≥ guard)', () => {
+    const flow = flowWithSeed(1);
+    flow.startMatch();
+    flow.draftUnit('knight');
+    // NaN comparisons are all false, so a `< 0 || >= len` guard alone would let it
+    // through and corrupt state via splice/index. The Number.isInteger check catches it.
+    expect(() => flow.placeUnit(Number.NaN, { row: 'front', col: 'center' })).toThrow(/out of range/i);
+    expect(() => flow.placeUnit(1.5, { row: 'front', col: 'center' })).toThrow(/out of range/i);
+    expect(() => flow.removeUnit(Number.NaN)).toThrow(/out of range/i);
+    // State is untouched — the guard threw before any mutation.
+    expect(flow.getState().playerArmy).toHaveLength(1);
   });
 });
 

@@ -74,7 +74,7 @@ export class MatchFlow {
   /** Removes the drafted unit at `index`; its element is discarded (forward-only — the counter is not rewound). */
   removeUnit(index: number): void {
     if (this.state.phase === 'committed') throw new Error('cannot remove: match already committed');
-    if (index < 0 || index >= this.state.playerArmy.length) {
+    if (!Number.isInteger(index) || index < 0 || index >= this.state.playerArmy.length) {
       throw new Error(`removeUnit: index ${index} out of range`);
     }
     this.state.playerArmy.splice(index, 1);
@@ -84,7 +84,7 @@ export class MatchFlow {
   /** Places (or moves/swaps) the unit at `unitIndex` onto `target` via the pure placement model (FR4). */
   placeUnit(unitIndex: number, target: Placement): void {
     if (this.state.phase === 'committed') throw new Error('cannot place: match already committed');
-    if (unitIndex < 0 || unitIndex >= this.state.playerArmy.length) {
+    if (!Number.isInteger(unitIndex) || unitIndex < 0 || unitIndex >= this.state.playerArmy.length) {
       throw new Error(`placeUnit: index ${unitIndex} out of range`);
     }
     this.state.playerPlacements = placeUnit(this.state.playerPlacements, unitIndex, target);
@@ -111,7 +111,7 @@ export class MatchFlow {
       return this.state.committedSetup;
     }
     if (this.state.playerArmy.length !== BALANCE.armySize || this.placedCount() !== BALANCE.armySize) {
-      throw new Error('cannot commit: place all 3 units first');
+      throw new Error(`cannot commit: place all ${BALANCE.armySize} units first`);
     }
 
     const streams = createStreams(this.state.seed);
