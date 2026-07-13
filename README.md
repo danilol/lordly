@@ -29,6 +29,23 @@ pnpm --filter web dev
 
 Then open http://localhost:8080.
 
+## Balancing harness
+
+A headless AI-vs-AI sweep over the engine's strategy pool (NFR4) — the tool
+for spotting dominant strategies after any balance or pool change:
+
+```sh
+pnpm --filter @lordly/engine sim                  # defaults: --runs=20 --seed=1 --threshold=0.65
+pnpm --filter @lordly/engine sim -- --runs=100    # bigger sample
+```
+
+It plays every archetype pairing `runs` times on deterministic seeds (each
+side on its own RNG stream) and prints win rates per archetype and per
+composition — win rate counts draws as half. Any archetype above the
+threshold is flagged and the command exits non-zero. The same 65% acceptance
+band runs in CI as a test (`packages/engine/test/sim.test.ts`), so a pool or
+balance edit that creates a dominant strategy fails the build.
+
 ## Deploy
 
 Production runs as static assets on Cloudflare Workers at **https://lordly.lol-gaming.workers.dev**. Every push to `main` deploys automatically from CI once these one-time secrets exist:

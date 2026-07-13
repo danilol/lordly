@@ -8,7 +8,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sim": "tsx sim/run.ts"
   },
   "dependencies": {
     "pure-rand": "8.4.2"
@@ -16,6 +17,7 @@
   "devDependencies": {
     "@fast-check/vitest": "^0.4",
     "fast-check": "^4",
+    "tsx": "^4",
     "typescript": "~5.9.3"
   }
 }

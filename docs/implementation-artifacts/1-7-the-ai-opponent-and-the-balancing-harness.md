@@ -4,7 +4,7 @@ baseline_commit: de845d9aba7df4f2d292cffb9897ec3c315af905
 
 # Story 1.7: The AI opponent and the balancing harness
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -22,37 +22,37 @@ so that I always have an opponent who can punish a lazy formation.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: The strategy pool — curated AI data (AC: 2)
-  - [ ] New `packages/engine/src/ai.ts`: `StrategyArchetype { id, name, classes: [UnitClass, UnitClass, UnitClass], placement: [Placement, Placement, Placement] }` — placement parallel to `classes` by index (same parallelism contract as `MatchSetup.armies`/`placements`); `id` a stable kebab-case string (goes in sim reports)
-  - [ ] `STRATEGY_POOL: readonly StrategyArchetype[]` — 8–12 curated archetypes. MUST include: ≥1 back-row-sniper (e.g. double-archer mid/back formation — FR9 arcs over front lines) and ≥1 anti-front-stack (e.g. mage-led artillery — FR10's row blast massacres everyone-in-front boards). Round out with: knight wall + cleric sustain, mercenary tempo, witch-control openings, balanced triangle spreads — curate AGAINST the sim results (Task 4 is the feedback loop), not by vibes
-  - [ ] Pool validity is a TEST, not a runtime check: every archetype's classes are legal, placements are 3 distinct in-grid cells, pool size in [8, 12], required roles present (assert by structural predicate — e.g. "has ≥2 units with back/mid placement and rearmost-targeting class" — not by hardcoded id list, so curation stays free)
-- [ ] Task 2: `chooseSetup` — the pure seeded pick (AC: 1, 2)
-  - [ ] `chooseSetup(pool, stream, options?)` in `ai.ts` → `{ archetypeId, classes, placement }`. Parameters admit NOTHING player-derived: pool + stream (+ options.exclude) only — FR24 holds by construction (AD-6). Do NOT return a `MatchSetup` fragment with elements: elements are NOT the AI's to roll (see spec decision 1)
-  - [ ] `options.exclude?: string` — an archetype id excluded from the pick (SPEC DECISION 2: "not the same board twice in a row" is the CALLER threading the previous match's `archetypeId` back in; a pure function cannot remember). With exclude matching a pool id, pick uniformly over the remaining pool; without (first match), over the whole pool
-  - [ ] AI-STREAM ORDERING INVARIANT (document prominently like resolve.ts's battle-stream comment): per `chooseSetup` call, draws are ① one archetype pick `nextInt(stream, 0, eligible-1)`, ② one placement-mirror flip `nextInt(stream, 0, 1)` — nothing else draws from `ai/*`. Story 1.8's shell and the sim MUST produce identical boards from identical stream states
-  - [ ] Mirror flip (SPEC DECISION 3): on 1, each placement's col is mirrored left↔right (owner-local; rows untouched) — doubles board variety per archetype while preserving its row intent; on 0, placements verbatim. Center col is its own mirror
-  - [ ] Unit tests: determinism (same seed+label → identical choice, twice); exclude honored (never picks the excluded id — property over seeds); exclude of an id NOT in the pool = whole pool eligible; mirror flip pins (a known seed hand-verified to mirrored cols — determinism-anchor style, verify WHICH board, not just "it ran"); purity (input pool not mutated, frozen-pool safe); a property: `chooseSetup` output + 3 `rollElement` draws per side always assembles into a `MatchSetup` that passes `validateMatchSetup`
-- [ ] Task 3: Engine exports + purity (AC: 1)
-  - [ ] `index.ts`: export `chooseSetup`, `STRATEGY_POOL`, types `StrategyArchetype`, `AiChoice` (or the equivalent names chosen); doc comments on every export (NFR3)
-  - [ ] `purity.test.ts`: add `ai.ts` to the exact src file list — the guard fails otherwise BY DESIGN
-  - [ ] `ai.ts` imports only engine-internal modules + nothing effectful (AD-1); coverage: `src/ai.ts` falls under the enforced ≥90% engine line gate automatically
-- [ ] Task 4: The sim harness — `packages/engine/sim/` (AC: 3)
-  - [ ] `sim/sweep.ts` — the PURE sweep core (importable by tests): `runSweep(pool, config) → SweepReport`. Per matchup: derive a deterministic match seed from (base seed, pair index, run index), kept inside uint32 (`>>> 0` / modular math — `createStreams` REJECTS anything else) — NO `Date.now()`/`Math.random()` anywhere; a sweep is replayable from its config
-  - [ ] Sweep shape: round-robin every archetype pairing (including self-pairings — a mirror pairing is legitimate BECAUSE the sides' streams differ) × N seeded runs each. Force the pairing by passing a SINGLETON pool per side: side A = `chooseSetup([archA], streams['ai/A'])`, side B = `chooseSetup([archB], streams['ai/B'])` — round-robin coverage AND the real pick+mirror code path on the real per-side streams (no mirror-match artifact, the AC's explicit trap; `exclude` is not needed in the sweep — it's the 1.8 shell's affordance). Then assemble each `MatchSetup` exactly as MatchFlow will (SPEC DECISION 4): elements = 3 × `rollElement` per side on `elements/A`/`elements/B` in army order (AD-9), `mode: 'single'`, engine's `BALANCE.version`; tally from `BattleEnded.winner` only (the log is the contract — AD-2/AD-12)
-  - [ ] `SweepReport`: per-archetype games/wins/draws/aggregate win rate, per-composition rollup (archetypes sharing a class multiset merge — compositions are the balance question, NFR4), flagged list (rate > threshold). Win rate = `(wins + draws/2) / games` (SPEC DECISION 5)
-  - [ ] `sim/run.ts` — thin CLI entry: parse `--runs`, `--seed`, `--threshold` (defaults: enough runs for stable rates, base seed 1, 0.65), call `runSweep`, print a readable table + flagged archetypes, exit non-zero when any archetype exceeds the threshold (CI-composable). Console/process usage lives ONLY here — `sim/` is outside the purity guard's src list but keep `sweep.ts` pure anyway (it's the testable core)
-  - [ ] Wire the CLI: engine `package.json` gets `"sim": "tsx sim/run.ts"` + `tsx` devDependency (^4 latest). TRAP: engine `tsconfig.json` has `"include": ["src", "test"]` — add `"sim"` or the harness silently escapes `tsc --noEmit` (verified at baseline). Node 24's native type-stripping CANNOT run it: the engine's relative imports are extensionless, and type stripping requires explicit extensions (verified 2026-07-13, nodejs.org/api/typescript.html) — do not burn time trying `node sim/run.ts`
-  - [ ] README: a short "Balancing harness" section — `pnpm --filter @lordly/engine sim`, what the report means, the 65% band (NFR3's documented-steps convention)
-- [ ] Task 5: The acceptance band in CI (AC: 3)
-  - [ ] `test/sim.test.ts`: a REDUCED deterministic sweep (fixed base seed, runs sized to keep the whole suite comfortably under ~10 s added) asserting no archetype's aggregate win rate exceeds 0.65 — the band is a named constant with the `[initial acceptance band — tuning value]` comment
-  - [ ] Determinism anchor: pin one sweep cell (archetype pair, seed → winner) hand-verified from the log, so a silent stream/ordering change trips loudly (rng-lessons convention)
-  - [ ] If the band FAILS: tune the POOL first (drop/adjust the dominant archetype — pool curation is AI data, freely editable this story). Touch `BALANCE` only as a last resort: that requires a version bump + hash update + golden re-records + re-pinned anchors across 5 suites — a documented, deliberate cascade, not a quick fix
-  - [ ] Meta tests from Task 1 (pool size/validity/required roles) live here or in `test/ai.test.ts` — dev's structural call
-- [ ] Task 6: Property + regression sweep (AC: 1, 2, 3)
-  - [ ] Property: over arbitrary uint32 seeds, `chooseSetup` on `ai/A` vs `ai/B` from the SAME match seed picks independently (not always-equal — the no-mirror-artifact guarantee, testable because the streams are avalanche-derived)
-  - [ ] Property: assembled AI-vs-AI `MatchSetup`s always resolve (termination holds — reuse `matchSetupArb` patterns; the existing engine properties already cover resolution, this covers the ASSEMBLY path)
-  - [ ] FR26's <1 s: the sim test IS the evidence (hundreds of `chooseSetup` calls in seconds); no dedicated perf test — note it in the test file comment
-  - [ ] Existing suites untouched and green: this story adds NO battle-stream draws, NO event types, NO balance changes → goldens and anchors must NOT move. A golden diff = you broke stream derivation or resolution — stop and investigate
+- [x] Task 1: The strategy pool — curated AI data (AC: 2)
+  - [x] New `packages/engine/src/ai.ts`: `StrategyArchetype { id, name, classes: [UnitClass, UnitClass, UnitClass], placement: [Placement, Placement, Placement] }` — placement parallel to `classes` by index (same parallelism contract as `MatchSetup.armies`/`placements`); `id` a stable kebab-case string (goes in sim reports)
+  - [x] `STRATEGY_POOL: readonly StrategyArchetype[]` — 8–12 curated archetypes. MUST include: ≥1 back-row-sniper (e.g. double-archer mid/back formation — FR9 arcs over front lines) and ≥1 anti-front-stack (e.g. mage-led artillery — FR10's row blast massacres everyone-in-front boards). Round out with: knight wall + cleric sustain, mercenary tempo, witch-control openings, balanced triangle spreads — curate AGAINST the sim results (Task 4 is the feedback loop), not by vibes
+  - [x] Pool validity is a TEST, not a runtime check: every archetype's classes are legal, placements are 3 distinct in-grid cells, pool size in [8, 12], required roles present (assert by structural predicate — e.g. "has ≥2 units with back/mid placement and rearmost-targeting class" — not by hardcoded id list, so curation stays free)
+- [x] Task 2: `chooseSetup` — the pure seeded pick (AC: 1, 2)
+  - [x] `chooseSetup(pool, stream, options?)` in `ai.ts` → `{ archetypeId, classes, placement }`. Parameters admit NOTHING player-derived: pool + stream (+ options.exclude) only — FR24 holds by construction (AD-6). Do NOT return a `MatchSetup` fragment with elements: elements are NOT the AI's to roll (see spec decision 1)
+  - [x] `options.exclude?: string` — an archetype id excluded from the pick (SPEC DECISION 2: "not the same board twice in a row" is the CALLER threading the previous match's `archetypeId` back in; a pure function cannot remember). With exclude matching a pool id, pick uniformly over the remaining pool; without (first match), over the whole pool
+  - [x] AI-STREAM ORDERING INVARIANT (document prominently like resolve.ts's battle-stream comment): per `chooseSetup` call, draws are ① one archetype pick `nextInt(stream, 0, eligible-1)`, ② one placement-mirror flip `nextInt(stream, 0, 1)` — nothing else draws from `ai/*`. Story 1.8's shell and the sim MUST produce identical boards from identical stream states
+  - [x] Mirror flip (SPEC DECISION 3): on 1, each placement's col is mirrored left↔right (owner-local; rows untouched) — doubles board variety per archetype while preserving its row intent; on 0, placements verbatim. Center col is its own mirror
+  - [x] Unit tests: determinism (same seed+label → identical choice, twice); exclude honored (never picks the excluded id — property over seeds); exclude of an id NOT in the pool = whole pool eligible; mirror flip pins (a known seed hand-verified to mirrored cols — determinism-anchor style, verify WHICH board, not just "it ran"); purity (input pool not mutated, frozen-pool safe); a property: `chooseSetup` output + 3 `rollElement` draws per side always assembles into a `MatchSetup` that passes `validateMatchSetup`
+- [x] Task 3: Engine exports + purity (AC: 1)
+  - [x] `index.ts`: export `chooseSetup`, `STRATEGY_POOL`, types `StrategyArchetype`, `AiChoice` (or the equivalent names chosen); doc comments on every export (NFR3)
+  - [x] `purity.test.ts`: add `ai.ts` to the exact src file list — the guard fails otherwise BY DESIGN
+  - [x] `ai.ts` imports only engine-internal modules + nothing effectful (AD-1); coverage: `src/ai.ts` falls under the enforced ≥90% engine line gate automatically
+- [x] Task 4: The sim harness — `packages/engine/sim/` (AC: 3)
+  - [x] `sim/sweep.ts` — the PURE sweep core (importable by tests): `runSweep(pool, config) → SweepReport`. Per matchup: derive a deterministic match seed from (base seed, pair index, run index), kept inside uint32 (`>>> 0` / modular math — `createStreams` REJECTS anything else) — NO `Date.now()`/`Math.random()` anywhere; a sweep is replayable from its config
+  - [x] Sweep shape: round-robin every archetype pairing (including self-pairings — a mirror pairing is legitimate BECAUSE the sides' streams differ) × N seeded runs each. Force the pairing by passing a SINGLETON pool per side: side A = `chooseSetup([archA], streams['ai/A'])`, side B = `chooseSetup([archB], streams['ai/B'])` — round-robin coverage AND the real pick+mirror code path on the real per-side streams (no mirror-match artifact, the AC's explicit trap; `exclude` is not needed in the sweep — it's the 1.8 shell's affordance). Then assemble each `MatchSetup` exactly as MatchFlow will (SPEC DECISION 4): elements = 3 × `rollElement` per side on `elements/A`/`elements/B` in army order (AD-9), `mode: 'single'`, engine's `BALANCE.version`; tally from `BattleEnded.winner` only (the log is the contract — AD-2/AD-12)
+  - [x] `SweepReport`: per-archetype games/wins/draws/aggregate win rate, per-composition rollup (archetypes sharing a class multiset merge — compositions are the balance question, NFR4), flagged list (rate > threshold). Win rate = `(wins + draws/2) / games` (SPEC DECISION 5)
+  - [x] `sim/run.ts` — thin CLI entry: parse `--runs`, `--seed`, `--threshold` (defaults: enough runs for stable rates, base seed 1, 0.65), call `runSweep`, print a readable table + flagged archetypes, exit non-zero when any archetype exceeds the threshold (CI-composable). Console/process usage lives ONLY here — `sim/` is outside the purity guard's src list but keep `sweep.ts` pure anyway (it's the testable core)
+  - [x] Wire the CLI: engine `package.json` gets `"sim": "tsx sim/run.ts"` + `tsx` devDependency (^4 latest). TRAP: engine `tsconfig.json` has `"include": ["src", "test"]` — add `"sim"` or the harness silently escapes `tsc --noEmit` (verified at baseline). Node 24's native type-stripping CANNOT run it: the engine's relative imports are extensionless, and type stripping requires explicit extensions (verified 2026-07-13, nodejs.org/api/typescript.html) — do not burn time trying `node sim/run.ts`
+  - [x] README: a short "Balancing harness" section — `pnpm --filter @lordly/engine sim`, what the report means, the 65% band (NFR3's documented-steps convention)
+- [x] Task 5: The acceptance band in CI (AC: 3)
+  - [x] `test/sim.test.ts`: a REDUCED deterministic sweep (fixed base seed, runs sized to keep the whole suite comfortably under ~10 s added) asserting no archetype's aggregate win rate exceeds 0.65 — the band is a named constant with the `[initial acceptance band — tuning value]` comment
+  - [x] Determinism anchor: pin one sweep cell (archetype pair, seed → winner) hand-verified from the log, so a silent stream/ordering change trips loudly (rng-lessons convention)
+  - [x] If the band FAILS: tune the POOL first (drop/adjust the dominant archetype — pool curation is AI data, freely editable this story). Touch `BALANCE` only as a last resort: that requires a version bump + hash update + golden re-records + re-pinned anchors across 5 suites — a documented, deliberate cascade, not a quick fix
+  - [x] Meta tests from Task 1 (pool size/validity/required roles) live here or in `test/ai.test.ts` — dev's structural call
+- [x] Task 6: Property + regression sweep (AC: 1, 2, 3)
+  - [x] Property: over arbitrary uint32 seeds, `chooseSetup` on `ai/A` vs `ai/B` from the SAME match seed picks independently (not always-equal — the no-mirror-artifact guarantee, testable because the streams are avalanche-derived)
+  - [x] Property: assembled AI-vs-AI `MatchSetup`s always resolve (termination holds — reuse `matchSetupArb` patterns; the existing engine properties already cover resolution, this covers the ASSEMBLY path)
+  - [x] FR26's <1 s: the sim test IS the evidence (hundreds of `chooseSetup` calls in seconds); no dedicated perf test — note it in the test file comment
+  - [x] Existing suites untouched and green: this story adds NO battle-stream draws, NO event types, NO balance changes → goldens and anchors must NOT move. A golden diff = you broke stream derivation or resolution — stop and investigate
 
 ## Dev Notes
 
@@ -119,12 +119,44 @@ so that I always have an opponent who can punish a lazy formation.
 
 ### Agent Model Used
 
+claude-opus-4-8[1m] (Claude Opus 4.8, 1M context)
+
 ### Debug Log References
+
+- TDD reds proven per task: ai.test (module missing), purity guard (file-list mismatch flagged ai.ts by design), sim.test (sweep module missing).
+- Anchors probed then HAND-derived (rng-lessons convention): seed 1 ai/A → pick 6/flip 0; seed 2 ai/A → pick 1/flip 1 — mapped onto the pool literal by hand (seed-2 mirror hand-computed left↔right). Sim anchor bulwark-vs-three-mages fully derived on paper (blast 34 = 23×3/2, knights die on blast 5 early in pass 2 after exactly 3 swings of 19 → B wipe, hpPct 0/76) and passed first run.
+- THE HARNESS EARNED ITS KEEP IMMEDIATELY: the first curated-by-reasoning pool failed the band spectacularly (triangle 92%, artillery 81%, skirmishers 10%). Probing revealed matchups between fixed boards are NEAR-DETERMINISTIC across seeds (identical tallies vs different opponents decompose into 100%-cross-wins + self-pair padding) — the band is a property of the matchup MATRIX, not of variance.
+- Response: computed a full 20-candidate pairwise matrix (scratch tooling over runSweep) and searched all C(20,10) subsets honoring the sniper/anti-front-stack constraints, maximizing the weakest member under a 62% cap. First optimizer pass "won" by keeping punching bags (twin-coven 22%) — re-ran with maximize-min objective for a competitive pool.
+- The dominant knight/archer/mage full-RPS spread family (`triangle`, 92%; `lancers` its only hard counter, itself 100% vs artillery) was deliberately LEFT OUT of the pool — no band-compliant pool containing it exists in the candidate space. Recorded in the pool doc comment as discoverable player tech.
+- CLI verified end-to-end at 4× the CI sample (2000 battles): max ambushers 63.2%, min wardens 35.0% — band holds with margin. CI band config: 500 battles, max ≈60%.
+- Typecheck trap found beyond the story's tsconfig one: `sim/run.ts` needs `process` typings; solved with a minimal `sim/env.d.ts` ambient declaration instead of `@types/node` (full node globals would let effectful code typecheck inside src/, weakening AD-1's type-level isolation).
 
 ### Completion Notes List
 
+- All 6 tasks complete: 161 tests green (20 added), engine src 99.69% lines under the enforced ≥90% gate; typecheck + web build green.
+- ZERO golden movement (as the story demanded): no battle-stream draws added, no event types, no balance edits — BALANCE stays version 1.
+- chooseSetup: pure, two-draw invariant documented, exclude threading + singleton-pool forcing both tested; FR24 satisfied by signature construction (AD-6).
+- STRATEGY_POOL: 10 archetypes, empirically balanced 35–63% pool-relative aggregate; required roles present (longbows/talons snipers, three-mages anti-front-stack).
+- Sim harness: pure `runSweep` core + thin tsx CLI (`pnpm --filter @lordly/engine sim`), deterministic seed schedule, draws-half-credit rates, per-composition rollup, non-zero exit on flagged; 65% band enforced in CI via test/sim.test.ts.
+- All 5 recorded spec decisions implemented as specified and documented in code comments.
+
 ### File List
+
+- packages/engine/src/ai.ts (new — StrategyArchetype/AiChoice/ChooseSetupOptions, STRATEGY_POOL, chooseSetup)
+- packages/engine/src/index.ts (modified — ai exports)
+- packages/engine/sim/sweep.ts (new — pure sweep core: runSweep, SweepConfig/SweepReport/ArchetypeStats/CompositionStats)
+- packages/engine/sim/run.ts (new — CLI entry; only effectful sim file)
+- packages/engine/sim/env.d.ts (new — minimal `process` ambient typing, deliberately not @types/node)
+- packages/engine/test/ai.test.ts (new — pool meta, chooseSetup determinism/exclude/mirror anchors, assembly+resolution property, A/B independence)
+- packages/engine/test/sim.test.ts (new — sweep determinism, accounting, rollup, hand-derived anchor, 65% acceptance band)
+- packages/engine/test/purity.test.ts (modified — ai.ts in the exact src list)
+- packages/engine/package.json (modified — sim script, tsx devDependency)
+- packages/engine/tsconfig.json (modified — include sim/)
+- README.md (modified — Balancing harness section)
+- docs/implementation-artifacts/1-7-the-ai-opponent-and-the-balancing-harness.md (story tracking)
+- docs/implementation-artifacts/sprint-status.yaml (status tracking)
 
 ## Change Log
 
 - 2026-07-13: Story created (ready-for-dev). Ultimate context engine analysis completed — comprehensive developer guide created: AI purity boundary (AD-6) and stream discipline (AD-10) as hard constraints, 5 recorded spec decisions (caller-rolled elements, caller-threaded no-repeat, seeded mirror flip, sim-as-MatchFlow-reference, draw-half-credit win rate), tsx-not-node CLI decision verified against Node 24 type-stripping limits, and the 1.6 review's data-must-be-read lesson carried forward.
+- 2026-07-13: Story 1.7 implemented, status → review. The AI opponent lives: pure `chooseSetup` (FR24 by signature construction, two-draw ai-stream invariant, exclude-threaded no-repeat, seeded mirror flip) over a 10-archetype STRATEGY_POOL curated EMPIRICALLY — the first reasoned pool failed its own acceptance band (triangle 92%!), so the pool was selected from a 20-candidate pairwise matchup matrix (matchups are near-deterministic; balance lives in the matrix). NFR4 sim harness: pure runSweep + tsx CLI with per-archetype/per-composition draws-half-credit win rates, deterministic seed schedule, 65% band enforced both in CI (500-battle sweep, max ≈60%) and at 4× sample via CLI (max 63.2%). 20 new tests incl. three hand-derived determinism anchors; 161 green, engine 99.69% lines, zero golden movement, BALANCE untouched.

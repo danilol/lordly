@@ -42,6 +42,7 @@ describe('engine purity guard (AD-1)', () => {
   it('covers every source module (recursive)', () => {
     const files = Object.keys(sources).map((p) => p.replace('../src/', ''));
     expect(files.sort()).toEqual([
+      'ai.ts',
       'balance.ts',
       'hash.ts',
       'index.ts',
