@@ -42,7 +42,7 @@
 # - Story 1-10 (until-wipeout) is a STRETCH story: ship only if cheap (PRD FR19)
 
 generated: 2026-07-12T03:18:30
-last_updated: 2026-07-12
+last_updated: 2026-07-13
 project: lordly
 project_key: NOKEY
 tracking_system: file-system
@@ -56,7 +56,7 @@ development_status:
   1-4-battle-timeline-and-the-battlelog-chassis: done
   1-5-melee-combat-damage-and-judging: done
   1-6-full-class-roster-archer-mage-cleric-and-witch: done
-  1-7-the-ai-opponent-and-the-balancing-harness: backlog
+  1-7-the-ai-opponent-and-the-balancing-harness: ready-for-dev
   1-8-draft-and-placement-on-the-phone: backlog
   1-9-reveal-battle-playback-and-result-the-loop-closes: backlog
   1-10-until-wipeout-mode-stretch: backlog
