@@ -31,6 +31,14 @@ export const PALETTE = {
     // Enemy-side marker on the placement grid (FR6 groundwork; first-time legibility).
     enemyText: '#e06a6a',
     enemyLine: 0xc0433a,
+    // Battle/result (story 1.9). Player = side A (green family); enemy = side B (red family).
+    playerText: '#7ab07f',
+    hpBarBack: 0x2a2a3e,
+    hpBarPlayer: 0x4a6a4e,
+    hpBarEnemy: 0x8a3a3a,
+    winText: '#7ab07f',
+    loseText: '#e06a6a',
+    drawText: '#c8c8d8',
 } as const;
 
 // Text render resolution multiplier: the game renders at the 360×640 base and
@@ -50,7 +58,37 @@ export const PLACEMENT_TITLE = 'Place your units';
 export const PLACEMENT_SUBMIT_LABEL = 'Ready';
 export const PLACEMENT_SUBMIT_HINT = 'place all 3 units';
 export const ENEMY_ARMY_LABEL = '▲  ENEMY ARMY  ▲';
-export const REVEAL_PLACEHOLDER = 'Both armies committed.\nReveal, battle & result arrive in story 1.9.';
+
+// Reveal / Battle / Result scene labels (story 1.9) — one source for tests + scenes.
+export const REVEAL_TITLE = 'Reveal';
+export const REVEAL_HINT = 'Both armies face off. Tap to begin the battle.';
+export const REVEAL_FIGHT_LABEL = 'Fight!';
+export const BATTLE_HINT = 'Press and hold to fast-forward';
+export const RESULT_WIN_LABEL = 'Victory!';
+export const RESULT_LOSE_LABEL = 'Defeat';
+export const RESULT_DRAW_LABEL = 'Draw';
+export const RESULT_REMATCH_LABEL = 'Rematch';
+export const RESULT_HOME_LABEL = 'Home';
+// Back-to-Home affordance shown on every post-Home scene (closes the 1.8 dead-end).
+export const HOME_BACK_LABEL = '‹ Home';
+
+// Battle playback pacing (AC2): the default beat is a DATA tuning constant, not
+// inlined in scene code. ~600 ms per event at normal speed; press-and-hold
+// fast-forwards by BATTLE_FAST_FORWARD× (interim until FR23's controls, story 2.3).
+export const BATTLE_BEAT_MS = 600;
+export const BATTLE_FAST_FORWARD = 4;
+
+// Shared battle-board geometry (story 1.9): six stacked rows (side B on top,
+// side A on the bottom) of a 3-wide grid, with a gap between the two facing
+// front rows. Reveal and Battle scenes project cells through this one source
+// (via battleView.screenCellCenter) so both stay pixel-consistent.
+export const BATTLE_BOARD = {
+    cell: 56,
+    gap: 4,
+    top: 120,
+    /** Extra vertical space between B.front (row 2) and A.front (row 3) — the "no man's land". */
+    midGap: 16,
+} as const;
 
 // FR3 element badge colors (cosmetic; the witch's spell keys off element — FR16).
 // Keyed by the engine's `Element` union (AD-4) so a new element is a compile

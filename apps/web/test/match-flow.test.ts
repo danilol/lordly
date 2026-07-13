@@ -192,6 +192,70 @@ describe('MatchFlow commit (FR5/FR24, AD-6/AD-9/AD-11/AD-13)', () => {
   });
 });
 
+describe('MatchFlow resolve (AD-2/AD-13)', () => {
+  /** Draft + place a full legal board, then commit — ready to resolve. */
+  function committed(seed: number): MatchFlow {
+    const flow = flowWithSeed(seed);
+    flow.startMatch();
+    flow.draftUnit('knight');
+    flow.draftUnit('archer');
+    flow.draftUnit('mage');
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    flow.placeUnit(1, { row: 'back', col: 'left' });
+    flow.placeUnit(2, { row: 'back', col: 'right' });
+    flow.commit();
+    return flow;
+  }
+
+  it('resolves the committed battle into a BattleLog: BattleStarted first, BattleEnded last', () => {
+    const log = committed(0xabcabc).resolve();
+    expect(log.logVersion).toBeTypeOf('number');
+    expect(log.events.length).toBeGreaterThan(0);
+    expect(log.events[0]?.type).toBe('BattleStarted');
+    expect(log.events[log.events.length - 1]?.type).toBe('BattleEnded');
+  });
+
+  it('is idempotent — a second resolve returns the SAME log object, never re-resolving (AD-13)', () => {
+    const flow = committed(0x0d0d);
+    const first = flow.resolve();
+    const second = flow.resolve();
+    expect(second).toBe(first); // same object — the battle resolves exactly once
+  });
+
+  it('is deterministic — the same seed yields an equal event stream (FR20)', () => {
+    expect(committed(31337).resolve().events).toEqual(committed(31337).resolve().events);
+  });
+
+  it('throws if called before commit — there is no committed setup to resolve', () => {
+    const flow = flowWithSeed(5);
+    flow.startMatch();
+    flow.draftUnit('knight');
+    expect(() => flow.resolve()).toThrow(/not committed/i);
+  });
+
+  it('rematch clears the cached log — startMatch lets the next match resolve its own battle', () => {
+    const seeds = [100, 200];
+    let i = 0;
+    const flow = new MatchFlow(() => seeds[i++] as number);
+    const fill = (f: MatchFlow) => {
+      f.draftUnit('knight');
+      f.draftUnit('archer');
+      f.draftUnit('mage');
+      f.placeUnit(0, { row: 'front', col: 'center' });
+      f.placeUnit(1, { row: 'back', col: 'left' });
+      f.placeUnit(2, { row: 'back', col: 'right' });
+      f.commit();
+    };
+    flow.startMatch();
+    fill(flow);
+    const first = flow.resolve();
+    flow.startMatch(); // rematch → fresh seed 200, cached log cleared
+    fill(flow);
+    const second = flow.resolve();
+    expect(second).not.toBe(first);
+  });
+});
+
 describe('MatchFlow rematch (AD-10)', () => {
   it('startMatch carries lastAiArchetypeId forward and rolls a FRESH seed', () => {
     const seeds = [11, 22];

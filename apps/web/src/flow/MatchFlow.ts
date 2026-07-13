@@ -2,11 +2,12 @@ import {
   BALANCE,
   chooseSetup,
   createStreams,
+  resolveBattle,
   rollElement,
   STRATEGY_POOL,
   validateMatchSetup,
 } from '@lordly/engine';
-import type { Element, MatchSetup, Placement, UnitClass } from '@lordly/engine';
+import type { BattleLog, Element, MatchSetup, Placement, UnitClass } from '@lordly/engine';
 import { placeUnit } from './placement';
 import type { DraftedUnit, MatchState } from './MatchState';
 
@@ -26,6 +27,13 @@ const cryptoSeed: SeedSource = () => crypto.getRandomValues(new Uint32Array(1))[
  */
 export class MatchFlow {
   private state: MatchState;
+  /**
+   * The resolved battle log, cached here (NOT in `MatchState`) so the state
+   * stays plain and JSON-serializable (AD-5). Resolved exactly once per match
+   * by `resolve()` (AD-13); cleared on `startMatch()` so a rematch resolves
+   * its own fresh battle.
+   */
+  private log?: BattleLog;
 
   constructor(private readonly seedSource: SeedSource = cryptoSeed) {
     this.state = MatchFlow.emptyState(0);
@@ -49,6 +57,7 @@ export class MatchFlow {
    */
   startMatch(): void {
     this.state = MatchFlow.emptyState(this.seedSource() >>> 0, this.state.lastAiArchetypeId);
+    this.log = undefined; // a rematch resolves its own battle (AD-13)
   }
 
   /** A read-only-by-convention view of the current state (scenes render from this). */
@@ -141,6 +150,24 @@ export class MatchFlow {
     this.state.lastAiArchetypeId = ai.archetypeId;
     this.state.phase = 'committed';
     return setup;
+  }
+
+  /**
+   * Resolves the committed battle into an immutable `BattleLog` (AD-1/AD-2)
+   * EXACTLY ONCE (AD-13): `MatchFlow` is the sole caller of `resolveBattle`,
+   * and the Reveal/Battle scenes replay the returned log read-only — they
+   * never touch the engine. Idempotent like `commit()`: a second call returns
+   * the SAME frozen log, never re-resolving (which would waste work and, in
+   * `replay` mode later, could re-enter history — the exact double-resolution
+   * trap AD-13 prevents). Cleared by `startMatch()` so a rematch resolves fresh.
+   */
+  resolve(): BattleLog {
+    if (this.log) return this.log;
+    if (this.state.phase !== 'committed' || !this.state.committedSetup) {
+      throw new Error('cannot resolve: match is not committed');
+    }
+    this.log = resolveBattle(this.state.committedSetup);
+    return this.log;
   }
 
   /**

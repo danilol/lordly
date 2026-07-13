@@ -11,7 +11,7 @@ import {
 } from '../config/constants';
 import { canAddUnit, canContinue, classRulesCard } from '../flow/draftModel';
 import type { MatchFlow } from '../flow/MatchFlow';
-import { crispText } from '../config/ui';
+import { addHomeBack, crispText } from '../config/ui';
 
 /**
  * Draft scene (FR1/FR2/FR3): six class cards to tap, the growing army with
@@ -35,6 +35,7 @@ export class DraftScene extends Scene {
 
   create() {
     this.cameras.main.setBackgroundColor(PALETTE.background);
+    addHomeBack(this);
 
     crispText(this, BASE_WIDTH / 2, 26, DRAFT_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
     crispText(this, BASE_WIDTH / 2, 50, DRAFT_HINT, { fontFamily: 'Arial', fontSize: '11px', color: PALETTE.mutedText, align: 'center', wordWrap: { width: BASE_WIDTH - 24 } }).setOrigin(0.5);

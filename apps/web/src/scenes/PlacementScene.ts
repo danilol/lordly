@@ -10,7 +10,7 @@ import {
   PLACEMENT_SUBMIT_LABEL,
   PLACEMENT_TITLE,
 } from '../config/constants';
-import { crispText } from '../config/ui';
+import { addHomeBack, crispText } from '../config/ui';
 import { placedCount } from '../flow/placement';
 import type { MatchFlow } from '../flow/MatchFlow';
 
@@ -43,6 +43,7 @@ export class PlacementScene extends Scene {
 
   create() {
     this.cameras.main.setBackgroundColor(PALETTE.background);
+    addHomeBack(this);
     this.gridLeft = (BASE_WIDTH - (3 * CELL + 2 * GAP)) / 2;
 
     crispText(this, BASE_WIDTH / 2, 28, PLACEMENT_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);

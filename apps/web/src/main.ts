@@ -4,6 +4,8 @@ import { HomeScene } from './scenes/HomeScene';
 import { DraftScene } from './scenes/DraftScene';
 import { PlacementScene } from './scenes/PlacementScene';
 import { RevealScene } from './scenes/RevealScene';
+import { BattleScene } from './scenes/BattleScene';
+import { ResultScene } from './scenes/ResultScene';
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -19,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mode: Scale.FIT,
             autoCenter: Scale.CENTER_BOTH,
         },
-        scene: [HomeScene, DraftScene, PlacementScene, RevealScene],
+        scene: [HomeScene, DraftScene, PlacementScene, RevealScene, BattleScene, ResultScene],
     });
 
 });
