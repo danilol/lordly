@@ -4,7 +4,7 @@ baseline_commit: 8fbabfb1660d0680d1e9dab6a08853641c4ec87e
 
 # Story 2.0: The pre-epic-2 tech-debt story — quality gate, crisp text, and ground-clearing
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -59,7 +59,7 @@ _This story exists by commitment: the 2026-07-13 sprint change proposal and the 
   - [x] Candidate A: `crispText` (`apps/web/src/config/ui.ts:10–18`) applies `setResolution(Math.max(TEXT_RESOLUTION, window.devicePixelRatio))` — DPR-aware with the current value as floor. Candidate B: raise the fixed multiplier (4–5). Build both behind a trivial toggle, compare ON DEVICE with Danilo.
   - [x] Font-floor audit: current sizes span 8px–34px. Offenders at 8px: BattleScene.ts:106, PlacementScene.ts:69, DraftScene.ts:114, RevealScene.ts:75; 9px: BattleScene.ts:105, PlacementScene.ts:119, DraftScene.ts:81–82, RevealScene.ts:74, ResultScene.ts:84. Introduce `MIN_FONT_PX` in `config/constants.ts` and raise every sub-floor label; verify no layout breakage at 360×640 (labels may need wrapping/truncation tweaks — keep minimal).
   - [x] Do NOT build a full type scale — that's the UX spec's job (retro action item 3). This story fixes legibility, not typography.
-  - [ ] Acceptance: Danilo plays a full match on his phone and confirms readability. His word is the gate.
+  - [x] Acceptance: Danilo plays a full match on his phone and confirms readability. His word is the gate. **Given 2026-07-13: "let's accept it and move forward, we won't make it perfect now"** — accepted after two on-device iterations (zoom-aware resolution, then 13px class codes); font/type-scale refinement carries to the UX spec.
 
 - [x] **Task 3 — Hygiene sweep (AC3)**
   - [x] Vite: extract a shared `vite/config.base.mjs`; dev overlay keeps `server.port: 8080` ONLY; prod overlay keeps terser + `manualChunks` ONLY; delete the `phasermsg` plugin (apps/web/vite/config.prod.mjs:3–17, the `games@phaser.io` banner) and the dead keys (manualChunks in dev config lines 8–10; server.port in prod lines 41–43). `pnpm --filter web dev` and `build` both verified working after.
@@ -78,7 +78,7 @@ _This story exists by commitment: the 2026-07-13 sprint change proposal and the 
 
 - [x] **Task 6 — Gate & device verification (all ACs)**
   - [x] `pnpm lint` clean (new), `pnpm -r typecheck` clean, `pnpm test` green (227+; goldens byte-identical), `pnpm --filter web build` succeeds, CI workflow updated and green on push.
-  - [ ] Manual dev drive at 360×640; then the DEPLOYED build on Danilo's device for the AC2 sign-off.
+  - [x] Manual dev drive at 360×640; then the DEPLOYED build on Danilo's device for the AC2 sign-off (two deployed iterations verified on device; accepted).
   - [x] Update `deferred-work.md`: strike/annotate every item this story resolves (lint gate, purity AST layer, template cruft, vite consolidation, tsconfig asymmetry, seed-bound dedup, allocation churn, blurry font, WebGL fallback); leave untouched items standing (corepack risk, mirror-flip if skipped).
 
 ## Dev Notes
@@ -150,7 +150,7 @@ Claude Opus 4.8 — via `bmad-dev-story`.
 ### Completion Notes List
 
 - **AC1 (lint gate):** eslint@10 flat config + typescript-eslint@8 + prettier@3 + eslint-config-prettier + @eslint/js, root devDependencies only (engine dependency-lock test untouched). `pnpm lint` in CI between typecheck and coverage. Engine AST purity layer scoped to `packages/engine/src/**` (no-restricted-imports/globals/properties/syntax with AD-1/AD-10 messages); the regex sieve KEPT (it also locks the dependency list + file census). **Recorded limit:** hardcoded-values and boundary-guard discipline are NOT cleanly lintable without noise rules — they remain review responsibilities.
-- **AC2 (legibility, HIGH — code complete, device sign-off PENDING):** `crispText` resolution is now `max(TEXT_RESOLUTION, devicePixelRatio)`, resolved once per load with a one-line boot diagnostic; `?textres=N` (1–8) query override implements the candidate-B comparison live on device with zero rebuilds. `MIN_FONT_PX = 10` floor added; all ten 8–9px labels raised across 5 scenes. No type-scale design (UX spec's job). **The acceptance gate is Danilo reading his phone — not yet given.**
+- **AC2 (legibility, HIGH — ACCEPTED on device 2026-07-13):** `crispText` resolution is now `max(TEXT_RESOLUTION, devicePixelRatio)`, resolved once per load with a one-line boot diagnostic; `?textres=N` (1–8) query override implements the candidate-B comparison live on device with zero rebuilds. `MIN_FONT_PX = 10` floor added; all ten 8–9px labels raised across 5 scenes. No type-scale design (UX spec's job). **Device verdict iteration:** sharpness fixes alone didn't satisfy — the real problem was SIZE: full class words can't fit a ~48px card readably ('mercenary' overflowed at 10px; multiple readers confirmed). Second iteration: compact cards render `CLASS_ABBREVIATIONS` (KNI/MER/ARC/MAG/CLE/WIT, `Record<UnitClass,…>`-keyed) at `CARD_CLASS_FONT_PX = 13`; the Draft picker keeps full names. Also: resolution formula upgraded to `FIT zoom × devicePixelRatio` (floor 3, cap 8) — the DPR-only formula still blurred on large windows (laptop finding). Accepted by Danilo as good-enough; typography perfection deferred to the UX spec.
 - **AC3 (hygiene):** vite configs consolidated onto `config.base.mjs` (phasermsg banner deleted, manualChunks out of dev, server.port out of prod; dev server + prod build both verified). tsconfigs symmetrized BOTH ways with ZERO new errors (epic-1's guard hardening paid off); `strictPropertyInitialization: false` stays web-only with a rationale comment (Phaser lifecycle). `MAX_SEED` exported from rng.ts, consumed by validate.ts and sim/run.ts (bound had triplicated); error types stay layer-appropriate.
 - **AC4 (allocations) — kept with a falsified hypothesis recorded:** `candidatesOf`/`judgedView` projections DELETED (UnitState now carries `maxHp` and structurally satisfies MeleeCandidate + JudgedUnit; the witch's unaffected-pool projection remains — different alive semantics). Throughput measured at parity (812 → 792–819 ms median in-process): the deferred-work claim that the churn "matters for sim throughput" is **empirically false at 6 units**. Kept as a net code deletion (~15 lines, 2 functions), goldens byte-identical.
 - **AC5:** `main.ts` init wrapped in try/catch with a plain-DOM fallback message (no Phaser on the failure path); browser-side trigger verification scheduled for the demo drive. **Stretch SKIPPED as designed:** a flip-controllable comparator seam requires changing `resolveBattle`'s production surface — exactly the contortion the task fenced out; the deferred-work entry stands.
@@ -170,9 +170,9 @@ Claude Opus 4.8 — via `bmad-dev-story`.
 - `apps/web/vite/config.dev.mjs`, `config.prod.mjs` — consolidated overlays
 - `apps/web/tsconfig.json`, `packages/engine/tsconfig.json` — symmetrized strictness
 - `apps/web/src/config/ui.ts` — DPR-aware resolution + `?textres` diagnostic
-- `apps/web/src/config/constants.ts` — `MIN_FONT_PX`
+- `apps/web/src/config/constants.ts` — `MIN_FONT_PX`, `CLASS_ABBREVIATIONS`, `CARD_CLASS_FONT_PX`
 - `apps/web/src/main.ts` — init try/catch + DOM fallback
-- `apps/web/src/scenes/{Battle,Draft,Placement,Result,Reveal}Scene.ts` — font floor (+ format sweep; HomeScene format-only)
+- `apps/web/src/scenes/{Battle,Draft,Placement,Result,Reveal}Scene.ts` — font floor + 13px class-code labels on compact cards (+ format sweep; HomeScene format-only)
 - `apps/web/src/flow/MatchFlow.ts`, `apps/web/test/battle-view.test.ts` — format sweep only
 - `packages/engine/src/resolve.ts` — projections deleted, UnitState.maxHp
 - `packages/engine/src/rng.ts` — `MAX_SEED` export
@@ -185,4 +185,5 @@ Claude Opus 4.8 — via `bmad-dev-story`.
 
 ## Change Log
 
+- 2026-07-13 (AC2 closure): two on-device iterations — zoom-aware text resolution (fitZoom × DPR; the laptop blur), then 3-letter class codes at 13px on compact cards (the phone size problem, confirmed by multiple readers). Accepted by Danilo ("we won't make it perfect now"); typography refinement carried to the epic-2 UX spec. Status → review.
 - 2026-07-13: Story 2.0 implemented — lint/format gate in CI (ESLint flat + AST purity layer + Prettier, gate proven to bite), DPR-aware text rendering + MIN_FONT_PX floor (device sign-off pending), vite/tsconfig/seed-bound hygiene, allocation projections deleted with throughput measured at parity (hypothesis falsified, recorded), Phaser init fallback. Gate green: lint 0, typecheck 0, 227 tests, coverage 99.7%, goldens zero re-records.
