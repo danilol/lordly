@@ -42,7 +42,7 @@
 # - Story 1-10 (until-wipeout) is a STRETCH story: ship only if cheap (PRD FR19)
 
 generated: 2026-07-12T03:18:30
-last_updated: 2026-07-14T00:00:00
+last_updated: 2026-07-15T00:00:00
 project: lordly
 project_key: NOKEY
 tracking_system: file-system
@@ -70,7 +70,7 @@ development_status:
   epic-2-retrospective: done  # 2026-07-14: epic-2-retro-2026-07-14.md — balance/tactics correct-course is the critical-path action
   epic-3: in-progress  # 2026-07-14: first story (3-0) created
   3-0-balance-tuning-pass: review  # 2026-07-14: implemented (balance v2 — rpsHunts + wipeout-scoped blastAttenuation, PO-approved mode-scoping; both-mode band green, 309 tests). Code-review PASSED (3-layer, zero shipping defects, 4 low robustness patches applied). Still open before done: prod deploy + Danilo's on-device felt-balance sign-off (AC6).  # Added via sprint-change-proposal-2026-07-14 — MUST complete before 3-1: FR10 blastAttenuation + FR14 archer-vs-casters, balanceVersion bump, BOTH-mode NFR4 sweep (wipeout knob ships here), rules.md drift guard, Danilo's on-device felt-balance sign-off. Story file created 2026-07-14.
-  3-1-battle-history: backlog
+  3-1-battle-history: ready-for-dev  # 2026-07-15: story file created; dev intentionally HELD until Danilo's on-device felt-balance sign-off closes 3-0 (a failed sign-off reopens balance tuning).
   3-2-replay-any-remembered-battle: backlog
   3-3-install-it-play-it-offline: backlog
   3-4-the-performance-verdict: backlog
