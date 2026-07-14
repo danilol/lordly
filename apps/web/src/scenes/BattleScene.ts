@@ -101,7 +101,10 @@ export class BattleScene extends Scene {
   /** Builds one unit's container + HP bar at its mirrored screen cell. */
   private buildUnit(unit: UnitSnapshot) {
     const { x, y } = screenCellCenter(toScreenCell(unit.side, unit.placement));
-    const stroke = unit.side === 'A' ? PALETTE.buttonStrokeEnabled : PALETTE.enemyLine;
+    // Side A stroke = playerLine (story 2.1 AC7): side identity is blue, no
+    // longer borrowed from the enabled-button green. Rendering itself is
+    // untouched here — the sprite/animation pass is story 2.2.
+    const stroke = unit.side === 'A' ? PALETTE.playerLine : PALETTE.enemyLine;
     const nameColor = unit.side === 'A' ? PALETTE.playerText : PALETTE.enemyText;
 
     const body = this.add.rectangle(0, 0, UNIT_W, UNIT_H, PALETTE.unitFill).setStrokeStyle(2, stroke);

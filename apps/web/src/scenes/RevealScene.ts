@@ -5,17 +5,15 @@ import {
   BASE_WIDTH,
   BUTTON_HEIGHT,
   BUTTON_WIDTH,
-  ELEMENT_COLORS,
   ENEMY_ARMY_LABEL,
   PALETTE,
   REVEAL_FIGHT_LABEL,
   REVEAL_HINT,
   REVEAL_TITLE,
-  MIN_FONT_PX,
   CARD_CLASS_FONT_PX,
   CLASS_ABBREVIATIONS,
 } from '../config/constants';
-import { addHomeBack, crispText } from '../config/ui';
+import { addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
 import { screenCellCenter, toScreenCell } from '../flow/battleView';
 import type { MatchFlow } from '../flow/MatchFlow';
 
@@ -76,16 +74,24 @@ export class RevealScene extends Scene {
     btn.on('pointerup', () => this.scene.start('Battle', { flow: this.flow }));
   }
 
-  /** Draws one unit at its mirrored screen cell: box + class label + element badge, tinted by side. */
+  /**
+   * Draws one unit at its mirrored screen cell as a compact unit-card (story
+   * 2.1, DESIGN.md): side-colored border + wash (blue = you, red = enemy —
+   * side A uses `playerLine`, deliberately decoupled from the enabled-button
+   * green), the real 32px class sprite, the 3-letter class code, and the
+   * shared element dot. No element WORD here — Reveal's 52px cells are the
+   * first to adopt DESIGN's dot-only compact card; Draft/Placement/Battle
+   * still show the word until their card passes (see deferred-work.md).
+   */
   private drawUnit(unit: UnitSnapshot) {
     const { x, y } = screenCellCenter(toScreenCell(unit.side, unit.placement));
-    const stroke = unit.side === 'A' ? PALETTE.buttonStrokeEnabled : PALETTE.enemyLine;
+    const side = unit.side === 'A' ? PALETTE.playerLine : PALETTE.enemyLine;
     const nameColor = unit.side === 'A' ? PALETTE.playerText : PALETTE.enemyText;
-    this.add.rectangle(x, y, 48, 40, PALETTE.unitFill).setStrokeStyle(2, stroke);
-    crispText(this, x, y - 6, CLASS_ABBREVIATIONS[unit.class], { fontFamily: 'Arial Black', fontSize: `${CARD_CLASS_FONT_PX}px`, color: nameColor }).setOrigin(
+    this.add.rectangle(x, y, 52, 48, side, 0.15).setStrokeStyle(2, side);
+    addUnitSprite(this, x, y - 3, unit.class, 32);
+    crispText(this, x, y + 17, CLASS_ABBREVIATIONS[unit.class], { fontFamily: 'Arial Black', fontSize: `${CARD_CLASS_FONT_PX}px`, color: nameColor }).setOrigin(
       0.5,
     );
-    crispText(this, x, y + 7, unit.element, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
-    this.add.rectangle(x + 17, y - 12, 8, 8, ELEMENT_COLORS[unit.element]).setOrigin(0.5);
+    addElementBadge(this, x + 20, y - 17, unit.element);
   }
 }

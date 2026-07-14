@@ -1,5 +1,7 @@
 import { GameObjects, Scene, Types } from 'phaser';
-import { BASE_HEIGHT, BASE_WIDTH, HOME_BACK_LABEL, PALETTE, TEXT_RESOLUTION } from './constants';
+import type { Element, UnitClass } from '@lordly/engine';
+import { BASE_HEIGHT, BASE_WIDTH, ELEMENT_BADGE_RADIUS, ELEMENT_COLORS, HOME_BACK_LABEL, PALETTE, TEXT_RESOLUTION } from './constants';
+import { UNITS_SHEET_KEY, UNIT_FRAMES } from './sprites';
 
 /**
  * The text render resolution (story 2.0 AC2 — the accessibility fix for the
@@ -57,6 +59,28 @@ export function crispText(scene: Scene, x: number, y: number, text: string | str
  * The hit area is a padded rectangle behind the label, not the bare text —
  * matching FR30's "large tap targets" and every other button in this codebase.
  */
+/**
+ * The FR3 element badge — one solid 12px dot, identical in every scene
+ * (story 2.1). Always a dot, never a border or fill: side identity owns
+ * borders and HP fills; this dot is the ONLY place element color appears
+ * on a unit. Building it here keeps the treatment from drifting per scene.
+ */
+export function addElementBadge(scene: Scene, x: number, y: number, element: Element): GameObjects.Arc {
+  return scene.add.circle(x, y, ELEMENT_BADGE_RADIUS, ELEMENT_COLORS[element]);
+}
+
+/**
+ * A unit's class sprite off the shared spritesheet (story 2.1, AD-11: sprites
+ * are shell-side lookups keyed by engine class). Callers pass a display size
+ * that is an INTEGER multiple of UNIT_FRAME_SIZE (32/64/…) — pixel art blurs
+ * at fractional scales.
+ */
+export function addUnitSprite(scene: Scene, x: number, y: number, cls: UnitClass, displaySize: number): GameObjects.Sprite {
+  const sprite = scene.add.sprite(x, y, UNITS_SHEET_KEY, UNIT_FRAMES[cls]);
+  sprite.setDisplaySize(displaySize, displaySize);
+  return sprite;
+}
+
 export function addHomeBack(scene: Scene): GameObjects.Rectangle {
   const label = crispText(scene, 44, 22, HOME_BACK_LABEL, {
     fontFamily: 'Arial',

@@ -3,7 +3,6 @@ import { ALL_COLS, ALL_ROWS } from '@lordly/engine';
 import type { Placement } from '@lordly/engine';
 import {
   BASE_WIDTH,
-  ELEMENT_COLORS,
   ENEMY_ARMY_LABEL,
   PALETTE,
   PLACEMENT_SUBMIT_HINT,
@@ -13,7 +12,7 @@ import {
   CARD_CLASS_FONT_PX,
   CLASS_ABBREVIATIONS,
 } from '../config/constants';
-import { addHomeBack, crispText } from '../config/ui';
+import { addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
 import { placedCount } from '../flow/placement';
 import type { MatchFlow } from '../flow/MatchFlow';
 
@@ -123,15 +122,20 @@ export class PlacementScene extends Scene {
     state.playerArmy.forEach((unit, i) => {
       const cell = state.playerPlacements[i] ?? null;
       const { x, y } = cell ? this.cellCenter(cell) : this.trayCenter(i);
-      const body = this.add.rectangle(0, 0, 72, 60, PALETTE.unitFill).setStrokeStyle(2, PALETTE.unitStroke);
-      const name = crispText(this, 0, -12, CLASS_ABBREVIATIONS[unit.class], {
+      // Unit-card (story 2.1, DESIGN.md): YOUR units read side-blue — border +
+      // ~15% wash — with the real class sprite; element stays the shared dot.
+      // The card stays a Container so the drag contract (setSize hit area,
+      // unitIndex data, setDraggable) is untouched by the sprite swap.
+      const body = this.add.rectangle(0, 0, 72, 60, PALETTE.playerLine, 0.15).setStrokeStyle(2, PALETTE.playerLine);
+      const sprite = addUnitSprite(this, -17, 2, unit.class, 32);
+      const name = crispText(this, 14, -12, CLASS_ABBREVIATIONS[unit.class], {
         fontFamily: 'Arial Black',
         fontSize: `${CARD_CLASS_FONT_PX}px`,
-        color: PALETTE.title,
+        color: PALETTE.playerText,
       }).setOrigin(0.5);
-      const el = crispText(this, 0, 4, unit.element, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
-      const badge = this.add.rectangle(24, -18, 12, 12, ELEMENT_COLORS[unit.element]).setOrigin(0.5);
-      const c = this.add.container(x, y, [body, name, el, badge]);
+      const el = crispText(this, 14, 6, unit.element, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
+      const badge = addElementBadge(this, 26, -20, unit.element);
+      const c = this.add.container(x, y, [body, sprite, name, el, badge]);
       c.setSize(72, 60); // sets the centered rectangular hit area for input
       c.setData('unitIndex', i);
       c.setInteractive({ useHandCursor: true });

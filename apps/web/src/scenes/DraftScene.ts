@@ -1,20 +1,10 @@
 import { GameObjects, Scene } from 'phaser';
 import { ALL_CLASSES, BALANCE } from '@lordly/engine';
 import type { UnitClass } from '@lordly/engine';
-import {
-  BASE_WIDTH,
-  DRAFT_CONTINUE_LABEL,
-  DRAFT_HINT,
-  DRAFT_TITLE,
-  ELEMENT_COLORS,
-  PALETTE,
-  MIN_FONT_PX,
-  CARD_CLASS_FONT_PX,
-  CLASS_ABBREVIATIONS,
-} from '../config/constants';
+import { BASE_WIDTH, DRAFT_CONTINUE_LABEL, DRAFT_HINT, DRAFT_TITLE, PALETTE, MIN_FONT_PX, CARD_CLASS_FONT_PX, CLASS_ABBREVIATIONS } from '../config/constants';
 import { canAddUnit, canContinue, classRulesCard } from '../flow/draftModel';
 import type { MatchFlow } from '../flow/MatchFlow';
-import { addHomeBack, crispText } from '../config/ui';
+import { addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
 
 /**
  * Draft scene (FR1/FR2/FR3): six class cards to tap, the growing army with
@@ -73,18 +63,9 @@ export class DraftScene extends Scene {
     const card = classRulesCard(cls);
     const bg = this.add.rectangle(x, y, w, h, PALETTE.cardFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.cardStroke).setInteractive({ useHandCursor: true });
 
-    // Sprite placeholder (FR2 / story 2.1 replaces with real art): a colored
-    // square bearing the class initial, top-right of the card.
-    const glyph = 26;
-    this.add
-      .rectangle(x + w - glyph - 8, y + 8, glyph, glyph, PALETTE.unitFill)
-      .setOrigin(0, 0)
-      .setStrokeStyle(1, PALETTE.unitStroke);
-    crispText(this, x + w - glyph / 2 - 8, y + 8 + glyph / 2, card.name.charAt(0).toUpperCase(), {
-      fontFamily: 'Arial Black',
-      fontSize: '15px',
-      color: PALETTE.title,
-    }).setOrigin(0.5);
+    // Real class sprite (story 2.1, FR2/FR31), top-right of the card — the
+    // picker shows the neutral archetype; element rolls on add (FR3).
+    addUnitSprite(this, x + w - 24, y + 24, cls, 32);
 
     const rps = card.beats ? `beats ${card.beats}` : card.beatenBy ? `weak vs ${card.beatenBy}` : 'neutral';
     const a = card.actions;
@@ -127,22 +108,27 @@ export class DraftScene extends Scene {
     for (let i = 0; i < BALANCE.armySize; i++) {
       const x = startX + i * (slotW + gap);
       const unit = army[i];
-      const slot = this.add.rectangle(x, trayY, slotW, 60, PALETTE.gridCellFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.gridCellStroke);
+      // Drafted units are YOURS: the unit-card reads side-blue (border + wash),
+      // never a gold frame and never element-colored (story 2.1, DESIGN.md).
+      const slot = unit
+        ? this.add.rectangle(x, trayY, slotW, 60, PALETTE.playerLine, 0.15).setOrigin(0, 0).setStrokeStyle(2, PALETTE.playerLine)
+        : this.add.rectangle(x, trayY, slotW, 60, PALETTE.gridCellFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.gridCellStroke);
       this.dynamic.push(slot);
       if (unit) {
-        const badge = this.add.rectangle(x + slotW - 14, trayY + 14, 16, 16, ELEMENT_COLORS[unit.element]).setOrigin(0.5);
-        const name = crispText(this, x + 8, trayY + 10, CLASS_ABBREVIATIONS[unit.class], {
+        const sprite = addUnitSprite(this, x + 22, trayY + 26, unit.class, 32);
+        const badge = addElementBadge(this, x + slotW - 14, trayY + 12, unit.element);
+        const name = crispText(this, x + 42, trayY + 8, CLASS_ABBREVIATIONS[unit.class], {
           fontFamily: 'Arial Black',
           fontSize: `${CARD_CLASS_FONT_PX}px`,
-          color: PALETTE.title,
+          color: PALETTE.playerText,
         });
-        const el = crispText(this, x + 8, trayY + 28, unit.element, { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.bodyText });
-        const hint = crispText(this, x + 8, trayY + 42, 'tap to remove', { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.mutedText });
+        const el = crispText(this, x + 42, trayY + 26, unit.element, { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.bodyText });
+        const hint = crispText(this, x + 8, trayY + 46, 'tap to remove', { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.mutedText });
         slot.setInteractive({ useHandCursor: true }).on('pointerup', () => {
           this.flow.removeUnit(i);
           this.redraw();
         });
-        this.dynamic.push(badge, name, el, hint);
+        this.dynamic.push(sprite, badge, name, el, hint);
       } else {
         this.dynamic.push(
           crispText(this, x + slotW / 2, trayY + 30, 'empty', { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.mutedText }).setOrigin(0.5),

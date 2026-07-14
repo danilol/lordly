@@ -31,12 +31,18 @@ export const PALETTE = {
   // Enemy-side marker on the placement grid (FR6 groundwork; first-time legibility).
   enemyText: '#e06a6a',
   enemyLine: 0xc0433a,
-  // Battle/result (story 1.9). Player = side A (green family); enemy = side B (red family).
-  playerText: '#7ab07f',
+  // Side identity (story 2.1, UX DESIGN.md): "blue = you, red = enemy,
+  // everywhere" — the load-bearing legibility rule. Player = side A (blue
+  // family, `blue-you-night` #4a8fe0 — reads on the current dark ground);
+  // enemy = side B (red family). The legacy green player family is
+  // deliberately gone from SIDE semantics; the greens remaining above are the
+  // enabled-BUTTON accent only (button theming deferred — deferred-work.md).
+  playerText: '#4a8fe0',
+  playerLine: 0x4a8fe0,
   hpBarBack: 0x2a2a3e,
-  hpBarPlayer: 0x4a6a4e,
+  hpBarPlayer: 0x4a8fe0,
   hpBarEnemy: 0x8a3a3a,
-  winText: '#7ab07f',
+  winText: '#4a8fe0',
   loseText: '#e06a6a',
   drawText: '#c8c8d8',
 } as const;
@@ -131,10 +137,19 @@ export const BATTLE_BOARD = {
 
 // FR3 element badge colors (cosmetic; the witch's spell keys off element — FR16).
 // Keyed by the engine's `Element` union (AD-4) so a new element is a compile
-// error here, never a runtime `undefined` fill.
+// error here, never a runtime `undefined` fill. Hex values are the UX-
+// authoritative set (DESIGN.md#Colors, reconciled in story 2.1 — one source,
+// applied everywhere, shared by both future themes).
 export const ELEMENT_COLORS: Record<Element, number> = {
-  fire: 0xc0563a,
-  water: 0x3a76c0,
-  wind: 0x6ab08a,
-  earth: 0xa98a52,
+  fire: 0xd1603b,
+  water: 0x3f78c2,
+  wind: 0x6bae8c,
+  earth: 0xb0904f,
 } as const;
+
+// FR3 element badge geometry (story 2.1, DESIGN.md#Components element-badge):
+// a single SOLID DOT — 12px diameter, full radius — identical in every scene.
+// Element is never a card border or HP fill (those are side-coded); scenes
+// render the badge through `addElementBadge` (config/ui.ts) so the treatment
+// cannot drift per scene.
+export const ELEMENT_BADGE_RADIUS = 6;
