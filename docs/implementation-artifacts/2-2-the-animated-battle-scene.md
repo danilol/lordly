@@ -1,6 +1,10 @@
+---
+baseline_commit: e21e7b13d40832ab8b304b45a71f76e2c402769d
+---
+
 # Story 2.2: The animated battle scene
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -59,39 +63,54 @@ The busiest battle (wipeout, multi-engagement, poison comps) plays without visib
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — The camera ADR (AC8)**
-  - [ ] Create `docs/adr/0001-battle-camera-iso-board.md` with the decision, context (no-artist constraint, pack angles), the `\` diagonal evolution, and consequences (orientation seam, procedural tiles). Content is fully specified in AC8 + Dev Notes §"The camera decision".
-- [ ] **Task 2 — Pure iso projection + orientation seam (AC1, AC2)**
-  - [ ] Extend `apps/web/src/flow/battleView.ts`: owner-local `(side, placement)` → screen px through an **orientation-aware** projection (`'|' | '\\' | '/'`, default `'\\'`). Standard iso math: for board-local `(r, c)`: `x = ox + (c − r) · TILE_W/2`, `y = oy + (c + r) · TILE_H/2`; per-board origins (enemy upper-left, player lower-right); side B keeps its column mirror (own col `i` faces enemy col `2−i` — FR7). Preserve/adapt the exported surface so Reveal keeps compiling.
-  - [ ] New geometry constants in `config/constants.ts` (replacing/extending `BATTLE_BOARD`): tile W/H (mock: 48×24 at 300-wide → scale to `BASE_WIDTH`; keep 2:1 diamond ratio), board origins, clash-gap placement. Metrics are DATA, not inline (house rule).
-  - [ ] Unit tests: bijection per side, A/B tile-set disjointness, B column mirror, front rows adjacent to the clash gap, orientation param respected (at minimum `'\\'` fully verified; `'|'`/`'/'` mapped but untuned).
-- [ ] **Task 3 — Board renderer (AC1, AC10)**
-  - [ ] A shared helper (e.g. `config/board.ts` or in `ui.ts`) that draws one iso board: 9 diamond tiles (`add.polygon` or `Graphics.fillPoints` — verify against installed Phaser 4 types), alternating side/neutral fills, gold-deep stroke, **brighter front tiles + gold front edge + "FRONT" directional label**, drawn ONCE at create.
-  - [ ] Battle draws both boards + `▲ ENEMY` / `YOUR ARMY ▼` labels + the clash-gap zone; Reveal swaps its floating rectangles for the same two boards (thin change, behavior untouched).
-- [ ] **Task 4 — Battle unit views on the boards (AC4, AC9)**
-  - [ ] Rebuild `buildUnit`: 32px sprite (`addUnitSprite`, ×1) standing on its tile (bottom-center anchored, e.g. `setOrigin(0.5, ~0.85)`), 3-letter class code (13px, side-colored text), **shared 12px element dot** (`addElementBadge`), HP bar **8px tall** side-colored fill over a low-alpha track, positioned via the new projection. HP numerals (`101/140`, 13px mono tabular) per DESIGN **if they fit the cell legibly** — attempt, judge on-device, fall back to bar-only with a note.
-  - [ ] Keep the `views: Map<UnitId, …>` handle pattern; extend the view record for icons/anchors as needed.
-- [ ] **Task 5 — Beat animation vocabulary (AC3)**
-  - [ ] Wire `UNIT_TWEENS` (2.1's recipes — `attack` lunge with side-mirrored x-delta, `hurt` flash on struck targets, `death` fade+topple) via `this.tweens.add`; arrow/blast treatments for archer/mage sources (simple tweened projectile line/flash crossing the gap — procedural, no new art); heal glow (brief tint/scale pulse).
-  - [ ] Class-flavor lookup keyed off the roster snapshot (`Record<UnitClass, 'melee'|'arrow'|'blast'|…>` in `config/` — compile-error on new class).
-  - [ ] Corpse leaves the lane: after `death` completes, remove the container (destroy or fully hide + clear icons); tile reads vacated.
-  - [ ] Preserve verbatim: beat loop order 1:1, silent-beat 50ms fast-skip, `↳` misfire pairing, holding mechanics (`pointerdown/up/gameout`, mid-beat reschedule), `EngagementEnded` HP resync + seam suppression, `BattleEnded` → Result.
-- [ ] **Task 6 — Combat numbers (AC4, AC5)**
-  - [ ] Upgrade `popup`: ≥14px mono weight-800 tabular via `crispText`, **actor-side color** (source's side → `playerText`/`enemyText`; poison = neutral distinct), rise+fade **within the beat**, destroyed on complete (existing pattern). Damage `-n` from `damage` (overkill as-is), heals `+n` from `amount`.
-- [ ] **Task 7 — Status icon layer (AC6)**
-  - [ ] Per-unit icon slots (text glyphs via `crispText`, ≥10px floor, positioned to stay distinguishable at phone size). Apply on `StatusApplied`; on `EngagementEnded` clear all but poison; remove with the corpse. Consider a pure reducer (`(iconsState, event) → iconsState`) in `flow/` so the lifecycle is unit-testable without Phaser.
-- [ ] **Task 8 — Log panel (AC7)**
-  - [ ] Pure narration builder (e.g. `flow/narration.ts`): `(event, roster) → string | null` — class names + `UnitId`s + numbers per the spec example; unit-tested across all 12 event types (silent ones → null).
-  - [ ] Panel UI: `≡ Log` toggle in the bottom bar (≥44px tap target), collapsible panel beneath the boards, appends lines as beats render, scrolls (Phaser text region with simple masking/trim — keep it cheap, e.g. last N lines), second tap collapses. Never touches the beat timer.
-- [ ] **Task 9 — HUD + bottom bar (AC9)**
-  - [ ] Slim top bar: `addHomeBack` + pass/engagement label right-aligned. Bottom bar: Log toggle only; visual placeholders for 2.3's speed buttons are OPTIONAL and non-functional if included (prefer omitting). Press-and-hold FF hint retained.
-- [ ] **Task 10 — Reduced motion (AC11)**
-  - [ ] Read `prefers-reduced-motion` (`window.matchMedia`, guarded for tests); damp float travel/lunge amplitude while keeping beats and numbers. Document the exact mapping in code comments ([ASSUMPTION] resolved here per EXPERIENCE.md#Accessibility Floor).
-- [ ] **Task 11 — Wipeout + Result regression guard (AC3, AC12)**
-  - [ ] Play a Wipeout battle end-to-end: engagement seams read, poison persists visually, per-engagement icon clear correct, Result unchanged. Standard mode shows no engagement marker (1.10 patch behavior preserved).
-- [ ] **Task 12 — Quality gate + on-device acceptance (AC12)**
-  - [ ] Full gate green; new pure modules tested; headless drive of the full flow (pattern from 2.1: puppeteer-core scratchpad script exists).
-  - [ ] On-device sign-off with Danilo: boards, beats, numbers, icons, log panel, wipeout. Perf sanity on the busiest battle.
+- [x] **Task 1 — The camera ADR (AC8)**
+  - [x] Create `docs/adr/0001-battle-camera-iso-board.md` with the decision, context (no-artist constraint, pack angles), the `\` diagonal evolution, and consequences (orientation seam, procedural tiles). Content is fully specified in AC8 + Dev Notes §"The camera decision".
+- [x] **Task 2 — Pure iso projection + orientation seam (AC1, AC2)**
+  - [x] Extend `apps/web/src/flow/battleView.ts`: owner-local `(side, placement)` → screen px through an **orientation-aware** projection (`'|' | '\\' | '/'`, default `'\\'`). Standard iso math: for board-local `(r, c)`: `x = ox + (c − r) · TILE_W/2`, `y = oy + (c + r) · TILE_H/2`; per-board origins (enemy upper-left, player lower-right); side B keeps its column mirror (own col `i` faces enemy col `2−i` — FR7). _Shipped as `unitTileCenter` + `boardTiles` (the old `toScreenCell`/`screenCellCenter` retired with their call sites)._
+  - [x] New geometry constants in `config/constants.ts` (replacing/extending `BATTLE_BOARD`): tile W/H 56×28 (2:1), board origins, stacked origins for `'|'`. Metrics are DATA, not inline (house rule).
+  - [x] Unit tests: bijection per side, A/B disjointness, B column mirror (facing-lane proximity), front rows adjacent to the clash gap, all 3 orientations invariant-tested, `'\\'` pixel-verified (canvas bounds, 2:1 ratio, checker alternation).
+- [x] **Task 3 — Board renderer (AC1, AC10)**
+  - [x] `config/board.ts` → `drawIsoBoard`: one static Graphics object per board, 9 diamonds, alternating side/neutral fills, gold-deep stroke, brighter front tiles + gold-lite front edge (drawn last so never overdrawn), drawn once at create. _Empirical finding: Phaser 4's `add.polygon` rendered the quads as TRIANGLES (both object-point and flat-array forms — screenshot-verified); Graphics path calls are the reliable route._
+  - [x] Battle draws both boards + `▲ ENEMY` / `YOUR ARMY ▼` positional labels + FRONT arrows beside each clashing edge; Reveal swapped its floating rectangles for the same two boards (behavior untouched, ENEMY label repositioned above the board).
+- [x] **Task 4 — Battle unit views on the boards (AC4, AC9)**
+  - [x] `buildUnit` rebuilt: 32px sprite on the tile, side-colored 3-letter code, shared 12px element dot, 8px HP bar (36w, low-alpha white track, side fill) — all in ONE container (depth = screen y for iso layering; chrome hugs the sprite since same-lane diagonal units sit 28px apart). _HP numerals NOT shipped: `101/140` at 13px mono ≈ 50px exceeds the 28px lane pitch — guaranteed collisions; bar-only per the story's sanctioned fallback._
+  - [x] `views: Map<UnitId, …>` kept; extended with sprite handle, class, statuses map, dead flag.
+- [x] **Task 5 — Beat animation vocabulary (AC3)**
+  - [x] `UNIT_TWEENS` wired: melee lunge along the attacker→target vector (yoyo, 140ms), `hurt` alpha flash on every struck target, `death` fade+topple then **container destroyed — corpse leaves the lane** and the tile vacates.
+  - [x] Class flavor (shell-side lookup off the roster): archer → gold arrow sliver tweened across the gap; mage → translucent blast wash on struck tiles; others → lunge. Heal → soft white glow pulse. Confusion → sprite wiggle + `confused!`; fizzle/sleep popups distinct (sleep uses `Zzz…` in the sleep status color).
+  - [x] Preserved verbatim: 1:1 beat order, silent-beat 50ms fast-skip, `↳` misfire pairing, holding mechanics (pointerdown/up/gameout + mid-beat reschedule), `EngagementEnded` HP resync + seam suppression, `BattleEnded` → Result.
+- [x] **Task 6 — Combat numbers (AC4, AC5)**
+  - [x] `popup` upgraded: 14px Courier bold via `crispText`, **actor-side color** (`actorColor(source)` roster lookup; poison → `POISON_TEXT` neutral), rise+fade within the beat, destroyed on complete.
+- [x] **Task 7 — Status icon layer (AC6)**
+  - [x] Per-unit glyph icons (`STATUS_GLYPHS`/`STATUS_COLORS`, 10px floor) in the unit container; applied on `StatusApplied` (no-stack guard), cleared-except-poison on `EngagementEnded` (mirroring resolve.ts:77-79), destroyed with the corpse. _Kept in the scene (a Map on the view record) rather than a separate reducer — the lifecycle is 3 one-line rules riding existing events; the narration ledger covers the pure-logic testing surface._
+- [x] **Task 8 — Log panel (AC7)**
+  - [x] Pure `flow/narration.ts`: `createNarrationState` + `narrateEvent` ledger (classes + running HP so before→after is TRUE even on overkill; `EngagementEnded` resyncs). 9 tests incl. the spec example verbatim, overkill, blast fan-out, resync, purity.
+  - [x] Panel UI: `≡ Log`/`× Log` toggle (80×44 target), panel beneath the boards (keep-last-14 window, newest at bottom), lines appended per beat whether open or closed, catch-up on open, second tap collapses, **beat timer untouched** — verified live in a headless drive (screenshot: playback advanced while the panel accumulated lines).
+- [x] **Task 9 — HUD + bottom bar (AC9)**
+  - [x] Slim top bar (`‹ Home` + right-aligned pass/engagement label, big title dropped); bottom bar = FF hint + Log toggle only (2.3's speed buttons omitted per the story's preference); press-and-hold FF retained.
+- [x] **Task 10 — Reduced motion (AC11)**
+  - [x] `prefers-reduced-motion` via `window.matchMedia` (guarded): float 22→8px, lunge 12→4px, arrow flight 180→80ms, glow/blast scale pulses off — beats and numbers preserved (they ARE the information). Mapping documented at the `reduceMotion` const.
+- [x] **Task 11 — Wipeout + Result regression guard (AC3, AC12)**
+  - [x] Wipeout driven headlessly end-to-end under fast-forward: Pass 2 HUD, `weaken` popup + ↓ icon rendered, wipe verdict reached, Result unchanged (`Victory!` now blue via 2.1's palette). Standard-mode seam suppression logic preserved (1.10 patch). Multi-engagement seam/icon-clear paths are unit-covered (narration EngagementEnded test) — on-device wipeout run is the final eyes-on.
+- [x] **Task 12 — Quality gate + on-device acceptance (AC12)**
+  - [x] Full gate green (typecheck, lint, 259 tests incl. 23 new, build); bundle re-measured 373,734 B ≈ 0.36 MB (≤3 MB); full flow + Log-panel + wipeout drives headless-verified with screenshots.
+  - [x] On-device sign-off with Danilo: boards, beats, numbers, icons, log panel, wipeout. Perf sanity on the busiest battle. _Danilo on device (2026-07-14): "everything looks great, besides the font. I love it." Font = the KNOWN pre-existing 360px canvas-backing ceiling (diagnosed and deferred in 2.1 — prod-identical, not a 2.2 regression); no new findings._
+
+### Review Findings (code review 2026-07-14)
+
+_3 layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor), full mode vs this spec, diff vs baseline `e21e7b1`. All beat-loop contracts, projection invariants, narration math, and scope fences independently verified clean. 8 patch findings (several merged from multi-layer convergence), 1 defer, 2 dismissed._
+
+- [x] [Review][Patch] Stale scene state across battles — Phaser scenes are singletons, `create()` re-runs but fields persist [apps/web/src/scenes/BattleScene.ts:80-93] — `holding` survives holding-through-the-ending (input listeners torn down before pointerup) so the NEXT battle auto-plays at ×4; `logLines` bleeds battle 1's narration into battle 2's panel; a stale `logOpen=true` makes the first Log tap a no-op; `views` retains destroyed containers (safe only by id-stability). Fix: reset all transient fields (`holding`, `logLines`, `logOpen`, `narration`, `pendingMisfirePair`, `currentSilent`, `views.clear()`) at the top of `create()`. (blind+edge, merged)
+- [x] [Review][Patch] Overlapping recipe tweens corrupt sprite state under fast-forward [apps/web/src/scenes/BattleScene.ts:327-370,412] — hurt flash totals 360ms vs a 150ms FF beat; a second tween on the same sprite captures the mid-dip alpha as its yoyo base → sprite stuck semi-transparent; same mechanism can strand a lunge off-tile and lets the hurt yoyo flash a dying sprite back to opaque mid-topple. Fix: `tweens.killTweensOf(sprite)` + reset alpha/x/y/angle to rest pose before each recipe tween, and in `kill()`. (blind+edge)
+- [x] [Review][Patch] Status-icon slot collision after the engagement clear [apps/web/src/scenes/BattleScene.ts:391] — slot x uses `statuses.size`; survivors aren't re-laid-out, so post-clear additions land on the persisting poison glyph (wipeout + multi-status scenario; all three layers found it). Fix: re-layout icons by index after any add/remove. (blind+edge+auditor)
+- [x] [Review][Patch] Blast wash: only `targets[0]`, hardcoded enemy-red; arrow color literal [apps/web/src/scenes/BattleScene.ts:315,354-356] — AC3 says "washes the struck row"; the wash must cover EVERY target tile and take the ACTING side's color (a player mage currently paints enemy red — against the side rule this diff itself enforces). Arrow's `0xf4d074` should reference `ISO_TILES.frontStroke`. (blind+edge+auditor)
+- [x] [Review][Patch] Log panel: Standard-mode seam line + overflow risk [apps/web/src/flow/narration.ts + BattleScene.ts:463-491] — the panel prints "— Engagement 1 ended —" in Standard mode, contradicting the 1.10 product rule the HUD honors (suppress when `BattleEnded` is next — the scene has the lookahead; filter the line there, keep narration pure); and 14 logical lines + wraps can exceed the panel bg (drop window to 11). (blind+edge+auditor, merged)
+- [x] [Review][Patch] Log-button taps stall beat progression [apps/web/src/scenes/BattleScene.ts:145-152] — every tap fires pointerdown+up through the global FF handler; `setHolding` restarts the current beat's wait at FULL duration on release, so repeated taps postpone the beat indefinitely. Fix: fast-reschedule only when ENGAGING hold (release takes effect from the next beat — imperceptible). (blind)
+- [x] [Review][Patch] Small AC conformance nits [BattleScene.ts:262,398; battleView.ts docstring] — `'idle'` skip popup shows the raw enum (narration says "waits" — align); combat-number weight `bold`=700 vs the binding 800 (`fontStyle: '800'`); the "rendered as one straight lane" FR7 docstring overclaims for the `\` layout (facing pairs are gap-offset like the UX mock's own corner boards — soften the wording, geometry unchanged). (blind+auditor, merged)
+- [x] [Review][Patch] `reduceMotion` resolved at module load, comment claims per-battle [apps/web/src/scenes/BattleScene.ts:58-64] — move the matchMedia read into `create()` so an OS preference change applies from the next battle, making the comment true. (blind+auditor)
+- [x] [Review][Defer] Status-icon lifecycle duplicates an engine rule in the shell (AD-2 exception) [BattleScene.ts clearStatusIconsExceptPoison] — no `StatusCleared` event exists in the union, so the "clear-except-poison at engagement end" rule lives in both resolve.ts and the scene; a future engine rule change would silently desync icons. The spec explicitly sanctioned this design (AC6) and an engine event is fenced off (LOG_VERSION bump). Deferred: consider `StatusExpired`/`StatusCleared` events at the next LOG_VERSION bump — logged in deferred-work.md. (blind)
+
+Dismissed (2): Map deletion during `for…of` iteration in `clearStatusIconsExceptPoison` — well-defined per the ES spec; FR7 lane-collinearity as a LAYOUT defect — the shipped geometry matches the binding UX mock's own non-collinear corner boards (only the comment overclaim is patched, above).
 
 ## Dev Notes
 
@@ -173,10 +192,52 @@ The busiest battle (wipeout, multi-engagement, poison comps) plays without visib
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Fable 5 (claude-fable-5) via Claude Code
+
+### Implementation Plan
+
+TDD on the pure modules first (RED: 23 new tests across projection + narration, confirmed failing), then GREEN (battleView iso projection with the orientation seam; narration ledger), then the renderers (board.ts, BattleScene rewrite, Reveal adoption), each visually verified by headless-driving the real game and reading screenshots (empirical-over-reasoned). Iso math: board-local `(r,c)` from owner-local via per-side edge mapping (A fronts its NW edge `c=0`, B fronts SE `c=2` with columns mirrored per FR7), then `x = ox + (c−r)·tileW/2`, `y = oy + (c+r)·tileH/2`.
 
 ### Debug Log References
 
+- RED: 19 failing (missing modules/constants) → GREEN 32/32 for the two pure suites; full suite 259/259.
+- **Phaser 4 `add.polygon` renders these diamond quads as TRIANGLES** — with object points AND with a flat number array (both screenshot-verified). Fix: `Graphics` path calls (moveTo/lineTo/closePath/fillPath/strokePath), one static Graphics per board — also the cheaper draw. Recorded in board.ts.
+- Iteration on unit chrome: initial code/bar offsets stacked ~50px tall vs the 28px same-lane pitch — tightened (code y+4, bar y+14) after the first battle screenshot showed pile-ups on an anti-diagonal placement.
+- Log-panel toggle initially showed stale text when opened (lines accumulate while closed) — caught in self-review, catch-up added on open.
+- One transient full-suite failure (1/259) traced to machine load from zombie headless-Chrome instances spawned by the drive scripts — two consecutive clean re-runs after cleanup; not a code issue.
+- Headless drives (puppeteer-core, scratchpad-only): standard flow → Battle → Result; Log-panel open mid-battle (narration lines exactly per spec format, playback not paused); wipeout under press-and-hold FF → Pass 2, weaken icon, wipe verdict → Result. Zero pageerrors across all drives.
+
 ### Completion Notes List
 
+- **AC1/AC2 ✅** Two procedural iso checkerboards (Graphics, drawn once), `\` diagonal, enemy upper-left red / player lower-right blue, alternating neutral tiles, gold-deep strokes, front-row indicator (brighter tiles + gold-lite edge + FRONT arrows), positional side labels. Orientation-aware projection (`'|' | '\' | '/'`, default `'\'`) — pure, 13 projection tests, `'\'` pixel-verified, others invariant-tested (untuned by design).
+- **AC3 ✅** Every event an animated beat in 1:1 order: class-flavored attacks (lunge / arrow / blast wash), heal glow, distinct misfire (wiggle) / fizzle / sleep treatments with the `↳` pairing preserved, death fade+topple with the **corpse leaving the lane**, HUD pass/engagement labels. All 1.9/1.10 beat-loop review patches preserved verbatim.
+- **AC4 ⚠️→✅** Sprites 32px ×1; combat numbers 14px mono bold; HP bars 8px side-colored over low-alpha track. **HP numerals dropped** (sanctioned fallback: 13px mono `101/140` ≈ 50px vs 28px lane pitch = guaranteed collision); "distinguishable per unit" rides depth-sorting + on-device judgment.
+- **AC5 ✅** Bars from `hpAfter` (+`EngagementEnded` resync), popups from `damage`/`amount`; numbers actor-side-colored via roster lookup; `PoisonTicked` (no actor in payload) uses the neutral poison color — documented in constants.
+- **AC6 ✅** Persistent glyph icons (Zzz/☠/↓/?), exact log-derivable lifecycle (apply → clear-except-poison at engagement end → leave with corpse), colors/glyphs keyed by the engine `SpellKind` union.
+- **AC7 ✅** Pure narration ledger (9 tests; spec example verbatim; TRUE before→after incl. overkill via running HP; resync). Panel: toggle, keep-last-14, appends while closed, catch-up on open, never touches the timer — live-verified.
+- **AC8 ✅** `docs/adr/0001-battle-camera-iso-board.md` — the repo's first ADR; decision + context + `\`-diagonal evolution + orientation-seam consequences.
+- **AC9 ✅** Slim HUD; bottom bar = hint + Log toggle only (speed buttons deferred to 2.3); Battle units normalized to shared helpers (sprite, 12px dot — closes 2.1's deferred Battle-badge item; element word gone from Battle).
+- **AC10 ✅** Reveal renders the same two boards through the same projection + helper; units stand on tiles (2.1's card wash retired — side identity = tile color + code color + position); behavior untouched.
+- **AC11 ✅** Static boards (2 Graphics), no scene `update()` loop (timer/tween-driven), transient popups destroyed on complete, reduced-motion damping implemented. Real fps check = on-device.
+- **AC12 ✅** Gate green (259 tests, engine coverage unchanged, build ✓, bundle 0.36 MB). On-device sign-off complete ("everything looks great… I love it"); the font remark is the known 2.1-diagnosed backing-store ceiling, not a 2.2 finding.
+- Scope fences honored: no speed/skip controls, no settings/theme, no engine changes (LOG_VERSION untouched), no Result changes, no new art (boards/effects/icons all procedural or text), no profiling infra.
+
 ### File List
+
+- `docs/adr/0001-battle-camera-iso-board.md` — NEW: the camera ADR (AC8)
+- `apps/web/src/flow/battleView.ts` — REWRITTEN: orientation-aware iso projection (`unitTileCenter`, `boardTiles`); beat schedule unchanged; old rectangular transform retired
+- `apps/web/src/flow/narration.ts` — NEW: pure narration ledger for the Log panel
+- `apps/web/src/config/board.ts` — NEW: `drawIsoBoard` shared Graphics renderer
+- `apps/web/src/config/constants.ts` — MODIFIED: `ISO_BOARD`/`ISO_TILES` geometry+palette (night variant), status glyphs/colors, battle labels, `POISON_TEXT`; `BATTLE_BOARD` removed
+- `apps/web/src/scenes/BattleScene.ts` — REWRITTEN: iso stage, animated beat vocabulary, actor-colored numbers, status icons, Log panel, slim HUD (all 1.9/1.10 beat-loop contracts preserved)
+- `apps/web/src/scenes/RevealScene.ts` — MODIFIED: shared iso boards + units-on-tiles (card wash retired); label repositioned
+- `apps/web/test/battle-view.test.ts` — REWRITTEN: 14 projection/pacing tests (3 orientations)
+- `apps/web/test/narration.test.ts` — NEW: 9 narration tests
+- `docs/implementation-artifacts/sprint-status.yaml` — MODIFIED: story tracking
+- `docs/implementation-artifacts/2-2-the-animated-battle-scene.md` — MODIFIED: this story file
+
+### Change Log
+
+- 2026-07-14: Story 2.2 implemented — iso two-board battle stage (procedural Graphics, ADR-0001 recorded), orientation-seam projection (pure, tested), animated beat vocabulary per event type with 1.9/1.10 contracts preserved, actor-side combat numbers (poison neutral), exact log-derivable status icons, pure-tested narration Log panel (never pauses playback), Reveal board adoption, reduced-motion damping. 259 tests green; bundle 0.36 MB; standard + wipeout flows headless-verified with screenshots. Pending: on-device sign-off (AC12).
+- 2026-07-14 (acceptance): AC12 signed off on device ("everything looks great… I love it"); font remark = the known 2.1-diagnosed backing-store ceiling, not a 2.2 finding. Status → review.
+- 2026-07-14 (code review): 3-layer adversarial review vs baseline e21e7b1 — architecture verified clean (beat contracts, projection invariants, narration math, AD-2 purity, scope fences). 8 patches applied: singleton-scene state reset in create() (stale holding/log/views), tween kill+rest-pose reset (FF corruption), status-icon relayout (slot collision), blast washes every struck tile in actor color + arrow color token, Log-panel Standard-seam suppression + 11-line window, engage-only FF reschedule (tap-stall), 'waits'/weight-800/lane-docstring nits, reduceMotion per-battle. 1 deferred (StatusCleared engine events at next LOG_VERSION bump — deferred-work.md), 2 dismissed. Gate re-run green (259 tests); flow re-driven clean. Status → done.

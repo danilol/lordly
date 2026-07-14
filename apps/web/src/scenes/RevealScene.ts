@@ -14,7 +14,8 @@ import {
   CLASS_ABBREVIATIONS,
 } from '../config/constants';
 import { addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
-import { screenCellCenter, toScreenCell } from '../flow/battleView';
+import { drawIsoBoard } from '../config/board';
+import { unitTileCenter } from '../flow/battleView';
 import type { MatchFlow } from '../flow/MatchFlow';
 
 /**
@@ -58,7 +59,13 @@ export class RevealScene extends Scene {
       align: 'center',
       wordWrap: { width: BASE_WIDTH - 24 },
     }).setOrigin(0.5);
-    crispText(this, BASE_WIDTH / 2, 92, ENEMY_ARMY_LABEL, { fontFamily: 'Arial Black', fontSize: '12px', color: PALETTE.enemyText }).setOrigin(0.5);
+    // Above the enemy board (tiles start ~y86 in the iso layout — story 2.2).
+    crispText(this, BASE_WIDTH / 2, 70, ENEMY_ARMY_LABEL, { fontFamily: 'Arial Black', fontSize: '12px', color: PALETTE.enemyText }).setOrigin(0.5);
+
+    // The shared iso boards (story 2.2, ADR-0001) — the same component the
+    // Battle scene stages, so Reveal → Battle reads as one continuous place.
+    drawIsoBoard(this, 'B');
+    drawIsoBoard(this, 'A');
 
     // resolve() runs the engine EXACTLY ONCE (AD-13); the Battle scene replays
     // the same cached log. The initial roster is the BattleStarted event.
@@ -75,23 +82,19 @@ export class RevealScene extends Scene {
   }
 
   /**
-   * Draws one unit at its mirrored screen cell as a compact unit-card (story
-   * 2.1, DESIGN.md): side-colored border + wash (blue = you, red = enemy —
-   * side A uses `playerLine`, deliberately decoupled from the enabled-button
-   * green), the real 32px class sprite, the 3-letter class code, and the
-   * shared element dot. No element WORD here — Reveal's 52px cells are the
-   * first to adopt DESIGN's dot-only compact card; Draft/Placement/Battle
-   * still show the word until their card passes (see deferred-work.md).
+   * Draws one unit standing on its iso tile (story 2.2): the 32px billboard
+   * sprite, side-colored 3-letter class code, and the shared element dot —
+   * matching the Battle scene's unit treatment exactly, so Reveal → Battle
+   * is the same stage. Side identity lives in the tile color + code color +
+   * board position (the non-color anchor); the 2.1 card wash is retired here.
    */
   private drawUnit(unit: UnitSnapshot) {
-    const { x, y } = screenCellCenter(toScreenCell(unit.side, unit.placement));
-    const side = unit.side === 'A' ? PALETTE.playerLine : PALETTE.enemyLine;
+    const { x, y } = unitTileCenter(unit.side, unit.placement);
     const nameColor = unit.side === 'A' ? PALETTE.playerText : PALETTE.enemyText;
-    this.add.rectangle(x, y, 52, 48, side, 0.15).setStrokeStyle(2, side);
-    addUnitSprite(this, x, y - 3, unit.class, 32);
-    crispText(this, x, y + 17, CLASS_ABBREVIATIONS[unit.class], { fontFamily: 'Arial Black', fontSize: `${CARD_CLASS_FONT_PX}px`, color: nameColor }).setOrigin(
-      0.5,
-    );
-    addElementBadge(this, x + 20, y - 17, unit.element);
+    addUnitSprite(this, x, y - 12, unit.class, 32).setDepth(y);
+    crispText(this, x, y + 8, CLASS_ABBREVIATIONS[unit.class], { fontFamily: 'Arial Black', fontSize: `${CARD_CLASS_FONT_PX}px`, color: nameColor })
+      .setOrigin(0.5)
+      .setDepth(y);
+    addElementBadge(this, x + 16, y - 26, unit.element).setDepth(y);
   }
 }

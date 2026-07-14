@@ -1,4 +1,4 @@
-import type { Element, UnitClass } from '@lordly/engine';
+import type { Element, SpellKind, UnitClass } from '@lordly/engine';
 
 export const GAME_NAME = 'Lord Battle Tactics';
 
@@ -123,17 +123,64 @@ export const engagementEndedLabel = (engagement: number) => `Engagement ${engage
 export const BATTLE_BEAT_MS = 600;
 export const BATTLE_FAST_FORWARD = 4;
 
-// Shared battle-board geometry (story 1.9): six stacked rows (side B on top,
-// side A on the bottom) of a 3-wide grid, with a gap between the two facing
-// front rows. Reveal and Battle scenes project cells through this one source
-// (via battleView.screenCellCenter) so both stay pixel-consistent.
-export const BATTLE_BOARD = {
-  cell: 56,
-  gap: 4,
-  top: 120,
-  /** Extra vertical space between B.front (row 2) and A.front (row 3) — the "no man's land". */
-  midGap: 16,
+// Shared iso-board geometry (story 2.2, ADR-0001): two tilted 3×3 diamond
+// checkerboards in the `\` diagonal — enemy upper-left, player lower-right,
+// front rows meeting along the clash gap. 2:1 diamond ratio per the UX mock
+// (48×24 at 300-wide, scaled to the 360 base). Reveal and Battle project
+// through battleView's one source so both stay pixel-consistent. The stacked
+// origins serve the untuned '|' orientation (the seam ships, the toggle is
+// deferred — deferred-work.md).
+export const ISO_BOARD = {
+  tileW: 56,
+  tileH: 28,
+  enemy: { ox: 120, oy: 100 },
+  player: { ox: 240, oy: 224 },
+  stackedEnemy: { ox: 180, oy: 88 },
+  stackedPlayer: { ox: 180, oy: 236 },
 } as const;
+
+// Iso tile fills/strokes (story 2.2) — the UX mock's NIGHT variant, matching
+// the current dark ground (the full Heritage/Night theme system is deferred).
+// Side is coded on tiles too: blue = you, red = enemy; front tiles are
+// brighter with a gold-lite edge (the front-row indicator).
+export const ISO_TILES = {
+  you: 0x2c4d80,
+  youFront: 0x4a8fe0,
+  foe: 0x7d2f2c,
+  foeFront: 0xc8483a,
+  neutral: 0x2a3050,
+  /** gold-deep-night — always a stroke, never a fill (DESIGN gold rule). */
+  stroke: 0x9c7c26,
+  /** gold-lite night — the front-row edge. */
+  frontStroke: 0xf4d074,
+} as const;
+
+// Battle HUD / control-bar labels (story 2.2). Speed buttons are 2.3 (FR23).
+export const BATTLE_LOG_LABEL = '≡ Log';
+export const BATTLE_ENEMY_LABEL = '▲ ENEMY';
+export const BATTLE_PLAYER_LABEL = 'YOUR ARMY ▼';
+export const BATTLE_FRONT_ENEMY_LABEL = 'FRONT ↘';
+export const BATTLE_FRONT_PLAYER_LABEL = '↖ FRONT';
+
+// Persistent status icons (story 2.2, FR16 rendering): text glyphs via
+// crispText — zero new art. Keyed by the engine union (AD-4). Lifecycle is
+// exactly log-derivable: apply on StatusApplied; EngagementEnded clears all
+// but poison (engine resolve.ts:77-79); icons leave with the corpse.
+export const STATUS_GLYPHS: Record<SpellKind, string> = {
+  sleep: 'Zzz',
+  poison: '☠',
+  weaken: '↓',
+  confusion: '?',
+};
+export const STATUS_COLORS: Record<SpellKind, string> = {
+  sleep: '#9ac7e8',
+  poison: '#9b6bae',
+  weaken: '#e0b050',
+  confusion: '#e08ad0',
+};
+
+/** PoisonTicked carries no actor in its payload (types.ts), so poison numbers use this distinct neutral instead of a guessed side color. */
+export const POISON_TEXT = '#9b6bae';
 
 // FR3 element badge colors (cosmetic; the witch's spell keys off element — FR16).
 // Keyed by the engine's `Element` union (AD-4) so a new element is a compile

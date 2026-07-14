@@ -1,56 +1,84 @@
 import { ALL_COLS, ALL_ROWS } from '@lordly/engine';
 import type { BattleEvent, Placement, Side } from '@lordly/engine';
-import { BASE_WIDTH, BATTLE_BOARD, BATTLE_FAST_FORWARD } from '../config/constants';
+import { BASE_WIDTH, BATTLE_FAST_FORWARD, ISO_BOARD } from '../config/constants';
 
 /**
  * Pure, Phaser-free, DOM-free presentation helpers for the Reveal/Battle
- * scenes (mirrors the story-1.8 pattern of `placement.ts`/`draftModel.ts`:
- * the tested correctness lives here, the scenes are thin renderers). Nothing
- * in this module evaluates a combat rule (AD-2) — it only maps engine data to
- * screen geometry and paces the replay.
+ * scenes (the story-1.8 pattern: tested correctness lives here, scenes are
+ * thin renderers). Nothing in this module evaluates a combat rule (AD-2) —
+ * it only maps engine data to screen geometry and paces the replay.
+ *
+ * Story 2.2 (ADR-0001): the flat stacked grid became two tilted isometric
+ * 3×3 checkerboards. The owner-local→screen mapping is ORIENTATION-AWARE
+ * from the start (the cheap seam — a player-facing toggle stays deferred):
+ * `'\'` is the shipped, pixel-tuned default (enemy board upper-left, player
+ * lower-right, front rows meeting along the diagonal clash gap); `'/'` is
+ * its horizontal mirror; `'|'` stacks the boards vertically, untuned.
  */
 
-/** A cell on the shared battle board: `screenRow` 0..5 top→bottom, `screenCol` 0..2 left→right. */
-export interface ScreenCell {
-  screenRow: number;
-  screenCol: number;
-}
+export const ALL_ORIENTATIONS = ['|', '\\', '/'] as const;
+export type BoardOrientation = (typeof ALL_ORIENTATIONS)[number];
+export const DEFAULT_ORIENTATION: BoardOrientation = '\\';
 
 /**
- * Owner-local placement → shared-screen cell — the AD-11 lane-mirroring
- * transform, confined to presentation and first needed here. Both armies share
- * one board: side B (enemy) occupies the top three rows facing DOWN, side A
- * (player) the bottom three facing UP, so the two `front` rows meet in the
- * middle. Columns mirror for B ("your left column faces the enemy's right,
- * rendered as one straight lane" — FR7): own col `i` faces enemy col `2 − i`.
+ * Owner-local placement → board-local diamond-grid coordinates. In the iso
+ * projection below, increasing `r` runs down-LEFT and increasing `c` runs
+ * down-RIGHT, so the board's NW edge is `c = 0` and its SE edge is `c = 2`.
  *
- * Layout, top→bottom: B.back, B.mid, B.front | A.front, A.mid, A.back.
+ * - Side A (player, lower-right board) fronts its NW edge (toward the enemy):
+ *   `c` = row index (front = 0), `r` = column index.
+ * - Side B (enemy, upper-left board) fronts its SE edge: `c` = 2 − row index,
+ *   and its columns MIRROR (`r` = 2 − col index) so A's left lane faces B's
+ *   right across the clash gap (FR7, AD-11). In the diagonal layout, facing
+ *   pairs sit gap-OFFSET rather than on one collinear line — matching the UX
+ *   mock's corner boards; the "lane" is conceptual, and the tests pin the
+ *   facing pair as each unit's nearest cross-board front tile.
  */
-export function toScreenCell(side: Side, placement: Placement): ScreenCell {
+function projection(side: Side, placement: Placement): { r: number; c: number } {
   const rowIndex = ALL_ROWS.indexOf(placement.row); // front=0, mid=1, back=2
   const colIndex = ALL_COLS.indexOf(placement.col); // left=0, center=1, right=2
-  if (side === 'A') {
-    // Bottom half: front (nearest the middle) is row 3, back is row 5.
-    return { screenRow: 3 + rowIndex, screenCol: colIndex };
-  }
-  // Top half, facing down and column-mirrored: B.front is row 2, B.back is row 0.
-  return { screenRow: 2 - rowIndex, screenCol: 2 - colIndex };
+  if (side === 'A') return { r: colIndex, c: rowIndex };
+  return { r: 2 - colIndex, c: 2 - rowIndex };
+}
+
+/** The board origin (its top-corner tile center) for a side under an orientation. */
+function frame(side: Side, orientation: BoardOrientation): { ox: number; oy: number } {
+  if (orientation === '|') return side === 'A' ? ISO_BOARD.stackedPlayer : ISO_BOARD.stackedEnemy;
+  // '\' and '/' share origins; '/' mirrors the final x instead.
+  return side === 'A' ? ISO_BOARD.player : ISO_BOARD.enemy;
 }
 
 /**
- * Screen cell → pixel center, using the single `BATTLE_BOARD` geometry so the
- * Reveal and Battle scenes position identically. Pure (depends only on
- * constants). The `midGap` opens a lane between the two facing front rows.
+ * Owner-local cell → its tile's pixel center. Standard iso math: from the
+ * board origin, `x` steps ±tileW/2 with (c − r) and `y` steps +tileH/2 with
+ * (c + r), producing the 2:1 diamond grid.
  */
-export function screenCellCenter(cell: ScreenCell): { x: number; y: number } {
-  const { cell: size, gap, top, midGap } = BATTLE_BOARD;
-  const boardWidth = 3 * size + 2 * gap;
-  const left = (BASE_WIDTH - boardWidth) / 2;
-  const x = left + cell.screenCol * (size + gap) + size / 2;
-  // Rows 0..2 (side B) sit above the gap; rows 3..5 (side A) are pushed down by it.
-  const midOffset = cell.screenRow >= 3 ? midGap : 0;
-  const y = top + cell.screenRow * (size + gap) + midOffset + size / 2;
-  return { x, y };
+export function unitTileCenter(side: Side, placement: Placement, orientation: BoardOrientation = DEFAULT_ORIENTATION): { x: number; y: number } {
+  const { r, c } = projection(side, placement);
+  const { ox, oy } = frame(side, orientation);
+  const x = ox + (c - r) * (ISO_BOARD.tileW / 2);
+  const y = oy + (c + r) * (ISO_BOARD.tileH / 2);
+  return { x: orientation === '/' ? BASE_WIDTH - x : x, y };
+}
+
+/** One renderable board tile: pixel center, front-row flag, and checker parity (side color vs neutral fill). */
+export interface BoardTile {
+  x: number;
+  y: number;
+  front: boolean;
+  checker: boolean;
+}
+
+/** All 9 tiles of one side's board, aligned 1:1 with `unitTileCenter` so units always stand exactly on a tile. */
+export function boardTiles(side: Side, orientation: BoardOrientation = DEFAULT_ORIENTATION): BoardTile[] {
+  return ALL_ROWS.flatMap((row) =>
+    ALL_COLS.map((col) => {
+      const placement = { row, col };
+      const { r, c } = projection(side, placement);
+      const { x, y } = unitTileCenter(side, placement, orientation);
+      return { x, y, front: row === 'front', checker: (r + c) % 2 === 0 };
+    }),
+  );
 }
 
 /** One playback beat: its source event plus when it fires and for how long. */
@@ -77,7 +105,7 @@ export function buildBeatSchedule(events: readonly BattleEvent[], beatMs: number
   }));
 }
 
-/** The fast-forwarded per-beat duration for press-and-hold ×BATTLE_FAST_FORWARD (AC2). */
+/** The fast-forwarded per-beat duration for press-and-hold ×BATTLE_FAST_FORWARD (interim until FR23 / story 2.3). */
 export function fastForwardMs(beatMs: number): number {
   return Math.round(beatMs / BATTLE_FAST_FORWARD);
 }

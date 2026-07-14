@@ -64,7 +64,7 @@ development_status:
   epic-2: in-progress
   2-0-pre-epic-2-tech-debt: done  # From epic-1 retro action item 2 + sprint-change-proposal-2026-07-13; MUST complete before 2-1 (no epics.md entry — sources: epic-1-retro-2026-07-13.md, deferred-work.md).
   2-1-real-units-sprite-packs-atlases-and-animations: done
-  2-2-the-animated-battle-scene: ready-for-dev
+  2-2-the-animated-battle-scene: done
   2-3-watchability-controls-and-a-worthy-result-screen: backlog
   2-4-help-rules-and-credits-screens: backlog
   epic-2-retrospective: optional
