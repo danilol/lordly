@@ -12,6 +12,8 @@ export const BASE_HEIGHT = 640;
 // the Phaser game config. Hex strings for text/config, numbers for shapes.
 export const PALETTE = {
   background: '#1a1a2e',
+  /** The same ground as `background`, as a number for shape fills (e.g. the Help scene's opaque header strip). */
+  backgroundFill: 0x1a1a2e,
   title: '#e8d5a3',
   buttonFill: 0x3a3a4e,
   buttonStroke: 0x55556a,
@@ -100,6 +102,14 @@ export const RESULT_REMATCH_LABEL = 'Rematch';
 export const RESULT_HOME_LABEL = 'Home';
 // Back-to-Home affordance shown on every post-Home scene (closes the 1.8 dead-end).
 export const HOME_BACK_LABEL = '‹ Home';
+/** Origin-aware back label (story 2.4 — Help returns to Home OR Draft). */
+export const BACK_LABEL = '‹ Back';
+
+// Help / Credits (story 2.4, FR27/FR31) — one source for scenes + tests.
+export const HOME_HELP_LABEL = 'Help';
+export const HOME_CREDITS_LABEL = 'Credits';
+export const DRAFT_RULES_LABEL = '? Rules';
+export const CREDITS_TITLE = 'Credits';
 
 // Battle-mode toggle on Home (story 1.10, FR17/FR19): Standard vs Wipeout.
 export const MODE_HEADING = 'Battle mode';

@@ -1,7 +1,17 @@
 import { GameObjects, Scene } from 'phaser';
 import { ALL_CLASSES, BALANCE } from '@lordly/engine';
 import type { UnitClass } from '@lordly/engine';
-import { BASE_WIDTH, DRAFT_CONTINUE_LABEL, DRAFT_HINT, DRAFT_TITLE, PALETTE, MIN_FONT_PX, CARD_CLASS_FONT_PX, CLASS_ABBREVIATIONS } from '../config/constants';
+import {
+  BASE_WIDTH,
+  DRAFT_CONTINUE_LABEL,
+  DRAFT_HINT,
+  DRAFT_RULES_LABEL,
+  DRAFT_TITLE,
+  PALETTE,
+  MIN_FONT_PX,
+  CARD_CLASS_FONT_PX,
+  CLASS_ABBREVIATIONS,
+} from '../config/constants';
 import { canAddUnit, canContinue, classRulesCard } from '../flow/draftModel';
 import type { MatchFlow } from '../flow/MatchFlow';
 import { addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
@@ -29,6 +39,15 @@ export class DraftScene extends Scene {
   create() {
     this.cameras.main.setBackgroundColor(PALETTE.background);
     addHomeBack(this);
+
+    // Rules spur (story 2.4, FR27): top-right mirror of the Home affordance.
+    // Help returns HERE with the same flow, so a mid-draft army survives the
+    // round-trip (create() re-renders from flow state — the 1.8 pattern).
+    const rules = crispText(this, BASE_WIDTH - 44, 22, DRAFT_RULES_LABEL, { fontFamily: 'Arial', fontSize: '13px', color: PALETTE.mutedText }).setOrigin(0.5);
+    this.add
+      .rectangle(rules.x, rules.y, 72, 36, 0, 0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerup', () => this.scene.start('Help', { from: 'Draft', flow: this.flow }));
 
     crispText(this, BASE_WIDTH / 2, 26, DRAFT_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
     crispText(this, BASE_WIDTH / 2, 50, DRAFT_HINT, {

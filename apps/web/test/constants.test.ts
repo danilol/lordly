@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BASE_HEIGHT, BASE_WIDTH, BATTLE_SPEEDS, battleSpeed, DEFAULT_SPEED_ID, GAME_NAME, HOME_PLAY_LABEL } from '../src/config/constants';
+import { BASE_HEIGHT, BASE_WIDTH, BATTLE_SPEEDS, battleSpeed, DEFAULT_SPEED_ID, GAME_NAME, HOME_PLAY_LABEL, PALETTE } from '../src/config/constants';
 
 describe('web smoke test', () => {
   it('exposes the game name without booting Phaser', () => {
@@ -29,5 +29,11 @@ describe('battleSpeed sanitizer (FR23, story 2.3)', () => {
 
   it('keeps fast-forward opt-in: the default entry is normal speed, factor 1', () => {
     expect(battleSpeed(DEFAULT_SPEED_ID).factor).toBe(1);
+  });
+});
+
+describe('PALETTE internal consistency (story 2.4 review)', () => {
+  it('backgroundFill is the numeric twin of the background hex string — the Help header strip depends on it', () => {
+    expect(PALETTE.backgroundFill).toBe(parseInt(PALETTE.background.slice(1), 16));
   });
 });

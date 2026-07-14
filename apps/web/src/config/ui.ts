@@ -92,14 +92,54 @@ export function addUnitSprite(scene: Scene, x: number, y: number, cls: UnitClass
 }
 
 export function addHomeBack(scene: Scene): GameObjects.Rectangle {
-  const label = crispText(scene, 44, 22, HOME_BACK_LABEL, {
+  return addBackAffordance(scene, HOME_BACK_LABEL, () => scene.scene.start('Home'));
+}
+
+/**
+ * The generalized top-left back affordance (story 2.4): same padded hit-area
+ * pattern as `addHomeBack`, but with a caller-chosen label and destination —
+ * the Help scene dismisses to its ORIGIN (Home or Draft), not always Home.
+ */
+export function addBackAffordance(scene: Scene, label: string, onTap: () => void, depth = 0): GameObjects.Rectangle {
+  const text = crispText(scene, 44, 22, label, {
     fontFamily: 'Arial',
     fontSize: '13px',
     color: PALETTE.mutedText,
-  }).setOrigin(0.5);
-  const hitArea = scene.add
-    .rectangle(label.x, label.y, 72, 36, 0, 0)
-    .setInteractive({ useHandCursor: true })
-    .on('pointerup', () => scene.scene.start('Home'));
+  })
+    .setOrigin(0.5)
+    .setDepth(depth);
+  // 44px tall — the FR30 minimum tap target (review: 36px fell short of AC4's explicit floor).
+  const hitArea = scene.add.rectangle(text.x, text.y, 72, 44, 0, 0).setDepth(depth).setInteractive({ useHandCursor: true }).on('pointerup', onTap);
   return hitArea;
+}
+
+/**
+ * Touch-drag + mouse-wheel scrolling for a content container (story 2.4
+ * review — extracted from Help so Credits scrolls too, and desktop gets a
+ * wheel path). Clamped to [viewTop − overflow, viewTop]; content shorter
+ * than the viewport pins in place. Returns `wasDrag()` — true when the
+ * current pointer gesture moved beyond the tap threshold — so tap targets
+ * (e.g. the back affordance) can ignore a pointerup that ends a scroll
+ * (review: a drag releasing over ‹ Back ejected the reader mid-scroll).
+ */
+export function enableDragScroll(scene: Scene, content: GameObjects.Container, viewTop: number, contentHeight: number, viewBottom: number): () => boolean {
+  const minY = Math.min(viewTop, viewBottom - contentHeight);
+  const clamp = (y: number) => Math.max(minY, Math.min(viewTop, y));
+  let dragStartY = 0;
+  let contentStartY = 0;
+  let dragDistance = 0;
+  scene.input.on('pointerdown', (pointer: { y: number }) => {
+    dragStartY = pointer.y;
+    contentStartY = content.y;
+    dragDistance = 0;
+  });
+  scene.input.on('pointermove', (pointer: { y: number; isDown: boolean }) => {
+    if (!pointer.isDown) return;
+    dragDistance = Math.max(dragDistance, Math.abs(pointer.y - dragStartY));
+    content.y = clamp(contentStartY + (pointer.y - dragStartY));
+  });
+  scene.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
+    content.y = clamp(content.y - dy);
+  });
+  return () => dragDistance > 8;
 }

@@ -8,6 +8,8 @@ import { PlacementScene } from './scenes/PlacementScene';
 import { RevealScene } from './scenes/RevealScene';
 import { BattleScene } from './scenes/BattleScene';
 import { ResultScene } from './scenes/ResultScene';
+import { HelpScene } from './scenes/HelpScene';
+import { CreditsScene } from './scenes/CreditsScene';
 
 document.addEventListener('DOMContentLoaded', () => {
   document.title = GAME_NAME;
@@ -37,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mode: Scale.FIT,
         autoCenter: Scale.CENTER_BOTH,
       },
-      scene: [BootScene, HomeScene, DraftScene, PlacementScene, RevealScene, BattleScene, ResultScene],
+      scene: [BootScene, HomeScene, DraftScene, PlacementScene, RevealScene, BattleScene, ResultScene, HelpScene, CreditsScene],
     });
   } catch (error) {
     // `type: AUTO` already falls back Canvas→WebGL; this covers a constructor

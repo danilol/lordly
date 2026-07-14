@@ -61,12 +61,12 @@ development_status:
   1-9-reveal-battle-playback-and-result-the-loop-closes: done
   1-10-until-wipeout-mode-stretch: done
   epic-1-retrospective: done
-  epic-2: in-progress
+  epic-2: done  # 2026-07-14: all five stories done (2.0 tech-debt, 2.1 sprites, 2.2 animated battle, 2.3 controls+result, 2.4 help+credits) — the battle became a show
   2-0-pre-epic-2-tech-debt: done  # From epic-1 retro action item 2 + sprint-change-proposal-2026-07-13; MUST complete before 2-1 (no epics.md entry — sources: epic-1-retro-2026-07-13.md, deferred-work.md).
   2-1-real-units-sprite-packs-atlases-and-animations: done
   2-2-the-animated-battle-scene: done
   2-3-watchability-controls-and-a-worthy-result-screen: done
-  2-4-help-rules-and-credits-screens: backlog
+  2-4-help-rules-and-credits-screens: done
   epic-2-retrospective: optional
   epic-3: backlog
   3-1-battle-history: backlog

@@ -7,6 +7,8 @@ import {
   BUTTON_HEIGHT,
   BUTTON_WIDTH,
   GAME_NAME,
+  HOME_CREDITS_LABEL,
+  HOME_HELP_LABEL,
   HOME_PLAY_LABEL,
   MODE_BUTTON_GAP,
   MODE_BUTTON_HEIGHT,
@@ -76,6 +78,25 @@ export class HomeScene extends Scene {
       color: PALETTE.mutedText,
     }).setOrigin(0.5);
     this.redrawModeToggle();
+
+    // Home spurs (story 2.4, FR27/FR31): Help and Credits — exactly these
+    // two; History and Settings arrive with their own stories (Epic 3 /
+    // deferred). Same metrics as the mode toggle (≥44px targets).
+    this.spurButton(0, HOME_HELP_LABEL, () => this.scene.start('Help', { from: 'Home' }));
+    this.spurButton(1, HOME_CREDITS_LABEL, () => this.scene.start('Credits'));
+  }
+
+  /** One of the two Home spur buttons (Help / Credits), laid out like the mode toggle row. */
+  private spurButton(index: number, label: string, onTap: () => void) {
+    const startX = (BASE_WIDTH - (2 * MODE_BUTTON_WIDTH + MODE_BUTTON_GAP)) / 2;
+    const x = startX + index * (MODE_BUTTON_WIDTH + MODE_BUTTON_GAP) + MODE_BUTTON_WIDTH / 2;
+    const y = BASE_HEIGHT * 0.9;
+    this.add
+      .rectangle(x, y, MODE_BUTTON_WIDTH, MODE_BUTTON_HEIGHT, PALETTE.buttonFill)
+      .setStrokeStyle(2, PALETTE.buttonStroke)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerup', onTap);
+    crispText(this, x, y, label, { fontFamily: 'Arial', fontSize: '15px', color: PALETTE.buttonText }).setOrigin(0.5);
   }
 
   /** The Standard/Wipeout toggle (story 1.10, AC2) — a real player-facing choice, redrawn on change. */
