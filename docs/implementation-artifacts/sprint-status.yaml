@@ -67,7 +67,7 @@ development_status:
   2-2-the-animated-battle-scene: done
   2-3-watchability-controls-and-a-worthy-result-screen: done
   2-4-help-rules-and-credits-screens: done
-  epic-2-retrospective: optional
+  epic-2-retrospective: done  # 2026-07-14: epic-2-retro-2026-07-14.md — balance/tactics correct-course is the critical-path action
   epic-3: backlog
   3-1-battle-history: backlog
   3-2-replay-any-remembered-battle: backlog
@@ -91,3 +91,19 @@ action_items:
     action: "UX spec via bmad-ux before 2.1 — camera perspective, sprite-pack direction, layouts, minimum-text-size rule"
     owner: "Sally (UX)"
     status: done  # 2026-07-13: DESIGN.md + EXPERIENCE.md finalized at docs/planning-artifacts/ux-designs/ux-lordly-2026-07-13/ (iso-board camera ADR, two-theme palette, type scale, \ battle layout). Retro critical path complete.
+  - epic: 2
+    action: "Run correct-course for the balance/tactics package (mage blast nerf, target-selection tactics, critical hits, archer-vs-casters FR14) — one design pass, one sim-sweep; explicitly decide sequencing vs Epic 3 history/replay (AD-8 balanceVersion makes pre-balance history non-replayable)"
+    owner: "John (PM) + Danilo"
+    status: open
+  - epic: 2
+    action: "Text-ceiling fix scheduling decision at Epic 3 planning (360px backing-store investigation, NFR1-gated; candidate home beside story 3.4)"
+    owner: "Winston (Architect)"
+    status: open
+  - epic: 2
+    action: "StatusCleared engine events ride the next LOG_VERSION bump (bundle with a crit flag if the balance pass adds one)"
+    owner: "Amelia (dev)"
+    status: open
+  - epic: 2
+    action: "Sim-harness wipeout sweep executes inside the balance-pass verification (deferred since 1.10)"
+    owner: "Amelia (dev)"
+    status: open
