@@ -25,11 +25,11 @@ FR6: On both submissions, a reveal shows the two boards face to face before comb
 FR7: Reach — a unit acts on its facing column and adjacent columns; corner units reach two, center units reach three; applies to Knight, Mercenary, Archer, Witch; Mage blast and Cleric heal ignore reach.
 FR8: Melee targeting (Knight, Mercenary) — nearest occupied row among reachable, no bypass; priority: facing column → center-closer → left; re-evaluated per attack.
 FR9: Ranged targeting (Archer) — rearmost occupied row among reachable; column priority and re-evaluation as FR8.
-FR10: Mage row blast — hits every unit in one enemy row, ignoring reach; row with most living enemies, tie → rearmost; RPS per target.
+FR10: Mage row blast — hits every unit in one enemy row, ignoring reach; row with most living enemies, tie → rearmost; per-target `blastAttenuation` ×0.75 after base, before RPS (amended 2026-07-14); RPS per target.
 FR11: Cleric heals lowest-HP-% living ally (self included), ignoring reach, capped at max HP; if no ally damaged, weak STR-based staff attack with magic targeting.
 FR12: Witch casts her prepared spell on one enemy by magic targeting (rearmost reachable), preferring unaffected targets; deals no damage.
 FR13: Initiative — AGI timeline in passes; one action per living unit per pass in descending AGI across both armies; multihit split; ties: front row → left → seeded coin flip; dead/sleeping units lose unspent actions; effects apply immediately in sequence.
-FR14: RPS triangle — Mage > Knight > Archer > Mage; advantage ×1.5, disadvantage ×0.75; Mercenary/Cleric/Witch neutral.
+FR14: RPS triangle — Mage > Knight > Archer > Mage; advantage ×1.5, disadvantage ×0.75; plus Archer deals ×1.5 to all casters (Mage/Cleric/Witch), one-way, no symmetric penalty (amended 2026-07-14); Mercenary fully neutral.
 FR15: Six fixed per-class attributes (STR/VIT/INT/MEN/AGI/DEX); integer-math formulas (phys = STR − VIT/2, magic = INT − MEN/2, min 1, then RPS; heal = INT × 1.25); per-row action counts per the class table; DEX reserved (no miss/crit in MVP); values live in a data file.
 FR16: Witch spells keyed to element — Water→Sleep, Earth→Poison (15 dmg end of engagement), Fire→Weaken (damage halved), Wind→Confusion (50% seeded misfire onto own side; fizzle if no valid target); same spell doesn't stack.
 FR17: Single-engagement mode — every unit spends its per-row action count once on the timeline; engagement end = match end.
@@ -89,11 +89,11 @@ FR6: Epic 1 - Reveal screen
 FR7: Epic 1 - Reach / column adjacency (engine)
 FR8: Epic 1 - Melee targeting (engine)
 FR9: Epic 1 - Ranged targeting (engine)
-FR10: Epic 1 - Mage row blast (engine)
+FR10: Epic 1 - Mage row blast (engine); blast attenuation tuning in story 3.0
 FR11: Epic 1 - Cleric healing (engine)
 FR12: Epic 1 - Witch status casting (engine)
 FR13: Epic 1 - AGI initiative timeline (engine)
-FR14: Epic 1 - RPS triangle multipliers (engine)
+FR14: Epic 1 - RPS triangle multipliers (engine); archer-vs-casters amendment in story 3.0
 FR15: Epic 1 - Attributes, formulas, class table (engine balance data)
 FR16: Epic 1 - Element-keyed Witch spells (engine)
 FR17: Epic 1 - Single-engagement resolution (engine)
@@ -130,7 +130,7 @@ The game becomes a real PWA: installable, fully offline for vs-AI, verified agai
 
 **Future (outside MVP breakdown):**
 - Link-play 1v1 via shareable URL — its engine seam (AD-1/AD-3/AD-11) is already fixed; broken down when the epic is scheduled.
-- **Epic 4: Position-dependent move variety** — per-row move-*kind* variation per class (FR32/FR33), including a new defensive "Guard" move type. Touches AD-4 (new domain vocabulary), AD-12 (BattleEvent union extension → logVersion bump), and AD-8 (balance-table schema → balanceVersion bump) — a PM/Architect design pass at scoping time, not a Direct Adjustment to Epic 1-3's shipped/planned stories. Broken down into stories when scheduled.
+- **Epic 4: Combat depth — moves, tactics, crits, promotions** *(widened & renamed via sprint-change-proposal-2026-07-14)* — one combined design pass over the sibling systems that change "what a unit does with its action": per-row move-*kind* variation per class (FR32/FR33, incl. the defensive "Guard" type), OB64 target-selection tactics (attack weakest / strongest / autonomous — FR8/FR9 + a new player-facing choice in `MatchSetup`), critical hits (DEX's reserved purpose, FR15), and Archmage-style promotion gating of the Mage blast (FR10). Touches AD-4 (new domain vocabulary), AD-12 (BattleEvent union extension → **one** combined logVersion bump, which also carries the 2.2-deferred `StatusCleared` events), and AD-8 (balance-table schema → balanceVersion bump) — a PM/Architect design pass at scoping time, not a Direct Adjustment to Epic 1-3's shipped/planned stories. Broken down into stories when scheduled; Epic-4-vs-link-play ordering is a post-Epic-3 planning decision.
 
 ## Epic 1: Play a complete match against the AI on your phone
 
@@ -470,7 +470,37 @@ So that a first-timer can learn the game cold and licenses are honored.
 
 ## Epic 3: Take it anywhere, keep your battles
 
-The game becomes a true pocket game: installable, fully offline, verified against the performance budget — and it remembers. Covers FR28, FR29, and NFR1 verification.
+The game becomes a true pocket game: installable, fully offline, verified against the performance budget — and it remembers. Covers FR28, FR29, and NFR1 verification. Opens with a pre-epic balance tuning pass (story 3.0, added via sprint-change-proposal-2026-07-14) so history records battles under the tuned rules.
+
+### Story 3.0: Balance tuning pass — the blast tamed, the archer a caster-hunter
+
+As a player,
+I want the Mage's row blast toned down and the Archer to counter every caster,
+So that no single class dominates and battles stay tense before my history starts recording them.
+
+**Acceptance Criteria:**
+
+**Given** the amended FR14
+**When** an Archer attacks a Mage, Cleric, or Witch
+**Then** the attack deals ×1.5 damage — one-way: Cleric and Witch take no new penalty attacking the Archer, and the core triangle is unchanged
+**And** `rpsBeats`' one-target-per-class map becomes a small multi-target lookup — a contained balance-data shape change, no new events, no new player choices, no UI work.
+
+**Given** the amended FR10
+**When** the Mage's blast resolves
+**Then** each target's damage is attenuated by the named `blastAttenuation` balance ratio (initial ×0.75), applied after the base formula and before RPS — integer math and FR15's fixed rounding order preserved (FR20).
+
+**Given** AD-8 discipline
+**When** the balance data changes
+**Then** `balanceVersion` bumps, the balance-hash test is re-pinned, and golden battles are re-recorded
+**And** `docs/rules.md` reflects the tuned rules and numbers — story 2.4's drift guard stays green (a lying Help screen fails CI).
+
+**Given** the NFR4 sim harness
+**When** the sweep runs headlessly
+**Then** it runs in **both modes** — single-engagement and wipeout (the sweep's mode knob, deferred since story 1.10, ships here) — and no archetype exceeds the ≤65% aggregate dominance band in either mode.
+
+**Given** the tuned build on the production URL
+**When** Danilo plays real matches on his own device
+**Then** felt balance is accepted: the blast no longer reads "too broken" and melee comps feel viable — the on-device felt-balance acceptance is this story's sign-off gate.
 
 ### Story 3.1: Battle history
 
