@@ -57,6 +57,25 @@ describe('docs/rules.md drift guard (story 2.4, AC2/AC6 — numbers are law)', (
     expect(raw).toContain(`×${disadvantage}`);
   });
 
+  it('states the one-way caster hunt: every hunter named with its full ×1.5 prey list (story 3.0)', () => {
+    const advantage = BALANCE.formulas.rpsAdvantage.num / BALANCE.formulas.rpsAdvantage.den;
+    expect(Object.keys(BALANCE.rpsHunts).length).toBeGreaterThan(0); // the rule exists — a silently emptied map must fail here
+    for (const [hunter, hunted] of Object.entries(BALANCE.rpsHunts)) {
+      // The doc states the hunter's COMPLETE ×1.5 prey list: triangle prey (if
+      // any — a hunter need not sit inside the triangle) + hunts, in data order.
+      const triangle = BALANCE.rpsBeats[hunter as UnitClass];
+      const prey = [...(triangle ? [triangle] : []), ...(hunted as readonly string[])].map(cap);
+      const list = prey.length === 1 ? (prey[0] as string) : `${prey.slice(0, -1).join(', ')}, and ${prey[prey.length - 1]}`;
+      expect(raw).toContain(`${cap(hunter)} hunts every caster`);
+      expect(raw).toContain(`×${advantage} to ${list}`);
+    }
+  });
+
+  it('states the wipeout blast attenuation with the exact ratio (story 3.0 — wipeout-scoped)', () => {
+    const attenuation = BALANCE.formulas.blastAttenuation.num / BALANCE.formulas.blastAttenuation.den;
+    expect(raw).toContain(`takes only ×${attenuation} of the damage`);
+  });
+
   it('states the poison damage and the wipeout engagement cap from balance data', () => {
     expect(raw).toContain(`${BALANCE.formulas.poisonDamage} damage`);
     expect(raw).toContain(`after ${BALANCE.engagementCap} engagements`);

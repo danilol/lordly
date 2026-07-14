@@ -19,7 +19,7 @@ Draft any three (duplicates allowed). Each unit also rolls one of four elements 
 
 ### The triangle
 
-**Mage beats Knight, Knight beats Archer, Archer beats Mage.** An attack with the advantage deals ×1.5 damage; against its counter, ×0.75. Mercenary, Cleric, and Witch stand outside the triangle.
+**Mage beats Knight, Knight beats Archer, Archer beats Mage.** An attack with the advantage deals ×1.5 damage; against its counter, ×0.75. Mercenary, Cleric, and Witch stand outside the triangle — but the **Archer hunts every caster**: arrows deal ×1.5 to Mage, Cleric, and Witch, and the hunted get no bonus back.
 
 ### Rows matter
 
@@ -32,7 +32,7 @@ The two boards face each other, front rows nearest. Your left column faces the e
 - **Reach.** A unit can act on its facing enemy column and the columns beside it. A corner unit reaches two enemy columns; a center unit reaches all three. When several targets in a row qualify, the attacker favors its facing column, then the column nearer the center. (The Mage's blast and the Cleric's healing ignore reach.)
 - **Melee (Knight, Mercenary).** Strikes the **nearest occupied enemy row** — a living front unit shields the rows behind it. No bypassing the wall.
 - **Ranged (Archer).** Arrows arc over the front line and strike the **rearmost occupied row it can reach** — the counter to artillery hiding in the back.
-- **Blast (Mage).** Each cast strikes **every unit in one enemy row** — the row with the most living enemies (ties go rearward).
+- **Blast (Mage).** Each cast strikes **every unit in one enemy row** — the row with the most living enemies (ties go rearward). In **Wipeout**, each struck unit takes only ×0.75 of the damage — over a long war, the artillery spreads thin.
 - **Heal (Cleric).** Restores the **living ally with the lowest HP share** (herself included). If nobody is hurt, she pokes with her staff instead — feebly.
 - **Curse (Witch).** Applies her prepared spell to the rearmost enemy she can reach, preferring one not yet afflicted. She deals no damage; she doesn't need to.
 

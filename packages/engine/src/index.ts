@@ -27,7 +27,7 @@ export type {
   UnitHealed,
   UnitSnapshot,
 } from './types';
-export { healAmount, magicDamage, physicalDamage, resolveBattle } from './resolve';
+export { blastDamage, healAmount, magicDamage, physicalDamage, resolveBattle } from './resolve';
 export { chooseSetup, STRATEGY_POOL } from './ai';
 export type { AiChoice, ChooseSetupOptions, StrategyArchetype } from './ai';
 export { InvalidMatchSetupError, validateMatchSetup } from './validate';

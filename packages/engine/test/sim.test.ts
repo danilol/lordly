@@ -148,4 +148,29 @@ describe('sim sweep (NFR4)', () => {
     }
     expect(report.flagged).toEqual([]);
   });
+
+  it('omitting mode is exactly single mode (the historical sweep behavior)', () => {
+    expect(runSweep(STRATEGY_POOL, { ...CI_CONFIG, mode: 'single' })).toEqual(report);
+  });
+
+  // Story 3.0: the band holds in BOTH modes (the wipeout knob deferred since
+  // 1.10). Wipeout battles run up to 5 engagements (~5× the compute), but the
+  // sweep is fast enough that the same runsPerPair: 15 stays well inside the
+  // test budget — no reduced sampling needed. The v1 baseline FAILED this
+  // band (three-mages 74.6% at runs=500): un-attenuated blasts compound
+  // across engagements, which is why blastAttenuation is wipeout-scoped.
+  // BINDING CONSTRAINT: `longbows` (archer+archer+knight) is the wipeout
+  // ceiling — ~63.7% at this runsPerPair, ~62.9% converged at runs=500, the
+  // thinnest margin in either mode. The archer-vs-caster hunt makes archer
+  // walls the near-dominant wipeout comp, so any future v2 retune should
+  // re-check wipeout longbows FIRST (same fragility class the single-mode
+  // ambushers comment above documents).
+  it(`ACCEPTANCE BAND (wipeout): no archetype exceeds ${ACCEPTANCE_BAND * 100}% aggregate win rate in wipeout mode`, () => {
+    const wipeoutReport = runSweep(STRATEGY_POOL, { ...CI_CONFIG, mode: 'wipeout' });
+    const table = wipeoutReport.archetypes.map((a) => `${a.id}: ${(a.winRate * 100).toFixed(1)}%`).join('\n');
+    for (const a of wipeoutReport.archetypes) {
+      expect(a.winRate, `dominant archetype flagged (wipeout) — sweep table:\n${table}`).toBeLessThanOrEqual(ACCEPTANCE_BAND);
+    }
+    expect(wipeoutReport.flagged).toEqual([]);
+  });
 });

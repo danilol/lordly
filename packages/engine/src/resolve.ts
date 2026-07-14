@@ -1,4 +1,5 @@
 import { BALANCE } from './balance';
+import type { Ratio } from './balance';
 import { judge, wipedSide } from './judging';
 import type { WipeState } from './judging';
 import { createStreams, nextInt } from './rng';
@@ -113,7 +114,7 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
           continue;
         }
         unit.actionsLeft -= 1;
-        const turnEvents = takeTurn(unit, units, streams.battle);
+        const turnEvents = takeTurn(unit, units, streams.battle, setup.mode);
         events.push(...turnEvents);
         // Only a death can change the alive-set — skip the wipe scan otherwise.
         if (turnEvents.some((e) => e.type === 'UnitDied')) {
@@ -169,7 +170,7 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
  * cast (FR12). Targeting is re-evaluated per attack — this runs fresh each
  * turn.
  */
-function takeTurn(unit: UnitState, units: UnitState[], battle: Stream): BattleEvent[] {
+function takeTurn(unit: UnitState, units: UnitState[], battle: Stream, mode: 'single' | 'wipeout'): BattleEvent[] {
   if (unit.statuses.has('confusion')) {
     // Data-driven misfire chance (AD-8): P(misfire) = num/den. The draw spans
     // [0, den-1] and misfires on the TOP `num` values, so at the shipped 1/2
@@ -179,14 +180,14 @@ function takeTurn(unit: UnitState, units: UnitState[], battle: Stream): BattleEv
     const { num, den } = BALANCE.formulas.confusionMisfire;
     const misfires = nextInt(battle, 0, den - 1) >= den - num;
     if (misfires) {
-      return [{ type: 'ActionMisfired', unit: unit.id }, ...misfire(unit, units, battle)];
+      return [{ type: 'ActionMisfired', unit: unit.id }, ...misfire(unit, units, battle, mode)];
     }
   }
-  return act(unit, units);
+  return act(unit, units, mode);
 }
 
 /** The unit's NORMAL action by class. */
-function act(unit: UnitState, units: UnitState[]): BattleEvent[] {
+function act(unit: UnitState, units: UnitState[], mode: 'single' | 'wipeout'): BattleEvent[] {
   const enemies = units.filter((u) => u.side !== unit.side);
 
   switch (unit.class) {
@@ -205,7 +206,7 @@ function act(unit: UnitState, units: UnitState[]): BattleEvent[] {
       const row = selectBlastRow(enemies);
       if (row === undefined) return skip(unit);
       const targets = enemies.filter((e) => e.alive && e.rowIndex === row);
-      return strike(unit, targets, magicDamage);
+      return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode));
     }
     case 'cleric': {
       const allies = units.filter((u) => u.side === unit.side && u.alive);
@@ -249,7 +250,7 @@ function act(unit: UnitState, units: UnitState[]): BattleEvent[] {
  * Misfire ally picks EXCLUDE the confused unit itself; the cleric's enemy
  * pick is any living enemy (recorded decisions).
  */
-function misfire(unit: UnitState, units: UnitState[], battle: Stream): BattleEvent[] {
+function misfire(unit: UnitState, units: UnitState[], battle: Stream, mode: 'single' | 'wipeout'): BattleEvent[] {
   const allies = units.filter((u) => u.side === unit.side && u.alive && u.id !== unit.id);
   const enemies = units.filter((u) => u.side !== unit.side && u.alive);
 
@@ -268,7 +269,7 @@ function misfire(unit: UnitState, units: UnitState[], battle: Stream): BattleEve
       const row = selectBlastRow(own);
       if (row === undefined) return [{ type: 'ActionFizzled', unit: unit.id }];
       const targets = own.filter((u) => u.alive && u.rowIndex === row);
-      return strike(unit, targets, magicDamage);
+      return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode));
     }
     case 'cleric': {
       if (enemies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
@@ -341,12 +342,28 @@ export function physicalDamage(attacker: UnitClass, defender: UnitClass, weakene
 }
 
 /**
- * FR10 magic damage: INT − floor(MEN/2), then the same FIXED order as
- * physical (RPS → Weaken → min-1). Per-target — the Mage blast calls this
- * once per unit in the struck row.
+ * The UNATTENUATED magic arithmetic: INT − floor(MEN/2), then the same FIXED
+ * order as physical (RPS → Weaken → min-1). The FR10 row blast itself uses
+ * `blastDamage` (this plus the pre-RPS attenuation); this stays exported as
+ * the tuning-transparent building block the arithmetic tests pin directly.
  */
 export function magicDamage(attacker: UnitClass, defender: UnitClass, weakened = false): number {
   return damagePipeline(BALANCE.classes[attacker].int, attacker, defender, weakened, 'men');
+}
+
+/**
+ * FR10 (2026-07-14 amendment) per-target Mage row-blast damage:
+ * INT − floor(MEN/2), then — in **wipeout mode only** — `blastAttenuation`
+ * (×3/4) BEFORE RPS, then the fixed tail (RPS → Weaken → min-1). In single
+ * mode the blast is unattenuated (identical to `magicDamage`): the story-3.0
+ * sweep showed single-engagement blasts are policed by the triangle, while
+ * wipeout blasts compound across engagements into dominance. Per-target:
+ * the blast calls this once per unit in the struck row, normal casts and
+ * confused self-blasts alike.
+ */
+export function blastDamage(attacker: UnitClass, defender: UnitClass, weakened: boolean, mode: 'single' | 'wipeout'): number {
+  const attenuation = mode === 'wipeout' ? BALANCE.formulas.blastAttenuation : undefined;
+  return damagePipeline(BALANCE.classes[attacker].int, attacker, defender, weakened, 'men', attenuation);
 }
 
 /** FR11 heal amount: floor(INT × 5/4); the EFFECTIVE restore is capped at max HP by the caller. */
@@ -355,12 +372,22 @@ export function healAmount(healer: UnitClass): number {
   return Math.floor((BALANCE.classes[healer].int * heal.num) / heal.den);
 }
 
-/** Shared FIXED-order damage pipeline (FR15/FR16/FR20): base → RPS → weaken → min clamp. */
-function damagePipeline(power: number, attacker: UnitClass, defender: UnitClass, weakened: boolean, mitigation: 'vit' | 'men'): number {
-  const { formulas, rpsBeats, classes } = BALANCE;
+/**
+ * Shared FIXED-order damage pipeline (FR15/FR16/FR20):
+ * base → preRps attenuation (blast only, FR10) → RPS → weaken → min clamp.
+ *
+ * The ×1.5 advantage comes from the triangle OR a one-way hunt (FR14
+ * amendment); the ×0.75 disadvantage derives from the TRIANGLE ALONE —
+ * deriving it from the hunts would hand the hunted casters the symmetric
+ * penalty the amendment explicitly forbids.
+ */
+function damagePipeline(power: number, attacker: UnitClass, defender: UnitClass, weakened: boolean, mitigation: 'vit' | 'men', preRps?: Ratio): number {
+  const { formulas, rpsBeats, rpsHunts, classes } = BALANCE;
   const base = power - Math.floor(classes[defender][mitigation] / 2);
-  const rps = rpsBeats[attacker] === defender ? formulas.rpsAdvantage : rpsBeats[defender] === attacker ? formulas.rpsDisadvantage : undefined;
-  let modified = rps === undefined ? base : Math.floor((base * rps.num) / rps.den);
+  let modified = preRps === undefined ? base : Math.floor((base * preRps.num) / preRps.den);
+  const advantage = rpsBeats[attacker] === defender || (rpsHunts[attacker]?.includes(defender) ?? false);
+  const rps = advantage ? formulas.rpsAdvantage : rpsBeats[defender] === attacker ? formulas.rpsDisadvantage : undefined;
+  if (rps !== undefined) modified = Math.floor((modified * rps.num) / rps.den);
   if (weakened) modified = Math.floor(modified / 2);
   return Math.max(formulas.minDamage, modified);
 }

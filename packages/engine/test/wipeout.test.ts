@@ -219,13 +219,17 @@ describe('wipeout mode (FR19)', () => {
   });
 
   it('weaken does not persist between engagements — the same attacker deals FULL damage again', () => {
-    // Golden #8's board shape with FIRE witches (fire → weaken). Hand-verified:
-    // A's witch (A:2, back center, 2 actions) weakens B:0 then knight B:2 in
-    // engagement 1, so B:2's second swing on archer A:0 lands halved —
-    // 18 = floor(36/2). The between-engagement reset clears the status, and in
-    // engagement 2 the witch's FIRST cast re-targets B:0 (prefer-unaffected,
-    // rearmost), so B:2's pass-1 swing on A:0 is back to full damage before
-    // she gets around to re-weakening him: 36 = physicalDamage(knight, archer).
+    // Hand-verified (story 3.0 retune: B:0 is a BACK-ROW KNIGHT soaking the
+    // witch's first cast — the original fire witch there now dies to the
+    // hunt-boosted arrows (4×28 > 85) mid-engagement-1, which let the eng-2
+    // first cast re-weaken B:2 BEFORE his swing and destroyed the scenario;
+    // arrows bounce off the knight at 7). A's witch (A:2, back center,
+    // 2 actions) weakens B:0 then knight B:2 in engagement 1, so B:2's second
+    // swing on archer A:0 lands halved — 18 = floor(36/2). The
+    // between-engagement reset clears the status, and in engagement 2 the
+    // witch's FIRST cast re-targets B:0 (prefer-unaffected, rearmost), so
+    // B:2's pass-1 swing on A:0 is back to full damage before she gets around
+    // to re-weakening him: 36 = physicalDamage(knight, archer).
     const log = resolveBattle(
       setup(
         {
@@ -236,7 +240,7 @@ describe('wipeout mode (FR19)', () => {
               { class: 'witch', element: 'fire' },
             ],
             B: [
-              { class: 'witch', element: 'fire' },
+              { class: 'knight', element: 'fire' },
               { class: 'knight', element: 'earth' },
               { class: 'knight', element: 'water' },
             ],

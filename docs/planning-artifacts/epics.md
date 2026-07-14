@@ -25,7 +25,7 @@ FR6: On both submissions, a reveal shows the two boards face to face before comb
 FR7: Reach — a unit acts on its facing column and adjacent columns; corner units reach two, center units reach three; applies to Knight, Mercenary, Archer, Witch; Mage blast and Cleric heal ignore reach.
 FR8: Melee targeting (Knight, Mercenary) — nearest occupied row among reachable, no bypass; priority: facing column → center-closer → left; re-evaluated per attack.
 FR9: Ranged targeting (Archer) — rearmost occupied row among reachable; column priority and re-evaluation as FR8.
-FR10: Mage row blast — hits every unit in one enemy row, ignoring reach; row with most living enemies, tie → rearmost; per-target `blastAttenuation` ×0.75 after base, before RPS (amended 2026-07-14); RPS per target.
+FR10: Mage row blast — hits every unit in one enemy row, ignoring reach; row with most living enemies, tie → rearmost; per-target `blastAttenuation` ×0.75 after base, before RPS, in WIPEOUT mode only (amended 2026-07-14; mode-scoped in story 3.0 per the both-mode sweep, PO-approved); RPS per target.
 FR11: Cleric heals lowest-HP-% living ally (self included), ignoring reach, capped at max HP; if no ally damaged, weak STR-based staff attack with magic targeting.
 FR12: Witch casts her prepared spell on one enemy by magic targeting (rearmost reachable), preferring unaffected targets; deals no damage.
 FR13: Initiative — AGI timeline in passes; one action per living unit per pass in descending AGI across both armies; multihit split; ties: front row → left → seeded coin flip; dead/sleeping units lose unspent actions; effects apply immediately in sequence.
@@ -486,8 +486,8 @@ So that no single class dominates and battles stay tense before my history start
 **And** `rpsBeats`' one-target-per-class map becomes a small multi-target lookup — a contained balance-data shape change, no new events, no new player choices, no UI work.
 
 **Given** the amended FR10
-**When** the Mage's blast resolves
-**Then** each target's damage is attenuated by the named `blastAttenuation` balance ratio (initial ×0.75), applied after the base formula and before RPS — integer math and FR15's fixed rounding order preserved (FR20).
+**When** the Mage's blast resolves **in until-wipeout mode**
+**Then** each target's damage is attenuated by the named `blastAttenuation` balance ratio (×0.75), applied after the base formula and before RPS — integer math and FR15's fixed rounding order preserved (FR20); single-engagement blasts stay unattenuated *(mode-scoping decided during the story from the both-mode sweep evidence, PO-approved: un-attenuated wipeout was three-mages-dominant at 74.6%, while attenuating single mode handed the meta to archer walls at ~75%)*.
 
 **Given** AD-8 discipline
 **When** the balance data changes

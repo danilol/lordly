@@ -22,6 +22,12 @@ export interface SweepConfig {
   runsPerPair: number;
   /** Aggregate win-rate line above which an archetype is flagged (AC3 band: 0.65). */
   threshold: number;
+  /**
+   * Battle mode for every match in the sweep (story 3.0: the NFR4 band is
+   * verified in BOTH modes — wipeout shifts poison/sustain dynamics for
+   * real). Defaults to 'single', the historical behavior.
+   */
+  mode?: 'single' | 'wipeout';
 }
 
 /** Per-archetype tally. Win rate = (wins + draws/2) / games (draws are half-credit — recorded decision). */
@@ -98,7 +104,7 @@ export function runSweep(pool: readonly StrategyArchetype[], config: SweepConfig
       for (let run = 0; run < config.runsPerPair; run++) {
         // Deterministic uint32 seed schedule; >>> 0 keeps createStreams' contract.
         const seed = (config.baseSeed + pairIndex * config.runsPerPair + run) >>> 0;
-        const winner = playMatch(archA, archB, seed);
+        const winner = playMatch(archA, archB, seed, config.mode ?? 'single');
         totalGames += 1;
 
         const statsA = tally.get(archA.id) as ArchetypeStats;
@@ -140,14 +146,14 @@ export function runSweep(pool: readonly StrategyArchetype[], config: SweepConfig
 }
 
 /** One AI-vs-AI battle: forced pairing, real streams, verdict from the log. */
-function playMatch(archA: StrategyArchetype, archB: StrategyArchetype, seed: number): 'A' | 'B' | 'draw' {
+function playMatch(archA: StrategyArchetype, archB: StrategyArchetype, seed: number, mode: 'single' | 'wipeout'): 'A' | 'B' | 'draw' {
   const streams = createStreams(seed);
   const a = chooseSetup([archA], streams['ai/A']);
   const b = chooseSetup([archB], streams['ai/B']);
   const setup: MatchSetup = {
     seed,
     balanceVersion: BALANCE.version,
-    mode: 'single',
+    mode,
     armies: {
       A: a.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/A']) })),
       B: b.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/B']) })),

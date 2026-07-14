@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { healAmount, magicDamage, physicalDamage } from '../src/resolve';
+import { blastDamage, healAmount, magicDamage, physicalDamage } from '../src/resolve';
 import type { UnitClass } from '../src/types';
 
 /**
@@ -19,6 +19,8 @@ describe('physicalDamage (FR14/FR15, balance v1)', () => {
     ['mercenary', 'mercenary', 16, '26 − 10, neutral'],
     ['archer', 'mage', 30, '24 − 4 = 20, ×3/2 advantage (archer beats mage)'],
     ['archer', 'knight', 7, '24 − 14 = 10, ×3/4 disadvantage (knight beats archer), floor(7.5)'],
+    ['archer', 'cleric', 27, '24 − 6 = 18, ×3/2 one-way hunt (FR14 amendment: archer hunts casters)'],
+    ['archer', 'witch', 28, '24 − 5 = 19, ×3/2 one-way hunt, floor(28.5)'],
   ];
 
   for (const [attacker, defender, expected, why] of cases) {
@@ -36,7 +38,23 @@ describe('physicalDamage (FR14/FR15, balance v1)', () => {
   });
 });
 
-describe('magicDamage (FR10/FR14/FR15, balance v1 — mage INT 30)', () => {
+describe('the hunt is ONE-WAY (FR14 amendment): hunted casters take no penalty attacking the archer', () => {
+  it('cleric staff → archer = 2 (8 − 6, NEUTRAL — a symmetric ×3/4 penalty would floor it to 1)', () => {
+    expect(physicalDamage('cleric', 'archer')).toBe(2);
+  });
+
+  it('witch → archer magic arithmetic = 20 (26 − 6, NEUTRAL — a leaked penalty would give 15)', () => {
+    // The Witch never deals damage in play (FR12); this pins the PIPELINE
+    // rule so no future refactor can re-derive disadvantage from the hunts.
+    expect(magicDamage('witch', 'archer')).toBe(20);
+  });
+
+  it('mage → archer stays the TRIANGLE ×3/4 disadvantage = 18 (the triangle is unchanged)', () => {
+    expect(magicDamage('mage', 'archer')).toBe(18);
+  });
+});
+
+describe('magicDamage — the UNATTENUATED magic arithmetic (FR14/FR15; FR10 blasts use blastDamage)', () => {
   const cases: Array<[UnitClass, number, string]> = [
     ['knight', 34, '30 − 7 = 23, ×3/2 advantage (mage beats knight), floor(34.5)'],
     ['archer', 18, '30 − 6 = 24, ×3/4 disadvantage (archer beats mage)'],
@@ -50,6 +68,45 @@ describe('magicDamage (FR10/FR14/FR15, balance v1 — mage INT 30)', () => {
       expect(magicDamage('mage', defender)).toBe(expected);
     });
   }
+});
+
+describe('blastDamage (FR10 amendment, MODE-SCOPED): ×3/4 attenuation in wipeout only, AFTER base, BEFORE RPS', () => {
+  const wipeoutCases: Array<[UnitClass, number, string]> = [
+    ['knight', 25, '30 − 7 = 23 → att floor(17.25) = 17 → ×3/2 advantage floor(25.5)'],
+    ['archer', 13, '30 − 6 = 24 → att 18 → ×3/4 disadvantage floor(13.5)'],
+    ['mage', 14, '30 − 11 = 19 → att floor(14.25), neutral'],
+    ['cleric', 13, '30 − 12 = 18 → att floor(13.5), neutral'],
+    ['witch', 15, '30 − 10 = 20 → att 15, neutral'],
+    ['mercenary', 17, '30 − 7 = 23 → att floor(17.25), neutral'],
+  ];
+  for (const [defender, expected, why] of wipeoutCases) {
+    it(`WIPEOUT mage blast → ${defender} = ${expected} (${why})`, () => {
+      expect(blastDamage('mage', defender, false, 'wipeout')).toBe(expected);
+    });
+  }
+
+  it('SINGLE-mode blast is unattenuated — identical to magicDamage for every matchup (sweep-verified tuning: the triangle polices single-mode blasts)', () => {
+    for (const attacker of ['mage', 'knight', 'witch', 'cleric'] as const) {
+      for (const defender of ['knight', 'archer', 'mage', 'cleric', 'witch', 'mercenary'] as const) {
+        expect(blastDamage(attacker, defender, false, 'single'), `${attacker}→${defender}`).toBe(magicDamage(attacker, defender));
+      }
+    }
+  });
+
+  it('ORDER DISCRIMINATOR — attenuation before RPS, not after: wipeout knight-INT blast → archer = 1 (2 → att 1 → adv 1; the after-RPS order would give 2 → adv 3 → att 2)', () => {
+    // blastDamage is class-agnostic pure math like physicalDamage, so a
+    // knight-INT blast legally exercises the small-base branch no real mage
+    // matchup reaches at this tuning (where both orders happen to collide).
+    expect(blastDamage('knight', 'archer', false, 'wipeout')).toBe(1);
+  });
+
+  it('weakened wipeout blast keeps the full fixed order: base 23 → att 17 → RPS 25 → halve = 12 (weakened mage → knight)', () => {
+    expect(blastDamage('mage', 'knight', true, 'wipeout')).toBe(12);
+  });
+
+  it('min-1 clamp stays LAST: negative base survives attenuation to clamp (wipeout knight-INT blast → cleric: −4 → att −3 → clamp 1)', () => {
+    expect(blastDamage('knight', 'cleric', false, 'wipeout')).toBe(1);
+  });
 });
 
 describe('Weaken halves damage in the FIXED order: base → RPS → halve → min-1 (FR16)', () => {

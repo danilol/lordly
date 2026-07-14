@@ -208,10 +208,16 @@ describe('golden battles (story 1.6 — full roster era)', () => {
         5,
       ),
     );
-    // Hand-verified (roster.test pins the tick order and the poison kill):
-    // four PoisonTicked events after the final action, B:0 dying at 0.
-    expect(log.events.filter((e) => e.type === 'PoisonTicked').length).toBe(4);
-    expect(log.events.some((e) => e.type === 'PoisonTicked' && e.hpAfter === 0)).toBe(true);
+    // Hand-verified (re-derived for balance v2 — the archer's caster hunt at
+    // ×3/2 means B's witch now falls to the FOURTH ARROW (4×28 > 85) before
+    // the ticks, instead of surviving at 9 hp): three PoisonTicked events
+    // (A:1@3, A:2@70, B:2@125 — dead units don't tick), B:0's death coming
+    // from a UnitAttacked, verdict B at 34%/72%. The fatal-tick behavior
+    // itself stays pinned by roster.test's retuned board.
+    expect(log.events.filter((e) => e.type === 'PoisonTicked').length).toBe(3);
+    expect(log.events.some((e) => e.type === 'PoisonTicked' && e.hpAfter === 0)).toBe(false);
+    expect(log.events.filter((e) => e.type === 'UnitDied').map((e) => e.unit)).toEqual(['B:0']);
+    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'B', hpPct: { A: 34, B: 72 } });
     expect(log).toMatchSnapshot();
   });
 });
@@ -335,15 +341,17 @@ describe('golden battles (story 1.10 — until-wipeout mode)', () => {
         'wipeout',
       ),
     );
-    // Hand-verified: golden #5's comp in wipeout runs exactly 3 engagements.
-    // The witches poison each other's sides (A:2 dots B:0/B:1/B:2, B:0 dots
-    // A:1/A:2); the status persists between engagements and ticks 7 × 15 dmg
-    // across the natural engagement ends. B's witch falls to the mutual dots,
-    // but her knights (ending at 118/103 HP) wipe side A in engagement 3 —
-    // verdict B, 60% vs 0%. (wipeout.test.ts pins the structural properties;
-    // this snapshot pins the exact log.)
+    // Hand-verified (re-derived for balance v2): golden #5's comp in wipeout
+    // still runs exactly 3 engagements, but the hunt-boosted arrows now kill
+    // B's witch in ENGAGEMENT 1 (4×28 > 85) — she no longer falls to the
+    // mutual dots. Six ticks across the two natural engagement ends
+    // (eng 1: A:1@3, A:2@70, B:2@125; eng 2: A:2@5, B:1@118, B:2@103 — the
+    // eng-3 wipe skips its tick), and the knights still wipe side A in
+    // engagement 3 for the SAME verdict — B, 60% vs 0%.
+    // (wipeout.test.ts pins the structural properties; this snapshot pins the
+    // exact log.)
     expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(3);
-    expect(log.events.filter((e) => e.type === 'PoisonTicked').length).toBe(7);
+    expect(log.events.filter((e) => e.type === 'PoisonTicked').length).toBe(6);
     expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'B', hpPct: { A: 0, B: 60 } });
     expect(log).toMatchSnapshot();
   });

@@ -11,6 +11,7 @@ import { contentHash } from '../src/hash';
  */
 const EXPECTED_HASHES: Record<number, string> = {
   1: 'bfce425a',
+  2: '19aeaa94', // story 3.0: rpsHunts (archer hunts casters) + blastAttenuation (wipeout-scoped ×3/4)
 };
 
 describe('balance-hash guard (AD-8)', () => {

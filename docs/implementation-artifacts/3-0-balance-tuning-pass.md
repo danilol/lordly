@@ -1,6 +1,10 @@
+---
+baseline_commit: ebd45e22d1392d178014ebf75f9c9c0e6e593e6e
+---
+
 # Story 3.0: Balance tuning pass — the blast tamed, the archer a caster-hunter
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -19,30 +23,32 @@ so that no single class dominates and battles stay tense before my history start
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Balance data change (AC: 1, 2, 3)
-  - [ ] In `packages/engine/src/balance.ts`: add `formulas.blastAttenuation: { num: 3, den: 4 }` (the ×0.75 `Ratio`), restructure the RPS data for the one-way archer rule (see Dev Notes — **do not** make a symmetric multi-target `rpsBeats` naively), bump `version: 1` → `2`
-  - [ ] Update `BalanceData`/type shapes and doc comments (every engine export carries doc comments — NFR3)
-- [ ] Task 2: Damage pipeline (AC: 1, 2)
-  - [ ] `packages/engine/src/resolve.ts` `damagePipeline` (~line 359): advantage check honors the multi-target/one-way data; disadvantage check stays triangle-only
-  - [ ] Blast attenuation applied to Mage row-blast damage per target — after base, before RPS — including the **confused-Mage self-blast misfire path** (`misfire`, ~lines 264–272); Cleric staff attack and all non-blast paths unaffected
-- [ ] Task 3: Re-pin and re-record (AC: 3)
-  - [ ] `packages/engine/test/balance-hash.test.ts`: add `{ 2: '<newHash>' }` to `EXPECTED_HASHES` (keep entry for version 1 — the contiguity test requires it)
-  - [ ] Re-record goldens (`vitest -u`) — **hand-re-verify each golden's asserted verdict first**, especially golden #4 (the blast golden); update verdict assertions where outcomes legitimately change
-  - [ ] Recompute the derived-arithmetic expectations: `damage.test.ts` (mage→knight/archer blast values), `roster.test.ts` (blast per-target damage), `combat.test.ts`, `confusion.test.ts` (seeded misfire battles — attenuation shifts HP totals and can move death timing), `balance.test.ts` (rpsBeats/rpsHunts pins + formula-ratio invariants), and the **determinism anchor** in `sim.test.ts` (~lines 111–142) — recompute deliberately, never blind-update an anchor
-- [ ] Task 4: New unit tests (AC: 1, 2)
-  - [ ] Archer→Mage/Cleric/Witch each ×1.5; **regression: Cleric→Archer staff attack stays ×1.0** (the one-way guarantee) and Mage→Archer stays ×0.75 (triangle intact)
-  - [ ] Blast attenuation order test: base → attenuation → RPS → Weaken → min-1 clamp, with hand-computed integer values; attenuation applies to confused-Mage misfire blast; does NOT apply to Cleric staff or Archer/melee attacks
-- [ ] Task 5: Sim sweep mode knob + both-mode verification (AC: 5)
-  - [ ] `packages/engine/sim/sweep.ts`: add `mode: 'single' | 'wipeout'` to `SweepConfig`, thread into the `MatchSetup` literal (~line 150, currently hardcoded `'single'`)
-  - [ ] `packages/engine/sim/run.ts`: `--mode` CLI flag (default `single`) — note `arg()` (run.ts:25) matches only `--name=value` form AND is numeric-only; unmatched flags fall back silently to defaults, so the new mode flag needs its own string parsing (and consider failing on unrecognized argv to kill the silent-fallback trap)
-  - [ ] `packages/engine/test/sim.test.ts`: second acceptance-band test for `mode: 'wipeout'` (≤65%, `flagged` empty); pick `runsPerPair` mindful of CI time — wipeout battles run up to 5 engagements (~5× compute); document the choice
-  - [ ] Run a high-`runs` sweep locally in BOTH modes — CLI flags use `=` form: `--runs=500` (the space form `--runs 500` is **silently ignored** and runs the default 20); record the per-archetype results in this story's Dev Agent Record
-- [ ] Task 6: Rules doc + drift guard (AC: 4)
-  - [ ] `docs/rules.md`: rewrite the triangle passage (line 22 — the literal `×1.5`/`×0.75` strings are guard-asserted) to include the one-way archer-vs-casters rule; amend the Mage blast bullet (line 35) and table row with the attenuation
-  - [ ] `apps/web/test/rules-doc.test.ts`: the guard iterates `rpsBeats` pairs (~lines 50–58) — update for the new data shape, add assertions pinning the archer-vs-casters wording and the blast-attenuation number to BALANCE
-  - [ ] Draft cards decision (pinned): the cards' "beats X / weak vs X" line is derived from `BALANCE.rpsBeats` (`draftModel.ts:49,54`, rendered `DraftScene.ts:89`) and the drift guard's card↔rules check covers only role/behavior columns (`rules-doc.test.ts:41-48`) — with the additive `rpsHunts` shape the cards keep showing the triangle only, which stays true (incomplete, not false). **Intentional: no card/UI changes this story** (AC 1); the full one-way rule lives in rules.md/Help. Note it in the Dev Agent Record; surfacing hunts on the cards is Epic 4 UI fodder
+- [x] Task 1: Balance data change (AC: 1, 2, 3)
+  - [x] In `packages/engine/src/balance.ts`: add `formulas.blastAttenuation: { num: 3, den: 4 }` (the ×0.75 `Ratio`), restructure the RPS data for the one-way archer rule (see Dev Notes — **do not** make a symmetric multi-target `rpsBeats` naively), bump `version: 1` → `2`
+  - [x] Update `BalanceData`/type shapes and doc comments (every engine export carries doc comments — NFR3)
+- [x] Task 2: Damage pipeline (AC: 1, 2)
+  - [x] `packages/engine/src/resolve.ts` `damagePipeline` (~line 359): advantage check honors the multi-target/one-way data; disadvantage check stays triangle-only
+  - [x] Blast attenuation applied to Mage row-blast damage per target — after base, before RPS — including the **confused-Mage self-blast misfire path** (`misfire`, ~lines 264–272); Cleric staff attack and all non-blast paths unaffected. **DEVIATION (PO-approved during dev, see Debug Log): attenuation is WIPEOUT-MODE-SCOPED** — `blastDamage(attacker, defender, weakened, mode)`; single-mode blasts stay unattenuated
+- [x] Task 3: Re-pin and re-record (AC: 3)
+  - [x] `packages/engine/test/balance-hash.test.ts`: `{ 2: '19aeaa94' }` pinned (version-1 entry kept for contiguity)
+  - [x] Goldens: #4 (blast, single) unchanged under mode-scoping; #5 and #8 hand-re-derived (arrow-kill of B's witch, new tick counts 3 and 6; #8's verdict B 0/60 verified to SURVIVE) then re-recorded with `vitest -u`
+  - [x] Recomputed/retuned: `roster.test.ts` fatal-tick board (front-row archer keeps the tick lethal), `wipeout.test.ts` weaken board (B:0 → back-row knight soaks the first cast), `balance.test.ts` pins + ratio invariants; `damage.test.ts`/`combat.test.ts`/`confusion.test.ts`/`sim.test.ts` anchor verified — no changes needed (single-mode battles without archer-vs-caster damage are bit-identical to v1)
+- [x] Task 4: New unit tests (AC: 1, 2)
+  - [x] Archer→Mage/Cleric/Witch each ×1.5; Cleric→Archer stays ×1.0 (one-way regression); Mage→Archer stays ×0.75 (triangle intact); Witch→Archer pipeline regression
+  - [x] Blast tests: wipeout table (25/13/14/13/15/17), single≡magicDamage equivalence sweep, order discriminator (knight-INT blast → archer = 1, after-RPS order would give 2), weakened chain (23→17→25→12), min-1 clamp last
+- [x] Task 5: Sim sweep mode knob + both-mode verification (AC: 5)
+  - [x] `SweepConfig.mode` ('single' | 'wipeout', defaults 'single'), threaded into `playMatch`
+  - [x] `run.ts`: `--mode=` string flag + hard error on ANY unrecognized argv (kills the silent-fallback trap)
+  - [x] `sim.test.ts`: wipeout acceptance-band test at the same `runsPerPair: 15` (fits the budget; documented) + default-mode≡single test
+  - [x] 500-run sweeps recorded below (both modes pass; plus the full attribution matrix that drove the mode-scoping decision)
+- [x] Task 6: Rules doc + drift guard (AC: 4)
+  - [x] `docs/rules.md`: triangle passage gains the caster-hunt sentence; blast bullet gains the wipeout attenuation sentence
+  - [x] `rules-doc.test.ts`: two new guard tests — hunter's complete ×1.5 prey list built from `rpsBeats`+`rpsHunts` (fails on a silently emptied map), and the exact `×0.75` attenuation literal
+  - [x] Draft cards: intentionally unchanged (triangle-only "beats" line stays true; full rule lives in Help/rules.md; hunts-on-cards is Epic 4 UI fodder)
 - [ ] Task 7: Gate, deploy, sign-off (AC: 6)
-  - [ ] Full gate green (typecheck, lint, tests incl. both-mode band, ≥90% engine coverage); push → CI deploy to prod
+  - [x] Full gate green: typecheck ✓, lint ✓, 309 tests ✓ (incl. both-mode bands), engine coverage 99.7% lines (≥90% gate)
+  - [x] Code review complete (3-layer adversarial, Opus 4.8): zero shipping defects, 4 low robustness patches applied — see Review Findings above; gate re-verified green after patches (309 tests)
+  - [ ] Push → CI deploy to prod
   - [ ] Danilo plays on his device — felt-balance acceptance recorded here before the story is done
 
 ## Dev Notes
@@ -142,12 +148,69 @@ Recent commits (`40549b1` correct-course docs, `1d8d90e` retro, `d418c9b` story 
 - [Source: docs/implementation-artifacts/2-4-help-rules-and-credits-screens.md#Dev-Agent-Record] — guard authoring lessons
 - [Source: docs/implementation-artifacts/epic-2-retro-2026-07-14.md] — team agreements, sequencing discovery
 
+## Review Findings
+
+Three-layer adversarial review (2026-07-14, Opus 4.8 reviewers), triaged: **zero shipping-behavior defects** — Blind Hunter and Acceptance Auditor both verified every domain invariant by running the suite (one-way hunt can't leak a reverse penalty, pipeline order correct, mode threaded to both blast sites, single-mode blast bit-identical to v1, purity/determinism intact). All six ACs confirmed genuinely satisfied; AC6 correctly open. Four low-severity robustness patches applied (test/CLI/guard code, no product-behavior change); two dismissed.
+
+- [x] [Review][Patch] Drift guard prey-list robust to a hunter with no triangle prey + single-element list [apps/web/test/rules-doc.test.ts:63-69] — a future non-triangle hunter (e.g. mercenary) would have crashed the guard with an opaque `cap(undefined)` TypeError; now builds the prey list defensively.
+- [x] [Review][Patch] Balance invariant: a hunt must not contradict the triangle [packages/engine/test/balance.test.ts:60-70] — added assertion that no hunted class beats the hunter in `rpsBeats`, since the pipeline's advantage-OR would silently flip that ×0.75 to ×1.5. Latent (current data safe); now guarded.
+- [x] [Review][Patch] Sim CLI rejects a stray `=` instead of truncating [packages/engine/sim/run.ts:32,50] — `--mode=single=x` / `--runs=100=x` now fail (slice on the first `=` and validate the remainder), honoring the file's no-silent-coercion stance.
+- [x] [Review][Patch] Documented longbows as the wipeout band's binding constraint [packages/engine/test/sim.test.ts] — both reviewers flagged the ~1.3-pt wipeout margin; comment points future tuners at wipeout-longbows first (matches the existing ambushers-fragility note).
+- [x] [Review][Dismiss] "Provided diff incomplete" (Auditor) — an artifact of how the review diff was assembled, not a code issue; reviewers read source directly and covered every file.
+- [x] [Review][Dismiss] "rules.md is customer-facing copy" (Blind Hunter, process note) — in-game help text, not external/regulated content; the human-review gate is Danilo's AC6 on-device sign-off.
+
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Claude Fable 5 (claude-fable-5); review by Claude Opus 4.8 (three parallel layers)
+
 ### Debug Log References
+
+- RED→GREEN held: 14 new-test failures before the implementation, all green after; the cascade then shook out exactly as the story predicted (hash ×2, goldens, roster/wipeout boards, sim band).
+- **THE TUNING SAGA (the sweep did its job).** The approved numbers as written — global blast ×0.75 + hunts ×1.5 — failed AC 5 in single mode: `longbows` (archer+archer+knight) at **75.3%**. Systematic attribution (deterministic 500-run sweeps): attenuation ALONE → longbows 69.8%; hunts ALONE → 57.7% ✓. The blast nerf, not the archer buff, was the driver: single mode is an HP-% chip-ledger war, mage chip was half the pool's police force, and *any* attenuation value (4/5, 5/6, 7/8, 9/10 all tested) hands the meta to the archer wall (~74% each — the meta is knife-edged on exact integer thresholds). Side-lever candidates all failed: archer STR 22/20 (74.2/73.3), archer HP 80/75 (73.9 both — longbows' ledger strength is the untouched 140 HP wall knight, and kills land after the chip is banked), merc STR 28/30 (74.9/74.5), knight HP 120/110 (75.1/75.0), heal ×3/2 (75.0, and pushes farshot to 64.1 in wipeout), +phalanx pool archetype (68.1, but drags bulwark over at 65.4).
+- **Head-to-head matrix exposed the structure**: longbows went 100% vs every mage comp (post-attenuation blast needs 7 hits vs a 90 HP archer — impossible in one engagement; melee mathematically cannot break a 140 HP wall in one engagement either), countered ONLY by bulwark (0%). In wipeout the same comp is healthy (0–41% vs sustain/status comps).
+- **The v1 baseline was measured for the first time in wipeout** (the knob deferred since 1.10): **three-mages 74.6% dominant** — Danilo's felt "blast too broken" empirically confirmed, and located: blasts compound across engagements. Single-mode v1 was fine (60.3% max) — there the triangle polices mages.
+- **Resolution (PO decision, AskUserQuestion during dev): mode-scoped attenuation** — ×0.75 in wipeout only. Both modes pass: single 59.7% max (ambushers), wipeout 62.9% max (longbows). PRD FR10 / epics AC / rules.md updated to record the scoping and its evidence.
+- Test-board casualties of the hunt (both preserved by intent, not weakened): roster fatal-tick board (4 back-row arrows now kill the witch outright → one archer moved to front row: 3×28 = 84 leaves her at 1 hp for the tick), wipeout weaken board (the eng-1 arrow-kill of B's fire witch let eng-2's first cast re-weaken the knight pre-swing → B:0 is now a back-row knight, arrows bounce at 7).
+- Golden #8's verdict (B, 0%/60%) survived the retune by coincidence worth noting: the witch dies to arrows instead of dots, one tick fewer, same final percentages — verified by hand before `vitest -u`.
+- Prettier caught run.ts formatting on the gate pass; fixed.
 
 ### Completion Notes List
 
+- **AC1 ✅** `rpsHunts: { archer: ['cleric', 'witch'] }` — additive one-way map; `rpsBeats` shape untouched (draftModel/balance.test pins hold); pipeline advantage = triangle OR hunt, disadvantage = triangle ONLY (the symmetric-penalty trap from Dev Notes is structurally excluded and regression-tested: cleric→archer = 2 neutral, witch→archer = 20 neutral, mage→archer = 18 disadvantage).
+- **AC2 ✅ (amended, PO-approved)** `blastDamage(attacker, defender, weakened, mode)`: base → ×3/4 attenuation (WIPEOUT ONLY) → RPS → weaken → min-1, exported alongside an untouched `magicDamage`; both blast call sites (normal + confused self-blast) mode-aware. Single-mode blast ≡ magicDamage, equivalence-tested.
+- **AC3 ✅** version 2, hash `19aeaa94` pinned, goldens re-recorded with hand-verified verdicts (#4 byte-identical, #5/#8 re-derived).
+- **AC4 ✅** rules.md states the hunt (data-built prey list "Mage, Cleric, and Witch" + ×1.5) and the wipeout attenuation (×0.75 literal); both drift-guarded; Draft cards intentionally triangle-only.
+- **AC5 ✅** Mode knob shipped (SweepConfig + `--mode=` + argv hardening); CI band enforced in BOTH modes; 500-run record below. The 1.10-deferred wipeout sweep debt is paid — and it immediately found the v1 wipeout dominance.
+- **AC6 ⏳** Deploy + Danilo's on-device felt-balance acceptance pending (post-review). Expected feel: Standard unchanged except archers punish caster comps; Wipeout noticeably tamer mage artillery.
+- **500-run sweep record (balance v2, seed 1):**
+  - single: ambushers 59.7, longbows 57.7, three-mages 57.0, gale 51.7, farshot 51.7, cabal 50.1, talons 48.4, bulwark 45.4, hex-coven 45.2, wardens 33.0 — ✅ band
+  - wipeout: longbows 62.9, wardens 58.0, cabal 53.9, farshot 51.0, hex-coven 50.3, bulwark 47.9, talons 45.6, ambushers 45.5, gale 43.7, three-mages 41.1 — ✅ band
+  - Witch-strength question (2026-07-13): answered — no witch comp dominates in either mode (hex-coven ≤50.3); the 2026-07-13 loss pattern is explained by v1's wipeout mage dominance + pre-hunt archer weakness vs casters, both now addressed.
+  - Watch item for the retro: wardens at 33% single / hex-coven mid-table — melee-witch comps are the new floor; Danilo's "melee too weak" instinct shows up here and is Epic 4's tactics territory (attack-weakest would fix wardens' wasted swings).
+
 ### File List
+
+- `packages/engine/src/balance.ts` — MODIFIED: version 2, `rpsHunts`, `formulas.blastAttenuation` (+ types/doc comments)
+- `packages/engine/src/resolve.ts` — MODIFIED: pipeline advantage/hunt + optional pre-RPS ratio; exported mode-aware `blastDamage`; mode threaded through takeTurn/act/misfire
+- `packages/engine/src/index.ts` — MODIFIED: export `blastDamage`
+- `packages/engine/sim/sweep.ts` — MODIFIED: `SweepConfig.mode` threaded to `playMatch`
+- `packages/engine/sim/run.ts` — MODIFIED: `--mode=` flag, unrecognized-argv hard error, mode in header
+- `packages/engine/test/balance.test.ts` — MODIFIED: rpsHunts pin + one-way structural invariants, blastAttenuation ratio pins
+- `packages/engine/test/damage.test.ts` — MODIFIED: hunts cases, one-way regressions, blastDamage suite (wipeout table, single≡magic, order discriminator, weaken chain, clamp)
+- `packages/engine/test/balance-hash.test.ts` — MODIFIED: version-2 hash pinned
+- `packages/engine/test/golden.test.ts` — MODIFIED: #5/#8 assertions re-derived; snapshots re-recorded (`__snapshots__/golden.test.ts.snap`)
+- `packages/engine/test/roster.test.ts` — MODIFIED: fatal-tick board retuned (front-row archer)
+- `packages/engine/test/wipeout.test.ts` — MODIFIED: weaken-reset board retuned (back-row knight soak)
+- `packages/engine/test/sim.test.ts` — MODIFIED: wipeout band test, default-mode≡single test
+- `apps/web/test/rules-doc.test.ts` — MODIFIED: hunt prey-list + attenuation drift-guard tests
+- `docs/rules.md` — MODIFIED: caster-hunt sentence, wipeout-attenuation sentence
+- `README.md` — MODIFIED: sim CLI `--mode` docs, both-mode band note
+- `docs/planning-artifacts/prds/prd-lordly-2026-07-11/prd.md` — MODIFIED: FR10/FR15 mode-scoping (PO-approved deviation recorded)
+- `docs/planning-artifacts/epics.md` — MODIFIED: story 3.0 AC2 + FR10 inventory line mode-scoping
+- `docs/implementation-artifacts/sprint-status.yaml`, this story file — MODIFIED: tracking
+
+### Change Log
+
+- 2026-07-14: Story 3.0 implemented — archer one-way caster hunt (`rpsHunts`, ×1.5 to Mage/Cleric/Witch, no reverse penalty) + Mage blast attenuation (×0.75, **wipeout-scoped** — a PO-approved amendment driven by both-mode sweep evidence: v1 wipeout was three-mages-dominant at 74.6%, global attenuation made single-mode archer walls dominant at ~75%). balanceVersion 2, hash re-pinned, goldens hand-re-verified + re-recorded, sweep mode knob shipped (the 1.10 debt), CI band now enforced in both modes, rules.md + drift guard extended. 309 tests green, engine coverage 99.7%. Pending: deploy + on-device felt-balance sign-off (post-review).

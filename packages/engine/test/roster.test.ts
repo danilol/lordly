@@ -402,7 +402,10 @@ describe('FR16 poison — ticks at natural engagement end, can kill, ordered by 
         },
         placements: {
           A: [
-            { row: 'back', col: 'left' },
+            // Front-row archer = 1 action (story 3.0 retune: at the hunt's
+            // ×3/2 the old 4 back-row shots would kill the witch outright —
+            // 3 shots leave her at 1 hp so the TICK still lands the kill).
+            { row: 'front', col: 'left' },
             { row: 'back', col: 'right' },
             { row: 'back', col: 'center' },
           ],
@@ -422,7 +425,7 @@ describe('FR16 poison — ticks at natural engagement end, can kill, ordered by 
     // Both earth witches landed poisons; ticks run in unit order (A before B).
     expect(ticks.map((t) => t.unit)).toEqual(['A:1', 'A:2', 'B:0', 'B:2']);
     const fatal = ticks.find((t) => t.hpAfter === 0);
-    expect(fatal?.unit).toBe('B:0'); // the arrow-riddled witch (85 − 4×19 = 9) succumbs
+    expect(fatal?.unit).toBe('B:0'); // the arrow-riddled witch (85 − 3×28 = 1) succumbs
     const i = log.events.indexOf(fatal as BattleEvent);
     expect(log.events[i + 1]).toEqual({ type: 'UnitDied', unit: 'B:0' });
     // All ticks precede EngagementEnded; the snapshot carries post-tick hp.

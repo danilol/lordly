@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/balance';
 import type { Ratio } from '../src/balance';
 import { ALL_CLASSES } from '../src/types';
+import type { UnitClass } from '../src/types';
 
 describe('balance data (FR14, FR15, FR16, AD-4)', () => {
   it('declares a positive integer balanceVersion', () => {
@@ -28,6 +29,7 @@ describe('balance data (FR14, FR15, FR16, AD-4)', () => {
     const ratios: Record<string, Ratio> = {
       rpsAdvantage: BALANCE.formulas.rpsAdvantage,
       rpsDisadvantage: BALANCE.formulas.rpsDisadvantage,
+      blastAttenuation: BALANCE.formulas.blastAttenuation,
       heal: BALANCE.formulas.heal,
       confusionMisfire: BALANCE.formulas.confusionMisfire,
     };
@@ -55,9 +57,26 @@ describe('balance data (FR14, FR15, FR16, AD-4)', () => {
     expect(BALANCE.rpsBeats).toEqual({ mage: 'knight', knight: 'archer', archer: 'mage' });
   });
 
+  it('encodes the FR14 one-way caster hunts: archer → cleric + witch, and nobody hunts back', () => {
+    expect(BALANCE.rpsHunts).toEqual({ archer: ['cleric', 'witch'] });
+    // One-way by construction: no hunted class may itself hunt the hunter,
+    // hunts must not duplicate a triangle pair (that would double-count), and
+    // a hunt must not contradict the triangle — if the hunted class BEATS the
+    // hunter in the triangle, the pipeline's advantage-OR would silently
+    // override the ×0.75 disadvantage with ×1.5 (resolve.ts damagePipeline).
+    for (const [hunter, hunted] of Object.entries(BALANCE.rpsHunts)) {
+      for (const target of hunted ?? []) {
+        expect(BALANCE.rpsHunts[target as UnitClass], `${target} hunts back`).toBeUndefined();
+        expect(BALANCE.rpsBeats[hunter as UnitClass], `${hunter} triangle/hunt overlap`).not.toBe(target);
+        expect(BALANCE.rpsBeats[target as UnitClass], `${target} beats hunter ${hunter} — hunt would flip a disadvantage to advantage`).not.toBe(hunter);
+      }
+    }
+  });
+
   it('keeps formula constants as integer ratios (FR15 integer math)', () => {
     expect(BALANCE.formulas.rpsAdvantage).toEqual({ num: 3, den: 2 });
     expect(BALANCE.formulas.rpsDisadvantage).toEqual({ num: 3, den: 4 });
+    expect(BALANCE.formulas.blastAttenuation).toEqual({ num: 3, den: 4 });
     expect(BALANCE.formulas.heal).toEqual({ num: 5, den: 4 });
     expect(BALANCE.formulas.minDamage).toBe(1);
     expect(BALANCE.formulas.poisonDamage).toBe(15);

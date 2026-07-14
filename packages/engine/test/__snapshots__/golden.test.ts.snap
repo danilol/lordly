@@ -391,8 +391,8 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "source": "A:0",
       "targets": [
         {
-          "damage": 19,
-          "hpAfter": 66,
+          "damage": 28,
+          "hpAfter": 57,
           "unit": "B:0",
         },
       ],
@@ -402,8 +402,8 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "source": "A:1",
       "targets": [
         {
-          "damage": 19,
-          "hpAfter": 47,
+          "damage": 28,
+          "hpAfter": 29,
           "unit": "B:0",
         },
       ],
@@ -451,8 +451,8 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "source": "A:0",
       "targets": [
         {
-          "damage": 19,
-          "hpAfter": 28,
+          "damage": 28,
+          "hpAfter": 1,
           "unit": "B:0",
         },
       ],
@@ -462,12 +462,16 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "source": "A:1",
       "targets": [
         {
-          "damage": 19,
-          "hpAfter": 9,
+          "damage": 28,
+          "hpAfter": 0,
           "unit": "B:0",
         },
       ],
       "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "B:0",
     },
     {
       "source": "B:1",
@@ -502,16 +506,6 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "hpAfter": 70,
       "type": "PoisonTicked",
       "unit": "A:2",
-    },
-    {
-      "damage": 15,
-      "hpAfter": 0,
-      "type": "PoisonTicked",
-      "unit": "B:0",
-    },
-    {
-      "type": "UnitDied",
-      "unit": "B:0",
     },
     {
       "damage": 15,
@@ -1820,8 +1814,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:0",
       "targets": [
         {
-          "damage": 19,
-          "hpAfter": 66,
+          "damage": 28,
+          "hpAfter": 57,
           "unit": "B:0",
         },
       ],
@@ -1831,8 +1825,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:1",
       "targets": [
         {
-          "damage": 19,
-          "hpAfter": 47,
+          "damage": 28,
+          "hpAfter": 29,
           "unit": "B:0",
         },
       ],
@@ -1880,8 +1874,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:0",
       "targets": [
         {
-          "damage": 19,
-          "hpAfter": 28,
+          "damage": 28,
+          "hpAfter": 1,
           "unit": "B:0",
         },
       ],
@@ -1891,12 +1885,16 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:1",
       "targets": [
         {
-          "damage": 19,
-          "hpAfter": 9,
+          "damage": 28,
+          "hpAfter": 0,
           "unit": "B:0",
         },
       ],
       "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "B:0",
     },
     {
       "source": "B:1",
@@ -1931,16 +1929,6 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "hpAfter": 70,
       "type": "PoisonTicked",
       "unit": "A:2",
-    },
-    {
-      "damage": 15,
-      "hpAfter": 0,
-      "type": "PoisonTicked",
-      "unit": "B:0",
-    },
-    {
-      "type": "UnitDied",
-      "unit": "B:0",
     },
     {
       "damage": 15,

@@ -43,16 +43,19 @@ broader balance question is a playtesting concern (PRD Open Item 1), not
 something this band certifies:
 
 ```sh
-pnpm --filter @lordly/engine sim                  # defaults: --runs=20 --seed=1 --threshold=0.65
-pnpm --filter @lordly/engine sim -- --runs=100    # bigger sample
+pnpm --filter @lordly/engine sim                       # defaults: --runs=20 --seed=1 --threshold=0.65 --mode=single
+pnpm --filter @lordly/engine sim -- --runs=100         # bigger sample
+pnpm --filter @lordly/engine sim -- --mode=wipeout     # the until-wipeout meta (story 3.0)
 ```
 
 It plays every archetype pairing `runs` times on deterministic seeds (each
 side on its own RNG stream) and prints win rates per archetype and per
 composition — win rate counts draws as half. Any archetype above the
 threshold is flagged and the command exits non-zero. The same 65% acceptance
-band runs in CI as a test (`packages/engine/test/sim.test.ts`), so a pool or
-balance edit that creates a dominant strategy fails the build.
+band runs in CI as a test (`packages/engine/test/sim.test.ts`) in BOTH battle
+modes, so a pool or balance edit that creates a dominant strategy fails the
+build. (Flags use the `--name=value` form; anything else is rejected rather
+than silently ignored.)
 
 ## Deploy
 

@@ -2,11 +2,12 @@
  * The NFR4 balancing harness CLI — the ONLY effectful file in `sim/`
  * (console + process; the sweep itself is pure, see `sweep.ts`).
  *
- *   pnpm --filter @lordly/engine sim [--runs=N] [--seed=N] [--threshold=0.65]
+ *   pnpm --filter @lordly/engine sim [--runs=N] [--seed=N] [--threshold=0.65] [--mode=single|wipeout]
  *
  * Sweeps AI-vs-AI round-robin over STRATEGY_POOL and reports win rates per
  * archetype and per composition. Exits non-zero when any archetype exceeds
- * the threshold (CI-composable), mirroring test/sim.test.ts's band.
+ * the threshold (CI-composable), mirroring test/sim.test.ts's band — which
+ * story 3.0 onward enforces in BOTH modes.
  */
 import { STRATEGY_POOL } from '../src/ai';
 import { MAX_SEED } from '../src/rng';
@@ -28,13 +29,43 @@ function arg(name: string, fallback: number): number {
     process.exit(2);
   }
   if (hits.length === 0) return fallback;
-  const raw = hits[0]!.split('=')[1] ?? '';
+  // Split on the FIRST '=' only and keep the whole remainder, so a stray '='
+  // (`--runs=100=x`) is rejected below rather than silently truncated to '100'.
+  const raw = hits[0]!.slice(`--${name}=`.length);
   const value = Number(raw);
   if (raw === '' || !Number.isFinite(value)) {
     console.error(`invalid --${name}: ${hits[0]}`);
     process.exit(2);
   }
   return value;
+}
+
+/** Parses the string-valued `--mode=`; same once-only, no-silent-coercion stance as `arg`. */
+function modeArg(fallback: 'single' | 'wipeout'): 'single' | 'wipeout' {
+  const hits = process.argv.filter((a) => a.startsWith('--mode='));
+  if (hits.length > 1) {
+    console.error(`--mode passed ${hits.length} times — pass it once`);
+    process.exit(2);
+  }
+  if (hits.length === 0) return fallback;
+  // First '=' only (see `arg`): `--mode=single=x` must fail, not truncate to 'single'.
+  const raw = hits[0]!.slice('--mode='.length);
+  if (raw !== 'single' && raw !== 'wipeout') {
+    console.error(`--mode must be 'single' or 'wipeout', got ${hits[0]}`);
+    process.exit(2);
+  }
+  return raw;
+}
+
+// Unrecognized argv is a hard error, not a silent fallback: `--runs 500`
+// (space form) or a typoed flag would otherwise run the defaults and report
+// a sweep the caller never asked for.
+const KNOWN_FLAGS = ['runs', 'seed', 'threshold', 'mode'];
+for (const a of process.argv.slice(2)) {
+  if (!KNOWN_FLAGS.some((name) => a.startsWith(`--${name}=`))) {
+    console.error(`unrecognized argument: ${a} (flags take the form --name=value; known: ${KNOWN_FLAGS.map((n) => `--${n}`).join(', ')})`);
+    process.exit(2);
+  }
 }
 
 const seedArg = arg('seed', 1);
@@ -66,13 +97,16 @@ const config: SweepConfig = {
   baseSeed: seedArg,
   runsPerPair: Math.floor(runsArg),
   threshold: thresholdArg,
+  mode: modeArg('single'),
 };
 
 const pool = STRATEGY_POOL;
 const report = runSweep(pool, config);
 
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`.padStart(6);
-console.log(`lordly balancing sweep — ${pool.length} archetypes, ${report.totalGames} battles (runs=${config.runsPerPair}, seed=${config.baseSeed})\n`);
+console.log(
+  `lordly balancing sweep — ${pool.length} archetypes, ${report.totalGames} battles (runs=${config.runsPerPair}, seed=${config.baseSeed}, mode=${config.mode})\n`,
+);
 
 console.log('ARCHETYPES (win rate = wins + draws/2, per games):');
 for (const a of report.archetypes) {
