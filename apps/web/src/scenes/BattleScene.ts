@@ -7,9 +7,11 @@ import {
   BATTLE_ENEMY_LABEL,
   BATTLE_FRONT_ENEMY_LABEL,
   BATTLE_FRONT_PLAYER_LABEL,
-  BATTLE_HINT,
   BATTLE_LOG_LABEL,
   BATTLE_PLAYER_LABEL,
+  BATTLE_SKIP_LABEL,
+  BATTLE_SPEEDS,
+  battleSpeed,
   engagementEndedLabel,
   PALETTE,
   MIN_FONT_PX,
@@ -20,9 +22,11 @@ import {
   STATUS_GLYPHS,
   ISO_TILES,
 } from '../config/constants';
-import { addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
+import type { BattleSpeedId } from '../config/constants';
+import { addElementBadge, addHomeBack, addUnitSprite, crispText, prefersReducedMotion } from '../config/ui';
 import { drawIsoBoard } from '../config/board';
-import { buildBeatSchedule, fastForwardMs, unitTileCenter } from '../flow/battleView';
+import { beatDurationMs, buildBeatSchedule, unitTileCenter } from '../flow/battleView';
+import { createStorage } from '../flow/storage';
 import type { Beat } from '../flow/battleView';
 import { createNarrationState, narrateEvent } from '../flow/narration';
 import type { NarrationState } from '../flow/narration';
@@ -57,31 +61,27 @@ const FLOAT_PX = 22;
 const LOG_PANEL_LINES = 11;
 
 /**
- * Reduced-motion damping (story 2.2 AC11, EXPERIENCE.md Accessibility Floor):
- * the beats ARE the information, so beats/numbers stay; only non-essential
- * travel is damped (float distance, lunge amplitude, projectile flight).
- * Read per battle (in create()) so an OS preference change applies from the
- * next battle (review: was a module const, resolved only at page load).
- */
-function resolveReduceMotion(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia !== undefined && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-/**
  * Battle scene (AD-2/AD-13, story 2.2/ADR-0001): a PURE PLAYER of the
  * `BattleLog` on two isometric boards. It evaluates no combat rule — delete
  * the engine and no game logic remains here. It builds units from the
  * `BattleStarted` roster (keyed by `UnitId`), then walks `log.events` in
  * array order, one animated beat per event on the `battleView` schedule.
  * HP bars follow the authoritative `hpAfter`; popups show `damage`; the Log
- * panel narrates the SAME events (flow/narration — no new data). Press and
- * hold anywhere fast-forwards ×BATTLE_FAST_FORWARD (interim until FR23 / 2.3).
+ * panel narrates the SAME events (flow/narration — no new data). The bottom
+ * bar owns pacing: tappable 1×/2× speed (persisted via AD-8) and skip (FR23).
  */
 export class BattleScene extends Scene {
   private flow!: MatchFlow;
+  /** The AD-8 gateway — the ONLY module allowed to touch localStorage. */
+  private readonly storage = createStorage();
   private views = new Map<UnitId, UnitView>();
   private beats: Beat[] = [];
-  private holding = false;
+  /** Current playback speed factor (FR23). LOADED from settings in create() — the one field that loads instead of resetting (singleton-scene rule). */
+  private speedFactor = 1;
+  /** The speed buttons' rectangles, for selected-state redraws (labels keep one live color — review: the disabled token misread as "unavailable"). */
+  private speedUi = new Map<BattleSpeedId, GameObjects.Rectangle>();
+  /** Re-entry guard for the Skip button (review: a double-tap fired scene.start twice). */
+  private transitioning = false;
   private currentIndex = 0;
   /** True when the beat now waiting is one that rendered nothing (see `render`'s return). */
   private currentSilent = false;
@@ -108,13 +108,14 @@ export class BattleScene extends Scene {
   create() {
     // Phaser scenes are SINGLETONS: create() re-runs on every scene.start but
     // fields persist. Reset every piece of transient playback state so nothing
-    // leaks between battles (review: a stale `holding` — from holding
-    // fast-forward through a battle's ending, whose pointerup dies with the
-    // scene — made the NEXT battle auto-play at ×4; stale log lines/toggle
-    // bled between matches; `views` kept destroyed containers).
+    // leaks between battles (2.2 review; stale log lines/toggle bled between
+    // matches; `views` kept destroyed containers). The ONE exception: the
+    // playback speed LOADS from the persisted settings instead of resetting —
+    // it is a preference, not battle state (FR23/AD-8, story 2.3).
     this.views.clear();
     this.beats = [];
-    this.holding = false;
+    this.speedUi.clear();
+    this.transitioning = false;
     this.currentIndex = 0;
     this.currentSilent = false;
     this.pendingTimer = undefined;
@@ -122,7 +123,8 @@ export class BattleScene extends Scene {
     this.narration = createNarrationState();
     this.logLines = [];
     this.logOpen = false;
-    this.reduceMotion = resolveReduceMotion();
+    this.reduceMotion = prefersReducedMotion();
+    this.speedFactor = battleSpeed(this.storage.loadSettings().battleSpeed).factor;
 
     this.cameras.main.setBackgroundColor(PALETTE.background);
 
@@ -147,33 +149,50 @@ export class BattleScene extends Scene {
     const roster = (log.events[0] as BattleStarted).units;
     for (const unit of roster) this.buildUnit(unit);
 
-    this.buildLogPanel();
+    this.buildControlBar();
     this.beats = buildBeatSchedule(log.events, BATTLE_BEAT_MS);
 
-    // Press-and-hold anywhere fast-forwards; release returns to normal speed.
-    // 'gameout' catches a touch/pointer leaving the canvas without a pointerup
-    // firing, so `holding` can never get stuck true.
-    this.input.on('pointerdown', () => this.setHolding(true));
-    this.input.on('pointerup', () => this.setHolding(false));
-    this.input.on('gameout', () => this.setHolding(false));
-
+    // The epic-1 press-and-hold fast-forward (and its global pointer
+    // listeners) is GONE — FR23's tappable speed buttons replaced it (story
+    // 2.3, per EXPERIENCE.md). With no global pointerdown handler, stray taps
+    // can no longer touch the beat timer at all (2.2 review class of bug).
     this.step(0);
   }
 
   /**
-   * Toggles fast-forward. ENGAGING mid-wait restarts the current beat at the
-   * fast rate immediately (the 1.9 latency patch); RELEASING applies from the
-   * next beat only (≤ one fast beat late — imperceptible). Restarting on
-   * release too let any tap (down+up, e.g. on the Log button) reset a beat's
-   * wait to the FULL duration and stall progression under repeated taps (review).
+   * Switches playback speed (FR23): updates the selected-state visuals,
+   * PERSISTS the preference via the AD-8 gateway, and CONTINUES a pending
+   * non-silent beat from its elapsed progress at the new rate (the 1.9
+   * latency lesson, minus the restart bug: rescheduling a fresh FULL wait
+   * let alternating 1×↔2× taps stall the beat forever — review). Same-speed
+   * taps no-op.
    */
-  private setHolding(next: boolean) {
-    if (this.holding === next) return;
-    this.holding = next;
-    if (next && this.pendingTimer && !this.currentSilent) {
-      this.pendingTimer.remove();
-      this.scheduleNext();
+  private setSpeed(id: BattleSpeedId) {
+    const next = battleSpeed(id);
+    if (next.factor === this.speedFactor) return;
+    // Capture how far through the current beat we are BEFORE switching rates.
+    const progress = this.pendingTimer && !this.currentSilent ? this.pendingTimer.getProgress() : 1;
+    this.speedFactor = next.factor;
+    this.storage.saveSettings({ battleSpeed: next.id });
+    for (const [speedId, button] of this.speedUi) {
+      const selected = speedId === next.id;
+      button
+        .setFillStyle(selected ? PALETTE.buttonFillEnabled : PALETTE.buttonFill)
+        .setStrokeStyle(2, selected ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke);
     }
+    if (this.pendingTimer && !this.currentSilent) {
+      this.pendingTimer.remove();
+      const remaining = Math.max(1, Math.round((1 - progress) * beatDurationMs(BATTLE_BEAT_MS, this.speedFactor)));
+      this.pendingTimer = this.time.delayedCall(remaining, () => this.step(this.currentIndex + 1));
+    }
+  }
+
+  /** Skip-to-result (FR23, AD-2): the same log resolves instantly — Result reads the identical cached BattleLog; nothing is recomputed. */
+  private skipToResult() {
+    if (this.transitioning) return; // review: double-tap fired two scene.starts
+    this.transitioning = true;
+    this.pendingTimer?.remove();
+    this.scene.start('Result', { flow: this.flow });
   }
 
   /** Builds one unit standing on its iso tile: sprite + class code + element dot + HP bar, all in one container. */
@@ -225,9 +244,9 @@ export class BattleScene extends Scene {
     this.scheduleNext();
   }
 
-  /** Waits out the current beat (a minimal delay for a silent one), then advances. */
+  /** Waits out the current beat (a minimal delay for a silent one) at the selected speed, then advances. */
   private scheduleNext() {
-    const dur = this.currentSilent ? 50 : this.holding ? fastForwardMs(BATTLE_BEAT_MS) : BATTLE_BEAT_MS;
+    const dur = this.currentSilent ? 50 : beatDurationMs(BATTLE_BEAT_MS, this.speedFactor);
     this.pendingTimer = this.time.delayedCall(dur, () => this.step(this.currentIndex + 1));
   }
 
@@ -510,14 +529,55 @@ export class BattleScene extends Scene {
     });
   }
 
-  // ---- Log panel (AC7): same events, text form; never touches the beat timer. ----
+  // ---- Control bar (FR23, story 2.3) + Log panel: controls playback only, never rules. ----
 
-  private buildLogPanel() {
+  /**
+   * The pinned bottom bar: speed toggles (persisted), Skip, and the Log panel
+   * toggle — ≥44px targets. Slot positions are DERIVED from the speed count
+   * (review: hand-aligned indices meant a third BATTLE_SPEEDS entry would
+   * draw over the Skip button). Labels keep one live color — selection is
+   * signalled by the enabled fill+stroke, not by graying the alternative
+   * (review: the disabled token read as "1× is unavailable").
+   */
+  private buildControlBar() {
     const barY = BASE_HEIGHT - 40;
-    crispText(this, 16, barY, BATTLE_HINT, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.mutedText }).setOrigin(0, 0.5);
+    const gap = 8;
+    let cursor = 12;
+    const nextSlot = (width: number) => {
+      const center = cursor + width / 2;
+      cursor += width + gap;
+      return { width, center };
+    };
 
+    // Speed toggles (selected state reflects the LOADED preference).
+    for (const speed of BATTLE_SPEEDS) {
+      const slot = nextSlot(72);
+      const selected = speed.factor === this.speedFactor;
+      const button = this.add
+        .rectangle(slot.center, barY, slot.width, 44, selected ? PALETTE.buttonFillEnabled : PALETTE.buttonFill)
+        .setStrokeStyle(2, selected ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke)
+        .setInteractive({ useHandCursor: true });
+      crispText(this, slot.center, barY, speed.label, { fontFamily: 'Arial', fontSize: '13px', color: PALETTE.buttonText }).setOrigin(0.5);
+      button.on('pointerup', () => this.setSpeed(speed.id));
+      this.speedUi.set(speed.id, button);
+    }
+
+    // Skip: momentary action, never persisted.
+    const skipSlot = nextSlot(84);
+    const skip = this.add
+      .rectangle(skipSlot.center, barY, skipSlot.width, 44, PALETTE.buttonFill)
+      .setStrokeStyle(2, PALETTE.buttonStroke)
+      .setInteractive({ useHandCursor: true });
+    crispText(this, skipSlot.center, barY, BATTLE_SKIP_LABEL, { fontFamily: 'Arial', fontSize: '13px', color: PALETTE.buttonText }).setOrigin(0.5);
+    skip.on('pointerup', () => this.skipToResult());
+
+    const logSlot = nextSlot(84);
+    this.buildLogPanel(logSlot.center, logSlot.width, barY);
+  }
+
+  private buildLogPanel(buttonX: number, buttonWidth: number, barY: number) {
     const button = this.add
-      .rectangle(BASE_WIDTH - 56, barY, 80, 44, PALETTE.buttonFill)
+      .rectangle(buttonX, barY, buttonWidth, 44, PALETTE.buttonFill)
       .setStrokeStyle(2, PALETTE.buttonStroke)
       .setInteractive({ useHandCursor: true });
     const buttonLabel = crispText(this, button.x, button.y, BATTLE_LOG_LABEL, { fontFamily: 'Arial', fontSize: '13px', color: PALETTE.buttonText }).setOrigin(

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_COLS, ALL_ROWS, ALL_SIDES } from '@lordly/engine';
 import type { BattleEvent, Placement, Side } from '@lordly/engine';
-import { BASE_WIDTH, BATTLE_BEAT_MS, BATTLE_FAST_FORWARD, ISO_BOARD } from '../src/config/constants';
-import { ALL_ORIENTATIONS, DEFAULT_ORIENTATION, boardTiles, buildBeatSchedule, fastForwardMs, unitTileCenter } from '../src/flow/battleView';
+import { BASE_WIDTH, BATTLE_BEAT_MS, ISO_BOARD } from '../src/config/constants';
+import { ALL_ORIENTATIONS, DEFAULT_ORIENTATION, beatDurationMs, boardTiles, buildBeatSchedule, unitTileCenter } from '../src/flow/battleView';
 import type { BoardOrientation } from '../src/flow/battleView';
 
 /** Every owner-local cell, for exhaustive transform checks. */
@@ -123,7 +123,7 @@ describe("iso projection — the shipped '\\' layout (AC1)", () => {
   });
 });
 
-describe('buildBeatSchedule / fastForwardMs — playback pacing (AC3)', () => {
+describe('buildBeatSchedule — playback pacing', () => {
   const events: BattleEvent[] = [
     { type: 'BattleStarted', units: [] },
     { type: 'PassStarted', pass: 1 },
@@ -144,12 +144,20 @@ describe('buildBeatSchedule / fastForwardMs — playback pacing (AC3)', () => {
     expect(beats.every((b) => b.durationMs === BATTLE_BEAT_MS)).toBe(true);
   });
 
-  it('fast-forward shortens the beat by the configured factor', () => {
-    expect(fastForwardMs(BATTLE_BEAT_MS)).toBe(Math.round(BATTLE_BEAT_MS / BATTLE_FAST_FORWARD));
-    expect(fastForwardMs(BATTLE_BEAT_MS)).toBeLessThan(BATTLE_BEAT_MS);
-  });
-
   it('handles an empty log without producing beats', () => {
     expect(buildBeatSchedule([], BATTLE_BEAT_MS)).toEqual([]);
+  });
+});
+
+describe('beatDurationMs — the FR23 speed math (story 2.3 review: keep it pure and tested)', () => {
+  it('divides the beat by the speed factor', () => {
+    expect(beatDurationMs(BATTLE_BEAT_MS, 1)).toBe(BATTLE_BEAT_MS);
+    expect(beatDurationMs(BATTLE_BEAT_MS, 2)).toBe(BATTLE_BEAT_MS / 2);
+  });
+
+  it('guards degenerate factors — non-positive plays at normal speed, and the result never floors to 0ms', () => {
+    expect(beatDurationMs(BATTLE_BEAT_MS, 0)).toBe(BATTLE_BEAT_MS);
+    expect(beatDurationMs(BATTLE_BEAT_MS, -3)).toBe(BATTLE_BEAT_MS);
+    expect(beatDurationMs(1, 1000)).toBe(1);
   });
 });

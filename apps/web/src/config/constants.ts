@@ -93,7 +93,6 @@ export const ENEMY_ARMY_LABEL = '▲  ENEMY ARMY  ▲';
 export const REVEAL_TITLE = 'Reveal';
 export const REVEAL_HINT = 'Both armies face off. Tap to begin the battle.';
 export const REVEAL_FIGHT_LABEL = 'Fight!';
-export const BATTLE_HINT = 'Press and hold to fast-forward';
 export const RESULT_WIN_LABEL = 'Victory!';
 export const RESULT_LOSE_LABEL = 'Defeat';
 export const RESULT_DRAW_LABEL = 'Draw';
@@ -117,11 +116,27 @@ export const modeWipeoutHint = (cap: number) => `fight until a side falls (max $
 /** Engagement-boundary marker in the Battle scene (multi-engagement wipeout playback). */
 export const engagementEndedLabel = (engagement: number) => `Engagement ${engagement} ended`;
 
-// Battle playback pacing (AC2): the default beat is a DATA tuning constant, not
-// inlined in scene code. ~600 ms per event at normal speed; press-and-hold
-// fast-forwards by BATTLE_FAST_FORWARD× (interim until FR23's controls, story 2.3).
+// Battle playback pacing: the default beat is a DATA tuning constant, not
+// inlined in scene code. ~600 ms per event at normal speed.
 export const BATTLE_BEAT_MS = 600;
-export const BATTLE_FAST_FORWARD = 4;
+
+// FR23 speed controls (story 2.3): tappable speeds as DATA. The persisted
+// settings value is a speed ID — an unknown/stale id from storage falls back
+// to the first entry (normal speed; fast-forward is opt-in, never the default
+// first watch). Replaces the epic-1 press-and-hold interim (BATTLE_FAST_FORWARD).
+export const BATTLE_SPEEDS = [
+  { id: '1x', label: '▶ 1×', factor: 1 },
+  { id: '2x', label: '⏩ 2×', factor: 2 },
+] as const;
+export type BattleSpeedId = (typeof BATTLE_SPEEDS)[number]['id'];
+export const DEFAULT_SPEED_ID: BattleSpeedId = '1x';
+
+/** The speed entry for a persisted id — an unknown id (stale storage, future version) falls back to normal speed. */
+export function battleSpeed(id: string): (typeof BATTLE_SPEEDS)[number] {
+  return BATTLE_SPEEDS.find((s) => s.id === id) ?? BATTLE_SPEEDS[0];
+}
+
+export const BATTLE_SKIP_LABEL = '⏭ Skip';
 
 // Shared iso-board geometry (story 2.2, ADR-0001): two tilted 3×3 diamond
 // checkerboards in the `\` diagonal — enemy upper-left, player lower-right,

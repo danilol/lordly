@@ -60,6 +60,16 @@ export function crispText(scene: Scene, x: number, y: number, text: string | str
  * matching FR30's "large tap targets" and every other button in this codebase.
  */
 /**
+ * Reduced-motion preference (EXPERIENCE.md Accessibility Floor): scenes damp
+ * non-essential travel/flourishes while keeping the information-bearing
+ * beats/values. Read at each scene's create() so an OS change applies from
+ * the next scene entry (2.2 review). Guarded for node/test environments.
+ */
+export function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia !== undefined && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
  * The FR3 element badge — one solid 12px dot, identical in every scene
  * (story 2.1). Always a dot, never a border or fill: side identity owns
  * borders and HP fills; this dot is the ONLY place element color appears

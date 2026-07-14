@@ -1,6 +1,6 @@
 import { ALL_COLS, ALL_ROWS } from '@lordly/engine';
 import type { BattleEvent, Placement, Side } from '@lordly/engine';
-import { BASE_WIDTH, BATTLE_FAST_FORWARD, ISO_BOARD } from '../config/constants';
+import { BASE_WIDTH, ISO_BOARD } from '../config/constants';
 
 /**
  * Pure, Phaser-free, DOM-free presentation helpers for the Reveal/Battle
@@ -93,8 +93,8 @@ export interface Beat {
  * Turns the log's ordered events into a beat schedule — one beat per event,
  * order preserved 1:1 (AD-2: the scene never reorders or re-derives), each
  * event held for `beatMs` and starting where the previous one ended. This is
- * the whole pacing contract; press-and-hold fast-forward just shortens the
- * per-beat duration at play time (see `fastForwardMs`).
+ * the whole pacing contract; the FR23 speed control just divides the
+ * per-beat duration at play time (story 2.3 — the scene owns the factor).
  */
 export function buildBeatSchedule(events: readonly BattleEvent[], beatMs: number): Beat[] {
   return events.map((event, index) => ({
@@ -105,7 +105,12 @@ export function buildBeatSchedule(events: readonly BattleEvent[], beatMs: number
   }));
 }
 
-/** The fast-forwarded per-beat duration for press-and-hold ×BATTLE_FAST_FORWARD (interim until FR23 / story 2.3). */
-export function fastForwardMs(beatMs: number): number {
-  return Math.round(beatMs / BATTLE_FAST_FORWARD);
+/**
+ * Per-beat duration at an FR23 speed factor — the speed feature's whole math,
+ * pure and tested here (story 2.3 review: the divide had gone inline in the
+ * smoke-free scene when press-and-hold's tested helper was retired). Guards:
+ * a non-positive factor plays at normal speed; the result never floors to 0ms.
+ */
+export function beatDurationMs(beatMs: number, factor: number): number {
+  return Math.max(1, Math.round(beatMs / Math.max(1, factor)));
 }
