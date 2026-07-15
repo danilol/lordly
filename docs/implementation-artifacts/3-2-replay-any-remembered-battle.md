@@ -41,6 +41,18 @@ so that I can study a great read or show a friend.
   - [x] Headless-Chrome drive (the 3.1 harness in scratchpad): seed history with a fresh-version entry + a stale-v1 entry → screenshot the list (enabled ▶ vs disabled + marker); tap Replay → screenshot the Battle scene mid-playback; skip → Result renders; confirm via page-evaluate that `lordly.v1.history` is BYTE-IDENTICAL after the whole replay journey
   - [ ] On-device: Danilo replays a real match from his own history, confirms tick-for-tick believability + a rematch afterward records normally (pending post-review deploy)
 
+## Review Findings
+
+Three-layer adversarial review (2026-07-15, Opus 4.8 reviewers), triaged. Acceptance Auditor: **zero AC violations** — all three ACs genuinely satisfied and tested (the cross-flow determinism equality test and byte-identical-storage test are real). The four load-bearing invariants (no-write replay, FR20 determinism, AD-8 version gate, AD-5 serializability) verified sound by all three layers. Five patches applied, one dismissed.
+
+- [x] [Review][Patch] Replay button had no double-tap re-entry guard — reintroduced the memorized singleton-scene bug class (two rapid taps → two `scene.start('Battle')`). [HistoryScene.ts] — added a `transitioning` latch (reset in `create()`), matching `BattleScene.skipToResult`'s precedent.
+- [x] [Review][Patch] Army length never bounded before the fixed-width row layout — the render guard's `.every()` passed vacuously for 0 or 4+ units, so a corrupt entry would overrun the Replay button off-canvas. [storage.ts:59] — `isRenderableSetup` now requires exactly `BALANCE.armySize` units per side (strengthens 3.1's render-depth guard along its width dimension); new storage test.
+- [x] [Review][Patch] `scene.start` sat inside the demotion `try`, so a transition error would be silently mislabeled "not replayable". [HistoryScene.ts] — restructured: only `startReplay` is guarded; `scene.start` runs after.
+- [x] [Review][Patch] Graceful demotion double-drew a slot+glyph over the still-present button. [HistoryScene.ts] — the catch now mutes the existing objects in place and adds only the marker (shared `notReplayableMarker` helper).
+- [x] [Review][Patch] `startReplay` dropped `lastAiArchetypeId`, so a Rematch-after-replay could repeat the replayed opponent (FR25). [MatchFlow.ts:112] — documented as an accepted, deliberate gap (the archetype id isn't stored in a HistoryEntry, so it's unrecoverable; a replay isn't a "previous live match").
+- [x] [Review][Dismiss] `committedSetup` shares references with the stored history entry [MatchFlow.ts] — no live defect (mirrors `commit()`'s pattern; `resolveBattle` is pure and `loadHistory()` re-parses fresh); both deep-divers concurred it's safe.
+- [x] [Review][Adjacent] Story-3.0's wipeout-band sim test flaked on a load-induced 5s timeout during the gate (not a 3.2 regression — zero engine/sim changes here). Hardened with an explicit 20s timeout (the wipeout sweep is ~5× single-mode compute).
+
 ## Dev Notes
 
 ### The flow seam (exact, from the current code)

@@ -1,4 +1,4 @@
-import { ALL_CLASSES, ALL_ELEMENTS } from '@lordly/engine';
+import { ALL_CLASSES, ALL_ELEMENTS, BALANCE } from '@lordly/engine';
 import type { MatchSetup, Unit } from '@lordly/engine';
 import { battleSpeed, DEFAULT_SPEED_ID } from '../config/constants';
 import type { BattleSpeedId } from '../config/constants';
@@ -46,11 +46,18 @@ function isRenderableUnit(value: unknown): value is Unit {
   return typeof unit.class === 'string' && CLASS_SET.has(unit.class) && typeof unit.element === 'string' && ELEMENT_SET.has(unit.element);
 }
 
+/** Exactly the army the row lays out — `.every()` alone passes vacuously for length 0 or 4+. */
+function isRenderableArmy(value: unknown): value is Unit[] {
+  return Array.isArray(value) && value.length === BALANCE.armySize && value.every(isRenderableUnit);
+}
+
 /**
  * A setup the History scene can safely render: both armies are arrays of
- * renderable units. Validated to the DEPTH the renderer reaches
- * (`setup.armies.{A,B}[].{class,element}`) so a structurally-broken record
- * drops here rather than throwing mid-render and bricking the whole scene.
+ * exactly `BALANCE.armySize` renderable units. Validated to the DEPTH the
+ * renderer reaches (`setup.armies.{A,B}[].{class,element}`) AND its fixed
+ * WIDTH — the row's card layout hard-codes the army size, so an off-length
+ * corrupt entry (which `.every()` would pass vacuously) would overrun the
+ * Replay button off-canvas; drop it here instead (story 3.2 review).
  * Deliberately does NOT check seed/placements/balanceVersion — those don't
  * affect display, and a stale-`balanceVersion` entry must still DISPLAY
  * (marked non-replayable, story 3.2); the engine re-validates the full setup
@@ -61,7 +68,7 @@ function isRenderableSetup(value: unknown): boolean {
   const armies = (value as Record<string, unknown>).armies;
   if (typeof armies !== 'object' || armies === null) return false;
   const { A, B } = armies as Record<string, unknown>;
-  return Array.isArray(A) && Array.isArray(B) && A.every(isRenderableUnit) && B.every(isRenderableUnit);
+  return isRenderableArmy(A) && isRenderableArmy(B);
 }
 
 /** Per-entry shape check (AD-8): one corrupt record drops, the list survives — validated to render depth. */

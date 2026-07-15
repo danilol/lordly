@@ -109,6 +109,11 @@ export class MatchFlow {
       elementsRolled: setup.armies.A.length,
       phase: 'committed',
       committedSetup: setup,
+      // lastAiArchetypeId is deliberately UNSET: the archetype id isn't stored
+      // in a HistoryEntry (only the composition is), so it's unrecoverable from
+      // a replayed setup. Consequence: a Rematch AFTER a replay can't exclude
+      // the replayed opponent's archetype (FR25 no-repeat) — accepted, since a
+      // replay isn't a "previous live match" and the id genuinely isn't stored.
     };
     this.log = undefined;
     this.historyWritten = false;

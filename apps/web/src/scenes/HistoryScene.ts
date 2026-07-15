@@ -47,12 +47,15 @@ const REPLAY_X = BASE_WIDTH - MARGIN - REPLAY_W;
  */
 export class HistoryScene extends Scene {
   private readonly storage = createStorage();
+  /** Re-entry latch for Replay taps — reset every create() (Phaser scenes are singletons; a stale true would dead-lock the buttons). */
+  private transitioning = false;
 
   constructor() {
     super('History');
   }
 
   create() {
+    this.transitioning = false;
     this.cameras.main.setBackgroundColor(PALETTE.background);
 
     const entries = this.storage.loadHistory();
@@ -162,21 +165,32 @@ export class HistoryScene extends Scene {
     }).setOrigin(0.5);
     btn.on('pointerup', () => {
       if (wasDrag()) return; // a scroll releasing over Replay is not a tap
+      if (this.transitioning) return; // re-entry latch: a double-tap must not fire two scene.starts (BattleScene precedent, singleton-scene memory)
+      // Validate + hydrate inside the try (the ONLY thing that legitimately
+      // throws: a render-valid but replay-invalid entry — the 3.1 two-tier gap);
+      // scene.start is OUTSIDE so a transition error can't be mislabeled "not
+      // replayable" (review).
+      let flow: MatchFlow;
       try {
-        const flow = new MatchFlow();
+        flow = new MatchFlow();
         flow.startReplay(entry.setup);
-        this.scene.start('Battle', { flow }); // straight to Battle — the reveal moment belongs to live play
       } catch {
-        // Render-valid but replay-invalid (invalid seed/placements passed the
-        // render-depth guard): demote, don't crash (3.1 two-tier design).
-        btn.disableInteractive();
-        btn.setFillStyle(PALETTE.buttonFill).setStrokeStyle(2, PALETTE.buttonStroke);
-        glyph.setColor(PALETTE.buttonTextDisabled);
-        this.renderNotReplayable(content, cardsY, headerY);
+        this.demoteToNonReplayable(content, btn, glyph, headerY);
+        return;
       }
+      this.transitioning = true;
+      this.scene.start('Battle', { flow }); // straight to Battle — the reveal moment belongs to live play
     });
     content.add(btn);
     content.add(glyph);
+  }
+
+  /** In-place demotion of a tapped-but-replay-invalid button: mute the EXISTING objects (no double-draw), then add only the marker. */
+  private demoteToNonReplayable(content: GameObjects.Container, btn: GameObjects.Rectangle, glyph: GameObjects.Text, headerY: number): void {
+    btn.disableInteractive();
+    btn.setFillStyle(PALETTE.buttonFill).setStrokeStyle(1, PALETTE.buttonStroke);
+    glyph.setColor(PALETTE.buttonTextDisabled);
+    content.add(this.notReplayableMarker(headerY));
   }
 
   /** The EXPERIENCE.md:98 "visibly marked non-replayable" treatment: muted disabled slot + marker under the date. */
@@ -187,14 +201,18 @@ export class HistoryScene extends Scene {
       fontSize: '18px',
       color: PALETTE.buttonTextDisabled,
     }).setOrigin(0.5);
-    const marker = crispText(this, BASE_WIDTH - MARGIN, headerY + 14, HISTORY_NOT_REPLAYABLE_LABEL, {
+    content.add(slot);
+    content.add(glyph);
+    content.add(this.notReplayableMarker(headerY));
+  }
+
+  /** The muted "not replayable" marker under the date — one source for both the version gate and the tap-time demotion. */
+  private notReplayableMarker(headerY: number): GameObjects.Text {
+    return crispText(this, BASE_WIDTH - MARGIN, headerY + 14, HISTORY_NOT_REPLAYABLE_LABEL, {
       fontFamily: 'Arial',
       fontSize: '10px',
       color: PALETTE.mutedText,
     }).setOrigin(1, 0);
-    content.add(slot);
-    content.add(glyph);
-    content.add(marker);
   }
 
   /** One compact unit card (DESIGN unit-card): side-colored border + ~15% wash, sprite, 3-letter code, element dot. Returns the next x. */

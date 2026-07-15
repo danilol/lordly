@@ -185,6 +185,21 @@ describe('web/storage gateway — history (story 3.1, FR28/AD-8)', () => {
     expect(storage.loadHistory()).toEqual([good]);
   });
 
+  it('drops an off-length army even when every unit is valid — the row layout is fixed-width (story 3.2 review)', () => {
+    // `.every()` passes vacuously for length 0 or 4+; an off-length army would
+    // overrun the History row's Replay button. The width gate drops it.
+    const good = entryFixture(5);
+    const tooMany = { ...setupFixture(6), armies: { A: [...setupFixture(6).armies.A, { class: 'knight', element: 'fire' }], B: setupFixture(6).armies.B } };
+    const empty = { ...setupFixture(7), armies: { A: [], B: [] } };
+    const stored = JSON.stringify([
+      good,
+      { setup: tooMany, winner: 'A', date: '2026-07-15T00:00:00.000Z' }, // 4 units on A
+      { setup: empty, winner: 'A', date: '2026-07-15T00:00:00.000Z' }, // 0 units
+    ]);
+    const storage = createStorage(fakeBackend({ [HISTORY_KEY]: stored }));
+    expect(storage.loadHistory()).toEqual([good]);
+  });
+
   it('KEEPS a stale-balanceVersion entry — it must still DISPLAY (marked non-replayable, story 3.2)', () => {
     const stale: HistoryEntry = { ...entryFixture(8), setup: { ...setupFixture(8), balanceVersion: 1 } };
     const storage = createStorage(fakeBackend({ [HISTORY_KEY]: JSON.stringify([stale]) }));

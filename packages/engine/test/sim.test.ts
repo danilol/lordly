@@ -165,6 +165,9 @@ describe('sim sweep (NFR4)', () => {
   // walls the near-dominant wipeout comp, so any future v2 retune should
   // re-check wipeout longbows FIRST (same fragility class the single-mode
   // ambushers comment above documents).
+  // Explicit 20s timeout: the wipeout sweep runs up to engagementCap engagements
+  // per match (~5× the single-mode compute), which brushes Vitest's 5s default on
+  // a loaded CI runner — a load flake, not a slow assertion (story 3.2 review).
   it(`ACCEPTANCE BAND (wipeout): no archetype exceeds ${ACCEPTANCE_BAND * 100}% aggregate win rate in wipeout mode`, () => {
     const wipeoutReport = runSweep(STRATEGY_POOL, { ...CI_CONFIG, mode: 'wipeout' });
     const table = wipeoutReport.archetypes.map((a) => `${a.id}: ${(a.winRate * 100).toFixed(1)}%`).join('\n');
@@ -172,5 +175,5 @@ describe('sim sweep (NFR4)', () => {
       expect(a.winRate, `dominant archetype flagged (wipeout) — sweep table:\n${table}`).toBeLessThanOrEqual(ACCEPTANCE_BAND);
     }
     expect(wipeoutReport.flagged).toEqual([]);
-  });
+  }, 20_000);
 });
