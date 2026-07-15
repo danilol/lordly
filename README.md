@@ -61,6 +61,8 @@ than silently ignored.)
 
 Production runs as static assets on Cloudflare Workers at **https://lordly.lol-gaming.workers.dev**. Every push to `main` deploys automatically from CI once these one-time secrets exist:
 
+**Install / offline (FR29):** the production URL is an installable PWA — Android Chrome offers "Add to Home screen", and after one fully-completed online load the whole game (draft → battle → result, History and Replay included) works with no connection. A new deploy's service worker activates as soon as it precaches (`autoUpdate` + skipWaiting/clientsClaim), so the next launch serves the new build (ADR 0002).
+
 1. Create a free [Cloudflare](https://dash.cloudflare.com) account.
 2. Create an API token from the **"Edit Cloudflare Workers"** template (My Profile → API Tokens).
 3. Find your **Account ID** (Workers & Pages → right sidebar, or the dashboard URL path).

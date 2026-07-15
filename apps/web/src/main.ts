@@ -1,6 +1,11 @@
 import { AUTO, Game, Scale } from 'phaser';
 import { BASE_HEIGHT, BASE_WIDTH, GAME_NAME, PALETTE } from './config/constants';
 import { showInitFallback } from './flow/initFallback';
+
+// FR29 (story 3.3): the service-worker registration is NOT here — vite-plugin-pwa
+// injects it inline into index.html at build (`injectRegister: 'inline'`,
+// ADR 0002 autoUpdate). See vite/config.base.mjs for why (workbox-window
+// would otherwise become an undeclared dependency). Dev builds inject nothing.
 import { BootScene } from './scenes/BootScene';
 import { HomeScene } from './scenes/HomeScene';
 import { DraftScene } from './scenes/DraftScene';

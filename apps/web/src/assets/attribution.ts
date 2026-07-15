@@ -33,7 +33,16 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
     license: 'CC0-1.0',
     licenseName: 'Creative Commons Zero 1.0 (public domain)',
     licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
-    assets: ['apps/web/src/assets/units.png'],
+    assets: [
+      'apps/web/src/assets/units.png',
+      // PWA icons (story 3.3, FR29): the knight frame (vault_guard), NEAREST
+      // integer-upscaled (×6, ×16) onto the theme background. CC0 needs no
+      // attribution, but every redistributed derived file is listed here
+      // (FR31 manifest); the attribution test asserts each exists on disk.
+      'apps/web/public/icon-192.png',
+      'apps/web/public/icon-512.png',
+      'apps/web/public/icon-512-maskable.png',
+    ],
     classSources: {
       knight: 'dc-mon/vault_guard.png',
       mercenary: 'dc-mon/deep_elf_fighter.png',
