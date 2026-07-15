@@ -42,6 +42,15 @@ export class MatchFlow {
    */
   private historyWritten = false;
 
+  /**
+   * AD-13's `live | replay` mode as a flow-level flag (story 3.2): set by
+   * `startReplay()`, cleared by `startMatch()` — so the Result screen's
+   * Rematch after a replay is automatically a live match again. Kept separate
+   * from `historyWritten` on purpose (two concepts: "already wrote" vs
+   * "must never write").
+   */
+  private replay = false;
+
   constructor(
     private readonly seedSource: SeedSource = cryptoSeed,
     /** The AD-8 gateway for the history write; injectable for tests, no-op backend in node. */
@@ -74,6 +83,36 @@ export class MatchFlow {
     this.state = MatchFlow.emptyState(this.seedSource() >>> 0, mode ?? this.state.mode, this.state.lastAiArchetypeId);
     this.log = undefined; // a rematch resolves its own battle (AD-13)
     this.historyWritten = false; // …and records its own history entry (story 3.1)
+    this.replay = false; // Rematch-from-a-replay is a LIVE match (story 3.2)
+  }
+
+  /**
+   * Enters REPLAY mode (story 3.2, FR20/FR28, AD-13): hydrates the flow
+   * straight to the committed phase from a stored history `MatchSetup`, so
+   * the existing Battle → Result pipeline replays the battle tick-for-tick
+   * (determinism — same setup, bit-identical log). Replay writes nothing:
+   * `recordResult()` no-ops until `startMatch()` flips the flow live again.
+   *
+   * @throws InvalidMatchSetupError — notably `balance-version-mismatch` for a
+   * stale entry (AD-8): the History screen's gate should prevent the call;
+   * this is the flow-level backstop.
+   */
+  startReplay(setup: MatchSetup): void {
+    validateMatchSetup(setup); // fail at the tap, not mid-scene
+    this.state = {
+      seed: setup.seed,
+      mode: setup.mode,
+      // Mirror side A so any state reader stays coherent (engine Unit is
+      // structurally a DraftedUnit; Placement[] assigns to (Placement|null)[]).
+      playerArmy: setup.armies.A.map((u) => ({ class: u.class, element: u.element })),
+      playerPlacements: [...setup.placements.A],
+      elementsRolled: setup.armies.A.length,
+      phase: 'committed',
+      committedSetup: setup,
+    };
+    this.log = undefined;
+    this.historyWritten = false;
+    this.replay = true;
   }
 
   /** A read-only-by-convention view of the current state (scenes render from this). */
@@ -200,7 +239,7 @@ export class MatchFlow {
    * @throws if the battle has not been resolved — there is no verdict yet.
    */
   recordResult(): void {
-    if (this.historyWritten) return;
+    if (this.replay || this.historyWritten) return; // replays NEVER write (AD-13, story 3.2)
     if (!this.log || !this.state.committedSetup) {
       throw new Error('cannot record result: battle is not resolved');
     }

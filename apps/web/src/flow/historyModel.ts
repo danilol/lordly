@@ -1,3 +1,4 @@
+import { BALANCE } from '@lordly/engine';
 import type { Unit } from '@lordly/engine';
 import { MODE_STANDARD_LABEL, MODE_WIPEOUT_LABEL, RESULT_DRAW_LABEL, RESULT_LOSE_LABEL, RESULT_WIN_LABEL } from '../config/constants';
 import type { HistoryEntry } from './storage';
@@ -28,6 +29,12 @@ export interface HistoryRow {
    * field is the link-play epic's design item (see deferred-work.md).
    */
   modeLabel: string;
+  /**
+   * True iff the entry's `balanceVersion` matches the running engine — the
+   * AD-8 replay gate (story 3.2). The scene keys the Replay button off THIS;
+   * a stale entry still displays fully, marked non-replayable.
+   */
+  replayable: boolean;
   yourComp: readonly Unit[];
   enemyComp: readonly Unit[];
 }
@@ -42,5 +49,6 @@ export function formatHistoryRow(entry: HistoryEntry): HistoryRow {
   const verdictLabel = outcome === 'draw' ? RESULT_DRAW_LABEL : outcome === 'win' ? RESULT_WIN_LABEL : RESULT_LOSE_LABEL;
   // Strict equality so an odd stored mode degrades to Standard, never throws.
   const modeLabel = entry.setup.mode === 'wipeout' ? MODE_WIPEOUT_LABEL : MODE_STANDARD_LABEL;
-  return { dateLabel, verdictLabel, outcome, modeLabel, yourComp: entry.setup.armies.A, enemyComp: entry.setup.armies.B };
+  const replayable = entry.setup.balanceVersion === BALANCE.version;
+  return { dateLabel, verdictLabel, outcome, modeLabel, replayable, yourComp: entry.setup.armies.A, enemyComp: entry.setup.armies.B };
 }

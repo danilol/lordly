@@ -399,6 +399,126 @@ describe('MatchFlow recordResult — the SOLE history writer (story 3.1, FR28/AD
   });
 });
 
+describe('MatchFlow replay mode (story 3.2, FR20/FR28, AD-8/AD-13)', () => {
+  const FIXED_ISO = '2026-07-15T15:00:00.000Z';
+
+  function wiredFlow(seeds: number[]): { flow: MatchFlow; storage: WebStorage; raw: Map<string, string> } {
+    let i = 0;
+    const raw = new Map<string, string>();
+    const storage = createStorage({
+      getItem: (key: string) => raw.get(key) ?? null,
+      setItem: (key: string, value: string) => void raw.set(key, value),
+    });
+    const flow = new MatchFlow(
+      () => seeds[i++] as number,
+      storage,
+      () => FIXED_ISO,
+    );
+    return { flow, storage, raw };
+  }
+
+  function playToRecorded(flow: MatchFlow): void {
+    flow.draftUnit('knight');
+    flow.draftUnit('archer');
+    flow.draftUnit('mage');
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    flow.placeUnit(1, { row: 'back', col: 'left' });
+    flow.placeUnit(2, { row: 'back', col: 'right' });
+    flow.commit();
+    flow.resolve();
+    flow.recordResult();
+  }
+
+  it('a replayed battle is BIT-IDENTICAL to the original live resolve (FR20 — the whole feature)', () => {
+    const { flow, storage } = wiredFlow([0x5eed]);
+    flow.startMatch();
+    playToRecorded(flow);
+    const liveLog = flow.resolve();
+
+    const stored = storage.loadHistory()[0]!;
+    const replayFlow = new MatchFlow(
+      () => 0,
+      storage,
+      () => FIXED_ISO,
+    );
+    replayFlow.startReplay(stored.setup);
+    expect(replayFlow.resolve().events).toEqual(liveLog.events);
+  });
+
+  it('replay writes NOTHING: history is byte-identical after a full replay incl. recordResult (AC2)', () => {
+    const { flow, storage, raw } = wiredFlow([0x5eed]);
+    flow.startMatch();
+    playToRecorded(flow);
+    const before = raw.get('lordly.v1.history');
+
+    const replayFlow = new MatchFlow(
+      () => 0,
+      storage,
+      () => FIXED_ISO,
+    );
+    replayFlow.startReplay(storage.loadHistory()[0]!.setup);
+    replayFlow.resolve();
+    replayFlow.recordResult(); // ResultScene calls this unconditionally — must no-op in replay
+    replayFlow.recordResult();
+    expect(raw.get('lordly.v1.history')).toBe(before);
+    expect(storage.loadHistory()).toHaveLength(1);
+  });
+
+  it('Rematch after a replay is a LIVE match again: startMatch clears replay mode, fresh seed, records normally (AC2)', () => {
+    const { flow, storage } = wiredFlow([111, 222]);
+    flow.startMatch(); // consumes seed 111
+    playToRecorded(flow);
+
+    const replayFlow = new MatchFlow(
+      () => 333,
+      storage,
+      () => FIXED_ISO,
+    );
+    replayFlow.startReplay(storage.loadHistory()[0]!.setup);
+    replayFlow.resolve();
+    replayFlow.recordResult(); // no-op (replay)
+
+    replayFlow.startMatch(); // the Result screen's Rematch — flips to live
+    expect(replayFlow.getState().seed).toBe(333); // fresh seed from ITS seedSource
+    expect(replayFlow.getState().phase).toBe('draft');
+    playToRecorded(replayFlow); // a real second match
+    expect(storage.loadHistory()).toHaveLength(2);
+  });
+
+  it('startReplay hydrates committed state that resolves without commit(), and the state survives a JSON round-trip (AD-5)', () => {
+    const { flow, storage } = wiredFlow([0x5eed]);
+    flow.startMatch();
+    playToRecorded(flow);
+    const stored = storage.loadHistory()[0]!;
+
+    const replayFlow = new MatchFlow(
+      () => 0,
+      storage,
+      () => FIXED_ISO,
+    );
+    replayFlow.startReplay(stored.setup);
+    const state = replayFlow.getState();
+    expect(state.phase).toBe('committed');
+    expect(state.committedSetup).toEqual(stored.setup);
+    expect(state.mode).toBe(stored.setup.mode);
+    expect(JSON.parse(JSON.stringify(state)) as MatchState).toEqual(state);
+  });
+
+  it('startReplay REJECTS a stale-balanceVersion setup (AD-8 — the flow-level backstop behind the UI gate)', () => {
+    const { flow, storage } = wiredFlow([0x5eed]);
+    flow.startMatch();
+    playToRecorded(flow);
+    const stale = { ...storage.loadHistory()[0]!.setup, balanceVersion: 1 };
+
+    const replayFlow = new MatchFlow(
+      () => 0,
+      storage,
+      () => FIXED_ISO,
+    );
+    expect(() => replayFlow.startReplay(stale)).toThrow(/balance/i);
+  });
+});
+
 describe('MatchFlow rematch (AD-10)', () => {
   it('startMatch carries lastAiArchetypeId forward and rolls a FRESH seed', () => {
     const seeds = [11, 22];

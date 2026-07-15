@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BALANCE } from '@lordly/engine';
 import type { MatchSetup } from '@lordly/engine';
 import { HISTORY_EMPTY_LABEL, MODE_STANDARD_LABEL, MODE_WIPEOUT_LABEL, RESULT_DRAW_LABEL, RESULT_LOSE_LABEL, RESULT_WIN_LABEL } from '../src/config/constants';
 import { formatHistoryRow } from '../src/flow/historyModel';
@@ -7,7 +8,7 @@ import type { HistoryEntry } from '../src/flow/storage';
 /** A fixed setup fixture; only the fields the formatter reads matter here. */
 const setup: MatchSetup = {
   seed: 7,
-  balanceVersion: 2,
+  balanceVersion: BALANCE.version, // tracks the engine — a future bump must not rot this fixture
   mode: 'single',
   armies: {
     A: [
@@ -76,5 +77,14 @@ describe('formatHistoryRow (story 3.1, FR28) — pure display model', () => {
 
   it('pins the EXPERIENCE.md empty-state copy exactly', () => {
     expect(HISTORY_EMPTY_LABEL).toBe('No battles yet — play your first match.');
+  });
+
+  it('marks replayability by balanceVersion match — machine key, scene never re-derives (story 3.2, AD-8)', () => {
+    expect(formatHistoryRow(entry('A')).replayable).toBe(true); // fixture carries the current version
+    const stale = { setup: { ...setup, balanceVersion: 1 }, winner: 'A' as const, date: '2026-07-15T09:30:45.123Z' };
+    expect(formatHistoryRow(stale).replayable).toBe(false);
+    // A stale row still formats FULLY — display is never gated (EXPERIENCE.md:98).
+    expect(formatHistoryRow(stale).verdictLabel).toBe(RESULT_WIN_LABEL);
+    expect(formatHistoryRow(stale).yourComp).toEqual(setup.armies.A);
   });
 });

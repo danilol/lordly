@@ -117,6 +117,9 @@ export const HISTORY_EMPTY_LABEL = 'No battles yet — play your first match.';
 /** Home spur row (story 3.1): three buttons across 360px — 3×104 + 2×12 = 336 ≤ BASE_WIDTH; height keeps the 44px floor. */
 export const SPUR_COUNT = 3;
 export const SPUR_BUTTON_WIDTH = 104;
+/** Replay (story 3.2, FR20/AD-8) — one source for the scene + tests. */
+export const HISTORY_REPLAY_LABEL = '▶';
+export const HISTORY_NOT_REPLAYABLE_LABEL = 'not replayable';
 export const DRAFT_RULES_LABEL = '? Rules';
 export const CREDITS_TITLE = 'Credits';
 

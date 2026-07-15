@@ -1,6 +1,10 @@
+---
+baseline_commit: 57adededfb092146e6aa0e993c383ef9a6871b53
+---
+
 # Story 3.2: Replay any remembered battle
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -16,26 +20,26 @@ so that I can study a great read or show a friend.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: MatchFlow replay mode (AC: 1, 2) — RED first
-  - [ ] `startReplay(setup: MatchSetup): void` — hydrates the flow straight to `phase: 'committed'`: `committedSetup = setup`, `seed`/`mode` from the setup, `playerArmy`/`playerPlacements` mirrored from `setup.armies.A`/`placements.A` (state readers stay coherent; serializability holds), `lastAiArchetypeId` untouched/undefined, cached log cleared. Guard: run the engine's `validateMatchSetup(setup)` first — it already throws `InvalidMatchSetupError('balance-version-mismatch')` on a stale version, giving the flow-level backstop behind the UI gate for free
-  - [ ] A private `replay` flag set by `startReplay`, cleared by `startMatch()` — this is AD-13's `mode: 'live' | 'replay'` landing on the flow (NOT on `MatchState`; same reasoning as 3.1's `historyWritten`)
-  - [ ] `recordResult()` no-ops in replay mode (ResultScene calls it unconditionally — the 3.1 choke point does its job): `if (this.replay || this.historyWritten) return;`
-  - [ ] Tests (match-flow.test.ts, wired-flow pattern from 3.1): replayed log EQUALS the original live resolve's log for the same setup (FR20 — resolve a live match, startReplay its stored setup on a fresh flow, compare event streams); full replay + recordResult leaves storage byte-identical; Rematch-after-replay (startMatch) records normally with a FRESH seed; startReplay on a stale-balanceVersion setup throws; state after startReplay survives the JSON round-trip (AD-5)
-- [ ] Task 2: historyModel grows `replayable` (AC: 1, 3) — RED first
-  - [ ] `HistoryRow.replayable: boolean` = `entry.setup.balanceVersion === BALANCE.version` — pure, the scene keys the button state off this (never re-derives)
-  - [ ] Tests: matching version → true; stale (v1) → false; the row still formats fully either way (stale entries DISPLAY — pinned in 3.1's storage tests)
-- [ ] Task 3: Replay affordance on the History rows (AC: 1, 3)
-  - [ ] **Layout math (measured):** current cards span to x=327 (MARGIN 16, CARD_W 46, CARD_GAP 3, `renderUnitCard` returns `x + CARD_W + CARD_GAP`, vs advance `x += 20`), leaving only 17px — NOT enough for a ≥44px target. Shrink to fit: `CARD_W 46→42`, `CARD_GAP 3→2`, vs advance 20→12 ⇒ with the existing `+CARD_W+CARD_GAP` return pattern: yours end 148, vs ..160, enemy end **290**, **Replay button 296..344 (48 wide, full CARD_H height ≥44px)**, 16px right margin. Don't chase ±2px against these figures — derive from the code's own advance pattern. Re-verify code/dot/sprite legibility at 42px in the screenshot pass (sprite stays 32px; `CARD_CLASS_FONT_PX` 13 fits)
-  - [ ] Replayable row: a bordered `▶` button (PALETTE button tokens), drag-guarded via `wasDrag()`. **Scope restructure required:** `wasDrag` is currently a local const created AFTER the row loop (enableDragScroll needs the final content height — HistoryScene.ts:70) — hoist it (`let wasDrag: () => boolean` declared before the loop, assigned after; the pointerup closures only fire post-create, so the late assignment is safe) or store it on a field reset in create()
-  - [ ] Tap → `const flow = new MatchFlow(); flow.startReplay(entry.setup); this.scene.start('Battle', { flow })` — straight to Battle (no Reveal; the reveal moment belongs to live play), matching the epics AC "the Battle scene plays it"
-  - [ ] **Guard the tap against render-valid-but-replay-invalid entries:** `isHistoryEntry` deliberately validates only to RENDER depth (no seed/placements — 3.1's two-tier design), so a corrupt entry can carry `balanceVersion: 2` (button enabled) yet fail `validateMatchSetup` at the tap. Wrap the handler: on `InvalidMatchSetupError`, do NOT crash — disable the button and show the non-replayable marker for that row (graceful demotion). Test the flow-level throw; the scene path rides the drive
-  - [ ] Stale row: the button renders disabled (muted fill/stroke, no interactivity) AND the row carries a visible "non-replayable" marker (muted text near the date — EXPERIENCE.md:98's "visibly marked"); everything else renders normally
-- [ ] Task 4: Post-replay Result behavior (AC: 2)
-  - [ ] No ResultScene code change expected: `recordResult()` no-ops (Task 1), Rematch already calls `startMatch()` (flips the flow to live, fresh seed, carries the replayed mode — document this as the DECIDED behavior), Home works as-is. Verify by test (Task 1) + drive (Task 5)
-- [ ] Task 5: Gate + drive + device (all ACs)
-  - [ ] Full gate green (typecheck, lint, all tests, engine coverage untouched ≥90%)
-  - [ ] Headless-Chrome drive (the 3.1 harness in scratchpad): seed history with a fresh-version entry + a stale-v1 entry → screenshot the list (enabled ▶ vs disabled + marker); tap Replay → screenshot the Battle scene mid-playback; skip → Result renders; confirm via page-evaluate that `lordly.v1.history` is BYTE-IDENTICAL after the whole replay journey
-  - [ ] On-device: Danilo replays a real match from his own history, confirms tick-for-tick believability + a rematch afterward records normally
+- [x] Task 1: MatchFlow replay mode (AC: 1, 2) — RED first
+  - [x] `startReplay(setup: MatchSetup): void` — hydrates the flow straight to `phase: 'committed'`: `committedSetup = setup`, `seed`/`mode` from the setup, `playerArmy`/`playerPlacements` mirrored from `setup.armies.A`/`placements.A` (state readers stay coherent; serializability holds), `lastAiArchetypeId` untouched/undefined, cached log cleared. Guard: run the engine's `validateMatchSetup(setup)` first — it already throws `InvalidMatchSetupError('balance-version-mismatch')` on a stale version, giving the flow-level backstop behind the UI gate for free
+  - [x] A private `replay` flag set by `startReplay`, cleared by `startMatch()` — this is AD-13's `mode: 'live' | 'replay'` landing on the flow (NOT on `MatchState`; same reasoning as 3.1's `historyWritten`)
+  - [x] `recordResult()` no-ops in replay mode (ResultScene calls it unconditionally — the 3.1 choke point does its job): `if (this.replay || this.historyWritten) return;`
+  - [x] Tests (match-flow.test.ts, wired-flow pattern from 3.1): replayed log EQUALS the original live resolve's log for the same setup (FR20 — resolve a live match, startReplay its stored setup on a fresh flow, compare event streams); full replay + recordResult leaves storage byte-identical; Rematch-after-replay (startMatch) records normally with a FRESH seed; startReplay on a stale-balanceVersion setup throws; state after startReplay survives the JSON round-trip (AD-5)
+- [x] Task 2: historyModel grows `replayable` (AC: 1, 3) — RED first
+  - [x] `HistoryRow.replayable: boolean` = `entry.setup.balanceVersion === BALANCE.version` — pure, the scene keys the button state off this (never re-derives)
+  - [x] Tests: matching version → true; stale (v1) → false; the row still formats fully either way (stale entries DISPLAY — pinned in 3.1's storage tests)
+- [x] Task 3: Replay affordance on the History rows (AC: 1, 3)
+  - [x] **Layout math (measured):** current cards span to x=327 (MARGIN 16, CARD_W 46, CARD_GAP 3, `renderUnitCard` returns `x + CARD_W + CARD_GAP`, vs advance `x += 20`), leaving only 17px — NOT enough for a ≥44px target. Shrink to fit: `CARD_W 46→42`, `CARD_GAP 3→2`, vs advance 20→12 ⇒ with the existing `+CARD_W+CARD_GAP` return pattern: yours end 148, vs ..160, enemy end **290**, **Replay button 296..344 (48 wide, full CARD_H height ≥44px)**, 16px right margin. Don't chase ±2px against these figures — derive from the code's own advance pattern. Re-verify code/dot/sprite legibility at 42px in the screenshot pass (sprite stays 32px; `CARD_CLASS_FONT_PX` 13 fits)
+  - [x] Replayable row: a bordered `▶` button (PALETTE button tokens), drag-guarded via `wasDrag()`. **Scope restructure required:** `wasDrag` is currently a local const created AFTER the row loop (enableDragScroll needs the final content height — HistoryScene.ts:70) — hoist it (`let wasDrag: () => boolean` declared before the loop, assigned after; the pointerup closures only fire post-create, so the late assignment is safe) or store it on a field reset in create()
+  - [x] Tap → `const flow = new MatchFlow(); flow.startReplay(entry.setup); this.scene.start('Battle', { flow })` — straight to Battle (no Reveal; the reveal moment belongs to live play), matching the epics AC "the Battle scene plays it"
+  - [x] **Guard the tap against render-valid-but-replay-invalid entries:** `isHistoryEntry` deliberately validates only to RENDER depth (no seed/placements — 3.1's two-tier design), so a corrupt entry can carry `balanceVersion: 2` (button enabled) yet fail `validateMatchSetup` at the tap. Wrap the handler: on `InvalidMatchSetupError`, do NOT crash — disable the button and show the non-replayable marker for that row (graceful demotion). Test the flow-level throw; the scene path rides the drive
+  - [x] Stale row: the button renders disabled (muted fill/stroke, no interactivity) AND the row carries a visible "non-replayable" marker (muted text near the date — EXPERIENCE.md:98's "visibly marked"); everything else renders normally
+- [x] Task 4: Post-replay Result behavior (AC: 2)
+  - [x] No ResultScene code change expected: `recordResult()` no-ops (Task 1), Rematch already calls `startMatch()` (flips the flow to live, fresh seed, carries the replayed mode — document this as the DECIDED behavior), Home works as-is. Verify by test (Task 1) + drive (Task 5)
+- [x] Task 5: Gate + drive + device (all ACs)
+  - [x] Full gate green (typecheck, lint, all tests, engine coverage untouched ≥90%)
+  - [x] Headless-Chrome drive (the 3.1 harness in scratchpad): seed history with a fresh-version entry + a stale-v1 entry → screenshot the list (enabled ▶ vs disabled + marker); tap Replay → screenshot the Battle scene mid-playback; skip → Result renders; confirm via page-evaluate that `lordly.v1.history` is BYTE-IDENTICAL after the whole replay journey
+  - [ ] On-device: Danilo replays a real match from his own history, confirms tick-for-tick believability + a rematch afterward records normally (pending post-review deploy)
 
 ## Dev Notes
 
@@ -97,8 +101,33 @@ Vitest from the root; RED→GREEN per task; wired-flow + fakeBackend patterns fr
 
 ### Agent Model Used
 
+Claude Fable 5 (claude-fable-5)
+
 ### Debug Log References
+
+- RED→GREEN held per task: replay-mode flow (5 failing → 34 green), replayable model (in-pass with the fixture made version-tracking: `balanceVersion: BALANCE.version` instead of a hardcoded 2 — a future bump must not rot the fixture).
+- `wasDrag` hoist implemented exactly as the story specified (`let` before the row loop, assigned after `enableDragScroll`; handlers close over the variable and fire post-create) — the back affordance shares the same binding.
+- Full-journey headless drive: History list (green ▶ on the fresh row; muted slot + "not replayable" marker on the stale Wipeout row — layout fits at 42px cards, nothing clips) → tap Replay → Battle playing (control bar intact; incidentally shows the chirality fix: seeded mage renders back-LEFT) → Skip (214,600) → Result (Victory! banner, Rematch/Home) → `lordly.v1.history` **byte-identical** across the entire journey.
 
 ### Completion Notes List
 
+- **AC1 ✅** `startReplay(setup)` validates via the engine (`validateMatchSetup` — stale version throws) then hydrates straight to committed; the untouched Battle→Result pipeline replays with full presentation + speed/skip. FR20 equality test: replayed `events` deep-equal the original live log's.
+- **AC2 ✅** Explicit AD-13 `replay` flag (deliberately separate from `historyWritten`); `recordResult()` no-ops in replay — byte-identical storage proven by unit test AND the drive; `startMatch()` clears the flag, so Rematch-after-replay is a live match with a fresh seed that records normally (tested).
+- **AC3 ✅** `HistoryRow.replayable` (machine key, version comparison in the pure model); stale rows render fully with a muted disabled slot + `not replayable` marker; render-valid-but-replay-invalid entries demote gracefully at the tap (try/catch) instead of crashing — the 3.1 two-tier validation honored end to end.
+- **Zero engine changes; zero ResultScene changes** — the 3.1 choke point absorbed the entire feature.
+- 342 tests green (6 new), typecheck + lint clean, engine coverage gate untouched.
+- **On-device ⏳** pending post-review deploy.
+
 ### File List
+
+- `apps/web/src/flow/MatchFlow.ts` — MODIFIED: `startReplay`, AD-13 replay flag, `recordResult` no-op branch, `startMatch` clears the flag
+- `apps/web/src/flow/historyModel.ts` — MODIFIED: `HistoryRow.replayable` (BALANCE.version comparison)
+- `apps/web/src/scenes/HistoryScene.ts` — MODIFIED: card metrics 42/2/12, Replay button (drag-guarded, graceful demotion), non-replayable slot + marker, `wasDrag` hoist
+- `apps/web/src/config/constants.ts` — MODIFIED: `HISTORY_REPLAY_LABEL`, `HISTORY_NOT_REPLAYABLE_LABEL`
+- `apps/web/test/match-flow.test.ts` — MODIFIED: 5 replay-mode tests (FR20 equality, byte-identical, rematch-flip, hydration round-trip, stale throw)
+- `apps/web/test/history-model.test.ts` — MODIFIED: replayable test + version-tracking fixture
+- `docs/implementation-artifacts/sprint-status.yaml`, this story file — MODIFIED: tracking
+
+### Change Log
+
+- 2026-07-15: Story 3.2 implemented — replay mode lands on MatchFlow through the 3.1 choke point (validate → hydrate → the untouched pipeline replays; replays never write; Rematch flips live automatically), version-gated Replay affordance with the measured card-shrink layout, graceful demotion for two-tier-validation stragglers. RED→GREEN per task; 342 tests; full replay journey screenshot-verified with byte-identical storage. Pending: on-device check post-review.
