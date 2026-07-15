@@ -72,7 +72,7 @@ development_status:
   3-0-balance-tuning-pass: done  # 2026-07-15: DONE — balance v2 (rpsHunts + wipeout-scoped blastAttenuation), both-mode band green, 3-layer review passed (zero shipping defects), deployed e6a06c4, Danilo's on-device AC6 sign-off: "mage blast feeling better and less OP". Origin: sprint-change-proposal-2026-07-14 (sequenced before 3-1).
   3-1-battle-history: done  # 2026-07-15: DONE — history gateway + MatchFlow sole-writer + HistoryScene (+ PO mode-tag amendment; opponent-type deferred to link-play). 3-layer review passed (1 Med + 1 Low patched), 336 tests, deployed c887cdc, Danilo's on-device acceptance: "it's great now."
   3-2-replay-any-remembered-battle: done  # 2026-07-15: DONE — MatchFlow replay mode via the 3.1 choke point, version-gated Replay UI, byte-identical no-write journey. Review passed (5 patches), 343 tests, deployed eb24f64, Danilo on prod: "everything works as expected".
-  3-3-install-it-play-it-offline: backlog
+  3-3-install-it-play-it-offline: ready-for-dev  # 2026-07-15: story file created (VitePWA in config.base — the dev-resolution trap, CC0-derived icons, autoUpdate ADR 0002, kill-the-server offline proof).
   3-4-the-performance-verdict: backlog
   epic-3-retrospective: optional
   epic-4: backlog  # Combat depth — moves, tactics, crits, promotions (FR32/FR33 + OB64 target-selection tactics + critical hits + Archmage blast gating; StatusCleared events ride its single logVersion bump) — post-MVP, added 2026-07-13, widened via correct-course 2026-07-14. Stories pending a PM/Architect design pass; ordering vs link-play decided at post-Epic-3 planning. See sprint-change-proposal-2026-07-14.md.
