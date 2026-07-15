@@ -4,7 +4,7 @@ baseline_commit: 1e86c3fd9c5994b8f5dd4a53eabf0752c2957599
 
 # Story 3.1: Battle history
 
-Status: review
+Status: done
 
 ## Story
 
@@ -50,7 +50,7 @@ so that I can see what I played and how it went.
 - [x] Task 6: Gate + device verification (all ACs)
   - [x] Full gate green (typecheck, lint, all tests, engine coverage untouched at ≥90%)
   - [x] Drive it: headless Chrome drive of the REAL app, screenshot-verified (empty state exact copy; 7-entry list with win/loss/draw colors, side-colored cards, dots, dates; drag-scroll under the header strip; ‹ Home returns to the 3-across spur row). Eviction + rematch-writes-twice covered by seeded-backend unit tests; the live write path (ResultScene → recordResult) is unit-tested and compile-checked — full live-match E2E lands with the device check
-  - [ ] On-device check: Danilo plays a match on prod, confirms the entry appears in History (pending post-review deploy)
+  - [x] **On-device check ACCEPTED (2026-07-15, Danilo on prod):** "it's great now. I consider it done." — entry appears with verdict, mode tag, and both comps. STORY DONE.
 
 ## Review Findings
 
@@ -149,7 +149,7 @@ Claude Fable 5 (claude-fable-5)
 - **AC3 ✅** `HistoryEntry { setup, winner, date }` — the exact AD-8 shape, no log field, no derived extras.
 - **AC4 ✅** HistoryScene (fills AD-5's planned slot, registered in main.ts): rows = verdict (Result banner vocabulary + win/lose/draw colors) + `YYYY-MM-DD HH:MM` date + both comps as DESIGN compact unit-cards (blue=you / red=enemy borders + 15% wash, 32px sprite, canonical 3-letter code, 12px element dot — History's cards land dot-only per the deferred-work normalization); drag-scroll with the Help/Credits header-strip pattern; drag-guarded `‹ Home`; exact EXPERIENCE.md empty-state copy (pinned by test); right edge left free for 3.2's Replay.
 - **AC5 ✅** loadHistory: corrupt/non-array → [], per-entry validation drops bad records keeping good ones, appendHistory recovers over corrupt prior data, foreign/older namespaces never read or touched, throwing/missing backend safe — all unit-tested.
-- **AC6 (device) ⏳** Screenshot-verified headlessly; Danilo's on-device play-a-match check pending post-review deploy.
+- **AC6 (device) ✅** Deployed (c887cdc, CI green); Danilo's on-device acceptance 2026-07-15: "it's great now. I consider it done."
 - 332 tests green (23 new), typecheck + lint clean, engine untouched (coverage gate unaffected).
 
 ### File List
