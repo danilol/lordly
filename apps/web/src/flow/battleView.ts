@@ -25,20 +25,27 @@ export const DEFAULT_ORIENTATION: BoardOrientation = '\\';
  * projection below, increasing `r` runs down-LEFT and increasing `c` runs
  * down-RIGHT, so the board's NW edge is `c = 0` and its SE edge is `c = 2`.
  *
+ * CHIRALITY (2026-07-15 device-reported fix): each board must be its owner's
+ * placement ROTATED into the iso frame, never reflected — the original
+ * mapping was a transpose (det −1), which mirrored the player's formation
+ * left↔right versus the Placement screen. Both mappings below are rigid
+ * rotations (det +1), 180° opposed:
+ *
  * - Side A (player, lower-right board) fronts its NW edge (toward the enemy):
- *   `c` = row index (front = 0), `r` = column index.
+ *   `c` = row index (front = 0), `r` = 2 − column index — the player's left
+ *   column stays on the screen-left, matching how they placed it.
  * - Side B (enemy, upper-left board) fronts its SE edge: `c` = 2 − row index,
- *   and its columns MIRROR (`r` = 2 − col index) so A's left lane faces B's
- *   right across the clash gap (FR7, AD-11). In the diagonal layout, facing
- *   pairs sit gap-OFFSET rather than on one collinear line — matching the UX
- *   mock's corner boards; the "lane" is conceptual, and the tests pin the
- *   facing pair as each unit's nearest cross-board front tile.
+ *   `r` = col index — a facing army's left is on OUR right, so A's left lane
+ *   still faces B's right across the clash gap (FR7, AD-11). In the diagonal
+ *   layout, facing pairs sit gap-OFFSET rather than on one collinear line —
+ *   matching the UX mock's corner boards; the "lane" is conceptual, and the
+ *   tests pin the facing pair as each unit's nearest cross-board front tile.
  */
 function projection(side: Side, placement: Placement): { r: number; c: number } {
   const rowIndex = ALL_ROWS.indexOf(placement.row); // front=0, mid=1, back=2
   const colIndex = ALL_COLS.indexOf(placement.col); // left=0, center=1, right=2
-  if (side === 'A') return { r: colIndex, c: rowIndex };
-  return { r: 2 - colIndex, c: 2 - rowIndex };
+  if (side === 'A') return { r: 2 - colIndex, c: rowIndex };
+  return { r: colIndex, c: 2 - rowIndex };
 }
 
 /** The board origin (its top-corner tile center) for a side under an orientation. */

@@ -91,6 +91,31 @@ describe("iso projection — the shipped '\\' layout (AC1)", () => {
     expect(fronts).toBeLessThan(backs);
   });
 
+  it("CHIRALITY (2026-07-15 device report): the player's board is the placement ROTATED, never reflected — A's left column renders left of A's right", () => {
+    // Danilo's regression case: knights front/left + front/center, mage
+    // back/left rendered with the mage on the RIGHT — projection() was a
+    // transpose (det −1, a reflection). Rotated correctly, everything the
+    // player put in the left column stays on the screen-left of the right
+    // column, front and back alike.
+    for (const row of ALL_ROWS) {
+      const left = unitTileCenter('A', { row, col: 'left' }, '\\');
+      const right = unitTileCenter('A', { row, col: 'right' }, '\\');
+      expect(left.x, `A ${row}: left col left of right col`).toBeLessThan(right.x);
+    }
+    // The mage stays on the knights' side: back/left sits screen-left of back/right.
+    const mage = unitTileCenter('A', { row: 'back', col: 'left' }, '\\');
+    const frontLeft = unitTileCenter('A', { row: 'front', col: 'left' }, '\\');
+    expect(Math.abs(mage.x - frontLeft.x)).toBeLessThanOrEqual(ISO_BOARD.tileW); // same flank, one diagonal step per row
+  });
+
+  it("CHIRALITY: the enemy board faces us — B's left column renders on OUR screen-right (a facing army's left is our right)", () => {
+    for (const row of ALL_ROWS) {
+      const left = unitTileCenter('B', { row, col: 'left' }, '\\');
+      const right = unitTileCenter('B', { row, col: 'right' }, '\\');
+      expect(left.x, `B ${row}: left col right of right col (facing us)`).toBeGreaterThan(right.x);
+    }
+  });
+
   it("mirrors columns for side B (FR7): A's left lane faces B's right, closer than B's left", () => {
     const aFrontLeft = unitTileCenter('A', { row: 'front', col: 'left' }, '\\');
     const bFacing = unitTileCenter('B', { row: 'front', col: 'right' }, '\\');
