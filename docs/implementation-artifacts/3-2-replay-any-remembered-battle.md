@@ -4,7 +4,7 @@ baseline_commit: 57adededfb092146e6aa0e993c383ef9a6871b53
 
 # Story 3.2: Replay any remembered battle
 
-Status: review
+Status: done
 
 ## Story
 
@@ -39,7 +39,7 @@ so that I can study a great read or show a friend.
 - [x] Task 5: Gate + drive + device (all ACs)
   - [x] Full gate green (typecheck, lint, all tests, engine coverage untouched ≥90%)
   - [x] Headless-Chrome drive (the 3.1 harness in scratchpad): seed history with a fresh-version entry + a stale-v1 entry → screenshot the list (enabled ▶ vs disabled + marker); tap Replay → screenshot the Battle scene mid-playback; skip → Result renders; confirm via page-evaluate that `lordly.v1.history` is BYTE-IDENTICAL after the whole replay journey
-  - [ ] On-device: Danilo replays a real match from his own history, confirms tick-for-tick believability + a rematch afterward records normally (pending post-review deploy)
+  - [x] **On-device ACCEPTED (2026-07-15, Danilo on prod, post-review-patches build eb24f64):** "everything works as expected in prod." STORY DONE.
 
 ## Review Findings
 
@@ -128,7 +128,7 @@ Claude Fable 5 (claude-fable-5)
 - **AC3 ✅** `HistoryRow.replayable` (machine key, version comparison in the pure model); stale rows render fully with a muted disabled slot + `not replayable` marker; render-valid-but-replay-invalid entries demote gracefully at the tap (try/catch) instead of crashing — the 3.1 two-tier validation honored end to end.
 - **Zero engine changes; zero ResultScene changes** — the 3.1 choke point absorbed the entire feature.
 - 342 tests green (6 new), typecheck + lint clean, engine coverage gate untouched.
-- **On-device ⏳** pending post-review deploy.
+- **On-device ✅** Danilo on prod (2026-07-15, build eb24f64 with all review patches): "everything works as expected in prod."
 
 ### File List
 
