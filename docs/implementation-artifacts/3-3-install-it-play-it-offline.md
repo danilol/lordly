@@ -39,7 +39,7 @@ so that a bus-stop match needs nothing but my phone.
   - [x] Assert the precache manifest by reading `dist/sw.js` contents (the load-bearing check — note prod builds run `logLevel: 'warn'`, so don't rely on workbox console output): icons, index.html, css, and ALL js chunks incl. the phaser chunk present
 - [x] Task 5: Gate + deploy + device (all ACs)
   - [x] Full gate green (typecheck incl. the new virtual-module reference, lint, all tests, engine coverage untouched)
-  - [ ] Push → CI build + deploy → on prod: confirm `manifest.webmanifest` + `sw.js` serve correctly from the Workers static assets (wrangler.jsonc `assets.directory: ./dist` picks them up automatically; `not_found_handling: single-page-application` must NOT swallow them — verify both URLs return their real content-type, not index.html)
+  - [x] Push → CI build + deploy (875092a) → **prod content-types VERIFIED** (fresh fetch, past the edge cache): `/manifest.webmanifest` → `application/manifest+json`, `/sw.js` → `text/javascript` (real workbox SW body, skipWaiting/precache present), `/icon-512.png` → `image/png`. SPA fallback does NOT swallow them. (First fetch seconds post-deploy hit stale edge cache returning HTML — a propagation artifact, not a served-wrong file; confirmed by cache-busted re-fetch.)
   - [ ] On-device (Danilo): Android Chrome shows the install prompt / "Add to Home screen"; installed app opens standalone with name+icon; airplane mode → a COMPLETE match (draft → placement → battle → result) + History — the AC2 acceptance
 
 ## Review Findings
