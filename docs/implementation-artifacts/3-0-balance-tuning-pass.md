@@ -4,7 +4,7 @@ baseline_commit: ebd45e22d1392d178014ebf75f9c9c0e6e593e6e
 
 # Story 3.0: Balance tuning pass — the blast tamed, the archer a caster-hunter
 
-Status: review
+Status: done
 
 ## Story
 
@@ -45,11 +45,11 @@ so that no single class dominates and battles stay tense before my history start
   - [x] `docs/rules.md`: triangle passage gains the caster-hunt sentence; blast bullet gains the wipeout attenuation sentence
   - [x] `rules-doc.test.ts`: two new guard tests — hunter's complete ×1.5 prey list built from `rpsBeats`+`rpsHunts` (fails on a silently emptied map), and the exact `×0.75` attenuation literal
   - [x] Draft cards: intentionally unchanged (triangle-only "beats" line stays true; full rule lives in Help/rules.md; hunts-on-cards is Epic 4 UI fodder)
-- [ ] Task 7: Gate, deploy, sign-off (AC: 6)
+- [x] Task 7: Gate, deploy, sign-off (AC: 6)
   - [x] Full gate green: typecheck ✓, lint ✓, 309 tests ✓ (incl. both-mode bands), engine coverage 99.7% lines (≥90% gate)
   - [x] Code review complete (3-layer adversarial, Opus 4.8): zero shipping defects, 4 low robustness patches applied — see Review Findings above; gate re-verified green after patches (309 tests)
-  - [ ] Push → CI deploy to prod
-  - [ ] Danilo plays on his device — felt-balance acceptance recorded here before the story is done
+  - [x] Pushed (e6a06c4) → CI green → deployed to prod
+  - [x] **AC6 ACCEPTED (2026-07-15, Danilo on device):** "the mage blast is feeling better and less OP. 3-0 is done." Felt-balance sign-off recorded — STORY DONE.
 
 ## Dev Notes
 
@@ -183,7 +183,7 @@ Claude Fable 5 (claude-fable-5); review by Claude Opus 4.8 (three parallel layer
 - **AC3 ✅** version 2, hash `19aeaa94` pinned, goldens re-recorded with hand-verified verdicts (#4 byte-identical, #5/#8 re-derived).
 - **AC4 ✅** rules.md states the hunt (data-built prey list "Mage, Cleric, and Witch" + ×1.5) and the wipeout attenuation (×0.75 literal); both drift-guarded; Draft cards intentionally triangle-only.
 - **AC5 ✅** Mode knob shipped (SweepConfig + `--mode=` + argv hardening); CI band enforced in BOTH modes; 500-run record below. The 1.10-deferred wipeout sweep debt is paid — and it immediately found the v1 wipeout dominance.
-- **AC6 ⏳** Deploy + Danilo's on-device felt-balance acceptance pending (post-review). Expected feel: Standard unchanged except archers punish caster comps; Wipeout noticeably tamer mage artillery.
+- **AC6 ✅** Deployed (e6a06c4, CI green); Danilo's on-device acceptance 2026-07-15: "the mage blast is feeling better and less OP. 3-0 is done."
 - **500-run sweep record (balance v2, seed 1):**
   - single: ambushers 59.7, longbows 57.7, three-mages 57.0, gale 51.7, farshot 51.7, cabal 50.1, talons 48.4, bulwark 45.4, hex-coven 45.2, wardens 33.0 — ✅ band
   - wipeout: longbows 62.9, wardens 58.0, cabal 53.9, farshot 51.0, hex-coven 50.3, bulwark 47.9, talons 45.6, ambushers 45.5, gale 43.7, three-mages 41.1 — ✅ band

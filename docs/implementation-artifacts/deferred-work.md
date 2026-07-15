@@ -1,5 +1,11 @@
 # Deferred Work
 
+## Bug report (Danilo on device, 2026-07-15) — Reveal/Battle iso boards render the player's formation MIRRORED
+
+- **Symptom:** placement front/left + front/center knights + back/left mage renders on the Reveal iso board with the mage on the player's RIGHT — the player's own board reads as a left-right reflection of what they placed, not a rotation. Both boards are flipped consistently (lane pairing and combat are untouched — AD-11 keeps the engine owner-local), so battles look internally coherent but contradict the player's placement intent (FR6 "the reveal shows the two boards face to face").
+- **Root cause (diagnosed):** `apps/web/src/flow/battleView.ts` `projection()` (line ~37) maps side A as `{ r: colIndex, c: rowIndex }` — a **transpose** (determinant −1 = reflection), not a rotation. A chirality-preserving mapping is `{ r: 2 − colIndex, c: rowIndex }` for A and `{ r: colIndex, c: 2 − rowIndex }` for B (180°-opposed rigid rotations; A-left still faces B-right across the clash gap, FR7 preserved). Fix surface: `projection()` + `battle-view.test.ts` facing-pair pins + a screenshot check of the `\` layout (labels/HUD anchors use `unitTileCenter`, so they follow automatically). Not caught in 2.2 because device acceptance used near-symmetric comps where chirality is invisible.
+- **Routing:** awaiting Danilo's call — quick targeted patch vs. bundling into story 3-1's dev pass.
+
 ## Product wishes (PO, 2026-07-14) — battle balance & tactics — ALL RESOLVED via `correct-course` (2026-07-14, see `docs/planning-artifacts/sprint-change-proposal-2026-07-14.md`)
 
 - **Mage area damage is too strong — gate the row blast behind an upgrade, OB64-style** (Danilo, 2026-07-14, after playing the 2.2/2.3 animated battles): in OB64 the base mage is single-target and only gains area damage when upgraded to Archmage. Today Lordly's mage blasts a whole row from level zero (FR10), which reads as "too broken" in real matches. Candidate shapes when scoped: base mage single-target with blast as an upgrade/promotion mechanic (a NEW system — nothing like promotion exists in the PRD), or a plain damage/targeting nerf inside current rules. Either way it is an FR10/balance-data change → `balanceVersion` bump + hash re-pin + golden re-records (AD-8 discipline) and an NFR4 sim sweep re-verification (≤65% dominance band). Natural bundle: the archer-vs-casters FR14 item below + the Epic 4 design pass. **RESOLVED via `correct-course` (2026-07-14): split by kind** — the immediate nerf ships as **story 3.0**'s `blastAttenuation` (FR10 amended: per-target ×0.75 after base, before RPS); the OB64 Archmage promotion gating is parked as an **Epic 4** design item (PRD Feature 6b).
@@ -49,7 +55,7 @@
 
 ## Deferred from: story-1.10 dev (2026-07-13)
 
-- **Sim-harness wipeout sweep** — `sim/sweep.ts` stays `mode: 'single'` (story 1.10 scope fence). Wipeout shifts balance dynamics for real: poison archetypes gain value (dots persist across engagements and tick at every natural end — FR19's Witch synergy), and sustain comps (Cleric equilibria) hit the engagement cap instead of losing. The NFR4 dominance-band verification (≤65%) has never been run under wipeout. Add a mode knob to the sweep and re-verify when balance work is next scoped (natural bundle: the archer-vs-casters FR14 item above, which already requires a sweep). **SCHEDULED via `correct-course` (2026-07-14):** the mode knob and both-mode ≤65% verification are an explicit AC of **story 3.0**; strike this item when 3.0 is done.
+- ~~**Sim-harness wipeout sweep**~~ **RESOLVED (story 3.0, 2026-07-15):** mode knob shipped (`SweepConfig.mode` + `--mode=` CLI), both-mode ≤65% band enforced in CI. The first-ever wipeout sweep vindicated the deferral's warning: v1 wipeout was three-mages-dominant at 74.6% — found and fixed (wipeout-scoped `blastAttenuation`).
 
 ## Deferred from: code review of story-1.1 (2026-07-12)
 
