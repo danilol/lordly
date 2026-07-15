@@ -4,7 +4,7 @@ baseline_commit: bf35604eec01564750d243eb3ee9c270b18777f0
 
 # Story 3.3: Install it, play it offline
 
-Status: review
+Status: done
 
 ## Story
 
@@ -22,14 +22,14 @@ so that a bus-stop match needs nothing but my phone.
 
 - [x] Task 1: PWA icons from the CC0 art (AC: 1)
   - [x] Derive the app icon from the CC0-1.0 knight frame in `apps/web/src/assets/units.png` (32×32 → NEAREST-kernel integer upscale: ×6 = 192, ×16 = 512 — both perfect integer multiples, honoring the pixel-art fractional-scale ban in sprites.ts:11). Generate once with a scratch script (e.g. `npm i --no-save sharp` in a temp dir, `kernel: 'nearest'`), COMMIT the PNGs — no new repo dependency
-  - [x] Ship in `apps/web/public/`: `icon-192.png`, `icon-512.png` (purpose `any`), plus `icon-512-maskable.png` (sprite centered at ~60% on a `PALETTE.background`-filled square — maskable safe zone) and `apple-touch-icon.png` — **180 is NOT an integer multiple of 32** (180/32 = 5.625): upscale ×5 = 160 and center it on a 180×180 `PALETTE.background` canvas (same padding technique as the maskable), never fractional-scale the pixels
+  - [x] Ship in `apps/web/public/`: `icon-192.png`, `icon-512.png` (purpose `any`), plus `icon-512-maskable.png` (sprite centered at ~60% on a `PALETTE.background`-filled square — maskable safe zone). ~~`apple-touch-icon.png`~~ **DROPPED in review** (180/32 = 5.625, a fractional scale — ragged upscale; iOS was never an AC, and the icon signaled a half-supported iOS path)
   - [x] Record the derived icon files in `ART_ATTRIBUTIONS[0].assets` (attribution.ts:28-46 — the Dungeon Crawl pack; CC0 needs no attribution but the manifest lists every redistributed derived file; `attribution.test.ts` rules stay green since CC0-1.0 is allowlisted)
 - [x] Task 2: VitePWA + manifest + registration (AC: 1, 2)
   - [x] Add `VitePWA` to a `plugins` array in **`config.base.mjs`** (shared, NOT prod-only — see Dev Notes: the `virtual:pwa-register` import must resolve in dev too or `pnpm dev` breaks); `devOptions` stays disabled (dev remains SW-free)
   - [x] Manifest: `name: 'Lord Battle Tactics'`, `short_name: 'Lordly'`, `display: 'standalone'`, `orientation: 'portrait'` (FR30), `start_url: './'` + `scope: './'` (the config's `base: './'` is load-bearing for Cloudflare — keep everything relative), `theme_color`/`background_color` from the ACTUAL `PALETTE.background` hex (read constants.ts, don't guess), icons array incl. the maskable
   - [x] `registerType: 'autoUpdate'` (the Task 3 decision); workbox `globPatterns: ['**/*.{js,css,html,png,ico,svg}']` so the public/ icons + favicon precache alongside the bundle. The phaser manual chunk is MEASURED at ~1.31 MiB uncompressed (dist/assets/phaser-*.js, 1,374,303 B) — under workbox's 2 MiB `maximumFileSizeToCacheInBytes` default, so no knob needed today; re-measure only if the build changes
   - [x] ~~`registerSW` from `virtual:pwa-register` in main.ts~~ **IMPLEMENTED DIFFERENTLY (see Debug Log):** the virtual module statically imports `workbox-window`, which is NOT a declared dependency of apps/web (pnpm strict isolation → build failure). Used `injectRegister: 'inline'` instead — the plugin injects the registration into index.html at build; zero new dependencies, no virtual import, main.ts carries an explanatory comment. Same autoUpdate behavior
-  - [x] `apps/web/index.html`: add `<meta name="theme-color">` + a `description` meta + the `apple-touch-icon` link (VitePWA injects the manifest link at build)
+  - [x] `apps/web/index.html`: add `<meta name="theme-color">` + a `description` meta (VitePWA injects the manifest link at build). ~~apple-touch-icon link~~ dropped along with the icon (see Task 1)
 - [x] Task 3: The update-strategy ADR (AC: 3)
   - [x] `docs/adr/0002-pwa-update-strategy.md` — Decision: **autoUpdate** (recommended; final call is the dev's with rationale). Context to weigh: `prompt` needs update-toast UI the game doesn't have; `autoUpdate` (skipWaiting + clientsClaim) is safe here because an in-flight session keeps its already-parsed JS (a mid-battle player is untouched; new assets apply on next launch), the game holds no server state, and `lordly.v1.*` localStorage is version-guarded independently (AD-8). Note there is no runtime app-version constant today — the SW's revision hashing IS the version
   - [x] README: one short "Install / offline" note in the existing deploy section (production URL is installable; offline after first load)
@@ -40,7 +40,7 @@ so that a bus-stop match needs nothing but my phone.
 - [x] Task 5: Gate + deploy + device (all ACs)
   - [x] Full gate green (typecheck incl. the new virtual-module reference, lint, all tests, engine coverage untouched)
   - [x] Push → CI build + deploy (875092a) → **prod content-types VERIFIED** (fresh fetch, past the edge cache): `/manifest.webmanifest` → `application/manifest+json`, `/sw.js` → `text/javascript` (real workbox SW body, skipWaiting/precache present), `/icon-512.png` → `image/png`. SPA fallback does NOT swallow them. (First fetch seconds post-deploy hit stale edge cache returning HTML — a propagation artifact, not a served-wrong file; confirmed by cache-busted re-fetch.)
-  - [ ] On-device (Danilo): Android Chrome shows the install prompt / "Add to Home screen"; installed app opens standalone with name+icon; airplane mode → a COMPLETE match (draft → placement → battle → result) + History — the AC2 acceptance
+  - [x] **On-device ACCEPTED (2026-07-15, Danilo, prod build a543417):** "it works great." Installed, standalone, airplane-mode full match confirmed. STORY DONE.
 
 ## Review Findings
 
@@ -128,8 +128,8 @@ Claude Fable 5 (claude-fable-5)
 
 ### Completion Notes List
 
-- **AC1 (build-verified, prod pending)** — manifest.webmanifest generated with name/short_name/standalone/portrait/theme colors/3 icons (192, 512, 512-maskable); apple-touch + theme-color + description in index.html; icons CC0-derived and attribution-listed (attribution tests green).
-- **AC2 (mechanism proven)** — SW precaches the complete app; kill-the-server reload + offline navigation screenshot-verified. The full-match airplane-mode check is Danilo's on-device acceptance.
+- **AC1 ✅** Installed on Danilo's Android device from prod; manifest verified content-type-correct (application/manifest+json); icons CC0-derived and attribution-listed with an existence-check test.
+- **AC2 ✅** SW precaches the complete app; kill-the-server drive + Danilo's on-device airplane-mode full match: "it works great."
 - **AC3 ✅** — ADR 0002 (autoUpdate; Context/Decision/Consequences; the link-play revisit seam named); README install/offline note.
 - Zero engine changes, zero scene changes, zero new dependencies; wrangler/CI untouched (the SW artifacts ride the existing build → artifact → deploy pipeline).
 - Gate: 343 tests, typecheck both packages, lint clean.
