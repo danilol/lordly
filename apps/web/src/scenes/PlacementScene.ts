@@ -13,6 +13,7 @@ import {
   CLASS_ABBREVIATIONS,
 } from '../config/constants';
 import { addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
+import { attachPerfSampler } from '../config/perf';
 import { placedCount } from '../flow/placement';
 import type { MatchFlow } from '../flow/MatchFlow';
 
@@ -44,6 +45,9 @@ export class PlacementScene extends Scene {
   }
 
   create() {
+    // Story 3.4 (NFR1): no-op unless `?perf=1` — per-frame fps sampling.
+    attachPerfSampler(this);
+
     this.cameras.main.setBackgroundColor(PALETTE.background);
     addHomeBack(this);
     this.gridLeft = (BASE_WIDTH - (3 * CELL + 2 * GAP)) / 2;

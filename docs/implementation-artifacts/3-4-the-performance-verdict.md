@@ -1,6 +1,10 @@
+---
+baseline_commit: ef2d62baa88a2ed0f60444d2e73d7b037659baab
+---
+
 # Story 3.4: The performance verdict
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -16,31 +20,32 @@ so that it feels like a real game, not a heavy web page.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: FPS/frame-time instrumentation (AC: 1)
-  - [ ] The codebase has ZERO existing perf instrumentation (verified: no `requestAnimationFrame`, `actualFps`, or FPS overlay anywhere in `apps/web/src`; `main.ts:31-49`'s `Game` config carries no `fps:` block). Add a minimal, dev-only frame-time sampler — **sample PER RENDERED FRAME (~60/sec), NOT per beat (~2-7/sec)**: `BattleScene` has no `update()` method today, but Phaser calls a scene's `update(time, delta)` EVERY frame automatically once one exists — add it (or hook `this.events.on(Phaser.Scenes.Events.UPDATE, ...)`) and sample `this.game.loop.actualFps` there. Sampling from the beat dispatcher (`render(event: BattleEvent)`, BattleScene.ts:260-342 — a DIFFERENT method, fires once per ~150-600ms beat, not once per frame) would give ~5 samples/sec and completely miss the mid-beat tween stutters (wash circles, popups) Task 5 is worried about. The same per-frame hook must exist on Draft/Placement too (Task 2's other benchmarks) — make it a small reusable mixin/helper, not BattleScene-only code, since neither of those scenes has a beat dispatcher to piggyback on anyway
-  - [ ] Keep it OFF the render path in production — a `?perf=1` query-param gate (the codebase's existing diagnostic-flag pattern — `config/ui.ts:27-41` has the precedent for `?textres=N`; no scene currently reads `URLSearchParams` directly, so a new small module alongside it is the right shape) that logs to `console` and exposes a `window.__perfSamples` array `page.evaluate` can read
-  - [ ] No new npm dependency (matches the story 3.2/3.3 zero-new-deps discipline) — this is ~20 lines, not a library
-- [ ] Task 2: A reproducible "busiest battle" benchmark (AC: 1)
-  - [ ] Reuse story 3.2's Replay feature as the repeatability seam: construct a wipeout-mode `MatchSetup` for the heaviest known composition — `three-mages` vs `three-mages` (`packages/engine/src/ai.ts:81`, both back-row, so every blast hits all 3 targets every pass) is the worst-case beat: 3 simultaneous `wash` circles (BattleScene.ts:423-428) + 3 `popup` texts (BattleScene.ts:512-530) + a `PoisonTicked`/status flurry across up to 5 engagements (`BALANCE.engagementCap`). Seed one `HistoryEntry` with this setup directly into `lordly.v1.history` (the 3.1/3.2 drive-harness technique) and tap Replay — deterministic, scriptable, and re-runs identically on every measurement pass
-  - [ ] Also benchmark Draft (many sprite/text redraws on rapid taps) and Placement (drag) — lighter, but AC1 names them explicitly
-- [ ] Task 3: On-device + headless frame-rate measurement (AC: 1)
-  - [ ] Primary evidence: Danilo on his own Pixel-6a-class device via Chrome remote debugging (`chrome://inspect`) — Performance panel recording across the Task 2 benchmark battle at normal AND ×2 speed (the worse case), reading the FPS meter / frame-time chart directly. This is the real, load-bearing measurement — a laptop's headless Chrome is not a Pixel 6a
-  - [ ] Secondary/regression evidence: headless-Chrome CDP trace (the established puppeteer-core recipe — see 3.2/3.3 story Dev Notes; rebuild the ~40-line script per session in scratchpad, NOT committed) with `Emulation.setCPUThrottlingRate` (~4x, a rough Pixel-6a-vs-dev-laptop ratio) driving the same Replay benchmark, reading `window.__perfSamples` from Task 1. Useful for a fast pre-check before bothering with a physical device, but the on-device numbers are the acceptance evidence
-  - [ ] Record: min/median/1%-low fps per scenario, whether the 30fps floor was ever breached, and under what conditions (normal vs ×2 speed — FR23's speed control is the worst-case multiplier, since beats complete faster with the same object churn)
-- [ ] Task 4: Bundle size + cold-load interactive time (AC: 2)
-  - [ ] Bundle: `pnpm --filter web build`, then measure `apps/web/dist/assets/*.js` gzip (and note brotli) sizes — methodology: report the INITIAL bundle (the two chunks the entry HTML loads: `phaser-*.js` + `index-*.js`; PWA precache extras like icons/sw.js are NOT part of the "initial bundle" the 3MB budget targets, they're offline infrastructure from story 3.3). At last measurement (2026-07-15, pre-3.4 changes) this was **~0.36 MB gzip / ~0.29 MB brotli — about 12% of the 3MB budget**; re-measure fresh, don't trust a stale number
-  - [ ] Cold-load interactive time: Chrome DevTools Network throttling preset "Slow 4G" (or `page.emulateNetworkConditions` in a headless script) against the DEPLOYED prod URL (not localhost — real TLS/CDN latency matters), timing from navigation start to the Home scene's "Play vs AI" button being tappable. **Do NOT use CDP network emulation under conditions where a service worker might intercept** (the exact false-pass trap documented in story 3.3's Dev Notes, Chromium bug 852127) — for a COLD load this is moot (no SW registered yet on first-ever visit), but if re-testing an already-installed device, clear site data first so the fetch genuinely goes over the throttled network
-  - [ ] If either budget is breached: profile with the browser's Coverage/Performance panels, fix the hotspot, re-measure. If genuinely out of scope for this story, file it in `deferred-work.md` with the measured baseline and a concrete follow-up (AC2's explicit escape hatch) — do not silently ship over-budget
-- [ ] Task 5: The GameObject-churn hotspot — measure before touching (AC: 1, 2)
-  - [ ] The one architecturally-plausible hotspot, found by code reading, NOT yet measured: `BattleScene.render()` creates and destroys GameObjects on nearly every beat with zero pooling — `popup()` (BattleScene.ts:512-530, a new `crispText` per damage/heal/status/misfire/fizzle/poison-tick beat — almost every beat has one), `attackFlavor()`'s per-target `wash` circles for Mage blasts (BattleScene.ts:423-428, up to 3 per beat), `healGlow()` (BattleScene.ts:446-451). `crispText` is the most expensive Phaser GameObject type in this codebase (the same supersampled-glyph primitive behind the deferred text-ceiling issue — see Dev Notes). **Do not preemptively pool or optimize this** — the codebase's established doctrine is empirical-over-reasoned (screenshot/measurement-verified, not guessed; see the Phaser-quirks memory). Measure first (Tasks 2-3); only build a pooling fix if the data shows a real floor breach during the three-mages-wipeout benchmark. If fps holds, document the finding and move on — a fix with no measured problem is exactly the kind of unrequested scope this codebase's conventions reject
-- [ ] Task 6: The text-ceiling item — link, don't re-diagnose or fix (AC: 2, 3)
-  - [ ] `deferred-work.md`'s "REOPENED: text still reads soft" entry is ALREADY fully diagnosed (canvas backing fixed at 360×640 regardless of DPR) and explicitly flagged as needing verification "against NFR1's 60fps budget" before any of its candidate fixes (DPR-sized backing, 720×1280 redesign, DOM overlay — all multiply GPU fill cost up to ~9×) can be scheduled. This story does NOT implement any of those fixes (they are not in the epics.md ACs for 3.4) — it only needs to (a) confirm the CURRENT fps numbers from Task 3 as the baseline the eventual fix must not regress below, and (b) cross-link that baseline into the deferred-work entry so whoever picks up the text-ceiling fix later inherits a real number instead of re-measuring from scratch
-- [ ] Task 7: Record the verdict (AC: 3)
-  - [ ] New `docs/performance-verdict.md` (repo-root docs convention, like `docs/rules.md`) — NOT an ADR (no architectural decision is being made, only measurements recorded): device/browser used, methodology per Tasks 3-4, the three-mages-wipeout benchmark composition and why it's worst-case, fps numbers (min/median/1%-low, normal + ×2 speed), bundle size (gzip/brotli, initial-vs-full breakdown), cold-load interactive time, pass/fail against NFR1's 60/30/5s/3MB, and any hotspot fixed or filed
-  - [ ] Link from README (one line, alongside the 3.3 "Install / offline" note) and from `deferred-work.md`'s text-ceiling entry (Task 6)
-- [ ] Task 8: Gate + device sign-off (all ACs)
-  - [ ] Full gate green (typecheck, lint, all tests, engine coverage untouched — this story should add zero or near-zero engine/test surface; the perf sampler is dev-web-only)
-  - [ ] Danilo's on-device measurement session IS this story's evidence (Task 3) — there is no separate "on-device acceptance" step after the fact the way 3.0-3.3 had it; the device session produces the numbers Task 7 records. Sign-off = Danilo confirms the recorded verdict matches what he observed
+- [x] Task 1: FPS/frame-time instrumentation (AC: 1)
+  - [x] `apps/web/src/config/perf.ts` (new): `attachPerfSampler(scene)` hooks Phaser's per-frame `update` scene event (NOT the beat dispatcher) and samples `scene.game.loop.actualFps` into `window.__perfSamples`, capped at 3600. No-op unless `?perf=1` (verified no-op cost when disabled — same pattern as `?textres`).
+  - [x] `?perf=1` query-param gate via `isPerfQueryEnabled` (pure, tested) — off by default, zero production cost.
+  - [x] Zero new npm dependencies — pure TS + Phaser's existing `Scene`/`game.loop` API.
+- [x] Task 2: A reproducible "busiest battle" benchmark (AC: 1)
+  - [x] Constructed the exact `three-mages` vs `three-mages` wipeout `MatchSetup` (seed 424242, both AI picks resolved via `chooseSetup` on their own streams — deterministic, FR20) and verified it via a direct engine run before using it in any drive. Seeded as one `HistoryEntry` into `lordly.v1.history`, driven via Replay — see `docs/performance-verdict.md` for the exact JSON and rationale.
+  - [x] Draft benchmarked too (15 rapid taps across all 6 class cards). Placement not separately benchmarked this pass (lighter than Draft/Battle per the story's own framing; no evidence of it being a distinct hotspot) — noted as a gap in Completion Notes, not silently dropped.
+- [x] Task 3: Headless frame-rate measurement — **on-device portion could not be performed by this session** (AC: 1)
+  - [ ] **NOT DONE — genuinely cannot be done by an AI session:** Danilo's own Pixel-6a-class device via `chrome://inspect` remote debugging. This is the row `docs/performance-verdict.md`'s verdict table leaves open. Left unchecked deliberately rather than claiming a device session that didn't happen.
+  - [x] Secondary/regression evidence: headless + headed Chrome via puppeteer-core, `Emulation.setCPUThrottlingRate` (4×) driving the three-mages Replay benchmark, reading `window.__perfSamples`. **Methodology finding, recorded honestly:** headless (and headed, same machine) Chrome does not vsync-cap rendering on this session's ~120Hz-class display — raw fps readings (median ~110) exceed any real mobile device's ceiling and are not directly comparable to the 60fps target. Repurposed as a RELATIVE signal instead: no craters in the low percentiles (min ≈ 1%-low, both ~75-80% of median) — i.e. no evidence of an isolated stutter under this proxy, though it cannot confirm the true 60/30 numbers.
+  - [x] Recorded: min/median/1%-low for Battle (three-mages wipeout, ~9s) and Draft (15 taps) — see verdict doc. Did NOT additionally run ×2 speed under this proxy (the vsync-uncapped numbers already can't answer the real question; running a second uninformative variant wasn't worth the time against a proxy that's already flagged as non-authoritative) — this narrowing is called out explicitly, not silently.
+  - [x] Bonus signal not in the original task list: CDP `Performance.getMetrics` heap sampling across the busiest battle — healthy sawtooth (6.98-12.45 MB), no leak, informing Task 5's decision.
+- [x] Task 4: Bundle size + cold-load interactive time (AC: 2)
+  - [x] Bundle re-measured fresh (not the stale story-writing-time number): 0.359 MiB gzip / 0.297 MiB brotli, 12.0% of the 3MiB budget.
+  - [x] Cold-load interactive time measured against the DEPLOYED prod URL. **Two methodology bugs caught and corrected before the number was trusted** (both recorded in the verdict doc so nobody repeats them): (1) `waitUntil:'networkidle0'` blocks on the service worker's background precache fetches — inflated the reading to ~9-10s, a measurement artifact; corrected to `waitUntil:'load'` (the page's own resources, independent of SW background activity). (2) The throttle constant used was 400Kbps/400ms — that's Chrome's "Slow 3G" preset mislabeled as "4G"; corrected to the real 4G profile (1.6Mbps/750Kbps/150ms). Final, correctly-labeled result: ~2.4-2.6s median across 3 fresh-context trials, screenshot-confirmed Home is fully painted.
+  - [x] Neither budget was breached — AC2's fix-or-file escape hatch wasn't needed.
+- [x] Task 5: The GameObject-churn hotspot — measure before touching (AC: 1, 2)
+  - [x] Measured, not guess-fixed: no fps craters (secondary evidence) + healthy sawtooth heap (no leak) both argue against a real floor breach from the unpooled `popup`/`wash`/`healGlow` churn. **No pooling fix implemented** — consistent with the codebase's empirical-over-reasoned doctrine. If Danilo's real on-device session (Task 3's open item) finds an actual 30fps breach, the pooling fix is the documented, ready-to-build follow-up — not built speculatively.
+- [x] Task 6: The text-ceiling item — link, don't re-diagnose or fix (AC: 2, 3)
+  - [x] `deferred-work.md`'s entry now cross-links `docs/performance-verdict.md` as the baseline any future candidate fix must not regress below. No fix implemented (correctly out of scope).
+- [x] Task 7: Record the verdict (AC: 3)
+  - [x] `docs/performance-verdict.md` written: verdict summary table, benchmark composition + rationale, instrumentation description, secondary-evidence methodology (incl. the two corrected mistakes), bundle/cold-load numbers, hotspot decision, text-ceiling link, and an explicit "what's still needed" section naming the one open item.
+  - [x] Linked from README (one line, alongside the 3.3 PWA note) and from `deferred-work.md` (Task 6).
+- [x] Task 8: Gate + device sign-off (all ACs)
+  - [x] Full gate green: 351 tests (7 new), typecheck both packages, lint clean, ZERO engine changes (coverage gate untouched).
+  - [ ] **Danilo's on-device Pixel-6a session — the one open item.** Unlike 3.0-3.3, this is not a rubber-stamp "confirm it works" pass: it's the actual missing DATA POINT for AC1's pass/fail. Everything else in this story is complete and gate-green; this single row is what stands between "review" and "done."
 
 ## Dev Notes
 
@@ -115,8 +120,38 @@ This story is unusually light on unit tests — its "test" IS the measurement se
 
 ### Agent Model Used
 
+Claude Sonnet 5 (claude-sonnet-5)
+
 ### Debug Log References
+
+- Perf sampler: RED confirmed (module not found) → 7/7 GREEN on first implementation of `perf.ts`. No iteration needed — the design was already corrected during story creation's validation pass (per-frame, not per-beat).
+- Benchmark construction: derived the exact `three-mages` vs `three-mages` wipeout `MatchSetup` by running `chooseSetup` directly via `tsx` against `packages/engine/src/ai.ts` (seed 424242) — verified the JSON before using it in any drive, rather than hand-writing a plausible-looking setup.
+- **Headless/headed fps numbers came back ~110 median — well above 60, which was the first sign of a methodology problem, not a real result.** Diagnosed: headless Chrome doesn't vsync-cap without a real compositor; re-ran headed (visible window) on the same machine and got the same ~110 median, confirming it's this session's ~120Hz-class display, not a headless artifact. Repurposed the data as a relative (crater-detection) signal instead of discarding it.
+- **Cold-load measurement: two real mistakes caught before trusting the number.** v1 (`networkidle0`) read ~9-10s — investigated rather than accepted, found it was waiting on the service worker's background precache fetches (a separate fetch context). v2 used a fragile canvas-content-diffing proxy for "interactive" that never fired reliably (WebGL canvas + `getContext('2d')` returning null, PNG-size heuristic too noisy) — abandoned for something simpler. v3/final: `waitUntil:'load'` + screenshot confirmation, which is both simpler and correct. THEN caught a second bug: the throttle constant (400Kbps/400ms) was actually Chrome's "Slow 3G" preset mislabeled as "4G" in my own script — the arithmetic (360KB ÷ 50KB/s ≈ 7.2s) explained the ~9s reading almost entirely on its own. Corrected to the real 4G profile (1.6Mbps/750Kbps/150ms) and got ~2.5s, which is what shipped.
+- Heap check (CDP `Performance.getMetrics`, not in the original task list) added opportunistically once the fps proxy came back non-authoritative — wanted a second, more machine-independent signal for Task 5's measure-before-fixing decision. Sawtooth 6.98-12.45MB, no leak.
 
 ### Completion Notes List
 
+- **AC1 (frame rate) ⏳ NOT CLOSED.** Everything measurable without a physical device is done and documented; the authoritative Pixel-6a-class number is explicitly absent. I want to be direct about this rather than paper over it: an AI session cannot operate Danilo's phone via `chrome://inspect`, so this criterion has a real, structural gap that only Danilo can close. This is different from every prior 3.x story's "on-device sign-off," which confirmed work already believed correct — here, the data itself doesn't exist yet.
+- **AC2 (cold load / bundle) ✅** Both measured fresh, both comfortably under budget (bundle 12%, load time ~50% of the 5s ceiling), two methodology bugs caught and corrected in-session rather than shipped.
+- **AC3 (recorded with evidence) ✅** `docs/performance-verdict.md` written, including the dead-ends — a future reader (or Danilo, adding his real numbers) inherits the corrected methodology, not just a clean-looking final table.
+- Zero engine changes; zero new dependencies. `apps/web` touched: one new module (`config/perf.ts`), three scenes gained a one-line `attachPerfSampler(this)` call, one new test file.
+- Gate: 351 tests (7 new), typecheck both packages, lint clean.
+- **Placement was not separately fps-benchmarked** (Task 2 scoped it as "lighter" and I focused effort on Battle/Draft) — noting this as a real, if minor, scope gap rather than silently completing the checkbox as if it were covered.
+- **×2 speed was not run under the headless proxy** — once the proxy was known to be non-authoritative (uncapped vsync), running a second uninformative variant didn't add real evidence; Danilo's real device session should cover both speeds per the original Task 3 wording.
+
 ### File List
+
+- `apps/web/src/config/perf.ts` — NEW: `isPerfQueryEnabled`, `summarizePerfSamples`, `attachPerfSampler`
+- `apps/web/test/perf.test.ts` — NEW: 7 tests for the pure functions
+- `apps/web/src/scenes/BattleScene.ts` — MODIFIED: `attachPerfSampler(this)` in `create()`
+- `apps/web/src/scenes/DraftScene.ts` — MODIFIED: `attachPerfSampler(this)` in `create()`
+- `apps/web/src/scenes/PlacementScene.ts` — MODIFIED: `attachPerfSampler(this)` in `create()`
+- `docs/performance-verdict.md` — NEW: the measurement record (NFR3)
+- `docs/implementation-artifacts/deferred-work.md` — MODIFIED: text-ceiling entry cross-links the new baseline
+- `README.md` — MODIFIED: one-line performance note + link
+- `docs/implementation-artifacts/sprint-status.yaml`, this story file — MODIFIED: tracking
+
+### Change Log
+
+- 2026-07-15: Story 3.4 implemented — greenfield perf methodology (zero prior instrumentation): a `?perf=1`-gated per-frame fps sampler, the three-mages-wipeout Replay benchmark (reusing 3.2's seam), bundle size (0.359 MiB gzip, 12% of budget) and cold-load time (~2.5s, corrected past two real methodology bugs caught in-session) both comfortably under NFR1's budgets, and a measure-before-fixing verdict on the one plausible GameObject-churn hotspot (no pooling built — no craters, healthy GC, per doctrine). `docs/performance-verdict.md` records everything including the dead-ends. **AC1's frame-rate criterion is NOT fully closed**: the authoritative Pixel-6a-class device measurement requires Danilo's own phone, which this session could not operate — flagged explicitly rather than claimed. 351 tests green, zero engine changes.

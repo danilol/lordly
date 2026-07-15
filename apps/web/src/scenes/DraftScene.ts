@@ -15,6 +15,7 @@ import {
 import { canAddUnit, canContinue, classRulesCard } from '../flow/draftModel';
 import type { MatchFlow } from '../flow/MatchFlow';
 import { addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
+import { attachPerfSampler } from '../config/perf';
 
 /**
  * Draft scene (FR1/FR2/FR3): six class cards to tap, the growing army with
@@ -37,6 +38,9 @@ export class DraftScene extends Scene {
   }
 
   create() {
+    // Story 3.4 (NFR1): no-op unless `?perf=1` — per-frame fps sampling.
+    attachPerfSampler(this);
+
     this.cameras.main.setBackgroundColor(PALETTE.background);
     addHomeBack(this);
 

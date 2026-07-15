@@ -25,6 +25,7 @@ import {
 import type { BattleSpeedId } from '../config/constants';
 import { addElementBadge, addHomeBack, addUnitSprite, crispText, prefersReducedMotion } from '../config/ui';
 import { drawIsoBoard } from '../config/board';
+import { attachPerfSampler } from '../config/perf';
 import { beatDurationMs, buildBeatSchedule, unitTileCenter } from '../flow/battleView';
 import { createStorage } from '../flow/storage';
 import type { Beat } from '../flow/battleView';
@@ -106,6 +107,10 @@ export class BattleScene extends Scene {
   }
 
   create() {
+    // Story 3.4 (NFR1): a no-op unless `?perf=1` — per-FRAME fps sampling for
+    // the performance-verdict benchmark, never the beat dispatcher below.
+    attachPerfSampler(this);
+
     // Phaser scenes are SINGLETONS: create() re-runs on every scene.start but
     // fields persist. Reset every piece of transient playback state so nothing
     // leaks between battles (2.2 review; stale log lines/toggle bled between
