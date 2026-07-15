@@ -1,12 +1,13 @@
+import { ALL_CLASSES, ALL_ELEMENTS } from '@lordly/engine';
+import type { MatchSetup, Unit } from '@lordly/engine';
 import { battleSpeed, DEFAULT_SPEED_ID } from '../config/constants';
 import type { BattleSpeedId } from '../config/constants';
 
 /**
  * The `web/storage` gateway (story 2.3, AD-8): the SOLE reader/writer of
  * localStorage in this codebase — no other module touches storage APIs, ever.
- * It owns the key manifest under the versioned `lordly.v1.*` namespace; this
- * story ships exactly ONE key (settings). History keys (`HistoryEntry`,
- * replay gating) arrive with Epic 3 and live behind this same gateway.
+ * It owns the key manifest under the versioned `lordly.v1.*` namespace:
+ * settings (story 2.3) and history (story 3.1, FR28).
  *
  * Resilience rules (AD-8 + NFR5): missing/corrupt/wrong-shape data → defaults,
  * never a throw (broken storage must not brick boot); a throwing backend
@@ -17,6 +18,59 @@ import type { BattleSpeedId } from '../config/constants';
  */
 
 export const SETTINGS_KEY = 'lordly.v1.settings';
+export const HISTORY_KEY = 'lordly.v1.history';
+
+/** How many matches the on-device history remembers (FR28: the last 10). */
+export const HISTORY_LIMIT = 10;
+
+/**
+ * One remembered match — EXACTLY the AD-8 shape: the full `MatchSetup`
+ * (carrying seed and `balanceVersion`, so story 3.2 can re-resolve the whole
+ * battle via determinism — FR20), the verdict, and an ISO 8601 date. There is
+ * deliberately no `BattleLog` field and no derived extras (HP%, archetype):
+ * storing a log is forbidden, and everything else is re-derivable.
+ */
+export interface HistoryEntry {
+  setup: MatchSetup;
+  winner: 'A' | 'B' | 'draw';
+  date: string;
+}
+
+const CLASS_SET: ReadonlySet<string> = new Set(ALL_CLASSES);
+const ELEMENT_SET: ReadonlySet<string> = new Set(ALL_ELEMENTS);
+
+/** A unit the History cards can render: a known class and element (AD-4 closed sets). */
+function isRenderableUnit(value: unknown): value is Unit {
+  if (typeof value !== 'object' || value === null) return false;
+  const unit = value as Record<string, unknown>;
+  return typeof unit.class === 'string' && CLASS_SET.has(unit.class) && typeof unit.element === 'string' && ELEMENT_SET.has(unit.element);
+}
+
+/**
+ * A setup the History scene can safely render: both armies are arrays of
+ * renderable units. Validated to the DEPTH the renderer reaches
+ * (`setup.armies.{A,B}[].{class,element}`) so a structurally-broken record
+ * drops here rather than throwing mid-render and bricking the whole scene.
+ * Deliberately does NOT check seed/placements/balanceVersion — those don't
+ * affect display, and a stale-`balanceVersion` entry must still DISPLAY
+ * (marked non-replayable, story 3.2); the engine re-validates the full setup
+ * at replay time.
+ */
+function isRenderableSetup(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const armies = (value as Record<string, unknown>).armies;
+  if (typeof armies !== 'object' || armies === null) return false;
+  const { A, B } = armies as Record<string, unknown>;
+  return Array.isArray(A) && Array.isArray(B) && A.every(isRenderableUnit) && B.every(isRenderableUnit);
+}
+
+/** Per-entry shape check (AD-8): one corrupt record drops, the list survives — validated to render depth. */
+function isHistoryEntry(value: unknown): value is HistoryEntry {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const entry = value as Record<string, unknown>;
+  const winnerOk = entry.winner === 'A' || entry.winner === 'B' || entry.winner === 'draw';
+  return isRenderableSetup(entry.setup) && winnerOk && typeof entry.date === 'string';
+}
 
 /** Player preferences. Extensible — later settings (e.g. the deferred theme toggle) add fields here, same key. */
 export interface Settings {
@@ -46,6 +100,10 @@ function defaultBackend(): StorageBackend | undefined {
 export interface WebStorage {
   loadSettings(): Settings;
   saveSettings(next: Settings): void;
+  /** The remembered matches, NEWEST first (storage order = display order); [] on anything unreadable. */
+  loadHistory(): HistoryEntry[];
+  /** Prepends one entry and evicts past `HISTORY_LIMIT` (oldest first). Pre-existing corrupt data yields a clean one-entry list. */
+  appendHistory(entry: HistoryEntry): void;
 }
 
 export function createStorage(backend: StorageBackend | undefined = defaultBackend()): WebStorage {
@@ -69,6 +127,27 @@ export function createStorage(backend: StorageBackend | undefined = defaultBacke
         backend?.setItem(SETTINGS_KEY, JSON.stringify(next));
       } catch {
         // Storage denied (quota, private mode) — preferences just don't persist this session.
+      }
+    },
+    loadHistory(): HistoryEntry[] {
+      try {
+        const raw = backend?.getItem(HISTORY_KEY);
+        if (raw === null || raw === undefined) return [];
+        const parsed: unknown = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter(isHistoryEntry);
+      } catch {
+        return []; // corrupt JSON or a throwing backend — history just reads empty
+      }
+    },
+    appendHistory(entry: HistoryEntry): void {
+      try {
+        // Reuse the resilient read: corrupt prior data degrades to [] and the
+        // new entry starts a clean list rather than throwing away the match.
+        const next = [entry, ...this.loadHistory()].slice(0, HISTORY_LIMIT);
+        backend?.setItem(HISTORY_KEY, JSON.stringify(next));
+      } catch {
+        // Storage denied — this match just isn't remembered.
       }
     },
   };

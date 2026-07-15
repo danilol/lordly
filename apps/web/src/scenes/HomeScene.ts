@@ -9,7 +9,10 @@ import {
   GAME_NAME,
   HOME_CREDITS_LABEL,
   HOME_HELP_LABEL,
+  HOME_HISTORY_LABEL,
   HOME_PLAY_LABEL,
+  SPUR_BUTTON_WIDTH,
+  SPUR_COUNT,
   MODE_BUTTON_GAP,
   MODE_BUTTON_HEIGHT,
   MODE_BUTTON_WIDTH,
@@ -79,20 +82,21 @@ export class HomeScene extends Scene {
     }).setOrigin(0.5);
     this.redrawModeToggle();
 
-    // Home spurs (story 2.4, FR27/FR31): Help and Credits — exactly these
-    // two; History and Settings arrive with their own stories (Epic 3 /
-    // deferred). Same metrics as the mode toggle (≥44px targets).
+    // Home spurs (stories 2.4 + 3.1, FR27/FR31/FR28): Help, Credits, History;
+    // Settings arrives with its own story (deferred). Height stays the 44px
+    // tap-target floor; width shrinks to fit three across a 360px viewport.
     this.spurButton(0, HOME_HELP_LABEL, () => this.scene.start('Help', { from: 'Home' }));
     this.spurButton(1, HOME_CREDITS_LABEL, () => this.scene.start('Credits'));
+    this.spurButton(2, HOME_HISTORY_LABEL, () => this.scene.start('History'));
   }
 
-  /** One of the two Home spur buttons (Help / Credits), laid out like the mode toggle row. */
+  /** One of the three Home spur buttons (Help / Credits / History) — 3-across row, ≥44px targets. */
   private spurButton(index: number, label: string, onTap: () => void) {
-    const startX = (BASE_WIDTH - (2 * MODE_BUTTON_WIDTH + MODE_BUTTON_GAP)) / 2;
-    const x = startX + index * (MODE_BUTTON_WIDTH + MODE_BUTTON_GAP) + MODE_BUTTON_WIDTH / 2;
+    const startX = (BASE_WIDTH - (SPUR_COUNT * SPUR_BUTTON_WIDTH + (SPUR_COUNT - 1) * MODE_BUTTON_GAP)) / 2;
+    const x = startX + index * (SPUR_BUTTON_WIDTH + MODE_BUTTON_GAP) + SPUR_BUTTON_WIDTH / 2;
     const y = BASE_HEIGHT * 0.9;
     this.add
-      .rectangle(x, y, MODE_BUTTON_WIDTH, MODE_BUTTON_HEIGHT, PALETTE.buttonFill)
+      .rectangle(x, y, SPUR_BUTTON_WIDTH, MODE_BUTTON_HEIGHT, PALETTE.buttonFill)
       .setStrokeStyle(2, PALETTE.buttonStroke)
       .setInteractive({ useHandCursor: true })
       .on('pointerup', onTap);

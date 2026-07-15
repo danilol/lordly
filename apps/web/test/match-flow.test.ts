@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, createStreams, rollElement, validateMatchSetup } from '@lordly/engine';
+import type { BattleEnded } from '@lordly/engine';
 import { MatchFlow } from '../src/flow/MatchFlow';
 import type { MatchState } from '../src/flow/MatchState';
+import { createStorage } from '../src/flow/storage';
+import type { HistoryEntry, WebStorage } from '../src/flow/storage';
 
 /** A MatchFlow with a fixed seed so every draw is deterministic in tests. */
 function flowWithSeed(seed: number): MatchFlow {
@@ -302,6 +305,97 @@ describe('MatchFlow mode (FR19/story 1.10 — Standard vs Wipeout)', () => {
     flow.commit();
     const state = flow.getState();
     expect(JSON.parse(JSON.stringify(state)) as MatchState).toEqual(state);
+  });
+});
+
+describe('MatchFlow recordResult — the SOLE history writer (story 3.1, FR28/AD-8/AD-13)', () => {
+  const FIXED_ISO = '2026-07-15T12:00:00.000Z';
+
+  /** A real gateway over a Map backend + a flow wired to it with a pinned clock. */
+  function wiredFlow(seeds: number[]): { flow: MatchFlow; storage: WebStorage } {
+    let i = 0;
+    const map = new Map<string, string>();
+    const storage = createStorage({
+      getItem: (key: string) => map.get(key) ?? null,
+      setItem: (key: string, value: string) => void map.set(key, value),
+    });
+    const flow = new MatchFlow(
+      () => seeds[i++] as number,
+      storage,
+      () => FIXED_ISO,
+    );
+    return { flow, storage };
+  }
+
+  function playToResolve(flow: MatchFlow): void {
+    flow.draftUnit('knight');
+    flow.draftUnit('archer');
+    flow.draftUnit('mage');
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    flow.placeUnit(1, { row: 'back', col: 'left' });
+    flow.placeUnit(2, { row: 'back', col: 'right' });
+    flow.commit();
+    flow.resolve();
+  }
+
+  it('writes exactly ONE entry per live match — the full committed MatchSetup, log winner, injected clock date (AC1)', () => {
+    const { flow, storage } = wiredFlow([0xcafe]);
+    flow.startMatch();
+    playToResolve(flow);
+    flow.recordResult();
+
+    const history = storage.loadHistory();
+    expect(history).toHaveLength(1);
+    const entry = history[0] as HistoryEntry;
+    expect(entry.setup).toEqual(flow.getState().committedSetup);
+    expect(entry.date).toBe(FIXED_ISO);
+    const ended = flow.resolve().events[flow.resolve().events.length - 1] as BattleEnded;
+    expect(entry.winner).toBe(ended.winner);
+  });
+
+  it('is idempotent: double recordResult (Result-scene restart) never duplicates (AC1)', () => {
+    const { flow, storage } = wiredFlow([0xcafe]);
+    flow.startMatch();
+    playToResolve(flow);
+    flow.recordResult();
+    flow.recordResult();
+    flow.recordResult();
+    expect(storage.loadHistory()).toHaveLength(1);
+  });
+
+  it('a rematch writes its OWN entry — startMatch resets the once-guard (AC1)', () => {
+    const { flow, storage } = wiredFlow([100, 200]);
+    flow.startMatch();
+    playToResolve(flow);
+    flow.recordResult();
+    flow.startMatch(); // rematch
+    playToResolve(flow);
+    flow.recordResult();
+    const history = storage.loadHistory();
+    expect(history).toHaveLength(2);
+    expect(history.map((e) => e.setup.seed)).toEqual([200, 100]); // newest first
+  });
+
+  it('throws before resolve — there is no verdict to record (guard style matches resolve())', () => {
+    const { flow } = wiredFlow([5]);
+    flow.startMatch();
+    expect(() => flow.recordResult()).toThrow(/not resolved|resolve/i);
+  });
+
+  it('keeps MatchState JSON-serializable — the once-guard lives on the flow, not the state (AD-5)', () => {
+    const { flow } = wiredFlow([0xaa]);
+    flow.startMatch();
+    playToResolve(flow);
+    flow.recordResult();
+    const state = flow.getState();
+    expect(JSON.parse(JSON.stringify(state)) as MatchState).toEqual(state);
+  });
+
+  it('default construction still works with no storage injected (node no-op backend) — no throw, nothing persisted', () => {
+    const flow = flowWithSeed(1);
+    flow.startMatch();
+    playToResolve(flow);
+    expect(() => flow.recordResult()).not.toThrow();
   });
 });
 

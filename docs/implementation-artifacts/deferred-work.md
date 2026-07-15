@@ -1,5 +1,9 @@
 # Deferred Work
 
+## Product wish (PO, 2026-07-15) — history rows show OPPONENT TYPE (vs AI / PvP) — deferred to the link-play epic
+
+- Danilo (during story 3.1 review): history should show the battle type — mode AND opponent. The **mode** (Standard/Wipeout) shipped immediately inside 3.1 (display-only; it was already stored in `HistoryEntry.setup.mode`). The **opponent type** is deferred to link-play with a safe-backfill guarantee: PvP does not exist, so every entry written before link-play ships is provably vs AI — "field absent = AI" is a forever-correct default, and adding an `opponent` field to `HistoryEntry` is a spine AD-8 shape amendment that belongs to link-play's design pass (alongside its side-assignment/rooms work). When link-play is scoped, remember: HistoryEntry schema + History row layout (the right edge is reserved for 3.2's Replay button — opponent tag placement must coexist).
+
 ## Bug report (Danilo on device, 2026-07-15) — Reveal/Battle iso boards render the player's formation MIRRORED
 
 - **Symptom:** placement front/left + front/center knights + back/left mage renders on the Reveal iso board with the mage on the player's RIGHT — the player's own board reads as a left-right reflection of what they placed, not a rotation. Both boards are flipped consistently (lane pairing and combat are untouched — AD-11 keeps the engine owner-local), so battles look internally coherent but contradict the player's placement intent (FR6 "the reveal shows the two boards face to face").

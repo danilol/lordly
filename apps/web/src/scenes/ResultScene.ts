@@ -41,6 +41,10 @@ export class ResultScene extends Scene {
     const reduceMotion = prefersReducedMotion();
 
     const log = this.flow.resolve();
+    // The verdict moment is where the ONE live history entry gets written
+    // (FR28, AD-13 — story 3.1). Idempotent in the flow, so a singleton-scene
+    // restart of Result can never duplicate it; replays (3.2) won't call it.
+    this.flow.recordResult();
     const roster = (log.events[0] as BattleStarted).units;
     const ended = log.events[log.events.length - 1] as BattleEnded;
 

@@ -108,6 +108,15 @@ export const BACK_LABEL = '‹ Back';
 // Help / Credits (story 2.4, FR27/FR31) — one source for scenes + tests.
 export const HOME_HELP_LABEL = 'Help';
 export const HOME_CREDITS_LABEL = 'Credits';
+
+// History (story 3.1, FR28) — one source for scenes + tests.
+export const HOME_HISTORY_LABEL = 'History';
+export const HISTORY_TITLE = 'History';
+/** EXPERIENCE.md pins this copy exactly — the drift-guarded empty state. */
+export const HISTORY_EMPTY_LABEL = 'No battles yet — play your first match.';
+/** Home spur row (story 3.1): three buttons across 360px — 3×104 + 2×12 = 336 ≤ BASE_WIDTH; height keeps the 44px floor. */
+export const SPUR_COUNT = 3;
+export const SPUR_BUTTON_WIDTH = 104;
 export const DRAFT_RULES_LABEL = '? Rules';
 export const CREDITS_TITLE = 'Credits';
 

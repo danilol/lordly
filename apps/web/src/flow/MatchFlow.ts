@@ -1,13 +1,21 @@
 import { BALANCE, chooseSetup, createStreams, resolveBattle, rollElement, STRATEGY_POOL, validateMatchSetup } from '@lordly/engine';
-import type { BattleLog, Element, MatchSetup, Mode, Placement, UnitClass } from '@lordly/engine';
+import type { BattleEnded, BattleLog, Element, MatchSetup, Mode, Placement, UnitClass } from '@lordly/engine';
 import { placeUnit } from './placement';
 import type { DraftedUnit, MatchState } from './MatchState';
+import { createStorage } from './storage';
+import type { WebStorage } from './storage';
 
 /** Produces a fresh uint32 match seed. Injected so tests can pin it (AD-10). */
 export type SeedSource = () => number;
 
 /** Default seed source: one uint32 from the Web Crypto RNG — the flow's ONE effectful dependency. */
 const cryptoSeed: SeedSource = () => crypto.getRandomValues(new Uint32Array(1))[0] as number;
+
+/** Produces the history entry's ISO 8601 timestamp. Injected so tests can pin it (story 3.1). */
+export type Clock = () => string;
+
+/** Default clock: the real wall clock, ISO-formatted — lives ONLY here, never inline in flow logic. */
+const isoNow: Clock = () => new Date().toISOString();
 
 /**
  * The controller that OWNS the `MatchState` and is the SOLE caller of the
@@ -27,7 +35,19 @@ export class MatchFlow {
    */
   private log?: BattleLog;
 
-  constructor(private readonly seedSource: SeedSource = cryptoSeed) {
+  /**
+   * Once-per-match guard for the history write (story 3.1, AD-13). Lives on
+   * the FLOW, not on `MatchState` — the state's JSON-serializability contract
+   * (AD-5) stays untouched. Reset by `startMatch()` like the cached log.
+   */
+  private historyWritten = false;
+
+  constructor(
+    private readonly seedSource: SeedSource = cryptoSeed,
+    /** The AD-8 gateway for the history write; injectable for tests, no-op backend in node. */
+    private readonly storage: WebStorage = createStorage(),
+    private readonly clock: Clock = isoNow,
+  ) {
     this.state = MatchFlow.emptyState(0);
   }
 
@@ -53,6 +73,7 @@ export class MatchFlow {
   startMatch(mode?: Mode): void {
     this.state = MatchFlow.emptyState(this.seedSource() >>> 0, mode ?? this.state.mode, this.state.lastAiArchetypeId);
     this.log = undefined; // a rematch resolves its own battle (AD-13)
+    this.historyWritten = false; // …and records its own history entry (story 3.1)
   }
 
   /** A read-only-by-convention view of the current state (scenes render from this). */
@@ -163,6 +184,29 @@ export class MatchFlow {
     }
     this.log = resolveBattle(this.state.committedSetup);
     return this.log;
+  }
+
+  /**
+   * Records this live match into on-device history — EXACTLY ONCE (FR28,
+   * AD-8, AD-13): the Result scene calls this at the verdict moment, and
+   * `MatchFlow` is the sole path to `appendHistory`. Idempotent like
+   * `commit()`/`resolve()`, so a Phaser singleton-scene restart can never
+   * duplicate an entry; `startMatch()` re-arms it for the rematch. The entry
+   * is the full committed `MatchSetup` + the log's verdict + the injected
+   * clock's ISO date — never the `BattleLog` (AD-8 forbids caching it).
+   * This is also the single choke point a future `replay` mode (story 3.2)
+   * bypasses: replays never write.
+   *
+   * @throws if the battle has not been resolved — there is no verdict yet.
+   */
+  recordResult(): void {
+    if (this.historyWritten) return;
+    if (!this.log || !this.state.committedSetup) {
+      throw new Error('cannot record result: battle is not resolved');
+    }
+    const ended = this.log.events[this.log.events.length - 1] as BattleEnded;
+    this.storage.appendHistory({ setup: this.state.committedSetup, winner: ended.winner, date: this.clock() });
+    this.historyWritten = true;
   }
 
   /**
