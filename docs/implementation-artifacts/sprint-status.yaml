@@ -74,8 +74,8 @@ development_status:
   3-2-replay-any-remembered-battle: done  # 2026-07-15: DONE — MatchFlow replay mode via the 3.1 choke point, version-gated Replay UI, byte-identical no-write journey. Review passed (5 patches), 343 tests, deployed eb24f64, Danilo on prod: "everything works as expected".
   3-3-install-it-play-it-offline: done  # 2026-07-15: DONE — VitePWA autoUpdate (skipWaiting/clientsClaim explicit after review), inline-injected registration, CC0 icon set, full precache. 3-layer review passed (5 patches: inert-autoUpdate fix, ADR correction, untracked-icons fix + existence-check test, dedupe, dropped apple-touch-icon). 344 tests, deployed a543417, prod content-types verified, Danilo on device: "it works great."
   3-4-the-performance-verdict: done  # 2026-07-16: DONE — senior review reopened AC1 (EMA metric, listener leak, impossible 5,746-sample trace), 7 patches applied + sampler rewritten (per-frame 1000/rawDelta, shutdown detach, cap 36k), deployed 5cb9517, then Danilo's same-day re-capture on the Pixel 9 Pro XL: Battle 1× + ×2 + Placement, 9,380 per-frame samples, worst frame 30.03fps (one Placement drag frame), ZERO 30fps-floor breaches. Device-class deviation (9 Pro XL vs 6a-class) accepted + recorded. docs/performance-verdict.md is the authoritative record. Danilo's sign-off: "let's flip it to done and move forward."
-  epic-3-retrospective: optional
-  epic-4: backlog  # Combat depth — moves, tactics, crits, promotions (FR32/FR33 + OB64 target-selection tactics + critical hits + Archmage blast gating; StatusCleared events ride its single logVersion bump) — post-MVP, added 2026-07-13, widened via correct-course 2026-07-14. Stories pending a PM/Architect design pass; ordering vs link-play decided at post-Epic-3 planning. See sprint-change-proposal-2026-07-14.md.
+  epic-3-retrospective: done  # 2026-07-16: epic-3-retro-2026-07-16.md — MVP complete & measured; big lesson: verify the meter (3.4 instrument fiasco); ORDERING DECIDED: Epic 4 before link-play; Epic 4 design pass is the critical-path action.
+  epic-4: backlog  # Combat depth — moves, tactics, crits, promotions (FR32/FR33 + OB64 target-selection tactics + critical hits + Archmage blast gating; StatusCleared events ride its single logVersion bump) — post-MVP, added 2026-07-13, widened via correct-course 2026-07-14. Stories pending a PM/Architect design pass. ORDERING DECIDED (epic-3 retro, 2026-07-16): Epic 4 BEFORE link-play — Danilo: "a lot of ideas on pve before enabling pvp". See sprint-change-proposal-2026-07-14.md + epic-3-retro-2026-07-16.md.
 
 # Epic-1 retrospective action items (2026-07-13, see epic-1-retro-2026-07-13.md).
 # Critical path items 1-3 run IN ORDER before story 2-1 starts.
@@ -99,7 +99,7 @@ action_items:
   - epic: 2
     action: "Text-ceiling fix scheduling decision at Epic 3 planning (360px backing-store investigation, NFR1-gated; candidate home beside story 3.4)"
     owner: "Winston (Architect)"
-    status: open
+    status: open  # 2026-07-16 epic-3 retro: NOT addressed in Epic 3, but now unblocked — story 3.4 supplied the fps baseline (docs/performance-verdict.md). Hard deadline: decide at the Epic 4 design pass (see epic-3 action item). Must not survive a third retro.
   - epic: 2
     action: "StatusCleared engine events ride the next LOG_VERSION bump (bundle with a crit flag if the balance pass adds one)"
     owner: "Amelia (dev)"
@@ -108,3 +108,18 @@ action_items:
     action: "Sim-harness wipeout sweep executes inside the balance-pass verification (deferred since 1.10)"
     owner: "Amelia (dev)"
     status: done  # 2026-07-15: story 3-0 done — mode knob + both-mode ≤65% band shipped and enforced in CI; the first-ever wipeout sweep found and fixed v1's three-mages dominance (74.6%).
+
+# Epic-3 retrospective action items (2026-07-16, see epic-3-retro-2026-07-16.md).
+# Item 1 is the critical path: no Epic 4 story is created before the design pass.
+  - epic: 3
+    action: "Epic 4 design pass — one PM/Architect scoping session with Danilo's full idea list: per-row move variety (FR32/FR33), target-selection tactics, crits/miss with the crit-vs-miss seeded draw ORDER fixed (FR20), Archmage blast gating, StatusCleared on the single combined bump, non-replayable-history UX confirmation; wardens-33% melee floor is a named design input"
+    owner: "John (PM) + Winston (Architect) + Danilo"
+    status: open
+  - epic: 3
+    action: "Record the epic-ordering decision: Epic 4 (combat depth) before link-play"
+    owner: "Amelia (dev)"
+    status: done  # 2026-07-16: decided by Danilo in the epic-3 retro; recorded in sprint-status epic-4 entry + retro doc.
+  - epic: 3
+    action: "Text-ceiling scheduling decision (carried from epic-2): decide at the Epic 4 design pass whether the fix becomes an Epic 4 story or stays parked — baseline exists in docs/performance-verdict.md"
+    owner: "Winston (Architect)"
+    status: open
