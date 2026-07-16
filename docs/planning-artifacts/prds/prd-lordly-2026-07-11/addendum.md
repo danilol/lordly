@@ -32,7 +32,7 @@ Advanced tiers for later calibration: Paladin 3/2/2, Archmage 1/2/2, Diana 1/2/3
 - **Ranged and magic** targeted rear-most first ("if there is anyone in your column behind you, ranged attacks have to get rid of them first"). Attacks biased toward the center of a row; a leader in a front corner absorbed ~2/3 of potential hits.
 - **AoE magic** was not row-locked: spells were single-target, "corner" (target + adjacent splash), or "wide range" blobs around a rear-priority primary target. Our row-AoE Mage is a deliberate simplification.
 
-### The four tactics orders (post-MVP parking-lot item)
+### The four tactics orders (committed into Epic 4 as FR34 on 2026-07-16)
 
 1. **Autonomous** (default) — units pick the easiest/closest valid target.
 2. **Attack Strongest** — prioritize the enemy with the highest remaining HP.
@@ -80,3 +80,25 @@ From the original brain dump (`ogre_game.txt`) — mined for this digest; keep a
 | Stat model | Six OB64 attributes (STR/VIT/INT/MEN/AGI/DEX), fixed per class, no leveling in MVP | Flat HP+damage numbers (round-1 draft); full leveling in MVP | User's end goal is attributes; freezing them per class costs ~nothing now and avoids a double rebalance later — growth/leveling stays post-MVP |
 | Initiative | AGI-driven timeline with OB64 multihit split | Fixed class order (round-1 draft); grid-position order | OB64-faithful, user-confirmed; AGI values recreate the intended class order while staying attribute-driven |
 | Accuracy/crits | None in MVP (DEX reserved) | DEX-based miss/evade/crit from day one | Misses are too swingy in a 3-unit battle; crits/evasion return post-MVP with more units on the board |
+
+## 4. Epic 4 design-pass additions (2026-07-16)
+
+Source: Danilo's vision dump (`docs/planning-artifacts/epic-4-design-pass-input-2026-07-16.md`) + his supplied OB64 rules, shaped in-session. Downstream owners: architecture (engine/type changes), UX (ledger + clarity), epics/stories.
+
+### OB64 monster deployment (user-supplied, adopted verbatim in FR38)
+
+Large monsters occupy **2 of the 5 unit slots** and physically fill **two vertically adjacent cells of a single column** — Front+Middle or Middle+Back, never horizontal. Max two monsters per squad, and two monsters can never share a column. Open engine semantics (must be designed before implementation): row-blast interaction (hit once or per occupied row?), melee nearest-row blockade with a body in two rows, ranged rearmost eligibility, reach from a two-cell origin.
+
+### OB64 leader rules (user-supplied, adopted in FR35 minus mid-battle switching)
+
+The leader dictates the squad's tactic. **Leader-killed penalty**: tactic control lost (squad reverts to degraded autonomous behavior) plus severe physical attack/defense reductions for the rest of the skirmish — a penalty state, *not* an instant rout. OB64 additionally allowed changing tactics mid-combat and gave certain leader classes initiative perks; **mid-battle switching is rejected for us** (AD-2's resolve-once engine — recorded deviation), initiative perks are a wave-1 design decision. **Tamer/Master synergies** (Enchanter/Doll Master → Golems ~18-20%/~12-13% tiered boosts; Dragon Master/Tamer → Dragons; Beast Master/Tamer → beasts) are parked for the named-heroes wave — they pair leader classes with monster types, a natural hook once leaders become characters.
+
+### Epic-4-pass rejected alternatives
+
+| Decision | Chosen | Rejected | Why |
+|---|---|---|---|
+| Advantage system at scale | Role-based relations (roles carry matchups; symmetric ×1.5/×0.75 or one-way ×1.5 — generalizing `rpsBeats`/`rpsHunts`) | Per-class N² affinity matrix; dropping hard RPS for pure mechanic niches | Scales with the roster, teachable on cards, sweep-policeable; matrix balloons combinatorially; no-RPS loses the counter-picking layer Goal 2 needs |
+| Monster grid presence | Exact OB64: 2 slots + two-cell vertical footprint | "1.5 spaces" budget-only (single cell, bigger sprite) | User supplied the authoritative OB64 rules; his original unit-count examples already matched the 2-slot arithmetic |
+| Leader death | OB64 penalty state (tactic lock + stat reduction) | Instant rout ends the battle; target-only leader with no death effect | User supplied the OB64 rules; rout is not what OB64 does and is too swingy; target-only makes the Attack Leader tactic toothless |
+| Epic shape | One mega-epic, one combined version bump | Squad-era + mechanics split (two epics, two bumps); depth-on-3-units first | PO call: one history invalidation, the whole targeted game lands as one coherent transformation; stories still ship/accept incrementally |
+| Wording | "Turn" as display-only rename of "pass" | Engine vocabulary rename | Zero cost, zero log/replay impact; glossary keeps both |
