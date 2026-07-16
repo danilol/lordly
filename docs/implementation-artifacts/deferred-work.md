@@ -1,5 +1,10 @@
 # Deferred Work
 
+## Deferred from: epic-4 architecture pass (2026-07-16)
+
+- **Landscape battle backgrounds (PO wish, Danilo, with OB64 reference screenshot):** replace the dark battle backdrop with OB64-style terrain — a field, mountains, rocks — under the floating formation grids. Art/UX wave item, explicitly NOT Epic 4 scope ("note for later"). Interacts with the label-contrast fix (FR39f) — whatever contrast treatment ships must survive a busy background later.
+- **Server-side persistence / database:** deferred to the link-play epic (architecture decision, memlog'd). Revisit condition: the first feature needing cross-device or authoritative state. Landing zone: Cloudflare Durable Objects storage / D1 — same platform per AD-7, no second provider.
+
 ## Product wish (PO, 2026-07-15) — history rows show OPPONENT TYPE (vs AI / PvP) — deferred to the link-play epic
 
 - Danilo (during story 3.1 review): history should show the battle type — mode AND opponent. The **mode** (Standard/Wipeout) shipped immediately inside 3.1 (display-only; it was already stored in `HistoryEntry.setup.mode`). The **opponent type** is deferred to link-play with a safe-backfill guarantee: PvP does not exist, so every entry written before link-play ships is provably vs AI — "field absent = AI" is a forever-correct default, and adding an `opponent` field to `HistoryEntry` is a spine AD-8 shape amendment that belongs to link-play's design pass (alongside its side-assignment/rooms work). When link-play is scoped, remember: HistoryEntry schema + History row layout (the right edge is reserved for 3.2's Replay button — opponent tag placement must coexist).
