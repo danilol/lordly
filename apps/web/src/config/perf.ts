@@ -5,14 +5,23 @@ import type { Scene } from 'phaser';
  * `?query=1` gating pattern as `?textres=N` (config/ui.ts). Kept OFF the
  * render path unless explicitly enabled: zero runtime cost in production.
  *
- * CRITICAL: samples must be taken PER RENDERED FRAME (~60/sec), never per
- * beat/event (~2-7/sec) — frame rate is a property of the render loop, not
- * the battle-log dispatcher. `attachPerfSampler` hooks Phaser's scene UPDATE
- * event, which fires every frame regardless of whether that scene defines
- * an `update()` method.
+ * Two real instrument bugs were caught by this story's review — don't
+ * reintroduce them:
+ * - Samples are per-frame INSTANTANEOUS fps derived from `game.loop.rawDelta`
+ *   (the unsmoothed frame delta), NOT `actualFps` — that one is a
+ *   once-per-second exponential moving average (Phaser TimeStep.updateFPS:
+ *   `0.25·framesThisSecond + 0.75·prev`), so sampling it per frame records
+ *   ~60 duplicates of a smoothed value and hides exactly the mid-beat tween
+ *   stutters this instrument exists to catch.
+ * - The listener is removed on scene shutdown. Phaser scenes are singletons
+ *   and `Systems.shutdown` clears only TRANSITION_* listeners, so without
+ *   cleanup every scene re-entry stacks another sampler — N pushes per frame,
+ *   corrupting every sample-count-based statistic.
  */
 
-const PERF_SAMPLE_CAP = 3600; // ~60s at 60fps — bounds memory; the tail is what matters for a scripted benchmark
+// ~10min at 60fps — bounds memory while outlasting any one benchmark session
+// (the original 3,600 cap proved too small: one ~96s ×2-speed device run overflows it).
+const PERF_SAMPLE_CAP = 36_000;
 
 /** True only for the literal `?perf=1` — same strict-match discipline as `?textres`. */
 export function isPerfQueryEnabled(search: string): boolean {
@@ -38,6 +47,12 @@ export function summarizePerfSamples(samples: readonly number[]): PerfSummary {
   return { count: sorted.length, min: sorted[0] as number, median, p1Low };
 }
 
+/** Appends one sample and evicts the oldest past `cap`. Mutates `samples` (it IS the live buffer). */
+export function pushSample(samples: number[], fps: number, cap: number = PERF_SAMPLE_CAP): void {
+  samples.push(fps);
+  if (samples.length > cap) samples.splice(0, samples.length - cap);
+}
+
 declare global {
   interface Window {
     /** Exposed only when `?perf=1` is active — a headless drive reads this via `page.evaluate`. */
@@ -47,18 +62,24 @@ declare global {
 
 /**
  * Attaches a per-frame fps sampler to `scene` when `?perf=1` is set; a no-op
- * otherwise. Reads `scene.game.loop.actualFps` on Phaser's own per-frame
- * UPDATE event — NOT the battle-log beat dispatcher, and NOT gated on the
- * scene defining its own `update()` (none of Draft/Placement/Battle do).
- * Samples accumulate in `window.__perfSamples` across scene transitions
- * within one `?perf=1` session, capped at `PERF_SAMPLE_CAP` (oldest evicted).
+ * otherwise. Each rendered frame pushes `1000 / game.loop.rawDelta` — the
+ * instantaneous fps of THAT frame. Samples accumulate in `window.__perfSamples`
+ * across scene transitions within one `?perf=1` session, capped at
+ * `PERF_SAMPLE_CAP` (oldest evicted); a harness may reset the array between
+ * scenarios (`= []`, `= undefined`, or `delete`) — the sampler recreates it.
+ * Detaches itself on scene shutdown so re-entering a scene never double-samples.
  */
 export function attachPerfSampler(scene: Scene): void {
   if (typeof window === 'undefined' || !isPerfQueryEnabled(window.location.search)) return;
   window.__perfSamples ??= [];
-  scene.events.on('update', () => {
-    const samples = window.__perfSamples as number[];
-    samples.push(scene.game.loop.actualFps);
-    if (samples.length > PERF_SAMPLE_CAP) samples.splice(0, samples.length - PERF_SAMPLE_CAP);
-  });
+  // Gated diagnostic readout, same as `?textres` (config/ui.ts): an on-device
+  // tester without a CDP harness needs proof the sampler is armed.
+  console.info(`[lordly] perf sampler armed (${scene.scene.key}) — read window.__perfSamples`);
+  const sample = (): void => {
+    const rawDelta = scene.game.loop.rawDelta;
+    if (!Number.isFinite(rawDelta) || rawDelta <= 0) return; // first frame / halted loop: no meaningful fps yet
+    pushSample((window.__perfSamples ??= []), 1000 / rawDelta);
+  };
+  scene.events.on('update', sample);
+  scene.events.once('shutdown', () => scene.events.off('update', sample));
 }

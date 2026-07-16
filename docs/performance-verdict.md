@@ -1,17 +1,27 @@
 # Performance Verdict (NFR1)
 
-Story 3.4, measured 2026-07-15. Not an ADR (no architectural decision) — a measurement record, per NFR3.
+Story 3.4. Bundle and cold-load measured 2026-07-15; first on-device frame-rate capture 2026-07-16, **superseded the same day by the senior code review** (see the review note below) — the frame-rate row is reopened pending re-capture with the patched sampler. Not an ADR (no architectural decision) — a measurement record, per NFR3.
 
 ## Verdict summary
 
 | Requirement | Budget | Result | Status |
 |---|---|---|---|
-| Frame rate (busiest battle) | 60fps target / 30fps floor | See "Frame rate" below — **primary evidence pending Danilo's on-device session** | ⏳ Secondary evidence collected, no red flags |
+| Frame rate (busiest battle) | 60fps target / 30fps floor | First capture (Pixel 9 Pro XL, ×2 speed): no reading below 60.49 — but the review found the metric (a once-per-second EMA) cannot expose single-frame stutters, and the trace's sample count is impossible under the shipped instrument (see review note) | ⏳ Re-capture pending (patched sampler) |
 | Initial compressed bundle | ≤ 3 MB | **0.359 MiB gzip / 0.297 MiB brotli — 12.0% of budget** | ✅ Pass |
 | Cold-load interactive time | ≤ 5 s on throttled 4G | **~2.4–2.6 s** (median of 3 trials) | ✅ Pass |
 | Recorded with evidence | NFR3 | This document | ✅ Pass |
 
-**Honest scope note:** the codebase's methodology doctrine (established across epic 2's three memorized Phaser quirks) is "empirical over reasoned" — measured, not guessed. The frame-rate requirement's authoritative evidence is a Pixel-6a-class Android phone in Chrome, which this session cannot physically operate. Everything below the frame-rate section that could be measured without a physical device (bundle size, cold-load time, heap/GC behavior, a proxy fps signal) was measured for real, with corrected methodology after two dead-end approaches (documented below so a future reader doesn't repeat them). **The frame-rate row above stays open pending Danilo's own device session** — see "What's still needed."
+**Honest scope note:** the codebase's methodology doctrine (established across epic 2's three memorized Phaser quirks) is "empirical over reasoned" — measured, not guessed. Everything that could be measured without a physical device (bundle size, cold-load time, heap/GC behavior, a headless proxy fps signal) was measured for real, with corrected methodology after two dead-end approaches (documented below so a future reader doesn't repeat them). The frame-rate requirement's authoritative evidence — a real Android phone in Chrome — was first supplied by Danilo on 2026-07-16, then demoted by the same day's senior review (below). The story's own pattern held: every number in this document that survived did so by being checked, and this one didn't survive the check.
+
+### Review note (2026-07-16) — the first on-device capture is superseded
+
+The senior code review (bmad-code-review, three adversarial layers) found three defects in the first on-device capture; Danilo chose re-capture over re-documentation:
+
+1. **Impossible arithmetic.** The record claimed a single "raw `window.__perfSamples` trace: 5,746 samples over ~96s", but the shipped sampler capped the array at 3,600 (oldest evicted) — no single read can produce that count. The same doc timed the benchmark battle at ~9s, so ~96s implies ~10 undocumented re-runs; a listener-stacking bug (each scene re-entry added another per-frame sampler) plausibly multiplied push rates as well. The capture methodology was never recorded. Both instrument bugs are now patched (shutdown cleanup; cap raised to 36,000 so a long session fits in one read).
+2. **Wrong metric.** The samples were Phaser's `game.loop.actualFps` — an exponential moving average recomputed **once per second** (`0.25·framesThisSecond + 0.75·prev`), so per-frame sampling recorded ~60 duplicates/sec of a smoothed value. A 150ms mid-beat hitch (~9 dropped frames — exactly the tween stutter the instrument exists to catch) would move the reading only from 60 to ~58; "no sample below 55" therefore does not establish "no frame below the 30fps floor". The patched sampler records per-frame **instantaneous** fps (`1000 / rawDelta`).
+3. **Device class.** AC1 specifies a Pixel 6a-class phone; the capture device is a Pixel 9 Pro XL — a strictly faster flagship. **Accepted deviation** (review decision, 2026-07-16): it is the device actually on hand; this document states plainly that the 6a-class floor is not directly demonstrated, rather than implying it.
+
+**Planned re-capture** (patched sampler; record the method here when done): three-mages-wipeout Replay benchmark at **1× and ×2 speed**, plus a **Placement** pass (never measured in the first round; Draft was desktop-proxy-only), on the Pixel 9 Pro XL, resetting `window.__perfSamples` between scenarios and reading each scenario in a single `page.evaluate`.
 
 ## Frame rate
 
@@ -37,7 +47,26 @@ Made reproducible via story 3.2's Replay feature: one `HistoryEntry` for this ex
 
 ### Instrumentation
 
-`apps/web/src/config/perf.ts` (new, story 3.4): `?perf=1` query-gated, zero production cost. Samples `this.game.loop.actualFps` on Phaser's per-FRAME scene `UPDATE` event (~60/sec) — deliberately NOT the battle-log beat dispatcher (~2-7/sec), which would silently miss the mid-beat tween stutters this measurement exists to catch. Wired into Battle, Draft, and Placement (the three scenes AC1 names). Exposes `window.__perfSamples` for a headless drive to read.
+`apps/web/src/config/perf.ts` (new, story 3.4; corrected by the 2026-07-16 review): `?perf=1` query-gated, zero production cost, announces itself with a `console.info` when armed. Samples per-frame **instantaneous fps** (`1000 / game.loop.rawDelta`) on Phaser's per-FRAME scene `UPDATE` event (~60/sec) — deliberately NOT the battle-log beat dispatcher (~2-7/sec), and deliberately NOT `actualFps` (a once-per-second EMA); either would silently miss the mid-beat tween stutters this measurement exists to catch. Detaches on scene shutdown (Phaser scenes are singletons — without cleanup, re-entries stack duplicate samplers). Wired into Battle, Draft, and Placement (the three scenes AC1 names). Exposes `window.__perfSamples` (cap 36,000 ≈ 10min) for a headless drive to read.
+
+### First on-device capture (Pixel 9 Pro XL, Chrome, 2026-07-16) — SUPERSEDED, kept for the record
+
+**Superseded by the review note above** — the numbers below were recorded with the pre-review sampler (once-per-second EMA, listener-stacking bug, undocumented multi-read collection) and are retained only so the correction trail stays legible. Do not cite them as AC1 evidence; the re-capture section will replace this.
+
+Danilo ran the three-mages-wipeout Replay benchmark on his own Pixel 9 Pro XL in Chrome (remote debugging, `window.__perfSamples`), at ×2 speed, and sent the raw per-frame `actualFps` samples back for analysis:
+
+| Metric | Value |
+|---|---|
+| Samples | 5,746 |
+| Duration (at ~60 samples/sec) | ~95.8 s of continuous playback |
+| min | 60.486 |
+| median | 60.993 |
+| 1%-low | 60.486 |
+| max | 61.420 |
+| Any sample below 55fps | **No** |
+| Any sample below the 30fps floor | **No** |
+
+The trace is essentially flat — but it is an exponential-moving-average `actualFps` signal, so "flat" here means the once-per-second smoothed average never dipped, **not** that no individual frame did (the review's central point: this metric cannot show a single long frame). The capture remains a weak positive signal — a sustained fps collapse would have dragged the EMA down and didn't — but it is not floor-breach evidence, and its sample count (5,746 > the 3,600 cap) means the collection method was never what the record described. **AC1 is NOT closed by this capture**; see the review note and the planned re-capture.
 
 ### Secondary evidence (headless Chrome, this session — NOT the authoritative device)
 
@@ -58,20 +87,20 @@ Both scenarios: **the worst 1% of frames sits within ~75-80% of the median, with
 
 ### The hotspot candidate — measured, not fixed
 
-Code reading identified one architecturally-plausible hotspot before any measurement: `BattleScene.render()` (`apps/web/src/scenes/BattleScene.ts:260-342`, the per-beat event dispatcher) creates and destroys GameObjects with zero pooling on nearly every beat:
-- `popup()` (`:512-530`) — a new `crispText` per damage/heal/status/misfire/poison-tick beat (crispText is the most expensive GameObject type in this codebase — the same supersampled-glyph primitive behind the text-ceiling issue, see below).
-- `attackFlavor()` (`:380-429`) — a new `circle` "wash" per struck target for Mage blasts (up to 3 in the benchmark's worst beat).
-- `healGlow()` (`:446-451`) — a new `circle` per heal.
+Code reading identified one architecturally-plausible hotspot before any measurement: `BattleScene.render()` (the per-beat event dispatcher in `apps/web/src/scenes/BattleScene.ts` — function names cited rather than line numbers, which drift) creates and destroys GameObjects with zero pooling on nearly every beat:
+- `popup()` — a new `crispText` per damage/heal/status/misfire/poison-tick beat (crispText is the most expensive GameObject type in this codebase — the same supersampled-glyph primitive behind the text-ceiling issue, see below).
+- `attackFlavor()` — a new `circle` "wash" per struck target for Mage blasts (up to 3 in the benchmark's worst beat).
+- `healGlow()` — a new `circle` per heal.
 
-Per this codebase's established doctrine (empirical over reasoned — three real Phaser rendering bugs in epic 2 were all caught by screenshot, never by reasoning alone), **this hotspot was measured, not guess-fixed**: the no-craters fps pattern and the clean sawtooth heap both argue against a real floor breach from this churn. **No pooling fix was implemented.** If Danilo's on-device session (below) finds a real 30fps-floor breach during this same benchmark, this is the first place to look — the object-pooling fix (reuse-and-reset instead of create-and-destroy for `popup`/`wash`/`healGlow`) is the targeted follow-up, not implemented preemptively.
+Per this codebase's established doctrine (empirical over reasoned — three real Phaser rendering bugs in epic 2 were all caught by screenshot, never by reasoning alone), **this hotspot was measured, not guess-fixed**: the no-craters fps pattern under the desktop proxy and the clean sawtooth heap both argue against a real floor breach from this churn. **No pooling fix was implemented.** The re-capture (review note above) is the evidence that will confirm or overturn that call on the real device — the superseded EMA capture can't carry that weight alone.
 
 ### The text-ceiling item (linked, not fixed here)
 
 `deferred-work.md`'s "REOPENED: text still reads soft" entry needed a current fps baseline before any of its three candidate fixes (all of which multiply GPU fill cost up to ~9× on a Pixel 6a) could be responsibly scheduled. This document is now that baseline — the entry has been cross-linked back here. None of the three fixes are implemented in this story (not in its ACs).
 
-### What's still needed (the actual sign-off)
+### What is still needed
 
-**This is the one piece of AC1 evidence this session could not produce**: Danilo, on his own Pixel-6a-class Android phone, in Chrome, via `chrome://inspect` remote debugging, running the same `?perf=1` three-mages-wipeout Replay benchmark (at both normal and ×2 speed) and reading `window.__perfSamples`/the DevTools Performance panel directly. That is the number this row's ✅/❌ actually depends on. Everything above is real, measured secondary evidence supporting "no known reason to expect a problem," not a substitute for it.
+The AC1-closing evidence is the planned re-capture (review note above): Danilo's device, in Chrome, running the `?perf=1` three-mages-wipeout Replay benchmark with the **patched** sampler — 1× and ×2 speed, plus a Placement pass — and reading `window.__perfSamples` per scenario. The first capture (2026-07-16, superseded section above) demonstrated the drive mechanics work end-to-end on the device; the re-run repeats it with an instrument whose numbers can actually answer the 30fps-floor question.
 
 ## Cold load / bundle size
 
