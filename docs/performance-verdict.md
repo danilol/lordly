@@ -1,12 +1,12 @@
 # Performance Verdict (NFR1)
 
-Story 3.4. Bundle and cold-load measured 2026-07-15; first on-device frame-rate capture 2026-07-16, **superseded the same day by the senior code review** (see the review note below) — the frame-rate row is reopened pending re-capture with the patched sampler. Not an ADR (no architectural decision) — a measurement record, per NFR3.
+Story 3.4. Bundle and cold-load measured 2026-07-15. Frame rate measured on-device 2026-07-16 **with the review-patched sampler** (an earlier same-day capture was superseded by the senior review and is kept below only for the record). Not an ADR (no architectural decision) — a measurement record, per NFR3.
 
 ## Verdict summary
 
 | Requirement | Budget | Result | Status |
 |---|---|---|---|
-| Frame rate (busiest battle) | 60fps target / 30fps floor | First capture (Pixel 9 Pro XL, ×2 speed): no reading below 60.49 — but the review found the metric (a once-per-second EMA) cannot expose single-frame stutters, and the trace's sample count is impossible under the shipped instrument (see review note) | ⏳ Re-capture pending (patched sampler) |
+| Frame rate (busiest battle + draft flow + placement) | 60fps target / 30fps floor | **On-device (Pixel 9 Pro XL, Chrome, per-frame instantaneous fps): Battle 1× and ×2 medians ≈59.9 with zero frames below 55 after scene entry; Placement worst single frame 30.03fps during touch drag — zero frames below the 30fps floor across all 9,380 samples (~156s)** | ✅ Pass |
 | Initial compressed bundle | ≤ 3 MB | **0.359 MiB gzip / 0.297 MiB brotli — 12.0% of budget** | ✅ Pass |
 | Cold-load interactive time | ≤ 5 s on throttled 4G | **~2.4–2.6 s** (median of 3 trials) | ✅ Pass |
 | Recorded with evidence | NFR3 | This document | ✅ Pass |
@@ -21,7 +21,7 @@ The senior code review (bmad-code-review, three adversarial layers) found three 
 2. **Wrong metric.** The samples were Phaser's `game.loop.actualFps` — an exponential moving average recomputed **once per second** (`0.25·framesThisSecond + 0.75·prev`), so per-frame sampling recorded ~60 duplicates/sec of a smoothed value. A 150ms mid-beat hitch (~9 dropped frames — exactly the tween stutter the instrument exists to catch) would move the reading only from 60 to ~58; "no sample below 55" therefore does not establish "no frame below the 30fps floor". The patched sampler records per-frame **instantaneous** fps (`1000 / rawDelta`).
 3. **Device class.** AC1 specifies a Pixel 6a-class phone; the capture device is a Pixel 9 Pro XL — a strictly faster flagship. **Accepted deviation** (review decision, 2026-07-16): it is the device actually on hand; this document states plainly that the 6a-class floor is not directly demonstrated, rather than implying it.
 
-**Planned re-capture** (patched sampler; record the method here when done): three-mages-wipeout Replay benchmark at **1× and ×2 speed**, plus a **Placement** pass (never measured in the first round; Draft was desktop-proxy-only), on the Pixel 9 Pro XL, resetting `window.__perfSamples` between scenarios and reading each scenario in a single `page.evaluate`.
+**Re-capture executed the same day** — see "On-device result (patched sampler)" below: three-mages-wipeout Replay at 1× and ×2 plus a Placement pass, `window.__perfSamples` reset between scenarios, each read in a single copy. All three scenarios pass with zero floor breaches.
 
 ## Frame rate
 
@@ -48,6 +48,29 @@ Made reproducible via story 3.2's Replay feature: one `HistoryEntry` for this ex
 ### Instrumentation
 
 `apps/web/src/config/perf.ts` (new, story 3.4; corrected by the 2026-07-16 review): `?perf=1` query-gated, zero production cost, announces itself with a `console.info` when armed. Samples per-frame **instantaneous fps** (`1000 / game.loop.rawDelta`) on Phaser's per-FRAME scene `UPDATE` event (~60/sec) — deliberately NOT the battle-log beat dispatcher (~2-7/sec), and deliberately NOT `actualFps` (a once-per-second EMA); either would silently miss the mid-beat tween stutters this measurement exists to catch. Detaches on scene shutdown (Phaser scenes are singletons — without cleanup, re-entries stack duplicate samplers). Wired into Battle, Draft, and Placement (the three scenes AC1 names). Exposes `window.__perfSamples` (cap 36,000 ≈ 10min) for a headless drive to read.
+
+### On-device result (Pixel 9 Pro XL, Chrome, 2026-07-16, patched sampler — the authoritative evidence)
+
+Method: production URL with `?perf=1` (console armed-readout confirmed the patched sampler was live), Chrome remote debugging. Three scenarios, `window.__perfSamples` copied via the console (`copy(JSON.stringify(...))`) and reset (`= []`) between them:
+
+1. **Battle 1×** — the seeded three-mages-wipeout Replay at normal speed.
+2. **Battle ×2** — the same replay at ×2 speed.
+3. **Placement** — a live match: quick draft, then ~70s of unit dragging on the placement grid (the scene the first round never measured).
+
+Samples are per-frame instantaneous fps (`1000 / rawDelta`); stats computed with the exact `summarizePerfSamples` definitions (min / median / average-of-worst-1%):
+
+| Scenario | Samples | ~Duration | min | median | 1%-low | Frames < 55fps | Frames < 30fps floor |
+|---|---|---|---|---|---|---|---|
+| Battle 1× | 3,685 | ~61s | 40.0 | 59.88 | 59.0 | 1 (scene-entry frame) | **0** |
+| Battle ×2 | 1,279 | ~21s | 40.0 | 59.88 | 58.0 | 1 (scene-entry frame) | **0** |
+| Placement (drag) | 4,416 | ~74s | 30.03 | 59.88 | 57.4 | 6 | **0** |
+
+Reading the artifacts honestly:
+- The single 40fps sample in each Battle capture is the **second frame after scene create** (one ~25ms frame while the scene builds its GameObjects) — a real frame, but a one-off scene-entry cost, not battle-churn stutter. After scene entry, no Battle frame dropped below 59.5 at either speed.
+- Occasional ~119–122fps samples are 8.3ms frames: the Pixel 9 Pro XL has a 120Hz-class display and Chrome sometimes schedules the next frame on the earlier vsync slot. Harmless — they're *fast* frames.
+- Placement's six sub-55 frames (worst 30.03fps, a single 33.3ms frame) all occur during active touch drags — consistent with Chrome's touch-event handling, and still on the right side of the 30fps floor. Sample counts and durations are internally coherent (unlike the superseded capture), and all fit in one read under the 36,000 cap.
+
+**AC1 is closed**: the busiest battle animation at both speeds, and the placement interaction, sustain the 60fps target with zero 30fps-floor breaches on the real device, measured per-frame with an instrument whose numbers can actually show a single long frame. (Device-class deviation — Pixel 9 Pro XL vs the AC's "Pixel 6a-class" — accepted per the review note above.)
 
 ### First on-device capture (Pixel 9 Pro XL, Chrome, 2026-07-16) — SUPERSEDED, kept for the record
 
@@ -92,15 +115,15 @@ Code reading identified one architecturally-plausible hotspot before any measure
 - `attackFlavor()` — a new `circle` "wash" per struck target for Mage blasts (up to 3 in the benchmark's worst beat).
 - `healGlow()` — a new `circle` per heal.
 
-Per this codebase's established doctrine (empirical over reasoned — three real Phaser rendering bugs in epic 2 were all caught by screenshot, never by reasoning alone), **this hotspot was measured, not guess-fixed**: the no-craters fps pattern under the desktop proxy and the clean sawtooth heap both argue against a real floor breach from this churn. **No pooling fix was implemented.** The re-capture (review note above) is the evidence that will confirm or overturn that call on the real device — the superseded EMA capture can't carry that weight alone.
+Per this codebase's established doctrine (empirical over reasoned — three real Phaser rendering bugs in epic 2 were all caught by screenshot, never by reasoning alone), **this hotspot was measured, not guess-fixed**: the no-craters fps pattern under the desktop proxy and the clean sawtooth heap both argued against a real floor breach from this churn, and the patched-sampler on-device result above confirms it per-frame — after scene entry, not one Battle frame below 59.5fps at either speed, straight through the heaviest three-target blast beats. **No pooling fix was implemented, and the per-frame evidence shows none is needed.**
 
 ### The text-ceiling item (linked, not fixed here)
 
 `deferred-work.md`'s "REOPENED: text still reads soft" entry needed a current fps baseline before any of its three candidate fixes (all of which multiply GPU fill cost up to ~9× on a Pixel 6a) could be responsibly scheduled. This document is now that baseline — the entry has been cross-linked back here. None of the three fixes are implemented in this story (not in its ACs).
 
-### What is still needed
+### What was still needed — now closed
 
-The AC1-closing evidence is the planned re-capture (review note above): Danilo's device, in Chrome, running the `?perf=1` three-mages-wipeout Replay benchmark with the **patched** sampler — 1× and ×2 speed, plus a Placement pass — and reading `window.__perfSamples` per scenario. The first capture (2026-07-16, superseded section above) demonstrated the drive mechanics work end-to-end on the device; the re-run repeats it with an instrument whose numbers can actually answer the 30fps-floor question.
+The re-capture demanded by the review ran the same day (2026-07-16) with the patched sampler and is recorded as the authoritative "On-device result" above: Battle at both speeds plus Placement, per-scenario resets, zero floor breaches. Nothing about the frame-rate requirement remains open. The remaining known softness is the accepted device-class deviation (documented in the review note) and Draft being desktop-proxy-only — both explicitly recorded rather than implied away.
 
 ## Cold load / bundle size
 
