@@ -93,6 +93,26 @@ Large monsters occupy **2 of the 5 unit slots** and physically fill **two vertic
 
 The leader dictates the squad's tactic. **Leader-killed penalty**: tactic control lost (squad reverts to degraded autonomous behavior) plus severe physical attack/defense reductions for the rest of the skirmish — a penalty state, *not* an instant rout. OB64 additionally allowed changing tactics mid-combat and gave certain leader classes initiative perks; **mid-battle switching is rejected for us** (AD-2's resolve-once engine — recorded deviation), initiative perks are a wave-1 design decision. **Tamer/Master synergies** (Enchanter/Doll Master → Golems ~18-20%/~12-13% tiered boosts; Dragon Master/Tamer → Dragons; Beast Master/Tamer → beasts) are parked for the named-heroes wave — they pair leader classes with monster types, a natural hook once leaders become characters.
 
+### The targeting pipeline (user-supplied OB64 logic, adopted in FR7/FR9/FR34 on 2026-07-16)
+
+Reference algorithm for the engine design — the per-action sequence, verbatim from the PO's OB64 source:
+
+```text
+1. Get all living enemies
+2. Filter by reach — MELEE ONLY (attacker column vs target column, FR7/FR8 blockade)
+   Ranged/magic units skip this step entirely: global range over the whole enemy grid
+3. IF the filtered list is empty -> include out-of-reach targets ("Last Stand" mode)
+4. Apply the tactic over the legal list:
+   - Weakest    -> sort by current HP ascending  -> pick top 1
+   - Strongest  -> sort by current HP descending -> pick top 1
+   - Leader     -> if the enemy leader is legal, pick it; else behave as Autonomous
+   - Autonomous -> melee: facing column -> center -> left (today's rule)
+                   ranged: rearmost occupied row first (FR9), any column
+5. Execute; ties on the HP metric fall back to the Autonomous priority (FR20 — no new randomness)
+```
+
+Key OB64 nuance adopted: ranged/magic ignore **column** reach always; under Autonomous they still respect their **row** preference (rearmost-first); under any target tactic they ignore rows too — the whole grid is one target pool. Rationale (PO): one teachable sentence ("bows and spells do not care about lanes"), a clean `isRanged` branch in the loop, and tactics turn back-line units into precision instruments while the front line grinds. This supersedes the MVP's stricter rule (reach applied to Archer/Witch) at Epic 4's bump — a deliberate Archer/Witch buff the NFR4 sweep re-polices.
+
 ### Epic-4-pass rejected alternatives
 
 | Decision | Chosen | Rejected | Why |
