@@ -4,7 +4,7 @@ baseline_commit: 241a0ec3d128319f2cd94245acd9f7602c99a254
 
 # Story 4.2: The era turnover — five-slot armies and named soldiers
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -56,17 +56,17 @@ so that my squad starts feeling like an OB64 squad, not a trio.
   - [x] **THE STORAGE CATCH (recon-verified — this breaks AC 6 if missed):** `storage.ts:51` `isRenderableArmy` requires `value.length === BALANCE.armySize` — after the bump, every pre-era 3-unit entry would be SILENTLY DROPPED from History (filtered at `loadHistory:145`), not displayed-non-replayable. Fix: renderability is `length >= 1 && length <= BALANCE.slotBudget && every(isRenderableUnit)` — display tolerance, never a legality gate (legality lives in validate.ts). Old entries then display and `historyModel.ts:52`'s balanceVersion check marks them non-replayable exactly as designed. Unit-test with a stored 3-unit v2 entry.
   - [x] `isRenderableUnit` (`storage.ts:43-47`) already ignores extra keys — old nameless units render (display falls back to code-only), new named units pass. Add the fallback path test.
   - [x] `test/match-flow.test.ts`: the hard 3-pins (`:66` regex, `:67` length) become budget-derived; new tests: names rolled forward-only, same-army name dedup, tactics/leaders present in committed setup + HistoryEntry.
-- [ ] Task 7: Shell — five on the phone, names on cards, icons log-driven (AC: 3, 5, 6)
+- [x] Task 7: Shell — five on the phone, names on cards, icons log-driven (AC: 3, 5, 6)
   - [x] `DraftScene`: tray math (`:130-132`) already derives from `BALANCE.armySize` — switch to `slotBudget`; 5 slots × 96px + gaps = 528px OVERFLOWS the 360 base → shrink slots (5×64 + 4×8 = 352 ✓) or two rows — dev's call against the 44px tap floor (UX-DR4); count copy `:121` derives; `DRAFT_HINT` (`constants.ts:147`, literal "3 units") becomes a `draftHint(budget)` function. (Chose shrunk 64px slots — ≥44px tap targets; compact card stacks sprite over code, the per-card "tap to remove" copy became one shared hint under the tray.)
   - [x] `PlacementScene.trayCenter` (`:114-118`): **hardcoded 3** → budget-derived, same overflow rework; `PLACEMENT_SUBMIT_HINT` (`constants.ts:150`, literal "place all 3 units") becomes derived (`MatchFlow.ts:183` already interpolates the count — align the constant).
   - [x] Names on cards: placement tray + reveal boards show the unit's name (dossier §7/§6 — under the code, `{typography.data}`-scale; the 4.0 contrast tokens govern board codes, names sit on cards/spines per DESIGN Epic 4 tokens). (Placement card: name under the code at the 10px floor; Reveal: name under the tile code with the FR39f stroke treatment.)
   - [x] `BattleScene`: handle `StatusCleared` (remove that unit's icon) and DELETE `clearStatusIconsExceptPoison()` — the sanctioned AD-2 exception dies (deferred-work.md's 2.2 item closes); keep `PassStarted` handler (label already Turn); narration gains the new-member lines (Task 3 ripple).
   - [x] Narration name display: `unitName()` (narration.ts) upgrades to "Kain (KNI)" using `UnitSnapshot.name` from BattleStarted.
-  - [ ] Home wipeout hint: NO code change (reads `BALANCE.engagementCap` — recon-verified); visually confirm "max 10" on device.
-- [ ] Task 8: Gate + device sign-off (all ACs)
+  - [x] Home wipeout hint: NO code change (reads `BALANCE.engagementCap` — recon-verified); visually confirm "max 10" on device. (Confirmed in Danilo's 2026-07-17 device session.)
+- [x] Task 8: Gate + device sign-off (all ACs)
   - [x] Full gate: typecheck, lint, prettier, all tests incl. re-recorded goldens + both-mode sweep, engine coverage ≥90%. (typecheck ✓ both packages; eslint + prettier ✓; 395/395 tests; engine 99.46% lines; prod build ✓.)
-  - [ ] Deploy; Danilo's device session: full 5-unit loop (draft → battle → result), names visible and flavorful (his §7 veto moment), Home says max 10, **History shows pre-era entries non-replayable and the new entry replayable** — the AC-6 in-anger check.
-  - [ ] Danilo's sign-off quoted into this file.
+  - [x] Deploy; Danilo's device session: full 5-unit loop (draft → battle → result), names visible and flavorful (his §7 veto moment), Home says max 10, **History shows pre-era entries non-replayable and the new entry replayable** — the AC-6 in-anger check. (Deployed fcd5477; round 1 caught the Result-screen 3-unit chip overflow — fixed + redeployed 11c0b6c same session; names approved: "i liked that we displayed the names, and on the battle we hide it".)
+  - [x] Danilo's sign-off quoted into this file: **"it works great, lets proceed"** (2026-07-17, after the Result fix; round-1 reaction: "I am excited by having 5 characters in my party").
 
 ## Dev Notes
 
