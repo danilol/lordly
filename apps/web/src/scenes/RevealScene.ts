@@ -10,10 +10,10 @@ import {
   REVEAL_FIGHT_LABEL,
   REVEAL_HINT,
   REVEAL_TITLE,
-  CARD_CLASS_FONT_PX,
   CLASS_ABBREVIATIONS,
+  unitCodeStyle,
 } from '../config/constants';
-import { addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
+import { addElementBadge, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText } from '../config/ui';
 import { drawIsoBoard } from '../config/board';
 import { unitTileCenter } from '../flow/battleView';
 import type { MatchFlow } from '../flow/MatchFlow';
@@ -38,6 +38,7 @@ export class RevealScene extends Scene {
 
   create() {
     this.cameras.main.setBackgroundColor(PALETTE.background);
+    applyHiDpiCamera(this);
     addHomeBack(this);
 
     crispText(this, BASE_WIDTH / 2, 26, REVEAL_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
@@ -90,9 +91,8 @@ export class RevealScene extends Scene {
    */
   private drawUnit(unit: UnitSnapshot) {
     const { x, y } = unitTileCenter(unit.side, unit.placement);
-    const nameColor = unit.side === 'A' ? PALETTE.playerText : PALETTE.enemyText;
     addUnitSprite(this, x, y - 12, unit.class, 32).setDepth(y);
-    crispText(this, x, y + 8, CLASS_ABBREVIATIONS[unit.class], { fontFamily: 'Arial Black', fontSize: `${CARD_CLASS_FONT_PX}px`, color: nameColor })
+    crispText(this, x, y + 8, CLASS_ABBREVIATIONS[unit.class], unitCodeStyle(unit.side))
       .setOrigin(0.5)
       .setDepth(y);
     addElementBadge(this, x + 16, y - 26, unit.element).setDepth(y);

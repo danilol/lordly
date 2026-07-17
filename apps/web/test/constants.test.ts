@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { BASE_HEIGHT, BASE_WIDTH, BATTLE_SPEEDS, battleSpeed, DEFAULT_SPEED_ID, GAME_NAME, HOME_PLAY_LABEL, PALETTE } from '../src/config/constants';
+import {
+  backingScaleFor,
+  BASE_HEIGHT,
+  BASE_WIDTH,
+  BATTLE_SPEEDS,
+  battleSpeed,
+  battleTurnLabel,
+  CODE_STROKE_COLOR,
+  DEFAULT_SPEED_ID,
+  DPR_BACKING_CAP,
+  GAME_NAME,
+  HOME_PLAY_LABEL,
+  PALETTE,
+  turnBoundaryLine,
+  unitCodeStyle,
+} from '../src/config/constants';
 
 describe('web smoke test', () => {
   it('exposes the game name without booting Phaser', () => {
@@ -35,5 +50,60 @@ describe('battleSpeed sanitizer (FR23, story 2.3)', () => {
 describe('PALETTE internal consistency (story 2.4 review)', () => {
   it('backgroundFill is the numeric twin of the background hex string — the Help header strip depends on it', () => {
     expect(PALETTE.backgroundFill).toBe(parseInt(PALETTE.background.slice(1), 16));
+  });
+});
+
+describe('Turn wording (FR39a, story 4.0) — display rename only, the engine keeps "pass"', () => {
+  it('the HUD label and log-panel boundary line both say Turn', () => {
+    expect(battleTurnLabel(2)).toBe('Turn 2');
+    expect(turnBoundaryLine(2)).toBe('— Turn 2 —');
+  });
+
+  it('neither player-facing string contains the engine word "pass"', () => {
+    expect(battleTurnLabel(7).toLowerCase()).not.toContain('pass');
+    expect(turnBoundaryLine(7).toLowerCase()).not.toContain('pass');
+  });
+});
+
+describe('backingScaleFor (story 4.0 text-ceiling fix) — the DPR-sized backing store scale', () => {
+  it('is a no-op at DPR 1 (desktop baseline unchanged)', () => {
+    expect(backingScaleFor(1)).toBe(1);
+  });
+
+  it('rounds fractional DPRs to integers — NEAREST pixel art needs integer duplication', () => {
+    expect(backingScaleFor(2)).toBe(2);
+    expect(backingScaleFor(2.625)).toBe(3);
+    expect(backingScaleFor(1.5)).toBe(2);
+  });
+
+  it('caps at DPR_BACKING_CAP — the fill-rate lever', () => {
+    expect(backingScaleFor(3.5)).toBe(DPR_BACKING_CAP);
+    expect(backingScaleFor(4)).toBe(DPR_BACKING_CAP);
+    expect(DPR_BACKING_CAP).toBe(3);
+  });
+
+  it('never goes below 1, even for garbage input (missing devicePixelRatio)', () => {
+    expect(backingScaleFor(0)).toBe(1);
+    expect(backingScaleFor(NaN)).toBe(1);
+  });
+});
+
+describe('unitCodeStyle (FR39f, story 4.0) — the label-contrast token treatment', () => {
+  it('carries a dark stroke so codes read on same-hue tiles (and future busy backdrops)', () => {
+    for (const side of ['A', 'B'] as const) {
+      const style = unitCodeStyle(side);
+      expect(style.stroke).toBe(CODE_STROKE_COLOR);
+      expect(style.strokeThickness).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('keeps side identity: the two sides get distinct fills, neither matching its own tile hex', () => {
+    const you = unitCodeStyle('A');
+    const enemy = unitCodeStyle('B');
+    expect(you.color).not.toBe(enemy.color);
+    // The shipped defect: playerText === youFront tile hue, enemyText ≈ foeFront.
+    // The code fill must not be the same hex as the bright front tile it stands on.
+    expect(you.color?.toLowerCase()).not.toBe('#4a8fe0');
+    expect(enemy.color?.toLowerCase()).not.toBe('#c8483a');
   });
 });

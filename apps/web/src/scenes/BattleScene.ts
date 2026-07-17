@@ -5,25 +5,24 @@ import {
   BASE_WIDTH,
   BATTLE_BEAT_MS,
   BATTLE_ENEMY_LABEL,
-  BATTLE_FRONT_ENEMY_LABEL,
-  BATTLE_FRONT_PLAYER_LABEL,
   BATTLE_LOG_LABEL,
   BATTLE_PLAYER_LABEL,
   BATTLE_SKIP_LABEL,
   BATTLE_SPEEDS,
   battleSpeed,
+  battleTurnLabel,
   engagementEndedLabel,
   PALETTE,
   MIN_FONT_PX,
-  CARD_CLASS_FONT_PX,
   CLASS_ABBREVIATIONS,
   POISON_TEXT,
   STATUS_COLORS,
   STATUS_GLYPHS,
   ISO_TILES,
+  unitCodeStyle,
 } from '../config/constants';
 import type { BattleSpeedId } from '../config/constants';
-import { addElementBadge, addHomeBack, addUnitSprite, crispText, prefersReducedMotion } from '../config/ui';
+import { addElementBadge, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText, prefersReducedMotion } from '../config/ui';
 import { drawIsoBoard } from '../config/board';
 import { attachPerfSampler } from '../config/perf';
 import { beatDurationMs, buildBeatSchedule, unitTileCenter } from '../flow/battleView';
@@ -132,13 +131,15 @@ export class BattleScene extends Scene {
     this.speedFactor = battleSpeed(this.storage.loadSettings().battleSpeed).factor;
 
     this.cameras.main.setBackgroundColor(PALETTE.background);
+    applyHiDpiCamera(this);
 
-    // Slim top HUD: ‹ Home left, live pass/engagement label right (no big title — the boards are the show).
+    // Slim top HUD: ‹ Home left, live turn/engagement label right (no big title — the boards are the show).
     addHomeBack(this);
     this.passLabel = crispText(this, BASE_WIDTH - 12, 22, '', { fontFamily: 'Arial', fontSize: '13px', color: PALETTE.bodyText }).setOrigin(1, 0.5);
 
     // The stage: two iso boards (ADR-0001) + positional side anchors (non-color accessibility cue:
-    // enemy always upper-left, you always lower-right) + FRONT indicators.
+    // enemy always upper-left, you always lower-right). The front row reads from the tiles alone —
+    // brighter fills + gold-lite edge (FR39e, story 4.0: the redundant FRONT text labels are gone).
     drawIsoBoard(this, 'B');
     drawIsoBoard(this, 'A');
     crispText(this, 20, 56, BATTLE_ENEMY_LABEL, { fontFamily: 'Courier', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.enemyText }).setOrigin(0, 0.5);
@@ -146,9 +147,6 @@ export class BattleScene extends Scene {
       1,
       0.5,
     );
-    // FRONT arrows hug each board's clashing edge (enemy SE edge, player NW edge), inside the gap.
-    crispText(this, 206, 146, BATTLE_FRONT_ENEMY_LABEL, { fontFamily: 'Courier', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.enemyText }).setOrigin(0, 0.5);
-    crispText(this, 156, 212, BATTLE_FRONT_PLAYER_LABEL, { fontFamily: 'Courier', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.playerText }).setOrigin(1, 0.5);
 
     const log = this.flow.resolve(); // same cached log the Reveal scene resolved (AD-13)
     const roster = (log.events[0] as BattleStarted).units;
@@ -203,17 +201,12 @@ export class BattleScene extends Scene {
   /** Builds one unit standing on its iso tile: sprite + class code + element dot + HP bar, all in one container. */
   private buildUnit(unit: UnitSnapshot) {
     const { x, y } = unitTileCenter(unit.side, unit.placement);
-    const nameColor = unit.side === 'A' ? PALETTE.playerText : PALETTE.enemyText;
 
     // Chrome hugs the sprite tightly — units on the same lane diagonal sit a
     // half-tile (28px) apart vertically, so every extra pixel of stack height
     // is overlap; depth sorting keeps the front unit's chrome readable.
     const sprite = addUnitSprite(this, 0, -14, unit.class, 32);
-    const code = crispText(this, 0, 4, CLASS_ABBREVIATIONS[unit.class], {
-      fontFamily: 'Arial Black',
-      fontSize: `${CARD_CLASS_FONT_PX}px`,
-      color: nameColor,
-    }).setOrigin(0.5);
+    const code = crispText(this, 0, 4, CLASS_ABBREVIATIONS[unit.class], unitCodeStyle(unit.side)).setOrigin(0.5);
     const badge = addElementBadge(this, 16, -28, unit.element);
     const barBack = this.add.rectangle(-BAR_W / 2, 14, BAR_W, BAR_H, 0xffffff, 0.1).setOrigin(0, 0.5);
     const fillColor = unit.side === 'A' ? PALETTE.hpBarPlayer : PALETTE.hpBarEnemy;
@@ -282,7 +275,8 @@ export class BattleScene extends Scene {
       case 'BattleStarted':
         return false; // roster already drawn in create()
       case 'PassStarted':
-        this.passLabel.setText(`Pass ${event.pass}`);
+        // FR39a: the HUD says "Turn" — the engine event stays PassStarted.
+        this.passLabel.setText(battleTurnLabel(event.pass));
         return true;
       case 'UnitAttacked': {
         this.attackFlavor(

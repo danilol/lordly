@@ -1,5 +1,6 @@
 import { AUTO, Game, Scale } from 'phaser';
 import { BASE_HEIGHT, BASE_WIDTH, GAME_NAME, PALETTE } from './config/constants';
+import { backingScale } from './config/ui';
 import { showInitFallback } from './flow/initFallback';
 
 // FR29 (story 3.3): the service-worker registration is NOT here — vite-plugin-pwa
@@ -28,11 +29,20 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('error', (event) => showInitFallback(document, event.error ?? event.message));
 
   try {
+    // Story 4.0 text-ceiling fix: the canvas BACKING STORE is sized by the
+    // (rounded, capped) devicePixelRatio so supersampled glyphs stop being
+    // minified into a 360px store before the browser's CSS upscale — the
+    // diagnosed ceiling no ?textres value could beat (deferred-work.md).
+    // Scenes keep their 360×640 logical coordinates: every scene's create()
+    // calls applyHiDpiCamera (config/ui.ts), which zooms the main camera by
+    // the SAME factor. Scale.FIT still fits the (unchanged) aspect to the
+    // viewport. At DPR 1 this multiplies by 1 — byte-for-byte the old config.
+    const backing = backingScale();
     new Game({
       type: AUTO,
       parent: 'game-container',
-      width: BASE_WIDTH,
-      height: BASE_HEIGHT,
+      width: BASE_WIDTH * backing,
+      height: BASE_HEIGHT * backing,
       backgroundColor: PALETTE.background,
       // Story 2.1: NO global `pixelArt: true`. It was tried first and FAILED
       // the on-device check (Danilo's phone): global nearest-neighbor also

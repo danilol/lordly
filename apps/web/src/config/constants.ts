@@ -47,6 +47,14 @@ export const PALETTE = {
   winText: '#4a8fe0',
   loseText: '#e06a6a',
   drawText: '#c8c8d8',
+  // Board-unit class codes (FR39f, story 4.0 — the label-contrast fix): the
+  // old side-colored fills (`playerText`/`enemyText`) matched the bright front
+  // tiles hue-for-hue (#4a8fe0 on #4a8fe0), erasing the label. Codes now use
+  // LIGHT side tints — still blue-family vs red-family (DESIGN's side rule) —
+  // over the dark `CODE_STROKE_COLOR` outline that carries the letterform on
+  // any ground, including the deferred landscape backdrops (deferred-work.md).
+  codeTextPlayer: '#d6e8fa',
+  codeTextEnemy: '#f8d9d2',
 } as const;
 
 // Text render resolution multiplier: the game renders at the 360×640 base and
@@ -78,6 +86,47 @@ export const CLASS_ABBREVIATIONS: Record<UnitClass, string> = {
   witch: 'WIT',
 };
 export const CARD_CLASS_FONT_PX = 13;
+
+// FR39f (story 4.0): the class-code contrast treatment for units standing ON
+// side-colored board tiles (Battle, Reveal). A dark outline stroke carries the
+// letterform regardless of what's behind it — the token treatment DESIGN.md's
+// unit-card component specifies; scenes consume it via `unitCodeStyle`, never
+// restating the values. (Tray/panel codes on dark cards keep their own styles
+// — the defect was tiles only.)
+export const CODE_STROKE_COLOR = '#10131f';
+export const CODE_STROKE_THICKNESS = 3;
+
+/** The one text style for board-unit class codes — both scenes (Battle, Reveal) read it from here so the FR39f treatment cannot drift. */
+export function unitCodeStyle(side: 'A' | 'B'): {
+  fontFamily: string;
+  fontSize: string;
+  color: string;
+  stroke: string;
+  strokeThickness: number;
+} {
+  return {
+    fontFamily: 'Arial Black',
+    fontSize: `${CARD_CLASS_FONT_PX}px`,
+    color: side === 'A' ? PALETTE.codeTextPlayer : PALETTE.codeTextEnemy,
+    stroke: CODE_STROKE_COLOR,
+    strokeThickness: CODE_STROKE_THICKNESS,
+  };
+}
+
+// Story 4.0 text-ceiling fix (UX-DR11, deferred-work.md candidate (a)): the
+// canvas BACKING STORE gets sized `BASE × backingScale` so supersampled glyphs
+// stop being minified into a 360px store before the browser upscale. The scale
+// is the devicePixelRatio ROUNDED to an integer (NEAREST pixel art needs
+// integer duplication) and CAPPED — the fill-rate lever: a DPR-3 backing pushes
+// ~9× the pixels of the 360 store, and NFR1's floor is verified on device
+// against docs/performance-verdict.md's baseline. DPR 1 is exactly a no-op.
+export const DPR_BACKING_CAP = 3;
+
+/** Pure core of the backing-store scale — `backingScale()` (config/ui.ts) feeds it the live devicePixelRatio. */
+export function backingScaleFor(dpr: number): number {
+  if (!Number.isFinite(dpr)) return 1;
+  return Math.min(DPR_BACKING_CAP, Math.max(1, Math.round(dpr)));
+}
 
 export const BUTTON_WIDTH = 220;
 export const BUTTON_HEIGHT = 56;
@@ -193,11 +242,19 @@ export const ISO_TILES = {
 } as const;
 
 // Battle HUD / control-bar labels (story 2.2). Speed buttons are 2.3 (FR23).
+// The FRONT ↘ / ↖ FRONT text labels are GONE (FR39e, story 4.0): the front row
+// reads from the non-verbal indicator alone — brighter tiles + gold-lite edge
+// (ISO_TILES.frontStroke, config/board.ts).
 export const BATTLE_LOG_LABEL = '≡ Log';
 export const BATTLE_ENEMY_LABEL = '▲ ENEMY';
 export const BATTLE_PLAYER_LABEL = 'YOUR ARMY ▼';
-export const BATTLE_FRONT_ENEMY_LABEL = 'FRONT ↘';
-export const BATTLE_FRONT_PLAYER_LABEL = '↖ FRONT';
+
+// FR39a (story 4.0): player-facing wording says "Turn" where the engine says
+// "pass" — a DISPLAY rename only. The engine vocabulary, `PassStarted` events,
+// and the PRD glossary's "pass" are untouched; the glossary carries both words.
+export const battleTurnLabel = (turn: number) => `Turn ${turn}`;
+/** The log-panel boundary line for a new turn (flow/narration.ts). */
+export const turnBoundaryLine = (turn: number) => `— Turn ${turn} —`;
 
 // Persistent status icons (story 2.2, FR16 rendering): text glyphs via
 // crispText — zero new art. Keyed by the engine union (AD-4). Lifecycle is

@@ -1,4 +1,5 @@
 import type { BattleEvent, UnitClass, UnitId } from '@lordly/engine';
+import { turnBoundaryLine } from '../config/constants';
 
 /**
  * Pure narration builder for the Battle scene's Log panel (story 2.2, AC7):
@@ -43,7 +44,8 @@ export function narrateEvent(state: NarrationState, event: BattleEvent): { lines
       return { lines: [], state: { classes, hp } };
     }
     case 'PassStarted':
-      return { lines: [`— Pass ${event.pass} —`], state };
+      // FR39a (story 4.0): the panel says "Turn" — the engine event stays PassStarted.
+      return { lines: [turnBoundaryLine(event.pass)], state };
     case 'UnitAttacked': {
       const hp = new Map(state.hp);
       const lines = event.targets.map((t) => {

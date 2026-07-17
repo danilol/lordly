@@ -12,7 +12,7 @@ import {
   CARD_CLASS_FONT_PX,
   CLASS_ABBREVIATIONS,
 } from '../config/constants';
-import { addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
+import { applyHiDpiCamera, addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
 import { placedCount } from '../flow/placement';
 import type { MatchFlow } from '../flow/MatchFlow';
@@ -49,6 +49,7 @@ export class PlacementScene extends Scene {
     attachPerfSampler(this);
 
     this.cameras.main.setBackgroundColor(PALETTE.background);
+    applyHiDpiCamera(this);
     addHomeBack(this);
     this.gridLeft = (BASE_WIDTH - (3 * CELL + 2 * GAP)) / 2;
 

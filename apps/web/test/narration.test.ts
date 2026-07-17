@@ -85,14 +85,14 @@ describe('narration builder — the Log panel text (AC7, AD-2)', () => {
     ]);
   });
 
-  it('marks pass and engagement boundaries and the verdict', () => {
+  it('marks turn and engagement boundaries and the verdict (FR39a: the panel says Turn, the engine says pass)', () => {
     const { lines } = run([
       started,
       { type: 'PassStarted', pass: 2 },
       { type: 'EngagementEnded', engagement: 1, hp: { 'A:0': 90, 'B:1': 78, 'B:2': 60, 'A:2': 70, 'B:0': 40 } },
       { type: 'BattleEnded', winner: 'A', hpPct: { A: 62, B: 0 } },
     ]);
-    expect(lines).toEqual(['— Pass 2 —', '— Engagement 1 ended —', 'You won — 62% vs 0%']);
+    expect(lines).toEqual(['— Turn 2 —', '— Engagement 1 ended —', 'You won — 62% vs 0%']);
   });
 
   it('resyncs its HP ledger from EngagementEnded (the authoritative snapshot)', () => {

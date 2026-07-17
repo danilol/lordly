@@ -12,7 +12,7 @@ import {
   HOME_BACK_LABEL,
   PALETTE,
 } from '../config/constants';
-import { addBackAffordance, addElementBadge, addUnitSprite, crispText, enableDragScroll } from '../config/ui';
+import { applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText, enableDragScroll } from '../config/ui';
 import { formatHistoryRow } from '../flow/historyModel';
 import { MatchFlow } from '../flow/MatchFlow';
 import { createStorage } from '../flow/storage';
@@ -57,6 +57,7 @@ export class HistoryScene extends Scene {
   create() {
     this.transitioning = false;
     this.cameras.main.setBackgroundColor(PALETTE.background);
+    applyHiDpiCamera(this);
 
     const entries = this.storage.loadHistory();
 

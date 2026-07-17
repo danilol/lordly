@@ -1,5 +1,5 @@
 # generated: 2026-07-12T03:18:30
-# last_updated: 2026-07-12T03:52:00
+# last_updated: 2026-07-17T12:00:00
 # project: lordly
 # project_key: NOKEY
 # tracking_system: file-system
@@ -40,9 +40,18 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 # - Story 1-10 (until-wipeout) is a STRETCH story: ship only if cheap (PRD FR19)
+# - EPIC 4 SEQUENCING (breakdown 2026-07-16/17, readiness report 2026-07-17):
+#   - Stories run IN ORDER. 4-1 (design dossier) GATES everything from 4-2 on
+#     (AD-15: complete union extension designed before the bump; FR38: monster
+#     semantics defined before monster stories; UX spine extension before UI stories).
+#   - 4-0 is display-only and pre-bump: it may run before or in parallel with 4-1.
+#   - 4-2 carries the era's SINGLE logVersion bump (AD-15). balanceVersion ticks
+#     freely per story (mid-epic entries display-but-don't-replay, 3.2 UX).
+#   - Size-risk stories flagged by the readiness report: 4-1, 4-2 (remediation
+#     seams recorded in implementation-readiness-report-2026-07-17.md).
 
 generated: 2026-07-12T03:18:30
-last_updated: 2026-07-16T00:00:00
+last_updated: 2026-07-17T12:00:00
 project: lordly
 project_key: NOKEY
 tracking_system: file-system
@@ -75,7 +84,21 @@ development_status:
   3-3-install-it-play-it-offline: done  # 2026-07-15: DONE — VitePWA autoUpdate (skipWaiting/clientsClaim explicit after review), inline-injected registration, CC0 icon set, full precache. 3-layer review passed (5 patches: inert-autoUpdate fix, ADR correction, untracked-icons fix + existence-check test, dedupe, dropped apple-touch-icon). 344 tests, deployed a543417, prod content-types verified, Danilo on device: "it works great."
   3-4-the-performance-verdict: done  # 2026-07-16: DONE — senior review reopened AC1 (EMA metric, listener leak, impossible 5,746-sample trace), 7 patches applied + sampler rewritten (per-frame 1000/rawDelta, shutdown detach, cap 36k), deployed 5cb9517, then Danilo's same-day re-capture on the Pixel 9 Pro XL: Battle 1× + ×2 + Placement, 9,380 per-frame samples, worst frame 30.03fps (one Placement drag frame), ZERO 30fps-floor breaches. Device-class deviation (9 Pro XL vs 6a-class) accepted + recorded. docs/performance-verdict.md is the authoritative record. Danilo's sign-off: "let's flip it to done and move forward."
   epic-3-retrospective: done  # 2026-07-16: epic-3-retro-2026-07-16.md — MVP complete & measured; big lesson: verify the meter (3.4 instrument fiasco); ORDERING DECIDED: Epic 4 before link-play; Epic 4 design pass is the critical-path action.
-  epic-4: backlog  # Combat depth — moves, tactics, crits, promotions (FR32/FR33 + OB64 target-selection tactics + critical hits + Archmage blast gating; StatusCleared events ride its single logVersion bump) — post-MVP, added 2026-07-13, widened via correct-course 2026-07-14. Stories pending a PM/Architect design pass. ORDERING DECIDED (epic-3 retro, 2026-07-16): Epic 4 BEFORE link-play — Danilo: "a lot of ideas on pve before enabling pvp". See sprint-change-proposal-2026-07-14.md + epic-3-retro-2026-07-16.md.
+  epic-4: in-progress  # THE SQUAD ERA — command a real OB64 squad. Broken down 2026-07-16/17 into stories 4.0–4.12 (epics.md) after the design pass (PRD Feature 6b, FR32–FR39; spine AD-14/AD-15). Readiness: READY (implementation-readiness-report-2026-07-17.md; planning baseline commit b32c97f). One combined logVersion/balanceVersion era bump, carried by 4-2. PO decisions at breakdown: Archmage promotion POSTPONED until after link-play; FR39g pause DROPPED for wave 1. Sequenced BEFORE link-play (epic-3 retro).
+  4-0-battle-legibility-quick-wins: review  # 2026-07-17: implemented — contrast tokens + FRONT removal + Turn wording + DPR backing store (candidate a). 368 tests (12 new), zero engine changes, headless DSF-3/1 screenshot evidence. OPEN before done: Danilo's on-device sign-off + ?perf=1 after-capture vs the post-review baseline (needs deploy first). Then code-review.
+  4-1-the-epic-4-design-dossier: backlog  # GATE: no story 4-2+ may be created before this is done (AD-15 union walk, FR38 semantics, UX spine extension — the readiness report's standing condition).
+  4-2-the-era-turnover-five-slot-armies-and-named-soldiers: backlog  # Carries the era's SINGLE logVersion bump.
+  4-3-roster-wave-1-twelve-classes-on-role-relations: backlog
+  4-4-tactics-the-order-you-give-your-army: backlog  # Pin at create-story: Attack-Leader picker behavior in the pre-4-5 window (grey out vs interim default) — readiness minor #3.
+  4-5-the-squad-leader: backlog
+  4-6-crits-and-dodge: backlog
+  4-7-per-row-moves-and-guard: backlog
+  4-8-monsters-in-the-engine: backlog
+  4-9-monsters-on-the-phone: backlog  # Pin at create-story: concrete monster sprite-size floor from the 4-1 spine extension — readiness minor #4.
+  4-10-attacks-read-from-to: backlog  # FR39g pause dropped for wave 1 (PO, 2026-07-16).
+  4-11-the-action-ledger-and-informed-placement: backlog
+  4-12-the-squad-era-balance-verdict: backlog  # Epic closing gate: scaled both-mode sweep + wardens-floor recheck + Danilo's felt-balance device sign-off.
+  epic-4-retrospective: optional
 
 # Epic-1 retrospective action items (2026-07-13, see epic-1-retro-2026-07-13.md).
 # Critical path items 1-3 run IN ORDER before story 2-1 starts.
@@ -99,11 +122,11 @@ action_items:
   - epic: 2
     action: "Text-ceiling fix scheduling decision at Epic 3 planning (360px backing-store investigation, NFR1-gated; candidate home beside story 3.4)"
     owner: "Winston (Architect)"
-    status: open  # 2026-07-16 epic-3 retro: NOT addressed in Epic 3, but now unblocked — story 3.4 supplied the fps baseline (docs/performance-verdict.md). Hard deadline: decide at the Epic 4 design pass (see epic-3 action item). Must not survive a third retro.
+    status: done  # 2026-07-17: DECIDED at the Epic 4 design pass (hard deadline met, did not survive a third retro) — the fix is SCHEDULED inside story 4-0 (legibility quick wins), candidate (a) DPR-sized backing + per-scene zoom, measured against docs/performance-verdict.md baseline. Recorded in spine performance convention + epics.md story 4.0 AC.
   - epic: 2
     action: "StatusCleared engine events ride the next LOG_VERSION bump (bundle with a crit flag if the balance pass adds one)"
     owner: "Amelia (dev)"
-    status: open  # 2026-07-14 correct-course: story 3-0 adds NO events, so the next logVersion bump is Epic 4's single combined bump (crit flag + StatusCleared together).
+    status: open  # 2026-07-17: ROUTED — the next (single) logVersion bump is story 4-2, whose AC emits StatusCleared immediately; crit/missed/dodged flags land in the same union (emitted by 4-6). Closes when 4-2 ships.
   - epic: 2
     action: "Sim-harness wipeout sweep executes inside the balance-pass verification (deferred since 1.10)"
     owner: "Amelia (dev)"
@@ -114,7 +137,7 @@ action_items:
   - epic: 3
     action: "Epic 4 design pass — one PM/Architect scoping session with Danilo's full idea list: per-row move variety (FR32/FR33), target-selection tactics, crits/miss with the crit-vs-miss seeded draw ORDER fixed (FR20), Archmage blast gating, StatusCleared on the single combined bump, non-replayable-history UX confirmation; wardens-33% melee floor is a named design input"
     owner: "John (PM) + Winston (Architect) + Danilo"
-    status: open
+    status: done  # 2026-07-16/17: COMPLETE — vision dump captured (epic-4-design-pass-input-2026-07-16.md), PRD Feature 6b (FR32–FR39) + spine AD-14/AD-15 committed, epics 4.0–4.12 broken down, readiness READY (report 2026-07-17, commit b32c97f). Every named input routed: moves/tactics/crits → stories 4.4–4.7; draw-order table frozen in 4-1's dossier; Archmage gating DECIDED (postponed post-link-play); StatusCleared → 4-2's bump; non-replayable-history device confirmation → 4-2 AC; wardens floor → named input in 4-1/4-4/4-12.
   - epic: 3
     action: "Record the epic-ordering decision: Epic 4 (combat depth) before link-play"
     owner: "Amelia (dev)"
@@ -122,4 +145,4 @@ action_items:
   - epic: 3
     action: "Text-ceiling scheduling decision (carried from epic-2): decide at the Epic 4 design pass whether the fix becomes an Epic 4 story or stays parked — baseline exists in docs/performance-verdict.md"
     owner: "Winston (Architect)"
-    status: open
+    status: done  # 2026-07-17: DECIDED — scheduled inside story 4-0 (see the epic-2 twin item above; one decision closes both carries).

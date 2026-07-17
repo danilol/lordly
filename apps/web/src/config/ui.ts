@@ -1,7 +1,33 @@
 import { GameObjects, Scene, Types } from 'phaser';
 import type { Element, UnitClass } from '@lordly/engine';
-import { BASE_HEIGHT, BASE_WIDTH, ELEMENT_BADGE_RADIUS, ELEMENT_COLORS, HOME_BACK_LABEL, PALETTE, TEXT_RESOLUTION } from './constants';
+import { backingScaleFor, BASE_HEIGHT, BASE_WIDTH, ELEMENT_BADGE_RADIUS, ELEMENT_COLORS, HOME_BACK_LABEL, PALETTE, TEXT_RESOLUTION } from './constants';
 import { UNITS_SHEET_KEY, UNIT_FRAMES } from './sprites';
+
+/**
+ * The live backing-store scale (story 4.0 text-ceiling fix): the pure rule is
+ * `backingScaleFor` (config/constants.ts — rounded DPR, capped, tested); this
+ * wrapper feeds it the real devicePixelRatio. Read at boot for the Game size
+ * and per scene for the camera zoom — the two MUST agree, hence one function.
+ */
+export function backingScale(): number {
+  if (typeof window === 'undefined') return 1;
+  return backingScaleFor(window.devicePixelRatio || 1);
+}
+
+/**
+ * Points a scene's main camera at the 360×640 LOGICAL stage on the DPR-sized
+ * backing store (story 4.0): zoom = backingScale, centered on the logical
+ * midpoint, so every existing coordinate keeps meaning what it always meant.
+ * Called in every scene's create() right after the background color — a scene
+ * that skips it would render its content at 1/scale size in the corner.
+ * At scale 1 (DPR-1 desktop) this is exactly a no-op.
+ */
+export function applyHiDpiCamera(scene: Scene): void {
+  const scale = backingScale();
+  if (scale === 1) return;
+  scene.cameras.main.setZoom(scale);
+  scene.cameras.main.centerOn(BASE_WIDTH / 2, BASE_HEIGHT / 2);
+}
 
 /**
  * The text render resolution (story 2.0 AC2 — the accessibility fix for the
@@ -128,6 +154,11 @@ export function enableDragScroll(scene: Scene, content: GameObjects.Container, v
   let dragStartY = 0;
   let contentStartY = 0;
   let dragDistance = 0;
+  // Raw pointer coords are BACKING-store pixels; content.y is LOGICAL. Under
+  // the story-4.0 hi-DPI camera the two differ by the zoom factor — divide
+  // deltas so a finger-length drag scrolls the same distance at any DPR.
+  // (Deltas only: the camera's centerOn offset cancels out of differences.)
+  const logicalDelta = (rawDelta: number) => rawDelta / (scene.cameras.main.zoom || 1);
   scene.input.on('pointerdown', (pointer: { y: number }) => {
     dragStartY = pointer.y;
     contentStartY = content.y;
@@ -135,8 +166,8 @@ export function enableDragScroll(scene: Scene, content: GameObjects.Container, v
   });
   scene.input.on('pointermove', (pointer: { y: number; isDown: boolean }) => {
     if (!pointer.isDown) return;
-    dragDistance = Math.max(dragDistance, Math.abs(pointer.y - dragStartY));
-    content.y = clamp(contentStartY + (pointer.y - dragStartY));
+    dragDistance = Math.max(dragDistance, Math.abs(logicalDelta(pointer.y - dragStartY)));
+    content.y = clamp(contentStartY + logicalDelta(pointer.y - dragStartY));
   });
   scene.input.on('wheel', (_p: unknown, _o: unknown, _dx: number, dy: number) => {
     content.y = clamp(content.y - dy);

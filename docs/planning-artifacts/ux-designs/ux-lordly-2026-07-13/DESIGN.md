@@ -105,6 +105,13 @@ components:
     fill-you: 'blue-you @ ~14–16% alpha'
     fill-enemy: 'red-enemy @ ~14–16% alpha'
     code: '{typography.label}'              # 3-letter class code, weight 800
+    # FR39f contrast treatment (story 4.0, 2026-07-17): codes standing ON
+    # side-colored board tiles use LIGHT side tints over a dark outline —
+    # the outline carries the letterform on any ground (incl. future
+    # landscape backdrops). Side-hue text on a same-hue tile is forbidden.
+    code-fill-you: '#d6e8fa'                # light blue-family tint
+    code-fill-enemy: '#f8d9d2'              # light red-family tint
+    code-stroke: '#10131f'                  # dark outline, 3px @ 13px code
     radius: '{rounded.sm}'
   hp-bar:
     track: 'ink @ ~18% (heritage) · white @ ~10% (night)'

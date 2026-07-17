@@ -49,7 +49,7 @@ The same spell never stacks on one target.
 
 ## The Timeline
 
-Combat runs in **passes**. Each pass, every unit with actions left acts once, fastest first — the order weaves between both armies. The natural speed order: **Witch, Archer, Mercenary, Mage, Cleric, Knight** — disruptors strike first; the heavy tank hits last, but survives to do it. Sleeping and fallen units forfeit their remaining actions.
+Combat runs in **turns**. Each turn, every unit with actions left acts once, fastest first — the order weaves between both armies. The natural speed order: **Witch, Archer, Mercenary, Mage, Cleric, Knight** — disruptors strike first; the heavy tank hits last, but survives to do it. Sleeping and fallen units forfeit their remaining actions.
 
 ## Judging
 

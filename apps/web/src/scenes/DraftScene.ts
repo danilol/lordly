@@ -14,7 +14,7 @@ import {
 } from '../config/constants';
 import { canAddUnit, canContinue, classRulesCard } from '../flow/draftModel';
 import type { MatchFlow } from '../flow/MatchFlow';
-import { addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
+import { applyHiDpiCamera, addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
 
 /**
@@ -42,6 +42,7 @@ export class DraftScene extends Scene {
     attachPerfSampler(this);
 
     this.cameras.main.setBackgroundColor(PALETTE.background);
+    applyHiDpiCamera(this);
     addHomeBack(this);
 
     // Rules spur (story 2.4, FR27): top-right mirror of the Home affordance.

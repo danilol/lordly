@@ -24,7 +24,7 @@ import {
   PALETTE,
 } from '../config/constants';
 import { MatchFlow } from '../flow/MatchFlow';
-import { crispText } from '../config/ui';
+import { applyHiDpiCamera, crispText } from '../config/ui';
 
 export class HomeScene extends Scene {
   /** The battle mode the next match starts in (FR17/FR19) — Standard by default. */
@@ -44,6 +44,7 @@ export class HomeScene extends Scene {
     this.modeUi = [];
 
     this.cameras.main.setBackgroundColor(PALETTE.background);
+    applyHiDpiCamera(this);
 
     crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.3, GAME_NAME, {
       fontFamily: 'Arial Black',

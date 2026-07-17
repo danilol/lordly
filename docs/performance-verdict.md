@@ -156,3 +156,11 @@ Three fresh-context trials (no cache, no service worker — genuinely cold):
 ## Fixes applied this story
 
 None. Bundle and cold-load both pass comfortably with headroom; the one architecturally-plausible frame-rate hotspot was measured (no craters, healthy GC) rather than fixed pre-emptively, per doctrine. Nothing here required AC2's "fix or file with a baseline" escape hatch for a budget breach — both budgets already had large margin.
+
+## Addendum — story 4.0 text-ceiling fix (2026-07-17)
+
+Story 4.0 shipped deferred-work.md's **candidate (a)**: the canvas backing store is now sized `360×640 × backingScaleFor(devicePixelRatio)` (rounded, capped at 3 — `DPR_BACKING_CAP`), with every scene's main camera zoomed by the same factor (`applyHiDpiCamera`, config/ui.ts). At DPR 3 the backing is 1080×1920 (~9× the fill of the old fixed 360×640 store); at DPR 1 the config is byte-for-byte the old one.
+
+**Headless verification (this session, dev server, puppeteer-core at deviceScaleFactor 3 and 1):** canvas backing 1080×1920 / 360×640 respectively, CSS size 360×640 both, layout pixel-consistent across scales, no page errors, text visibly sharp at DSF 3 in Home/History/Battle screenshots.
+
+**On-device fps (the authoritative NFR1 check): PENDING Danilo's `?perf=1` session.** Procedure — identical to the post-review baseline capture above so the numbers compare directly: deployed build, Pixel 9 Pro XL, Chrome remote debugging, `?perf=1`, per-scenario `window.__perfSamples` reset; scenarios Battle 1×, Battle ×2 (three-mages-wipeout Replay benchmark), Placement (~60s of drag). Compare against the post-review baseline table ONLY (the superseded first capture stays out of it). Acceptance: zero frames below the 30fps floor. If the floor breaks even at the DPR cap, the fix reverts per the story's fallback branch and candidates (b)/(c) stay parked in deferred-work.md.
