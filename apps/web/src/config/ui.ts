@@ -4,14 +4,24 @@ import { backingScaleFor, BASE_HEIGHT, BASE_WIDTH, ELEMENT_BADGE_RADIUS, ELEMENT
 import { UNITS_SHEET_KEY, UNIT_FRAMES } from './sprites';
 
 /**
- * The live backing-store scale (story 4.0 text-ceiling fix): the pure rule is
+ * The backing-store scale (story 4.0 text-ceiling fix): the pure rule is
  * `backingScaleFor` (config/constants.ts — rounded DPR, capped, tested); this
  * wrapper feeds it the real devicePixelRatio. Read at boot for the Game size
- * and per scene for the camera zoom — the two MUST agree, hence one function.
+ * and per scene for the camera zoom — the two MUST agree, so the first
+ * real-window read is MEMOIZED for the session (the `textResolution` pattern
+ * below): the Game's backing store is fixed at construction and cannot follow
+ * a later devicePixelRatio change (browser zoom, cross-monitor drag), so the
+ * per-scene camera zoom must keep using the boot-time value or the two desync
+ * — a stale-DPR camera would clip or shrink the stage (4.0 review). A resize/
+ * DPR-change re-sharpen pass stays deferred (deferred-work.md, story-2.0
+ * review) — this freeze is that same fence, applied consistently.
  */
+let cachedBackingScale: number | undefined;
 export function backingScale(): number {
-  if (typeof window === 'undefined') return 1;
-  return backingScaleFor(window.devicePixelRatio || 1);
+  if (cachedBackingScale !== undefined) return cachedBackingScale;
+  if (typeof window === 'undefined') return 1; // SSR/test: don't memoize
+  cachedBackingScale = backingScaleFor(window.devicePixelRatio || 1);
+  return cachedBackingScale;
 }
 
 /**

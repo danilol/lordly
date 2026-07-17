@@ -18,6 +18,13 @@ import { showInitFallback } from '../flow/initFallback';
  * units would render as missing-texture placeholders (review finding, 2.1).
  */
 export class BootScene extends Scene {
+  // DELIBERATE EXCLUSION (story 4.0): Boot is the one scene that does NOT call
+  // applyHiDpiCamera — it renders no game objects (success path starts Home
+  // immediately; failure paths render plain DOM via showInitFallback). If this
+  // scene ever gains a rendered object (loading bar, splash), add the
+  // applyHiDpiCamera(this) call like every other scene, or it will draw at
+  // 1/scale in the top-left corner on any DPR>1 device.
+
   /** Set by the loaderror handler; create() must not boot a spriteless game. */
   private loadFailed = false;
 

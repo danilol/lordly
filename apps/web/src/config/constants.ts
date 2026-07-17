@@ -122,7 +122,17 @@ export function unitCodeStyle(side: 'A' | 'B'): {
 // against docs/performance-verdict.md's baseline. DPR 1 is exactly a no-op.
 export const DPR_BACKING_CAP = 3;
 
-/** Pure core of the backing-store scale — `backingScale()` (config/ui.ts) feeds it the live devicePixelRatio. */
+/**
+ * Pure core of the backing-store scale — `backingScale()` (config/ui.ts) feeds
+ * it the devicePixelRatio (memoized at boot). Recorded tradeoff (4.0 review):
+ * rounding keeps the scale INTEGER because fractional backing scales re-soften
+ * the NEAREST pixel-art sprites — the very artifact the per-texture-NEAREST
+ * pattern exists to avoid. Consequence: DPR 1.25 (Windows 125% scaling) rounds
+ * to 1 and gets no backing-store benefit, while 1.5 rounds up to 2 (a slightly
+ * oversampled store — harmless). The mobile target (FR30) sits at DPR 2–3 and
+ * benefits fully; the desktop 1.25 case keeps the pre-4.0 rendering it always
+ * had, which was device-accepted.
+ */
 export function backingScaleFor(dpr: number): number {
   if (!Number.isFinite(dpr)) return 1;
   return Math.min(DPR_BACKING_CAP, Math.max(1, Math.round(dpr)));

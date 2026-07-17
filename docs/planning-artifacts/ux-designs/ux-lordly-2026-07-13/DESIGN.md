@@ -106,9 +106,14 @@ components:
     fill-enemy: 'red-enemy @ ~14–16% alpha'
     code: '{typography.label}'              # 3-letter class code, weight 800
     # FR39f contrast treatment (story 4.0, 2026-07-17): codes standing ON
-    # side-colored board tiles use LIGHT side tints over a dark outline —
-    # the outline carries the letterform on any ground (incl. future
-    # landscape backdrops). Side-hue text on a same-hue tile is forbidden.
+    # SOLID side-colored board tiles (Battle/Reveal iso boards) use LIGHT
+    # side tints over a dark outline — the outline carries the letterform on
+    # any ground (incl. future landscape backdrops). Side-hue text on a
+    # same-hue tile is forbidden. SCOPE (PO decision, 2026-07-17 review):
+    # these three tokens govern solid-tile board codes ONLY; the low-alpha
+    # (~15%) side-washed tray/panel cards (Draft, Placement, Result, History)
+    # are dark-dominant surfaces with no collision and keep the standard
+    # label treatment — do not apply the outline there.
     code-fill-you: '#d6e8fa'                # light blue-family tint
     code-fill-enemy: '#f8d9d2'              # light red-family tint
     code-stroke: '#10131f'                  # dark outline, 3px @ 13px code
