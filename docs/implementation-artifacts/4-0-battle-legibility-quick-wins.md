@@ -45,13 +45,13 @@ so that the shipped legibility defects stop obscuring the game before the era wo
   - [x] Re-examine `textResolution()` interplay: analyzed — glyph resolution (`max(3, fitZoom×dpr)`) always ≥ the backing scale (≤3), so glyphs land in the backing with a mild supersample (good antialiasing), never an upscale; no formula change needed, no double-supersampling case exists. `?textres=N` untouched.
   - [x] Verify per-texture NEAREST sprites: DSF-3 screenshots show sprites clean at the integer backing scale (integer duplication preserved by the rounded scale).
   - [x] Guard the known Phaser traps: NO global `pixelArt: true` (untouched); no new scene fields added (nothing to reset; `applyHiDpiCamera` is stateless per create()).
-  - [ ] Measure AFTER on Danilo's device with `?perf=1`: Battle 1×, Battle ×2, Placement drag — same scenarios as the post-review baseline; compare ONLY against the post-review numbers. Zero frames below the 30fps floor. **(OPEN — requires Danilo's phone; procedure written into the performance-verdict addendum.)**
+  - [x] Measure AFTER on Danilo's device with `?perf=1` (2026-07-17, deployed build): Battle 1× min 30.03 (one scene-entry-class frame + isolated 40–54fps beats), Battle ×2 min 59.52, Placement drag min 59.17 — **zero frames below the 30fps floor in all three scenarios**; results + method recorded in the performance-verdict addendum. The DPR-3 fill cost is unmeasurable against the floor on this device.
   - [x] Record: dated addendum appended to `docs/performance-verdict.md` (mechanism verified, fps row pending device); deferred-work.md's text-ceiling entry updated to "RESOLVED in code, pending on-device fps confirmation".
   - [x] Fallback branch documented and armed: if the device capture breaks the floor even DPR-capped, revert the backing change + record; candidates (b)/(c) stay parked.
 - [ ] Task 5: Gate + device sign-off (AC: 1, 4, 5)
   - [x] Full gate green: 368/368 tests (12 new), typecheck both packages, eslint + prettier clean; `git diff packages/engine` EMPTY; balance-hash and goldens untouched.
   - [x] Danilo's visual sign-off (2026-07-17, on the local build): **"I LOVE IT! It's great now! the font problem is solved for me, it's way better to read!"** — contrast, wording, and the text-ceiling fix all accepted visually.
-  - [ ] The `?perf=1` after-capture vs the post-review baseline (Battle 1×/×2, Placement drag, deployed build) — the NFR1 confirmation. **(OPEN — the story's remaining gate before done.)**
+  - [x] The `?perf=1` after-capture vs the post-review baseline (2026-07-17, deployed build): all three scenarios captured by Danilo, zero 30fps-floor breaches — NFR1 confirmed at the DPR-3 backing. The story's last gate is closed; code-review is the remaining workflow step before done.
 
 ## Dev Notes
 
@@ -140,7 +140,7 @@ Claude Fable 5 (claude-fable-5)
 - **AC4 (text ceiling) ✅ code, ⏳ device fps.** Candidate (a) shipped exactly as diagnosed: `backingScaleFor` (rounded DPR, cap 3) sizes the Game; `applyHiDpiCamera` zooms each of the 9 rendering scenes (BootScene renders nothing — deliberately skipped). Headless probe: backing 1080×1920@DSF3 / 360×640@DSF1, no page errors, pixel-consistent layout, text visibly sharp. The authoritative fps capture needs Danilo's phone — procedure in the performance-verdict addendum.
 - **AC5 (no engine change) ✅.** `git diff packages/engine` empty; balance hash and goldens untouched; the two replay-drive runs even produced the identical battle at both DPRs (FR20 holding across backing scales).
 - Determinism bonus caught on camera: the DSF-3 and DSF-1 drives replayed byte-identical battles from the same seeded HistoryEntry.
-- **Remaining before done:** Danilo's on-device session — visual sign-off + `?perf=1` after-capture vs the post-review baseline (Battle 1×/×2, Placement drag). Deploy first (the capture runs against prod, matching the baseline's conditions).
+- **On-device session complete (2026-07-17):** visual sign-off — "I LOVE IT! It's great now! the font problem is solved for me, it's way better to read!" — and the `?perf=1` after-capture on the deployed build: Battle 1× min 30.03, Battle ×2 min 59.52, Placement min 59.17, zero floor breaches (full record in the performance-verdict addendum). All ACs satisfied. Remaining workflow step: code-review.
 
 ### File List
 
@@ -163,3 +163,4 @@ Claude Fable 5 (claude-fable-5)
 ### Change Log
 
 - 2026-07-17: Story 4.0 implemented — all four legibility fixes land in one pass: (1) FR39f class-code contrast via light side tints + dark outline, tokenized in DESIGN.md and centralized in `unitCodeStyle`; (2) FR39e FRONT text labels deleted, tile indicator kept, EXPERIENCE.md reconciled; (3) FR39a "Turn" wording via new display constants (HUD, log panel, rules.md) with the engine vocabulary untouched; (4) the text-ceiling fix as candidate (a) — DPR-sized backing store (`backingScaleFor`, cap 3) + per-scene camera zoom, verified headlessly at DSF 3/1 (backing 1080×1920 vs 360×640 no-op, no errors, all six codes legible, layout pixel-consistent, drag-scroll zoom-corrected). Gate: 368/368 tests (12 new), typecheck, lint, prettier green; ZERO engine changes. **Not claimed done:** the on-device `?perf=1` after-capture and Danilo's visual sign-off remain open — status moves to review with those as the named gate, per the 3.4 precedent of flagging rather than claiming.
+- 2026-07-17 (same day): **Both gates closed.** Danilo's visual sign-off quoted in Task 5; the `?perf=1` after-capture on the deployed build (commit 65a6d75) shows zero 30fps-floor breaches across Battle 1×/Battle ×2/Placement (mins 30.03/59.52/59.17 — trace analysis + method in `docs/performance-verdict.md`'s story-4.0 addendum). All five ACs satisfied with evidence. Story remains in `review` awaiting the code-review workflow, which flips it to done.
