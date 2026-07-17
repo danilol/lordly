@@ -188,6 +188,19 @@ Hosts the **theme toggle** (Heritage / Night, `{components.theme-toggle}`) and t
 
 ---
 
+## Epic 4 extension (added 2026-07-17, story 4.1 — the design dossier is the rationale record)
+
+*Extends the spine for the squad era (FR32–FR39). The MVP sections above stay authoritative for shipped behavior; where this section speaks, it wins for Epic 4 surfaces. Unit counts and copy above that say "3 units" read "5 slots" from story 4.2 (FR1); the Wipeout hint's cap reads from balance data (10 from 4.2).*
+
+- **Placement gains three duties (FR4):** a **tactic picker** — four `{components.mode-toggle}`-style beveled options (Autonomous default · Weakest · Strongest · Leader; **Attack Leader renders disabled until story 4.5 ships leader designation** — no invisible defaults); **leader designation** — tap a placed unit to crown it (`{components.leader-crown}`), exactly one crown required to Ready; any army mutation clears the crown WITH a visible notice (AD-9's invariant, surfaced honestly); **per-row action counts** (FR39c) — each grid row shows the selected/dragged unit's count for that row ("back 2×") so positioning is an informed choice.
+- **Reveal discloses everything (FR6):** both tactics as labels, both leader crowns. The read is the payoff.
+- **Battle — the move-name plate (FR39b/d, Danilo's OB64 animation-off reference):** every beat, a small gold-framed plate (`{components.move-plate}`) appears over the ACTING unit naming its move ("Sword Slash", "Arrow", "Ice Blast", the FR16 spell names) and carrying its action pips (●○ = 1 of 2 left). The plate is the actor identifier, the beat namer, and the action-economy ledger in one transient element — no standing chrome; boards stay clean. Damage keeps popping on the TARGET. Fed by `UnitAttacked.kind` + `PassStarted.actionsRemaining` (log-driven, AD-2).
+- **Guard reads on the board:** `GuardRaised` shows a persistent shield marker on the guarding unit (`{components.guard-marker}`) until `GuardEnded`; an intercepted attack animates its from→to INTO the guard (the bodyguard visibly steps in — `redirectedFrom` payload).
+- **Leader fall:** `LeaderFell` gets a full-beat banner ("The leader has fallen!") + a persistent penalty tint on that side's HUD label.
+- **Golem (FR38):** renders ≥48px spanning BOTH its cells (one body across two tiles), ONE HP bar + ONE code at its anchor cell — one unit, never two (AD-14).
+- **Names (FR37):** on placement/reveal cards (under the code) and in the Log-panel narration ("Kain (KNI) struck…"); the board keeps codes.
+- **History cards** gain tactic + leader per side (from the stored setup, story 4.5).
+
 ## Explicitly Deferred (not designed here)
 
 These are loved but out of scope for this UX phase — noted only so no one designs them by accident:

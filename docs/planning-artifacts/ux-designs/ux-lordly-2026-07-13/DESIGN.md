@@ -143,6 +143,22 @@ components:
     tile-enemy: '{colors.red-enemy}'        # enemy board tiles
     tile-neutral: '{colors.ground-2}'       # heritage · {colors.tile-b-night} in night
     tile-stroke: '{colors.gold-deep}'
+  # ---- Epic 4 components (added 2026-07-17, story 4.1 — see EXPERIENCE.md Epic 4 extension) ----
+  move-plate:
+    note: 'The OB64 animation-off attack-name plate: transient, over the ACTING unit, one beat.'
+    frame: '{colors.gold}'                  # mini framed-panel — same bevel language
+    body: '{colors.panel-body-night}'       # dark plate (night); heritage uses {colors.panel-body}
+    text: '{colors.bone}'                   # move name, {typography.label}
+    pips: '{colors.gold}'                   # action economy: ● spent-remaining dots, ○ = spent
+  leader-crown:
+    note: 'Gold crown insignia marking the designated leader (placement, reveal, battle, history). Gold = leader, never side (side stays blue/red).'
+    glyph: '♛'
+    color: '{colors.gold}'
+  guard-marker:
+    note: 'Persistent shield glyph on a unit in guard stance (GuardRaised → GuardEnded), the status-icon treatment.'
+    glyph: '🛡'
+  golem-body:
+    note: 'A monster renders ONE body ≥48px spanning both its cells, one HP bar + one code at the ANCHOR cell (AD-14: one unit, never two). Board-tile codes keep the FR39f outline treatment.'
 ---
 
 # Lordly — Visual Identity (DESIGN.md)
