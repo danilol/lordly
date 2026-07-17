@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE, createStreams, rollElement, validateMatchSetup } from '@lordly/engine';
+import { BALANCE, createStreams, rollElement, rollName, validateMatchSetup } from '@lordly/engine';
 import type { BattleEnded } from '@lordly/engine';
 import { MatchFlow } from '../src/flow/MatchFlow';
 import type { MatchState } from '../src/flow/MatchState';
@@ -9,6 +9,20 @@ import type { HistoryEntry, WebStorage } from '../src/flow/storage';
 /** A MatchFlow with a fixed seed so every draw is deterministic in tests. */
 function flowWithSeed(seed: number): MatchFlow {
   return new MatchFlow(() => seed);
+}
+
+/** Drafts a full slot-legal army (5 smalls — AD-1) and places every unit. */
+function draftAndPlaceAll(flow: MatchFlow): void {
+  flow.draftUnit('knight');
+  flow.draftUnit('archer');
+  flow.draftUnit('mage');
+  flow.draftUnit('cleric');
+  flow.draftUnit('witch');
+  flow.placeUnit(0, { row: 'front', col: 'center' });
+  flow.placeUnit(1, { row: 'back', col: 'left' });
+  flow.placeUnit(2, { row: 'back', col: 'right' });
+  flow.placeUnit(3, { row: 'mid', col: 'center' });
+  flow.placeUnit(4, { row: 'front', col: 'left' });
 }
 
 describe('MatchState serializability (AD-5)', () => {
@@ -25,12 +39,7 @@ describe('MatchState serializability (AD-5)', () => {
   it('the COMMITTED state — the actual story-1.9 hand-off, with a nested MatchSetup — round-trips unchanged', () => {
     const flow = flowWithSeed(0xabcdef);
     flow.startMatch();
-    flow.draftUnit('knight');
-    flow.draftUnit('archer');
-    flow.draftUnit('mage');
-    flow.placeUnit(0, { row: 'front', col: 'center' });
-    flow.placeUnit(1, { row: 'back', col: 'left' });
-    flow.placeUnit(2, { row: 'back', col: 'right' });
+    draftAndPlaceAll(flow);
     flow.commit();
     const state = flow.getState();
     expect(state.phase).toBe('committed');
@@ -57,14 +66,12 @@ describe('MatchFlow draft (FR1/FR3, AD-9/AD-10)', () => {
     expect(second.class).toBe('archer');
   });
 
-  it('allows duplicates and caps the army at exactly 3', () => {
+  it('allows duplicates and caps the army at the slot budget (AD-1)', () => {
     const flow = flowWithSeed(7);
     flow.startMatch();
-    flow.draftUnit('knight');
-    flow.draftUnit('knight');
-    flow.draftUnit('knight');
-    expect(() => flow.draftUnit('knight')).toThrow(/army is full|exactly 3|full/i);
-    expect(flow.getState().playerArmy).toHaveLength(3);
+    for (let i = 0; i < BALANCE.slotBudget; i++) flow.draftUnit('knight');
+    expect(() => flow.draftUnit('knight')).toThrow(new RegExp(`${BALANCE.slotBudget} slots are filled`));
+    expect(flow.getState().playerArmy).toHaveLength(BALANCE.slotBudget); // all-smalls era: 5 slots = 5 units
   });
 
   it('FORWARD-ONLY: removing a unit and re-adding draws the NEXT element, never the discarded one (AC2)', () => {
@@ -86,17 +93,88 @@ describe('MatchFlow draft (FR1/FR3, AD-9/AD-10)', () => {
   });
 });
 
+describe('MatchFlow names (FR37, AD-9/AD-10, story 4.2)', () => {
+  it('rolls each unit its name via names/A, deterministically for a fixed seed', () => {
+    const seed = 4242;
+    const flow = flowWithSeed(seed);
+    flow.startMatch();
+    const first = flow.draftUnit('knight');
+    const second = flow.draftUnit('archer');
+
+    // Hand-derive against a fresh names/A stream: the Nth draft takes the Nth
+    // draw, with same-army dedup against the names already rolled.
+    const stream = createStreams(seed)['names/A'];
+    const expectedFirst = rollName(stream, 'knight', []);
+    const expectedSecond = rollName(stream, 'archer', [expectedFirst]);
+    expect(first.name).toBe(expectedFirst);
+    expect(second.name).toBe(expectedSecond);
+  });
+
+  it('FORWARD-ONLY: removing a unit and re-adding draws the NEXT name, never rewinding (AD-10)', () => {
+    const seed = 777;
+    const flow = flowWithSeed(seed);
+    flow.startMatch();
+    flow.draftUnit('knight'); // name draw 0
+    flow.draftUnit('knight'); // name draw 1
+    flow.removeUnit(1); // its name is gone forever
+    const readded = flow.draftUnit('knight'); // must be draw 2
+
+    const stream = createStreams(seed)['names/A'];
+    const draw0 = rollName(stream, 'knight', []);
+    rollName(stream, 'knight', []); // draw 1 (discarded; dedup doesn't affect stream advance)
+    const draw2 = rollName(stream, 'knight', [draw0]); // taken = the one name still in the army
+    expect(readded.name).toBe(draw2);
+    expect(flow.getState().nameRolls).toEqual(['knight', 'knight', 'knight']);
+  });
+
+  it('never repeats a name within the same army (dossier §7 dedup)', () => {
+    const flow = flowWithSeed(0x9999);
+    flow.startMatch();
+    const names = ['knight', 'knight', 'knight', 'knight', 'knight'].map((cls) => flow.draftUnit(cls as 'knight').name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it('the committed setup carries a name for EVERY unit on both sides (FR37 — the AI is named too)', () => {
+    const flow = flowWithSeed(0x4444);
+    flow.startMatch();
+    draftAndPlaceAll(flow);
+    const setup = flow.commit();
+    for (const side of ['A', 'B'] as const) {
+      for (const unit of setup.armies[side]) {
+        expect(unit.name.trim().length, `${side} unit name`).toBeGreaterThan(0);
+      }
+      expect(new Set(setup.armies[side].map((u) => u.name)).size).toBe(setup.armies[side].length);
+    }
+  });
+});
+
+describe('MatchFlow tactics & leaders (FR34/FR35, AD-9, story 4.2 interim defaults)', () => {
+  it("commit() carries the EXPLICIT interim defaults: tactics 'autonomous', leader 0, both sides (AC2)", () => {
+    const flow = flowWithSeed(0x2222);
+    flow.startMatch();
+    draftAndPlaceAll(flow);
+    const setup = flow.commit();
+    expect(setup.tactics).toEqual({ A: 'autonomous', B: 'autonomous' });
+    expect(setup.leaders).toEqual({ A: 0, B: 0 });
+  });
+
+  it('the leader-clearing hook: draftUnit and removeUnit reset playerLeader to null (4.5 lands only the picker)', () => {
+    const flow = flowWithSeed(0x3333);
+    flow.startMatch();
+    expect(flow.getState().playerLeader).toBeNull();
+    flow.draftUnit('knight');
+    expect(flow.getState().playerLeader).toBeNull();
+    flow.removeUnit(0);
+    expect(flow.getState().playerLeader).toBeNull();
+  });
+});
+
 describe('MatchFlow commit (FR5/FR24, AD-6/AD-9/AD-11/AD-13)', () => {
   /** Draft + place a full legal player board so commit can assemble. */
   function readyToCommit(seed: number): MatchFlow {
     const flow = flowWithSeed(seed);
     flow.startMatch();
-    flow.draftUnit('knight');
-    flow.draftUnit('archer');
-    flow.draftUnit('mage');
-    flow.placeUnit(0, { row: 'front', col: 'center' });
-    flow.placeUnit(1, { row: 'back', col: 'left' });
-    flow.placeUnit(2, { row: 'back', col: 'right' });
+    draftAndPlaceAll(flow);
     return flow;
   }
 
@@ -106,12 +184,14 @@ describe('MatchFlow commit (FR5/FR24, AD-6/AD-9/AD-11/AD-13)', () => {
     expect(() => validateMatchSetup(setup)).not.toThrow();
     expect(setup.mode).toBe('single');
     expect(setup.balanceVersion).toBe(BALANCE.version);
-    expect(setup.armies.A.map((u) => u.class)).toEqual(['knight', 'archer', 'mage']);
-    expect(setup.armies.B).toHaveLength(BALANCE.armySize);
+    expect(setup.armies.A.map((u) => u.class)).toEqual(['knight', 'archer', 'mage', 'cleric', 'witch']);
+    expect(setup.armies.B).toHaveLength(BALANCE.slotBudget); // all-smalls era: budget = unit count
     expect(setup.placements.A).toEqual([
       { row: 'front', col: 'center' },
       { row: 'back', col: 'left' },
       { row: 'back', col: 'right' },
+      { row: 'mid', col: 'center' },
+      { row: 'front', col: 'left' },
     ]);
   });
 
@@ -126,9 +206,13 @@ describe('MatchFlow commit (FR5/FR24, AD-6/AD-9/AD-11/AD-13)', () => {
     other.draftUnit('witch');
     other.draftUnit('witch');
     other.draftUnit('cleric');
+    other.draftUnit('mercenary');
+    other.draftUnit('knight');
     other.placeUnit(0, { row: 'back', col: 'left' });
     other.placeUnit(1, { row: 'back', col: 'center' });
     other.placeUnit(2, { row: 'back', col: 'right' });
+    other.placeUnit(3, { row: 'front', col: 'center' });
+    other.placeUnit(4, { row: 'front', col: 'right' });
     const boardB = other.commit();
 
     expect(boardB.armies.B).toEqual(boardA.armies.B);
@@ -149,12 +233,14 @@ describe('MatchFlow commit (FR5/FR24, AD-6/AD-9/AD-11/AD-13)', () => {
     flow.draftUnit('knight');
     flow.draftUnit('archer');
     flow.draftUnit('mage');
+    flow.draftUnit('cleric');
+    flow.draftUnit('witch');
     flow.placeUnit(0, { row: 'front', col: 'center' });
-    // only 1 of 3 placed
-    expect(() => flow.commit()).toThrow(/place all 3|incomplete|not placed/i);
-    // The count in the message is DERIVED from BALANCE.armySize, never hardcoded —
+    // only 1 of 5 placed
+    expect(() => flow.commit()).toThrow(/place all|incomplete|not placed/i);
+    // The count in the message is DERIVED from BALANCE.slotBudget, never hardcoded —
     // a drifted literal is the exact class of bug the models avoid.
-    expect(() => flow.commit()).toThrow(new RegExp(`place all ${BALANCE.armySize} units`));
+    expect(() => flow.commit()).toThrow(new RegExp(`place all ${BALANCE.slotBudget} units`));
   });
 
   it('is idempotent: a second commit returns the SAME board, never re-deriving a different AI', () => {
@@ -200,12 +286,7 @@ describe('MatchFlow resolve (AD-2/AD-13)', () => {
   function committed(seed: number): MatchFlow {
     const flow = flowWithSeed(seed);
     flow.startMatch();
-    flow.draftUnit('knight');
-    flow.draftUnit('archer');
-    flow.draftUnit('mage');
-    flow.placeUnit(0, { row: 'front', col: 'center' });
-    flow.placeUnit(1, { row: 'back', col: 'left' });
-    flow.placeUnit(2, { row: 'back', col: 'right' });
+    draftAndPlaceAll(flow);
     flow.commit();
     return flow;
   }
@@ -241,12 +322,7 @@ describe('MatchFlow resolve (AD-2/AD-13)', () => {
     let i = 0;
     const flow = new MatchFlow(() => seeds[i++] as number);
     const fill = (f: MatchFlow) => {
-      f.draftUnit('knight');
-      f.draftUnit('archer');
-      f.draftUnit('mage');
-      f.placeUnit(0, { row: 'front', col: 'center' });
-      f.placeUnit(1, { row: 'back', col: 'left' });
-      f.placeUnit(2, { row: 'back', col: 'right' });
+      draftAndPlaceAll(f);
       f.commit();
     };
     flow.startMatch();
@@ -261,12 +337,7 @@ describe('MatchFlow resolve (AD-2/AD-13)', () => {
 
 describe('MatchFlow mode (FR19/story 1.10 — Standard vs Wipeout)', () => {
   function draftAndPlace(flow: MatchFlow) {
-    flow.draftUnit('knight');
-    flow.draftUnit('archer');
-    flow.draftUnit('mage');
-    flow.placeUnit(0, { row: 'front', col: 'center' });
-    flow.placeUnit(1, { row: 'back', col: 'left' });
-    flow.placeUnit(2, { row: 'back', col: 'right' });
+    draftAndPlaceAll(flow);
   }
 
   it("defaults to 'single' — Standard is the default mode", () => {
@@ -328,12 +399,7 @@ describe('MatchFlow recordResult — the SOLE history writer (story 3.1, FR28/AD
   }
 
   function playToResolve(flow: MatchFlow): void {
-    flow.draftUnit('knight');
-    flow.draftUnit('archer');
-    flow.draftUnit('mage');
-    flow.placeUnit(0, { row: 'front', col: 'center' });
-    flow.placeUnit(1, { row: 'back', col: 'left' });
-    flow.placeUnit(2, { row: 'back', col: 'right' });
+    draftAndPlaceAll(flow);
     flow.commit();
     flow.resolve();
   }
@@ -418,12 +484,7 @@ describe('MatchFlow replay mode (story 3.2, FR20/FR28, AD-8/AD-13)', () => {
   }
 
   function playToRecorded(flow: MatchFlow): void {
-    flow.draftUnit('knight');
-    flow.draftUnit('archer');
-    flow.draftUnit('mage');
-    flow.placeUnit(0, { row: 'front', col: 'center' });
-    flow.placeUnit(1, { row: 'back', col: 'left' });
-    flow.placeUnit(2, { row: 'back', col: 'right' });
+    draftAndPlaceAll(flow);
     flow.commit();
     flow.resolve();
     flow.recordResult();
@@ -525,12 +586,7 @@ describe('MatchFlow rematch (AD-10)', () => {
     let i = 0;
     const flow = new MatchFlow(() => seeds[i++] as number);
     flow.startMatch();
-    flow.draftUnit('knight');
-    flow.draftUnit('archer');
-    flow.draftUnit('mage');
-    flow.placeUnit(0, { row: 'front', col: 'center' });
-    flow.placeUnit(1, { row: 'back', col: 'left' });
-    flow.placeUnit(2, { row: 'back', col: 'right' });
+    draftAndPlaceAll(flow);
     flow.commit();
     const firstAi = flow.getState().lastAiArchetypeId;
 

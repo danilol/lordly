@@ -144,10 +144,16 @@ export const BUTTON_HEIGHT = 56;
 // Scene labels (story 1.8) — kept here so tests and scenes share one source.
 export const DRAFT_TITLE = 'Draft your army';
 export const DRAFT_CONTINUE_LABEL = 'Continue';
-export const DRAFT_HINT = 'Tap a class to draft (3 units, duplicates allowed)';
+/** Draft hint DERIVES its count from balance data (story 4.2 — the "3 units" literal died with the era; spine: counts read "slots" now). */
+export function draftHint(slotBudget: number): string {
+  return `Tap a class to draft (${slotBudget} slots, duplicates allowed)`;
+}
 export const PLACEMENT_TITLE = 'Place your units';
 export const PLACEMENT_SUBMIT_LABEL = 'Ready';
-export const PLACEMENT_SUBMIT_HINT = 'place all 3 units';
+/** Submit hint DERIVES its count (story 4.2), aligned with MatchFlow.commit()'s own error message. */
+export function placementSubmitHint(unitCount: number): string {
+  return `place all ${unitCount} units`;
+}
 export const ENEMY_ARMY_LABEL = '▲  ENEMY ARMY  ▲';
 
 // Reveal / Battle / Result scene labels (story 1.9) — one source for tests + scenes.

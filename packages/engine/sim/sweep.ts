@@ -1,9 +1,11 @@
 import { chooseSetup } from '../src/ai';
 import type { StrategyArchetype } from '../src/ai';
 import { BALANCE } from '../src/balance';
+import { rollName } from '../src/names';
 import { resolveBattle } from '../src/resolve';
 import { createStreams, rollElement } from '../src/rng';
-import type { MatchSetup } from '../src/types';
+import type { MatchSetup, Unit, UnitClass } from '../src/types';
+import type { Stream } from '../src/rng';
 
 /**
  * The PURE sweep core of the NFR4 balancing harness: AI-vs-AI round-robin
@@ -145,6 +147,17 @@ export function runSweep(pool: readonly StrategyArchetype[], config: SweepConfig
   return { totalGames, archetypes, compositions, flagged };
 }
 
+/** Builds one side's army as MatchFlow does (AD-9): per unit in army order, roll element then name on the owner's streams. */
+function buildArmy(classes: readonly UnitClass[], elements: Stream, names: Stream): Unit[] {
+  const taken: string[] = [];
+  return classes.map((cls) => {
+    const element = rollElement(elements);
+    const name = rollName(names, cls, taken);
+    taken.push(name);
+    return { class: cls, element, name };
+  });
+}
+
 /** One AI-vs-AI battle: forced pairing, real streams, verdict from the log. */
 function playMatch(archA: StrategyArchetype, archB: StrategyArchetype, seed: number, mode: 'single' | 'wipeout'): 'A' | 'B' | 'draw' {
   const streams = createStreams(seed);
@@ -154,9 +167,13 @@ function playMatch(archA: StrategyArchetype, archB: StrategyArchetype, seed: num
     seed,
     balanceVersion: BALANCE.version,
     mode,
+    // Story 4.2 interim defaults, mirroring MatchFlow.commit exactly:
+    // pickers ship in 4.4 (tactics) and 4.5 (leaders).
+    tactics: { A: 'autonomous', B: 'autonomous' },
+    leaders: { A: 0, B: 0 },
     armies: {
-      A: a.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/A']) })),
-      B: b.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/B']) })),
+      A: buildArmy(a.classes, streams['elements/A'], streams['names/A']),
+      B: buildArmy(b.classes, streams['elements/B'], streams['names/B']),
     },
     placements: { A: a.placement, B: b.placement },
   };

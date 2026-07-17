@@ -28,10 +28,10 @@ pnpm --filter web dev
 ```
 
 Then open http://localhost:8080. **Play vs AI** now leads through the playable
-draft → placement flow: tap class cards to draft three units (each rolls its
-element), continue to the grid, drag units into your 3×3 formation, and submit
-to lock in your board against the AI's hidden commit. Reveal, battle, and
-result arrive in a later story.
+draft → placement flow: tap class cards to draft a five-slot army (each unit
+rolls its element and its soldier name), continue to the grid, drag units into
+your 3×3 formation, and submit to lock in your board against the AI's hidden
+commit. Reveal, battle, and result arrive in a later story.
 
 ## Balancing harness
 

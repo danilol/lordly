@@ -47,6 +47,7 @@ describe('engine purity guard (AD-1)', () => {
       'hash.ts',
       'index.ts',
       'judging.ts',
+      'names.ts', // story 4.2: name tables + rollName — pure data + function (AD-1)
       'resolve.ts',
       'rng.ts',
       'targeting.ts',

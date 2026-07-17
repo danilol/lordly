@@ -1,4 +1,4 @@
-import type { Element, SpellKind, UnitClass } from './types';
+import type { Element, SpellKind, Unit, UnitClass } from './types';
 
 /**
  * An exact integer ratio. All combat arithmetic is integer math (FR15/FR20):
@@ -11,7 +11,14 @@ export interface Ratio {
   den: number;
 }
 
-/** Per-class attribute block (FR15). DEX is reserved — no miss/crit in MVP. */
+/**
+ * A unit's physical size (FR38, dossier §1): smalls occupy one grid cell and
+ * one slot; monsters occupy two cells (anchor + the cell behind, story 4.8)
+ * and two slots. Slot COST derives from this — see `SLOT_COST` (one source).
+ */
+export type SizeClass = 'small' | 'monster';
+
+/** Per-class attribute block (FR15). DEX is reserved — crit/dodge draws arrive in story 4.6. */
 export interface ClassStats {
   hp: number;
   str: number;
@@ -22,14 +29,20 @@ export interface ClassStats {
   dex: number;
   /** Actions per engagement by the row the unit starts in (FR15). */
   actions: { front: number; mid: number; back: number };
+  /** Physical size (FR38): drives slot cost and (from 4.8) the two-cell footprint. */
+  sizeClass: SizeClass;
 }
 
 /** Shape of the versioned balance data (AD-4, AD-8). */
 export interface BalanceData {
   /** Monotonic integer; bump on ANY change to this data (AD-8 hash guard). */
   version: number;
-  /** Army size is data, never a hardcoded constant elsewhere (AD-1). */
-  armySize: number;
+  /**
+   * The army's slot budget (AD-1, dossier §1 — replaces `armySize`, story
+   * 4.2): legality is `slotTotal(army) === slotBudget`, NEVER `army.length` —
+   * a future two-monster army is full at 3 units. Data, never a constant.
+   */
+  slotBudget: number;
   /** Until-wipeout anti-stalemate cap: judge by FR18 after this many engagements (FR19). */
   engagementCap: number;
   /** The FR15 class table. Initial tuning values — the rules are the requirements. */
@@ -83,16 +96,16 @@ export interface BalanceData {
  * forgotten (AD-8).
  */
 export const BALANCE: BalanceData = {
-  version: 2,
-  armySize: 3,
-  engagementCap: 5,
+  version: 3,
+  slotBudget: 5,
+  engagementCap: 10,
   classes: {
-    knight: { hp: 140, str: 30, vit: 28, int: 8, men: 14, agi: 8, dex: 16, actions: { front: 2, mid: 1, back: 1 } },
-    mercenary: { hp: 110, str: 26, vit: 20, int: 10, men: 14, agi: 14, dex: 18, actions: { front: 2, mid: 1, back: 1 } },
-    archer: { hp: 90, str: 24, vit: 12, int: 10, men: 12, agi: 22, dex: 24, actions: { front: 1, mid: 2, back: 2 } },
-    mage: { hp: 80, str: 6, vit: 8, int: 30, men: 22, agi: 12, dex: 14, actions: { front: 1, mid: 1, back: 2 } },
-    cleric: { hp: 90, str: 8, vit: 12, int: 24, men: 24, agi: 10, dex: 12, actions: { front: 1, mid: 1, back: 2 } },
-    witch: { hp: 85, str: 6, vit: 10, int: 26, men: 20, agi: 26, dex: 16, actions: { front: 1, mid: 1, back: 2 } },
+    knight: { hp: 140, str: 30, vit: 28, int: 8, men: 14, agi: 8, dex: 16, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small' },
+    mercenary: { hp: 110, str: 26, vit: 20, int: 10, men: 14, agi: 14, dex: 18, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small' },
+    archer: { hp: 90, str: 24, vit: 12, int: 10, men: 12, agi: 22, dex: 24, actions: { front: 1, mid: 2, back: 2 }, sizeClass: 'small' },
+    mage: { hp: 80, str: 6, vit: 8, int: 30, men: 22, agi: 12, dex: 14, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small' },
+    cleric: { hp: 90, str: 8, vit: 12, int: 24, men: 24, agi: 10, dex: 12, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small' },
+    witch: { hp: 85, str: 6, vit: 10, int: 26, men: 20, agi: 26, dex: 16, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small' },
   },
   rpsBeats: { mage: 'knight', knight: 'archer', archer: 'mage' },
   rpsHunts: { archer: ['cleric', 'witch'] },
@@ -107,3 +120,19 @@ export const BALANCE: BalanceData = {
     confusionMisfire: { num: 1, den: 2 },
   },
 };
+
+/**
+ * Slot cost by size class (AD-1, dossier §1): the ONE source the legality
+ * arithmetic derives from — small = 1, monster = 2. Story 4.8's Golem pays 2
+ * through this table with no further code change.
+ */
+export const SLOT_COST: Record<SizeClass, number> = { small: 1, monster: 2 };
+
+/**
+ * Total slots an army occupies (AD-1, story 4.2): THE legality arithmetic.
+ * Army legality everywhere is `slotTotal(army) === BALANCE.slotBudget` —
+ * never `army.length`, which a two-slot monster silently breaks.
+ */
+export function slotTotal(army: readonly Pick<Unit, 'class'>[]): number {
+  return army.reduce((sum, unit) => sum + SLOT_COST[BALANCE.classes[unit.class].sizeClass], 0);
+}

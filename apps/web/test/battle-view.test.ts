@@ -151,7 +151,7 @@ describe("iso projection — the shipped '\\' layout (AC1)", () => {
 describe('buildBeatSchedule — playback pacing', () => {
   const events: BattleEvent[] = [
     { type: 'BattleStarted', units: [] },
-    { type: 'PassStarted', pass: 1 },
+    { type: 'PassStarted', pass: 1, actionsRemaining: {} },
     { type: 'BattleEnded', winner: 'A', hpPct: { A: 100, B: 0 } },
   ];
 

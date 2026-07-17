@@ -64,6 +64,16 @@ export type Col = (typeof ALL_COLS)[number];
 export type Mode = 'single' | 'wipeout';
 
 /**
+ * The four army-wide tactics (FR34, dossier §4), in picker order. Story 4.2
+ * lands the vocabulary; the resolution pipeline arrives in 4.4 and leader
+ * designation in 4.5 — until then flows commit 'autonomous' explicitly.
+ */
+export const ALL_TACTICS = ['autonomous', 'weakest', 'strongest', 'leader'] as const;
+
+/** An army-wide targeting tactic (FR34). 'autonomous' is the shipped FR7-FR12 behavior. */
+export type Tactic = (typeof ALL_TACTICS)[number];
+
+/**
  * The Witch's four spells, keyed to her element (FR16):
  * water→sleep, earth→poison, fire→weaken, wind→confusion.
  * The mapping itself lives in the balance data.
@@ -76,13 +86,27 @@ export type SpellKind = 'sleep' | 'poison' | 'weaken' | 'confusion';
  */
 export type UnitId = `${Side}:${number}`;
 
-/** One drafted unit: a class plus its rolled element (FR1, FR3). */
+/**
+ * One drafted unit: a class, its rolled element (FR1, FR3), and its rolled
+ * name (FR37, story 4.2). The name is FLAVOR — rolled once at draft on the
+ * owner's `names/*` stream (AD-10), stored here as data (AD-9), never a
+ * gameplay input.
+ */
 export interface Unit {
   class: UnitClass;
   element: Element;
+  name: string;
 }
 
-/** One cell of the owner's 3×3 grid (FR4), owner-local coordinates (AD-11). */
+/**
+ * One cell of the owner's 3×3 grid (FR4), owner-local coordinates (AD-11).
+ *
+ * ANCHOR SEMANTICS (AD-9/AD-14, story 4.2): a placement is the unit's ANCHOR
+ * cell. Smalls occupy exactly their anchor — structurally nothing changed for
+ * them. A monster (story 4.8) anchors at its front-most cell and DERIVES its
+ * second cell (the cell behind) in the engine; the stored data stays one cell
+ * per unit.
+ */
 export interface Placement {
   row: Row;
   col: Col;
@@ -97,13 +121,19 @@ export interface Placement {
  * - `balanceVersion` — must match the engine's balance data version (AD-8).
  * - `armies` — both drafted armies; elements are **stored data**, rolled once
  *   at draft via the engine's roll function, never re-derived (AD-9).
- * - `placements` — parallel-indexed to `armies` (unit index → grid cell),
+ * - `placements` — parallel-indexed to `armies` (unit index → ANCHOR cell),
  *   owner-local (AD-11).
+ * - `tactics` — each side's committed army-wide tactic (FR34, story 4.2).
+ *   The picker ships in 4.4; until then flows commit 'autonomous' explicitly.
+ * - `leaders` — each side's leader as an index into that side's army (FR35,
+ *   story 4.2). Designation UI ships in 4.5; until then flows commit 0.
  */
 export interface MatchSetup {
   seed: number;
   balanceVersion: number;
   mode: Mode;
+  tactics: { A: Tactic; B: Tactic };
+  leaders: { A: number; B: number };
   armies: { A: Unit[]; B: Unit[] };
   placements: { A: Placement[]; B: Placement[] };
 }
@@ -112,9 +142,20 @@ export interface MatchSetup {
  * Version of the `BattleEvent` union below (AD-12). Extending the union
  * bumps this integer: v1 = chassis envelope (story 1.4); v2 = +UnitAttacked,
  * +UnitDied (story 1.5); v3 = the full closed set (+UnitHealed,
- * +StatusApplied, +ActionMisfired, +ActionFizzled, +PoisonTicked — story 1.6).
+ * +StatusApplied, +ActionMisfired, +ActionFizzled, +PoisonTicked — story 1.6);
+ * v4 = the squad-era extension, landed COMPLETE in ONE bump (story 4.2,
+ * AD-15/dossier §5): +GuardRaised, +GuardEnded, +StatusCleared, +LeaderFell,
+ * `UnitAttacked.kind`/`redirectedFrom?`, per-target `outcome`, and
+ * `PassStarted.actionsRemaining`.
  */
-export const LOG_VERSION = 3;
+export const LOG_VERSION = 4;
+
+/**
+ * The physical shape of an attack (FR32, story 4.2): the renderer's flavor
+ * reads THIS, never the class — story 4.7's row-varied moves make class
+ * inference wrong. 'bash' joins with the Phalanx (4.3/4.7).
+ */
+export type MoveKind = 'slash' | 'arrow' | 'blast' | 'staff';
 
 /**
  * One unit's full initial render state, carried by `BattleStarted` so the
@@ -125,6 +166,8 @@ export interface UnitSnapshot {
   side: Side;
   class: UnitClass;
   element: Element;
+  /** The unit's rolled name (FR37, story 4.2) — narration reads it from here. */
+  name: string;
   placement: Placement;
   hp: number;
   maxHp: number;
@@ -139,10 +182,14 @@ export interface BattleStarted {
 /**
  * A new **pass** of the initiative timeline began (FR13). Multihit units act
  * once per pass, so the pass boundaries make the multihit split visible.
+ * `actionsRemaining` (story 4.2, FR39b) snapshots every unit's unspent
+ * actions as the pass opens (dead units read 0) — the action ledger's
+ * per-turn anchor; per-beat decrements derive from the observed events.
  */
 export interface PassStarted {
   type: 'PassStarted';
   pass: number;
+  actionsRemaining: Record<UnitId, number>;
 }
 
 /**
@@ -172,6 +219,12 @@ export interface AttackTarget {
   unit: UnitId;
   damage: number;
   hpAfter: number;
+  /**
+   * How the hit resolved (FR36, story 4.2): 'hit' is unconditional until
+   * story 4.6 lands ADR 0003's dodge/crit draws ('dodged' reports damage 0;
+   * 'missed' is reserved, unused in wave 1).
+   */
+  outcome: 'hit' | 'crit' | 'dodged' | 'missed';
 }
 
 /**
@@ -183,6 +236,14 @@ export interface AttackTarget {
 export interface UnitAttacked {
   type: 'UnitAttacked';
   source: UnitId;
+  /** The move's physical shape (FR32, story 4.2) — render flavor reads this, never the class. */
+  kind: MoveKind;
+  /**
+   * Present when a Guard intercepted this attack (FR33, emitted from story
+   * 4.7): the ORIGINAL target the bodyguard stepped in front of. The scene
+   * animates the step-in; narration names it.
+   */
+  redirectedFrom?: UnitId;
   targets: AttackTarget[];
 }
 
@@ -253,6 +314,49 @@ export interface PoisonTicked {
 }
 
 /**
+ * A unit entered its engagement-long Guard stance (FR33, dossier §4).
+ * IN THE UNION FROM v4, EMITTED FROM STORY 4.7 (AD-15: the union lands
+ * complete in one bump; the Guard move itself is 4.7's).
+ */
+export interface GuardRaised {
+  type: 'GuardRaised';
+  unit: UnitId;
+}
+
+/**
+ * A unit's Guard stance expired at engagement end (FR33) — an explicit event,
+ * NO shell-side lifecycle rule (the story-2.2 StatusCleared lesson, applied
+ * from birth). In the union from v4, emitted from story 4.7.
+ */
+export interface GuardEnded {
+  type: 'GuardEnded';
+  unit: UnitId;
+}
+
+/**
+ * A Witch status lifted at the between-engagement reset (FR19, story 4.2):
+ * the log narrates every clear the engine performs — poison persists and is
+ * NEVER cleared. Kills the shell's `clearStatusIconsExceptPoison` rule (the
+ * sanctioned AD-2 exception from story 2.2 dies here).
+ */
+export interface StatusCleared {
+  type: 'StatusCleared';
+  unit: UnitId;
+  spell: SpellKind;
+}
+
+/**
+ * A side's designated leader died (FR35, dossier §4): the sober-package
+ * penalty onset beat (the ratios themselves are static balance facts).
+ * In the union from v4, emitted from story 4.5.
+ */
+export interface LeaderFell {
+  type: 'LeaderFell';
+  side: Side;
+  unit: UnitId;
+}
+
+/**
  * An **engagement** finished: every unit spent its actions (FR17). Carries
  * the per-unit HP snapshot judging and the wipeout loop will read (FR18/19).
  */
@@ -273,8 +377,10 @@ export interface BattleEnded {
  * The closed, versioned battle event union (AD-12): past-tense, one event
  * per (actor, action) — blast fan-out lives inside `UnitAttacked.targets`,
  * and a confusion redirect is an `ActionMisfired` marker + its effect event.
- * v3 is the COMPLETE set narrating every observable rule of PRD Features
- * 3–5; the shell renders from these and never re-derives state (AD-2).
+ * v4 (story 4.2, AD-15) is the COMPLETE squad-era set: every observable rule
+ * of PRD Features 3–6b narrates through these — GuardRaised/GuardEnded and
+ * LeaderFell sit unemitted until 4.7/4.5 by design (one bump, whole union);
+ * the shell renders from these and never re-derives state (AD-2).
  */
 export type BattleEvent =
   | BattleStarted
@@ -287,6 +393,10 @@ export type BattleEvent =
   | ActionSkipped
   | PoisonTicked
   | UnitDied
+  | GuardRaised
+  | GuardEnded
+  | StatusCleared
+  | LeaderFell
   | EngagementEnded
   | BattleEnded;
 

@@ -1,13 +1,15 @@
 import type { Element, MatchSetup, Mode, Placement, UnitClass } from '@lordly/engine';
 
 /**
- * A drafted unit before the battle: its class and its once-rolled element
- * (FR3, AD-9). The element is stored DATA — rolled exactly once at draft
- * time on the `elements/A` stream and never re-derived.
+ * A drafted unit before the battle: its class, its once-rolled element
+ * (FR3, AD-9), and its once-rolled name (FR37, story 4.2). Element and name
+ * are stored DATA — rolled exactly once at draft time on the `elements/A`
+ * and `names/A` streams and never re-derived.
  */
 export interface DraftedUnit {
   class: UnitClass;
   element: Element;
+  name: string;
 }
 
 /** Where the match is in the Draft → Placement → committed flow (AD-5 FSM). */
@@ -38,12 +40,30 @@ export interface MatchState {
    * like `lastAiArchetypeId` — changing mode means returning Home.
    */
   mode: Mode;
-  /** The player's drafted units (side A — AD-11), in draft order, length 0..3. */
+  /** The player's drafted units (side A — AD-11), in draft order, filling `BALANCE.slotBudget` slots (AD-1). */
   playerArmy: DraftedUnit[];
   /** Placement of each player unit, parallel to `playerArmy` by index; `null` = still in the tray. */
   playerPlacements: (Placement | null)[];
   /** Monotonic count of `elements/A` draws made this match (forward-only guard). */
   elementsRolled: number;
+  /**
+   * The CLASS of every `names/A` draw ever made this match, in draw order
+   * (forward-only, append-only — the names twin of `elementsRolled`, story
+   * 4.2). A count alone would not suffice: a name draw's bounds come from the
+   * class's sex-keyed table, so replaying the fast-forward bit-identically
+   * needs each past draw's class (armor for 4.8's construct table, whose
+   * length may differ). Removing a unit never pops this list (AD-10
+   * forward-only: discarded rolls never rewind).
+   */
+  nameRolls: UnitClass[];
+  /**
+   * The designated leader index into `playerArmy`, or `null` when unset
+   * (story 4.2, AD-9). The 4.5 picker sets it; until then it stays `null`
+   * and `commit()` maps `null` → 0, the explicit interim default. CLEARED
+   * (→ null) by every army mutation — the leader-clearing invariant lands
+   * with the hook so 4.5 only adds the picker.
+   */
+  playerLeader: number | null;
   /** Current phase of the flow (AD-5). */
   phase: MatchPhase;
   /** The assembled, validated setup once committed — the handoff to story 1.9's Reveal. */

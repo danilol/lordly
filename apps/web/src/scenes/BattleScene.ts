@@ -320,16 +320,32 @@ export class BattleScene extends Scene {
       case 'UnitDied':
         this.kill(event.unit);
         return true;
+      case 'GuardRaised':
+        // In the v4 union from 4.2; emitted from 4.7 (FR33) — the full stance
+        // marker (spine Epic 4 tokens) lands with the emitting story.
+        this.popup(event.unit, 'guards', PALETTE.mutedText);
+        return true;
+      case 'GuardEnded':
+        return false; // silent until 4.7 renders the stance marker to remove
+      case 'StatusCleared':
+        // Story 4.2: log-driven icon removal (dossier §5) — the engine
+        // narrates every clear; the scene applies exactly what it hears.
+        this.removeStatusIcon(event.unit, event.spell);
+        return true;
+      case 'LeaderFell':
+        // In the v4 union from 4.2; emitted from 4.5 (FR35).
+        this.popup(event.unit, 'leader falls!', this.actorColor(event.unit));
+        return true;
       case 'EngagementEnded':
         // Defensive resync to the authoritative per-unit HP snapshot, plus a
         // visible boundary marker — wipeout battles play several engagements
         // back to back and the seam must read on screen. The marker only
         // labels a real seam (another engagement follows): the final/only
         // engagement flows straight into the verdict, so Standard mode never
-        // shows it (1.10 review patch). Between-engagement icon clear mirrors
-        // the engine rule: everything but poison (resolve.ts:77-79).
+        // shows it (1.10 review patch). Icon clears are LOG-DRIVEN now: the
+        // engine narrates each one as StatusCleared (story 4.2 — the
+        // sanctioned AD-2 exception from 2.2 is dead).
         for (const [id, hp] of Object.entries(event.hp)) this.setHp(id as UnitId, hp);
-        this.clearStatusIconsExceptPoison();
         if (this.beats[this.currentIndex + 1]?.event.type !== 'BattleEnded') {
           this.passLabel.setText(engagementEndedLabel(event.engagement));
         }
@@ -477,16 +493,15 @@ export class BattleScene extends Scene {
     for (const icon of v.statuses.values()) icon.setX(-20 + slot++ * 14);
   }
 
-  /** The between-engagement status clear, mirroring the engine rule exactly: everything but poison (resolve.ts:77-79). */
-  private clearStatusIconsExceptPoison() {
-    for (const v of this.views.values()) {
-      for (const [spell, icon] of v.statuses) {
-        if (spell === 'poison') continue;
-        icon.destroy();
-        v.statuses.delete(spell);
-      }
-      this.layoutStatusIcons(v);
-    }
+  /** Removes one status icon, driven by the engine's StatusCleared event (story 4.2 — AD-2, no shell-side lifecycle rule). */
+  private removeStatusIcon(id: UnitId, spell: SpellKind) {
+    const v = this.views.get(id);
+    if (!v) return;
+    const icon = v.statuses.get(spell);
+    if (!icon) return;
+    icon.destroy();
+    v.statuses.delete(spell);
+    this.layoutStatusIcons(v);
   }
 
   /** The death beat: fade + topple (UNIT_TWEENS.death) from a clean rest pose, then the corpse LEAVES the lane — container destroyed, tile vacated. */

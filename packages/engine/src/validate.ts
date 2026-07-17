@@ -1,6 +1,6 @@
-import { BALANCE } from './balance';
+import { BALANCE, slotTotal } from './balance';
 import { MAX_SEED } from './rng';
-import { ALL_CLASSES, ALL_COLS, ALL_ELEMENTS, ALL_ROWS } from './types';
+import { ALL_CLASSES, ALL_COLS, ALL_ELEMENTS, ALL_ROWS, ALL_TACTICS } from './types';
 import type { MatchSetup, Side } from './types';
 
 /** Discriminant codes for every way a `MatchSetup` can be malformed (AC2). */
@@ -9,9 +9,12 @@ export type MatchSetupViolation =
   | 'invalid-seed'
   | 'balance-version-mismatch'
   | 'invalid-mode'
-  | 'wrong-army-size'
+  | 'invalid-tactic'
+  | 'invalid-leader'
+  | 'wrong-slot-total'
   | 'unknown-class'
   | 'unknown-element'
+  | 'invalid-name'
   | 'placements-mismatch'
   | 'out-of-grid'
   | 'overlapping-placement';
@@ -42,8 +45,10 @@ const SIDES: readonly Side[] = ['A', 'B'];
 /**
  * Validates a `MatchSetup` against the AD-9 contract and the balance data,
  * in a fixed documented order: structure → seed → balanceVersion → mode →
- * army sizes → classes/elements → placement parallelism → grid membership →
- * same-side overlaps. Throws `InvalidMatchSetupError` naming the first
+ * tactics → classes/elements/names → slot totals (AD-1: classes first,
+ * because slot costs read the class table) → leaders (after armies, because
+ * a leader is an index into its side's army) → placement parallelism →
+ * grid membership → same-side overlaps. Throws `InvalidMatchSetupError` naming the first
  * violation; returns nothing on success. Runtime callers are not bound by
  * the TS unions, so both the STRUCTURE (objects present, not null) and every
  * closed set are re-checked here — the engine's sole error type must cover
@@ -53,7 +58,7 @@ export function validateMatchSetup(setup: MatchSetup): void {
   if (!isObject(setup)) {
     throw new InvalidMatchSetupError('not-an-object', `setup must be an object, got ${setup === null ? 'null' : typeof setup}`);
   }
-  const { seed, balanceVersion, mode, armies, placements } = setup as unknown as Record<string, unknown>;
+  const { seed, balanceVersion, mode, tactics, leaders, armies, placements } = setup as unknown as Record<string, unknown>;
 
   if (!Number.isInteger(seed) || (seed as number) < 0 || (seed as number) > MAX_SEED) {
     throw new InvalidMatchSetupError('invalid-seed', `seed must be a uint32, got ${String(seed)}`);
@@ -71,13 +76,19 @@ export function validateMatchSetup(setup: MatchSetup): void {
     throw new InvalidMatchSetupError('not-an-object', `armies and placements must be objects, got armies=${typeof armies}, placements=${typeof placements}`);
   }
 
+  // FR34 (story 4.2): both sides carry an explicit tactic from the closed set —
+  // there is no implicit default at the engine boundary.
+  for (const side of SIDES) {
+    const tactic = isObject(tactics) ? tactics[side] : undefined;
+    if (!(ALL_TACTICS as readonly string[]).includes(tactic as string)) {
+      throw new InvalidMatchSetupError('invalid-tactic', `side ${side} tactic must be one of [${ALL_TACTICS.join(', ')}], got '${String(tactic)}'`);
+    }
+  }
+
   for (const side of SIDES) {
     const army = (armies as Record<string, unknown>)[side];
-    if (!Array.isArray(army) || army.length !== BALANCE.armySize) {
-      throw new InvalidMatchSetupError(
-        'wrong-army-size',
-        `side ${side} must field exactly ${BALANCE.armySize} units, got ${Array.isArray(army) ? army.length : typeof army}`,
-      );
+    if (!Array.isArray(army)) {
+      throw new InvalidMatchSetupError('wrong-slot-total', `side ${side} army must be an array, got ${typeof army}`);
     }
     army.forEach((unit: unknown, i) => {
       if (!isObject(unit)) {
@@ -89,7 +100,28 @@ export function validateMatchSetup(setup: MatchSetup): void {
       if (!(ALL_ELEMENTS as readonly string[]).includes(unit.element as string)) {
         throw new InvalidMatchSetupError('unknown-element', `side ${side} unit ${i} has unknown element '${String(unit.element)}'`);
       }
+      if (typeof unit.name !== 'string' || unit.name.trim().length === 0) {
+        throw new InvalidMatchSetupError('invalid-name', `side ${side} unit ${i} must carry a non-empty name (FR37), got ${JSON.stringify(unit.name)}`);
+      }
     });
+    // AD-1 (story 4.2): legality is SLOTS, not unit count — runs after the
+    // class checks above because slot costs read the class table.
+    const total = slotTotal(army as Parameters<typeof slotTotal>[0]);
+    if (total !== BALANCE.slotBudget) {
+      throw new InvalidMatchSetupError('wrong-slot-total', `side ${side} must fill the slot budget of ${BALANCE.slotBudget}, got a slot total of ${total}`);
+    }
+  }
+
+  // FR35 (story 4.2): each side's leader is an integer index into its army.
+  for (const side of SIDES) {
+    const leader = isObject(leaders) ? leaders[side] : undefined;
+    const army = (armies as Record<string, unknown>)[side] as unknown[];
+    if (!Number.isInteger(leader) || (leader as number) < 0 || (leader as number) >= army.length) {
+      throw new InvalidMatchSetupError(
+        'invalid-leader',
+        `side ${side} leader must be an integer index into its ${army.length}-unit army, got ${String(leader)}`,
+      );
+    }
   }
 
   for (const side of SIDES) {

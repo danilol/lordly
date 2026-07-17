@@ -1,5 +1,5 @@
 import type { BattleEvent, UnitClass, UnitId } from '@lordly/engine';
-import { turnBoundaryLine } from '../config/constants';
+import { CLASS_ABBREVIATIONS, turnBoundaryLine } from '../config/constants';
 
 /**
  * Pure narration builder for the Battle scene's Log panel (story 2.2, AC7):
@@ -16,19 +16,27 @@ import { turnBoundaryLine } from '../config/constants';
  */
 export interface NarrationState {
   readonly classes: ReadonlyMap<UnitId, UnitClass>;
+  /** Soldier names from the BattleStarted roster (FR37, story 4.2) — narration's display key. */
+  readonly names: ReadonlyMap<UnitId, string>;
   readonly hp: ReadonlyMap<UnitId, number>;
 }
 
 export function createNarrationState(): NarrationState {
-  return { classes: new Map(), hp: new Map() };
+  return { classes: new Map(), names: new Map(), hp: new Map() };
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/** "Knight A:0" — capitalized class + engine unit id; falls back to the bare id for an unknown unit. */
+/**
+ * "Kain (KNI)" — soldier name + class code (FR37/dossier §7, story 4.2).
+ * Falls back to the pre-era "Knight A:0" form when the roster carried no
+ * name, and to the bare id for an unknown unit.
+ */
 function unitName(state: NarrationState, id: UnitId): string {
   const cls = state.classes.get(id);
-  return cls ? `${cap(cls)} ${id}` : id;
+  if (!cls) return id;
+  const name = state.names.get(id);
+  return name ? `${name} (${CLASS_ABBREVIATIONS[cls]})` : `${cap(cls)} ${id}`;
 }
 
 /** Narrates one event: the lines it adds to the panel (empty for silent events) plus the advanced ledger. Pure — never mutates the input state. */
@@ -36,12 +44,14 @@ export function narrateEvent(state: NarrationState, event: BattleEvent): { lines
   switch (event.type) {
     case 'BattleStarted': {
       const classes = new Map<UnitId, UnitClass>();
+      const names = new Map<UnitId, string>();
       const hp = new Map<UnitId, number>();
       for (const unit of event.units) {
         classes.set(unit.id, unit.class);
+        if (unit.name) names.set(unit.id, unit.name);
         hp.set(unit.id, unit.hp);
       }
-      return { lines: [], state: { classes, hp } };
+      return { lines: [], state: { classes, names, hp } };
     }
     case 'PassStarted':
       // FR39a (story 4.0): the panel says "Turn" — the engine event stays PassStarted.
@@ -53,7 +63,7 @@ export function narrateEvent(state: NarrationState, event: BattleEvent): { lines
         hp.set(t.unit, t.hpAfter);
         return `${unitName(state, event.source)} struck ${unitName(state, t.unit)} for ${t.damage} — ${before}→${t.hpAfter} HP`;
       });
-      return { lines, state: { classes: state.classes, hp } };
+      return { lines, state: { classes: state.classes, names: state.names, hp } };
     }
     case 'UnitHealed': {
       const hp = new Map(state.hp);
@@ -61,7 +71,7 @@ export function narrateEvent(state: NarrationState, event: BattleEvent): { lines
       hp.set(event.target, event.hpAfter);
       return {
         lines: [`${unitName(state, event.source)} healed ${unitName(state, event.target)} for ${event.amount} — ${before}→${event.hpAfter} HP`],
-        state: { classes: state.classes, hp },
+        state: { classes: state.classes, names: state.names, hp },
       };
     }
     case 'StatusApplied':
@@ -79,15 +89,26 @@ export function narrateEvent(state: NarrationState, event: BattleEvent): { lines
       hp.set(event.unit, event.hpAfter);
       return {
         lines: [`Poison sears ${unitName(state, event.unit)} for ${event.damage} — ${before}→${event.hpAfter} HP`],
-        state: { classes: state.classes, hp },
+        state: { classes: state.classes, names: state.names, hp },
       };
     }
     case 'UnitDied':
       return { lines: [`${unitName(state, event.unit)} falls!`], state };
+    case 'GuardRaised':
+      // In the v4 union from story 4.2; the engine emits it from 4.7 (FR33).
+      return { lines: [`${unitName(state, event.unit)} stands guard`], state };
+    case 'GuardEnded':
+      return { lines: [`${unitName(state, event.unit)}'s guard ends`], state };
+    case 'StatusCleared':
+      // Story 4.2: the between-engagement clear is log-driven (dossier §5).
+      return { lines: [`The ${event.spell} lifts from ${unitName(state, event.unit)}`], state };
+    case 'LeaderFell':
+      // In the v4 union from story 4.2; the engine emits it from 4.5 (FR35).
+      return { lines: [`Leader ${unitName(state, event.unit)} has fallen — ${event.side === 'A' ? 'your army' : 'the enemy army'} falters`], state };
     case 'EngagementEnded': {
       const hp = new Map(state.hp);
       for (const [id, value] of Object.entries(event.hp)) hp.set(id as UnitId, value);
-      return { lines: [`— Engagement ${event.engagement} ended —`], state: { classes: state.classes, hp } };
+      return { lines: [`— Engagement ${event.engagement} ended —`], state: { classes: state.classes, names: state.names, hp } };
     }
     case 'BattleEnded': {
       const verdict = event.winner === 'draw' ? 'Draw' : event.winner === 'A' ? 'You won' : 'Enemy won';

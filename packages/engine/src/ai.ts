@@ -15,16 +15,21 @@ export interface StrategyArchetype {
   id: string;
   /** Human-readable name for reports and (later) debug UI. */
   name: string;
-  classes: readonly [UnitClass, UnitClass, UnitClass];
-  placement: readonly [Placement, Placement, Placement];
+  /**
+   * Length-5 tuples (story 4.2 — all-smalls era, 5 slots = 5 units): the
+   * tuple keeps archetype authoring compile-checked. Story 4.8's two-slot
+   * Golem comps revisit this shape together with their placements.
+   */
+  classes: readonly [UnitClass, UnitClass, UnitClass, UnitClass, UnitClass];
+  placement: readonly [Placement, Placement, Placement, Placement, Placement];
 }
 
-/** What the AI committed (FR24): archetype identity + board. NO elements — see `chooseSetup`. */
+/** What the AI committed (FR24): archetype identity + board. NO elements, NO names — see `chooseSetup`. */
 export interface AiChoice {
   /** The picked archetype's id; thread it back via `options.exclude` next match. */
   archetypeId: string;
-  classes: [UnitClass, UnitClass, UnitClass];
-  placement: [Placement, Placement, Placement];
+  classes: [UnitClass, UnitClass, UnitClass, UnitClass, UnitClass];
+  placement: [Placement, Placement, Placement, Placement, Placement];
 }
 
 /** Options for `chooseSetup`. Deliberately admits nothing player-derived (AD-6). */
@@ -43,118 +48,142 @@ export interface ChooseSetupOptions {
  * The curated strategy pool (FR25): 8–12 archetypes spanning the roster's
  * answers to each other — including the required back-row-sniper
  * (`longbows`, `talons`) and anti-front-stack (`three-mages`: triple row
- * blast massacres stacked rows) roles. Curated EMPIRICALLY against the sim
- * harness (NFR4): matchups between fixed boards are near-deterministic, so
- * the pool was selected from a ~20-candidate matchup matrix to keep every
- * member's pool-relative aggregate win rate inside a reasonable band. At
- * the CI-pinned config (test/sim.test.ts, 285 games/archetype — a sample
- * large enough to have converged past small-sample noise) that's verified
- * as ~35–61%, comfortably under the 65% acceptance band. Deliberately
- * absent: the dominant knight/archer/mage full-RPS spread family (92%
- * aggregate in probing; only one hard counter exists in the candidate
- * space) — left as discoverable player tech rather than an AI board no
- * pool could balance (see README's Balancing harness section for the
- * scope of what this band certifies).
+ * blast massacres stacked rows) roles. Story 4.2 re-authored every entry as
+ * a 5-slot composition, EXTENDING each archetype's identity (bulwark stays a
+ * wall, longbows stays an archer line) rather than redesigning it. Curated
+ * EMPIRICALLY against the sim harness (NFR4): matchups between fixed boards
+ * are near-deterministic, so each member's pool-relative aggregate win rate
+ * must stay inside the ≤65% acceptance band at the CI-pinned config
+ * (test/sim.test.ts) in BOTH modes — the 5-unit meta was re-swept at 4.2
+ * over a ~40-variant identity-preserving search (comp support slots +
+ * placements). Converged rates at runs=200: single 30.9–62.3% (top cabal),
+ * wipeout 24.8–62.8% (top wardens). 5-unit meta lessons encoded below: a
+ * front screen absorbs a whole engagement of melee (single mode is a ranged
+ * damage race), back-row casters double their actions, and spread
+ * formations (≤2 per row) starve the blast. Deliberately absent
+ * (3-unit-era probe, kept as a caution): dominant full-RPS spread families
+ * are left as discoverable player tech rather than an AI board no pool
+ * could balance (see README's Balancing harness section).
  */
 export const STRATEGY_POOL: readonly StrategyArchetype[] = [
   {
     id: 'bulwark',
     name: 'Bulwark',
-    classes: ['knight', 'knight', 'knight'],
+    classes: ['knight', 'knight', 'knight', 'knight', 'knight'],
     placement: [
       { row: 'front', col: 'left' },
       { row: 'front', col: 'center' },
       { row: 'front', col: 'right' },
+      { row: 'mid', col: 'center' },
+      { row: 'back', col: 'center' },
     ],
   },
   {
     id: 'longbows',
     name: 'Longbows',
-    classes: ['archer', 'archer', 'knight'],
+    classes: ['archer', 'archer', 'archer', 'knight', 'cleric'],
     placement: [
       { row: 'back', col: 'left' },
       { row: 'back', col: 'right' },
+      { row: 'back', col: 'center' },
       { row: 'front', col: 'center' },
+      { row: 'mid', col: 'center' },
     ],
   },
   {
     id: 'three-mages',
     name: 'Three Mages',
-    classes: ['mage', 'mage', 'mage'],
+    classes: ['mage', 'mage', 'mage', 'knight', 'knight'],
     placement: [
-      { row: 'back', col: 'left' },
-      { row: 'back', col: 'center' },
-      { row: 'back', col: 'right' },
+      { row: 'mid', col: 'left' },
+      { row: 'mid', col: 'center' },
+      { row: 'mid', col: 'right' },
+      { row: 'front', col: 'center' },
+      { row: 'front', col: 'left' },
     ],
   },
   {
     id: 'talons',
     name: 'Talons',
-    classes: ['archer', 'archer', 'mage'],
+    classes: ['archer', 'archer', 'archer', 'archer', 'mercenary'],
     placement: [
       { row: 'back', col: 'left' },
       { row: 'mid', col: 'right' },
-      { row: 'back', col: 'center' },
+      { row: 'back', col: 'right' },
+      { row: 'mid', col: 'left' },
+      { row: 'front', col: 'center' },
     ],
   },
   {
     id: 'hex-coven',
     name: 'Hex Coven',
-    classes: ['witch', 'witch', 'knight'],
+    classes: ['witch', 'witch', 'knight', 'witch', 'knight'],
     placement: [
       { row: 'back', col: 'left' },
-      { row: 'back', col: 'center' },
+      { row: 'mid', col: 'center' },
       { row: 'front', col: 'center' },
+      { row: 'back', col: 'right' },
+      { row: 'front', col: 'left' },
     ],
   },
   {
     id: 'cabal',
     name: 'Cabal',
-    classes: ['mage', 'witch', 'cleric'],
+    classes: ['mage', 'witch', 'cleric', 'mage', 'witch'],
     placement: [
-      { row: 'back', col: 'center' },
       { row: 'back', col: 'left' },
+      { row: 'mid', col: 'center' },
+      { row: 'back', col: 'center' },
       { row: 'back', col: 'right' },
+      { row: 'mid', col: 'left' },
     ],
   },
   {
     id: 'farshot',
     name: 'Farshot',
-    classes: ['archer', 'mage', 'cleric'],
+    classes: ['archer', 'mage', 'cleric', 'archer', 'witch'],
     placement: [
       { row: 'mid', col: 'left' },
       { row: 'back', col: 'right' },
       { row: 'back', col: 'center' },
+      { row: 'mid', col: 'right' },
+      { row: 'back', col: 'left' },
     ],
   },
   {
     id: 'wardens',
     name: 'Wardens',
-    classes: ['mercenary', 'knight', 'witch'],
+    classes: ['mercenary', 'knight', 'archer', 'mercenary', 'archer'],
     placement: [
       { row: 'front', col: 'right' },
       { row: 'front', col: 'center' },
-      { row: 'back', col: 'left' },
+      { row: 'mid', col: 'left' },
+      { row: 'front', col: 'left' },
+      { row: 'mid', col: 'right' },
     ],
   },
   {
     id: 'ambushers',
     name: 'Ambushers',
-    classes: ['mercenary', 'witch', 'mage'],
+    classes: ['mercenary', 'witch', 'archer', 'mercenary', 'mage'],
     placement: [
       { row: 'front', col: 'center' },
       { row: 'back', col: 'left' },
-      { row: 'back', col: 'right' },
+      { row: 'mid', col: 'right' },
+      { row: 'mid', col: 'center' },
+      { row: 'back', col: 'center' },
     ],
   },
   {
     id: 'gale',
     name: 'Gale',
-    classes: ['witch', 'archer', 'mage'],
+    classes: ['witch', 'archer', 'mage', 'archer', 'mage'],
     placement: [
       { row: 'back', col: 'center' },
       { row: 'mid', col: 'left' },
       { row: 'back', col: 'right' },
+      { row: 'mid', col: 'right' },
+      { row: 'back', col: 'left' },
     ],
   },
 ];

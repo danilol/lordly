@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BALANCE } from '@lordly/engine';
 import type { MatchSetup } from '@lordly/engine';
 import { createStorage, DEFAULT_SETTINGS, HISTORY_KEY, SETTINGS_KEY } from '../src/flow/storage';
 import type { HistoryEntry } from '../src/flow/storage';
@@ -77,8 +78,55 @@ describe('web/storage gateway (story 2.3, AD-8)', () => {
   });
 });
 
-/** A minimal-but-valid MatchSetup for history fixtures; `seed` varies entries. */
+/** A minimal-but-valid current-era MatchSetup for history fixtures; `seed` varies entries. */
 function setupFixture(seed: number): MatchSetup {
+  return {
+    seed,
+    balanceVersion: BALANCE.version,
+    mode: 'single',
+    tactics: { A: 'autonomous', B: 'autonomous' },
+    leaders: { A: 0, B: 0 },
+    armies: {
+      A: [
+        { class: 'knight', element: 'fire', name: 'Kain' },
+        { class: 'knight', element: 'water', name: 'Aldric' },
+        { class: 'mage', element: 'wind', name: 'Magnus' },
+        { class: 'cleric', element: 'earth', name: 'Sela' },
+        { class: 'archer', element: 'fire', name: 'Lyra' },
+      ],
+      B: [
+        { class: 'archer', element: 'earth', name: 'Vess' },
+        { class: 'cleric', element: 'fire', name: 'Ithil' },
+        { class: 'mage', element: 'water', name: 'Osric' },
+        { class: 'witch', element: 'wind', name: 'Morwen' },
+        { class: 'mercenary', element: 'water', name: 'Brand' },
+      ],
+    },
+    placements: {
+      A: [
+        { row: 'front', col: 'left' },
+        { row: 'front', col: 'center' },
+        { row: 'back', col: 'left' },
+        { row: 'back', col: 'center' },
+        { row: 'mid', col: 'center' },
+      ],
+      B: [
+        { row: 'back', col: 'left' },
+        { row: 'back', col: 'center' },
+        { row: 'back', col: 'right' },
+        { row: 'mid', col: 'center' },
+        { row: 'front', col: 'center' },
+      ],
+    },
+  };
+}
+
+/**
+ * A PRE-ERA (logVersion-3 / balanceVersion-2) stored entry exactly as story
+ * 3.1 wrote it: 3-unit armies, NO names, NO tactics/leaders. History must
+ * still DISPLAY these (marked non-replayable) — the story-4.2 recon catch.
+ */
+function preEraSetupJson(seed: number): unknown {
   return {
     seed,
     balanceVersion: 2,
@@ -185,19 +233,39 @@ describe('web/storage gateway — history (story 3.1, FR28/AD-8)', () => {
     expect(storage.loadHistory()).toEqual([good]);
   });
 
-  it('drops an off-length army even when every unit is valid — the row layout is fixed-width (story 3.2 review)', () => {
-    // `.every()` passes vacuously for length 0 or 4+; an off-length army would
-    // overrun the History row's Replay button. The width gate drops it.
+  it('drops an OVER-slot-budget or empty army even when every unit is valid — bounded width, not an exact pin (story 4.2)', () => {
+    // `.every()` passes vacuously for length 0; an over-length army would
+    // overrun the History row's Replay button. Renderability is display
+    // TOLERANCE (1..slotBudget), so 4.2's bound drops these two while pre-era
+    // 3-unit entries survive (see the dedicated test below).
     const good = entryFixture(5);
-    const tooMany = { ...setupFixture(6), armies: { A: [...setupFixture(6).armies.A, { class: 'knight', element: 'fire' }], B: setupFixture(6).armies.B } };
+    const tooMany = {
+      ...setupFixture(6),
+      armies: { A: [...setupFixture(6).armies.A, { class: 'knight', element: 'fire', name: 'Extra' }], B: setupFixture(6).armies.B },
+    };
     const empty = { ...setupFixture(7), armies: { A: [], B: [] } };
     const stored = JSON.stringify([
       good,
-      { setup: tooMany, winner: 'A', date: '2026-07-15T00:00:00.000Z' }, // 4 units on A
+      { setup: tooMany, winner: 'A', date: '2026-07-15T00:00:00.000Z' }, // 6 units on A — over budget
       { setup: empty, winner: 'A', date: '2026-07-15T00:00:00.000Z' }, // 0 units
     ]);
     const storage = createStorage(fakeBackend({ [HISTORY_KEY]: stored }));
     expect(storage.loadHistory()).toEqual([good]);
+  });
+
+  it('KEEPS a pre-era 3-unit nameless entry — display tolerance, never a legality gate (story 4.2, THE storage catch)', () => {
+    // Before the 4.2 fix, `isRenderableArmy` pinned `length === armySize`;
+    // after the 5-slot bump every pre-era entry silently vanished from
+    // History instead of displaying non-replayable. The tolerant bound keeps
+    // them; their units also carry NO name (isRenderableUnit ignores that —
+    // display falls back to code-only).
+    const preEra = { setup: preEraSetupJson(3), winner: 'B', date: '2026-07-14T10:00:00.000Z' };
+    const current = entryFixture(4);
+    const storage = createStorage(fakeBackend({ [HISTORY_KEY]: JSON.stringify([current, preEra]) }));
+    const loaded = storage.loadHistory();
+    expect(loaded).toHaveLength(2);
+    expect(loaded[1]).toEqual(preEra);
+    expect((loaded[1]?.setup.armies.A[0] as { name?: string }).name).toBeUndefined(); // nameless units render code-only
   });
 
   it('KEEPS a stale-balanceVersion entry — it must still DISPLAY (marked non-replayable, story 3.2)', () => {

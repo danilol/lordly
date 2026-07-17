@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../src/balance';
+import { BALANCE, SLOT_COST, slotTotal } from '../src/balance';
 import type { Ratio } from '../src/balance';
 import { ALL_CLASSES } from '../src/types';
 import type { UnitClass } from '../src/types';
@@ -22,7 +22,25 @@ describe('balance data (FR14, FR15, FR16, AD-4)', () => {
         expect(Number.isInteger(c.actions[row]), `${cls}.actions.${row} integer`).toBe(true);
         expect(c.actions[row], `${cls}.actions.${row}`).toBeGreaterThanOrEqual(1);
       }
+      expect(['small', 'monster'], `${cls}.sizeClass`).toContain(c.sizeClass);
     }
+  });
+
+  it('slot schema (AD-1, story 4.2): budget 5, all six shipped classes small, costs derived from sizeClass', () => {
+    expect(BALANCE.slotBudget).toBe(5);
+    expect(SLOT_COST).toEqual({ small: 1, monster: 2 });
+    for (const cls of ALL_CLASSES) {
+      expect(BALANCE.classes[cls].sizeClass, `${cls} ships small`).toBe('small');
+    }
+  });
+
+  it('slotTotal sums per-class slot costs — THE legality arithmetic, never army.length (AD-1)', () => {
+    expect(slotTotal([])).toBe(0);
+    const five = (['knight', 'archer', 'mage', 'cleric', 'witch'] as const).map((cls) => ({ class: cls, element: 'fire' as const }));
+    expect(slotTotal(five)).toBe(5);
+    // A future monster (sizeClass 'monster') costs 2: a two-monster army is
+    // full at 3 units — the cost table above is what validation trusts.
+    expect(SLOT_COST.monster).toBe(2);
   });
 
   it('structural invariants survive tuning: ratios are positive-integer fractions', () => {
@@ -39,7 +57,7 @@ describe('balance data (FR14, FR15, FR16, AD-4)', () => {
       expect(ratio.num, `${name}.num >= 0`).toBeGreaterThanOrEqual(0);
       expect(ratio.den, `${name}.den > 0 (division by zero)`).toBeGreaterThan(0);
     }
-    expect(BALANCE.armySize).toBeGreaterThan(0);
+    expect(BALANCE.slotBudget).toBeGreaterThan(0);
     expect(BALANCE.engagementCap).toBeGreaterThan(0);
     expect(BALANCE.formulas.minDamage).toBeGreaterThanOrEqual(1);
   });
@@ -81,8 +99,8 @@ describe('balance data (FR14, FR15, FR16, AD-4)', () => {
     expect(BALANCE.formulas.minDamage).toBe(1);
     expect(BALANCE.formulas.poisonDamage).toBe(15);
     expect(BALANCE.formulas.confusionMisfire).toEqual({ num: 1, den: 2 });
-    expect(BALANCE.armySize).toBe(3);
-    expect(BALANCE.engagementCap).toBe(5);
+    expect(BALANCE.slotBudget).toBe(5);
+    expect(BALANCE.engagementCap).toBe(10);
   });
 
   it('maps elements to Witch spells per FR16', () => {

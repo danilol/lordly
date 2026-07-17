@@ -1,11 +1,13 @@
 import { fc, test } from '@fast-check/vitest';
 import { describe, expect, it } from 'vitest';
 import { chooseSetup, STRATEGY_POOL } from '../src/ai';
-import { BALANCE } from '../src/balance';
+import { BALANCE, slotTotal } from '../src/balance';
+import { rollName } from '../src/names';
 import { resolveBattle } from '../src/resolve';
 import { createStreams, nextInt, rollElement } from '../src/rng';
+import type { Stream } from '../src/rng';
 import { ALL_CLASSES, ALL_COLS, ALL_ROWS } from '../src/types';
-import type { MatchSetup, Placement } from '../src/types';
+import type { MatchSetup, Placement, Unit, UnitClass } from '../src/types';
 import { validateMatchSetup } from '../src/validate';
 
 /** Fresh ai/A stream for a seed (the usual chooseSetup input). */
@@ -21,10 +23,11 @@ describe('STRATEGY_POOL curation (FR25)', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('every archetype is a legal board: army-size classes, distinct in-grid cells', () => {
+  it('every archetype is a legal board: slot-budget composition, distinct in-grid cells (AD-1)', () => {
     for (const a of STRATEGY_POOL) {
-      expect(a.classes, a.id).toHaveLength(BALANCE.armySize);
-      expect(a.placement, a.id).toHaveLength(BALANCE.armySize);
+      // Legality is SLOTS (story 4.2): the composition fills the budget exactly.
+      expect(slotTotal(a.classes.map((cls) => ({ class: cls }))), a.id).toBe(BALANCE.slotBudget);
+      expect(a.placement, a.id).toHaveLength(a.classes.length);
       for (const cls of a.classes) expect(ALL_CLASSES, `${a.id}: ${cls}`).toContain(cls);
       const cells = new Set<string>();
       for (const p of a.placement) {
@@ -32,7 +35,7 @@ describe('STRATEGY_POOL curation (FR25)', () => {
         expect(ALL_COLS, `${a.id}: ${p.col}`).toContain(p.col);
         cells.add(`${p.row}/${p.col}`);
       }
-      expect(cells.size, `${a.id} overlapping cells`).toBe(BALANCE.armySize);
+      expect(cells.size, `${a.id} overlapping cells`).toBe(a.classes.length);
     }
   });
 
@@ -58,7 +61,7 @@ describe('chooseSetup guards (review-caught defensive gaps)', () => {
     const bad = { ...(STRATEGY_POOL[0] as (typeof STRATEGY_POOL)[number]) };
     const badArchetype = {
       ...bad,
-      placement: [{ row: 'front', col: 'nowhere' }, bad.placement[1], bad.placement[2]],
+      placement: [{ row: 'front', col: 'nowhere' }, ...bad.placement.slice(1)],
     } as unknown as (typeof STRATEGY_POOL)[number];
     expect(() => chooseSetup([badArchetype], aiStream(1))).toThrow(/invalid col/);
   });
@@ -106,26 +109,39 @@ describe('chooseSetup (FR24/FR25, AD-6, AD-10)', () => {
     expect(choice.placement[0]).not.toBe(solo[0]!.placement[0]);
   });
 
-  test.prop([fc.integer({ min: 0, max: 0xffffffff })])('its output + caller-rolled elements always assemble into a VALID MatchSetup (AD-9 flow)', (seed) => {
-    const streams = createStreams(seed);
-    const a = chooseSetup(STRATEGY_POOL, streams['ai/A']);
-    const b = chooseSetup(STRATEGY_POOL, streams['ai/B']);
-    const setup: MatchSetup = {
-      seed,
-      balanceVersion: BALANCE.version,
-      mode: 'single',
-      armies: {
-        A: a.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/A']) })),
-        B: b.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/B']) })),
-      },
-      placements: { A: a.placement, B: b.placement },
-    };
-    expect(() => validateMatchSetup(setup)).not.toThrow();
-    // ...and RESOLVES: termination holds over the AI assembly path, and the
-    // log ends with a verdict (AD-12) — the sim/MatchFlow consumption contract.
-    const log = resolveBattle(setup);
-    expect(log.events.at(-1)?.type).toBe('BattleEnded');
-  });
+  test.prop([fc.integer({ min: 0, max: 0xffffffff })])(
+    'its output + caller-rolled elements and names always assemble into a VALID MatchSetup (AD-9 flow)',
+    (seed) => {
+      const streams = createStreams(seed);
+      const a = chooseSetup(STRATEGY_POOL, streams['ai/A']);
+      const b = chooseSetup(STRATEGY_POOL, streams['ai/B']);
+      const buildArmy = (classes: readonly UnitClass[], elements: Stream, names: Stream): Unit[] => {
+        const taken: string[] = [];
+        return classes.map((cls) => {
+          const unit = { class: cls, element: rollElement(elements), name: rollName(names, cls, taken) };
+          taken.push(unit.name);
+          return unit;
+        });
+      };
+      const setup: MatchSetup = {
+        seed,
+        balanceVersion: BALANCE.version,
+        mode: 'single',
+        tactics: { A: 'autonomous', B: 'autonomous' },
+        leaders: { A: 0, B: 0 },
+        armies: {
+          A: buildArmy(a.classes, streams['elements/A'], streams['names/A']),
+          B: buildArmy(b.classes, streams['elements/B'], streams['names/B']),
+        },
+        placements: { A: a.placement, B: b.placement },
+      };
+      expect(() => validateMatchSetup(setup)).not.toThrow();
+      // ...and RESOLVES: termination holds over the AI assembly path, and the
+      // log ends with a verdict (AD-12) — the sim/MatchFlow consumption contract.
+      const log = resolveBattle(setup);
+      expect(log.events.at(-1)?.type).toBe('BattleEnded');
+    },
+  );
 
   // DETERMINISM ANCHORS (rng-lessons convention): expectations hand-derived
   // from the PROBED raw draws (seed 1 ai/A → pick 6, flip 0; seed 2 ai/A →
@@ -133,25 +149,32 @@ describe('chooseSetup (FR24/FR25, AD-6, AD-10)', () => {
   // — NOT pasted from a test run. A silent change to stream derivation, pool
   // order, or draw order trips these loudly.
   it('anchor: seed 1 on ai/A picks farshot (index 6) with placements VERBATIM (flip 0)', () => {
+    // The raw draws (seed 1 ai/A → pick 6, flip 0) are unchanged by 4.2 —
+    // only the pool literals grew; expectations re-mapped by hand onto the
+    // re-authored 5-slot farshot.
     const choice = chooseSetup(STRATEGY_POOL, aiStream(1));
     expect(choice.archetypeId).toBe('farshot');
-    expect(choice.classes).toEqual(['archer', 'mage', 'cleric']);
+    expect(choice.classes).toEqual(['archer', 'mage', 'cleric', 'archer', 'witch']);
     expect(choice.placement).toEqual([
       { row: 'mid', col: 'left' },
       { row: 'back', col: 'right' },
       { row: 'back', col: 'center' },
+      { row: 'mid', col: 'right' },
+      { row: 'back', col: 'left' },
     ]);
   });
 
   it('anchor: seed 2 on ai/A picks longbows MIRRORED left↔right (flip 1)', () => {
     const choice = chooseSetup(STRATEGY_POOL, aiStream(2));
     expect(choice.archetypeId).toBe('longbows');
-    // Literal [back/left, back/right, front/center] hand-mirrored: rows
-    // untouched, left→right, right→left, center stays.
+    // Literal [back/left, back/right, back/center, front/center, mid/center]
+    // hand-mirrored: rows untouched, left→right, right→left, center stays.
     expect(choice.placement).toEqual([
       { row: 'back', col: 'right' },
       { row: 'back', col: 'left' },
+      { row: 'back', col: 'center' },
       { row: 'front', col: 'center' },
+      { row: 'mid', col: 'center' },
     ]);
   });
 

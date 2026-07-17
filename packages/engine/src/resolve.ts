@@ -6,7 +6,7 @@ import { createStreams, nextInt } from './rng';
 import type { Stream } from './rng';
 import { selectBlastRow, selectMeleeTarget, selectRearmostTarget } from './targeting';
 import { ALL_COLS, ALL_ROWS, LOG_VERSION } from './types';
-import type { AttackTarget, BattleEvent, BattleLog, MatchSetup, Side, SpellKind, UnitClass, UnitId, UnitSnapshot } from './types';
+import type { AttackTarget, BattleEvent, BattleLog, MatchSetup, MoveKind, Side, SpellKind, UnitClass, UnitId, UnitSnapshot } from './types';
 import { validateMatchSetup } from './validate';
 
 /**
@@ -73,8 +73,17 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
       // FR19 between-engagement reset: living units replenish their per-row
       // action counts and shed every status EXCEPT poison, which persists for
       // the rest of the battle. HP, deaths, and placements carry over.
+      // Each shed status narrates as StatusCleared BEFORE the clear (story
+      // 4.2, dossier §5 — the 2.2 deferral: clears are log-driven now). Only
+      // LIVING units emit: a dead unit's statuses clear silently — they have
+      // no observable effect and no icon on screen.
       for (const u of units) {
         u.actionsLeft = u.alive ? BALANCE.classes[u.class].actions[u.snapshot.placement.row] : 0;
+        if (u.alive) {
+          for (const spell of u.statuses) {
+            if (spell !== 'poison') events.push({ type: 'StatusCleared', unit: u.id, spell });
+          }
+        }
         const poisoned = u.statuses.has('poison');
         u.statuses.clear();
         if (poisoned) u.statuses.add('poison');
@@ -95,7 +104,12 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
     let pass = 0;
     battle: while (units.some((u) => u.alive && u.actionsLeft > 0)) {
       pass += 1;
-      events.push({ type: 'PassStarted', pass });
+      // FR39b (story 4.2): snapshot every unit's unspent actions as the pass
+      // opens — dead units read 0 (their queued turns are lost narration, not
+      // budget). The ledger UI (4.11) derives per-beat decrements from events.
+      const actionsRemaining: Record<UnitId, number> = {};
+      for (const u of units) actionsRemaining[u.id] = u.alive ? u.actionsLeft : 0;
+      events.push({ type: 'PassStarted', pass, actionsRemaining });
       // Re-filter and re-sort every pass: this is the load-bearing mechanism for
       // mid-pass deaths (a unit killed earlier in the pass is gone from the next
       // pass). Do NOT cache the order.
@@ -294,10 +308,28 @@ function skip(unit: UnitState): BattleEvent[] {
 }
 
 /**
+ * The move kind each class's attack carries in wave 1 (FR32, story 4.2) —
+ * semantically true today because moves are class-uniform; story 4.7's
+ * row-varied move table replaces this lookup with per-row derivation.
+ * The Witch never strikes (she casts/fizzles), so her entry is unreachable —
+ * kept so the map stays total over `UnitClass`.
+ */
+const CLASS_MOVE_KIND: Record<UnitClass, MoveKind> = {
+  knight: 'slash',
+  mercenary: 'slash',
+  archer: 'arrow',
+  mage: 'blast',
+  cleric: 'staff',
+  witch: 'staff',
+};
+
+/**
  * Applies one attack from `source` to `targets` (one entry for melee/ranged/
  * staff; the whole struck row for a blast — AD-12 one event per action).
  * Damage runs the FIXED pipeline with the source's Weaken status; each kill
  * appends a `UnitDied` after the single `UnitAttacked`, in target order.
+ * Every target resolves `outcome: 'hit'` unconditionally in 4.2 — ADR 0003's
+ * dodge/crit draws are story 4.6's and MUST NOT land early (frozen table).
  */
 function strike(source: UnitState, targets: UnitState[], formula: (a: UnitClass, d: UnitClass, weakened?: boolean) => number): BattleEvent[] {
   const weakened = source.statuses.has('weaken');
@@ -306,13 +338,13 @@ function strike(source: UnitState, targets: UnitState[], formula: (a: UnitClass,
   for (const target of targets) {
     const damage = formula(source.class, target.class, weakened);
     target.hp = Math.max(0, target.hp - damage);
-    hits.push({ unit: target.id, damage, hpAfter: target.hp });
+    hits.push({ unit: target.id, damage, hpAfter: target.hp, outcome: 'hit' });
     if (target.hp === 0 && target.alive) {
       target.alive = false;
       deaths.push({ type: 'UnitDied', unit: target.id });
     }
   }
-  return [{ type: 'UnitAttacked', source: source.id, targets: hits }, ...deaths];
+  return [{ type: 'UnitAttacked', source: source.id, kind: CLASS_MOVE_KIND[source.class], targets: hits }, ...deaths];
 }
 
 /**
@@ -417,6 +449,7 @@ function buildUnits(setup: MatchSetup): UnitState[] {
           side,
           class: unit.class,
           element: unit.element,
+          name: unit.name,
           placement: { ...placement },
           hp: stats.hp,
           maxHp: stats.hp,

@@ -39,29 +39,42 @@ export interface HistoryEntry {
 const CLASS_SET: ReadonlySet<string> = new Set(ALL_CLASSES);
 const ELEMENT_SET: ReadonlySet<string> = new Set(ALL_ELEMENTS);
 
-/** A unit the History cards can render: a known class and element (AD-4 closed sets). */
+/**
+ * A unit the History cards can render: a known class and element (AD-4
+ * closed sets). Extra keys — including a missing pre-era `name` (story 4.2)
+ * — are ignored: old nameless units still render, falling back to code-only
+ * display.
+ */
 function isRenderableUnit(value: unknown): value is Unit {
   if (typeof value !== 'object' || value === null) return false;
   const unit = value as Record<string, unknown>;
   return typeof unit.class === 'string' && CLASS_SET.has(unit.class) && typeof unit.element === 'string' && ELEMENT_SET.has(unit.element);
 }
 
-/** Exactly the army the row lays out — `.every()` alone passes vacuously for length 0 or 4+. */
+/**
+ * An army the History row can lay out (story 4.2): renderability is DISPLAY
+ * TOLERANCE, never a legality gate — legality lives in validate.ts. Pre-era
+ * 3-unit entries must still DISPLAY (marked non-replayable by the
+ * balanceVersion check), so the bound is 1..slotBudget, NOT an exact-size
+ * pin — an exact pin here silently dropped every pre-bump entry from
+ * History (the story-4.2 recon catch). The upper bound still guards the
+ * card layout against corrupt over-length arrays (story 3.2 review).
+ */
 function isRenderableArmy(value: unknown): value is Unit[] {
-  return Array.isArray(value) && value.length === BALANCE.armySize && value.every(isRenderableUnit);
+  return Array.isArray(value) && value.length >= 1 && value.length <= BALANCE.slotBudget && value.every(isRenderableUnit);
 }
 
 /**
- * A setup the History scene can safely render: both armies are arrays of
- * exactly `BALANCE.armySize` renderable units. Validated to the DEPTH the
- * renderer reaches (`setup.armies.{A,B}[].{class,element}`) AND its fixed
- * WIDTH — the row's card layout hard-codes the army size, so an off-length
- * corrupt entry (which `.every()` would pass vacuously) would overrun the
- * Replay button off-canvas; drop it here instead (story 3.2 review).
- * Deliberately does NOT check seed/placements/balanceVersion — those don't
- * affect display, and a stale-`balanceVersion` entry must still DISPLAY
- * (marked non-replayable, story 3.2); the engine re-validates the full setup
- * at replay time.
+ * A setup the History scene can safely render: both armies are non-empty
+ * arrays of at most `BALANCE.slotBudget` renderable units. Validated to the
+ * DEPTH the renderer reaches (`setup.armies.{A,B}[].{class,element}`) AND a
+ * bounded WIDTH — a corrupt over-length entry (which `.every()` would pass
+ * vacuously) would overrun the Replay button off-canvas; drop it here
+ * instead (story 3.2 review). Deliberately does NOT check
+ * seed/placements/balanceVersion/tactics/leaders — those don't affect
+ * display, and a stale-`balanceVersion` entry must still DISPLAY (marked
+ * non-replayable, story 3.2); the engine re-validates the full setup at
+ * replay time.
  */
 function isRenderableSetup(value: unknown): boolean {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;

@@ -10,7 +10,7 @@ import type { Element } from './types';
  * streams — the raw seed is never consumed directly. Adding a stream is an
  * engine API change, not a local decision.
  */
-export const STREAM_LABELS = ['elements/A', 'elements/B', 'ai/A', 'ai/B', 'battle'] as const;
+export const STREAM_LABELS = ['elements/A', 'elements/B', 'ai/A', 'ai/B', 'battle', 'names/A', 'names/B'] as const;
 
 /**
  * The inclusive uint32 ceiling every match seed must satisfy (FR20). The ONE
@@ -33,7 +33,7 @@ export interface Stream {
   readonly label: StreamLabel;
 }
 
-/** All five streams for one match, keyed by label. */
+/** All seven streams for one match, keyed by label. */
 export type Streams = Record<StreamLabel, Stream>;
 
 /** Module-private handle → generator map: the opacity mechanism. */

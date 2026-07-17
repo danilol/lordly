@@ -1,5 +1,5 @@
-import { BALANCE, chooseSetup, createStreams, resolveBattle, rollElement, STRATEGY_POOL, validateMatchSetup } from '@lordly/engine';
-import type { BattleEnded, BattleLog, Element, MatchSetup, Mode, Placement, UnitClass } from '@lordly/engine';
+import { BALANCE, chooseSetup, createStreams, resolveBattle, rollElement, rollName, slotTotal, STRATEGY_POOL, validateMatchSetup } from '@lordly/engine';
+import type { BattleEnded, BattleLog, Element, MatchSetup, Mode, Placement, Unit, UnitClass } from '@lordly/engine';
 import { placeUnit } from './placement';
 import type { DraftedUnit, MatchState } from './MatchState';
 import { createStorage } from './storage';
@@ -67,6 +67,8 @@ export class MatchFlow {
       playerArmy: [],
       playerPlacements: [],
       elementsRolled: 0,
+      nameRolls: [],
+      playerLeader: null,
       phase: 'draft',
       lastAiArchetypeId,
     };
@@ -104,9 +106,12 @@ export class MatchFlow {
       mode: setup.mode,
       // Mirror side A so any state reader stays coherent (engine Unit is
       // structurally a DraftedUnit; Placement[] assigns to (Placement|null)[]).
-      playerArmy: setup.armies.A.map((u) => ({ class: u.class, element: u.element })),
+      playerArmy: setup.armies.A.map((u) => ({ class: u.class, element: u.element, name: u.name })),
       playerPlacements: [...setup.placements.A],
       elementsRolled: setup.armies.A.length,
+      // The names twin (story 4.2): one draw per stored unit, in army order.
+      nameRolls: setup.armies.A.map((u) => u.class),
+      playerLeader: setup.leaders.A,
       phase: 'committed',
       committedSetup: setup,
       // lastAiArchetypeId is deliberately UNSET: the archetype id isn't stored
@@ -126,21 +131,25 @@ export class MatchFlow {
   }
 
   /**
-   * Drafts a unit of `cls`, rolling its element once on `elements/A` (FR1,
-   * FR3, AD-9). Duplicates are allowed; throws if the army is already full.
+   * Drafts a unit of `cls`, rolling its element once on `elements/A` and its
+   * name once on `names/A` (FR1, FR3, FR37, AD-9). Duplicates are allowed;
+   * throws when the SLOT budget is filled (AD-1 — never an army.length gate).
+   * Clears the leader designation (story 4.2 invariant: any army mutation
+   * resets it).
    */
   draftUnit(cls: UnitClass): DraftedUnit {
     if (this.state.phase === 'committed') throw new Error('cannot draft: match already committed');
-    if (this.state.playerArmy.length >= BALANCE.armySize) {
-      throw new Error(`cannot draft: army is full (${BALANCE.armySize})`);
+    if (slotTotal(this.state.playerArmy) >= BALANCE.slotBudget) {
+      throw new Error(`cannot draft: the army's ${BALANCE.slotBudget} slots are filled`);
     }
-    const unit: DraftedUnit = { class: cls, element: this.rollNextElement() };
+    const unit: DraftedUnit = { class: cls, element: this.rollNextElement(), name: this.rollNextName(cls) };
     this.state.playerArmy.push(unit);
     this.state.playerPlacements.push(null);
+    this.state.playerLeader = null; // army mutated → leader designation clears (AD-9)
     return unit;
   }
 
-  /** Removes the drafted unit at `index`; its element is discarded (forward-only — the counter is not rewound). */
+  /** Removes the drafted unit at `index`; its element and name are discarded (forward-only — the counters never rewind). Clears the leader designation. */
   removeUnit(index: number): void {
     if (this.state.phase === 'committed') throw new Error('cannot remove: match already committed');
     if (!Number.isInteger(index) || index < 0 || index >= this.state.playerArmy.length) {
@@ -148,6 +157,7 @@ export class MatchFlow {
     }
     this.state.playerArmy.splice(index, 1);
     this.state.playerPlacements.splice(index, 1);
+    this.state.playerLeader = null; // army mutated → leader designation clears (AD-9)
   }
 
   /** Places (or moves/swaps) the unit at `unitIndex` onto `target` via the pure placement model (FR4). */
@@ -179,8 +189,10 @@ export class MatchFlow {
     if (this.state.phase === 'committed' && this.state.committedSetup) {
       return this.state.committedSetup;
     }
-    if (this.state.playerArmy.length !== BALANCE.armySize || this.placedCount() !== BALANCE.armySize) {
-      throw new Error(`cannot commit: place all ${BALANCE.armySize} units first`);
+    // Legality is SLOTS (AD-1, story 4.2); placement completeness stays
+    // per-unit (parallel indices, not a legality measure).
+    if (slotTotal(this.state.playerArmy) !== BALANCE.slotBudget || this.placedCount() !== this.state.playerArmy.length) {
+      throw new Error(`cannot commit: place all ${BALANCE.slotBudget} units first`);
     }
 
     const streams = createStreams(this.state.seed);
@@ -191,13 +203,29 @@ export class MatchFlow {
       return p;
     });
 
+    // The AI side's elements AND names roll HERE, on the B streams — MatchFlow
+    // rolls, never chooseSetup (AD-6: the AI module admits nothing but its own
+    // stream). Per unit in army order: one element, one name (AD-9/AD-10).
+    const armyB: Unit[] = [];
+    const takenB: string[] = [];
+    for (const cls of ai.classes) {
+      const name = rollName(streams['names/B'], cls, takenB);
+      takenB.push(name);
+      armyB.push({ class: cls, element: rollElement(streams['elements/B']), name });
+    }
+
     const setup: MatchSetup = {
       seed: this.state.seed,
       balanceVersion: BALANCE.version,
       mode: this.state.mode,
+      // Explicit interim defaults (story 4.2): the tactic picker ships in 4.4,
+      // leader designation in 4.5 — until then every commit is 'autonomous'
+      // with leader index 0 (or the state's designation once 4.5 sets it).
+      tactics: { A: 'autonomous', B: 'autonomous' },
+      leaders: { A: this.state.playerLeader ?? 0, B: 0 },
       armies: {
-        A: this.state.playerArmy.map((u) => ({ class: u.class, element: u.element })),
-        B: ai.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/B']) })),
+        A: this.state.playerArmy.map((u) => ({ class: u.class, element: u.element, name: u.name })),
+        B: armyB,
       },
       placements: { A: placementsA, B: [...ai.placement] },
     };
@@ -265,5 +293,26 @@ export class MatchFlow {
     const element = rollElement(stream);
     this.state.elementsRolled += 1;
     return element;
+  }
+
+  /**
+   * Draws the next `names/A` value (forward-only, story 4.2 — the exact
+   * `rollNextElement` pattern): reconstruct the stream, fast-forward by
+   * REPLAYING each past draw with its recorded class (a name draw's bounds
+   * come from the class's table, so the class list — not a bare count — is
+   * what makes the fast-forward bit-identical; dedup never consumes draws,
+   * so an empty `taken` replays exactly), take one with same-army dedup
+   * (dossier §7), and append to the roll history. Removals never rewind.
+   */
+  private rollNextName(cls: UnitClass): string {
+    const stream = createStreams(this.state.seed)['names/A'];
+    for (const pastCls of this.state.nameRolls) rollName(stream, pastCls, []);
+    const name = rollName(
+      stream,
+      cls,
+      this.state.playerArmy.map((u) => u.name),
+    );
+    this.state.nameRolls.push(cls);
+    return name;
   }
 }

@@ -3,19 +3,20 @@ import { ALL_CLASSES, BALANCE } from '@lordly/engine';
 import { canAddUnit, canContinue, classRulesCard } from '../src/flow/draftModel';
 import type { DraftedUnit } from '../src/flow/MatchState';
 
-const army = (n: number): DraftedUnit[] => Array.from({ length: n }, () => ({ class: 'knight', element: 'fire' }) as DraftedUnit);
+const army = (n: number): DraftedUnit[] => Array.from({ length: n }, (_, i) => ({ class: 'knight', element: 'fire', name: `Knight ${i}` }) as DraftedUnit);
 
-describe('draft gating (FR1)', () => {
-  it('can add while under the army size, not at it', () => {
+describe('draft gating (FR1/FR30 — SLOT budget, AD-1)', () => {
+  // All shipped classes are small (cost 1), so n knights fill n slots.
+  it('can add while under the slot budget, not at it', () => {
     expect(canAddUnit(army(0))).toBe(true);
-    expect(canAddUnit(army(2))).toBe(true);
-    expect(canAddUnit(army(BALANCE.armySize))).toBe(false);
+    expect(canAddUnit(army(BALANCE.slotBudget - 1))).toBe(true);
+    expect(canAddUnit(army(BALANCE.slotBudget))).toBe(false);
   });
 
-  it('can continue only at exactly the army size', () => {
-    expect(canContinue(army(2))).toBe(false);
-    expect(canContinue(army(BALANCE.armySize))).toBe(true);
-    expect(canContinue(army(BALANCE.armySize + 1))).toBe(false);
+  it('can continue only at exactly the filled slot budget', () => {
+    expect(canContinue(army(BALANCE.slotBudget - 1))).toBe(false);
+    expect(canContinue(army(BALANCE.slotBudget))).toBe(true);
+    expect(canContinue(army(BALANCE.slotBudget + 1))).toBe(false);
   });
 });
 

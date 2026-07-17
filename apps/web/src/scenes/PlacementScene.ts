@@ -1,11 +1,11 @@
 import { GameObjects, Input, Scene } from 'phaser';
-import { ALL_COLS, ALL_ROWS } from '@lordly/engine';
+import { ALL_COLS, ALL_ROWS, BALANCE } from '@lordly/engine';
 import type { Placement } from '@lordly/engine';
 import {
   BASE_WIDTH,
   ENEMY_ARMY_LABEL,
   PALETTE,
-  PLACEMENT_SUBMIT_HINT,
+  placementSubmitHint,
   PLACEMENT_SUBMIT_LABEL,
   PLACEMENT_TITLE,
   MIN_FONT_PX,
@@ -27,7 +27,7 @@ const TRAY_Y = 486;
  * rows front/mid/back top→bottom, cols left/center/right) plus a tray of
  * unplaced units, with touch drag-and-drop. The pure `placement` model is the
  * source of truth (via `MatchFlow`); sprite positions are just its projection,
- * re-derived after every drop. Submit is gated on all 3 placed (AC4), and
+ * re-derived after every drop. Submit is gated on ALL units placed (AC4), and
  * commits the match through `MatchFlow` (the sole AI caller — AD-13).
  */
 export class PlacementScene extends Scene {
@@ -110,11 +110,15 @@ export class PlacementScene extends Scene {
     return { x: this.gridLeft + c * (CELL + GAP) + CELL / 2, y: GRID_TOP + r * (CELL + GAP) + CELL / 2 };
   }
 
-  /** Tray slot center for unit `index` (its home when unplaced — predictable return spot). */
+  /**
+   * Tray slot center for unit `index` (its home when unplaced — predictable
+   * return spot). Budget-derived (story 4.2 — the hardcoded 3 died with the
+   * era): five 64px slots + 8px gaps = 352px inside the 360 base.
+   */
   private trayCenter(index: number): { x: number; y: number } {
-    const slotW = 96;
-    const gap = 12;
-    const startX = (BASE_WIDTH - (3 * slotW + 2 * gap)) / 2;
+    const slotW = 64;
+    const gap = 8;
+    const startX = (BASE_WIDTH - (BALANCE.slotBudget * slotW + (BALANCE.slotBudget - 1) * gap)) / 2;
     return { x: startX + index * (slotW + gap) + slotW / 2, y: TRAY_Y };
   }
 
@@ -129,19 +133,21 @@ export class PlacementScene extends Scene {
       const { x, y } = cell ? this.cellCenter(cell) : this.trayCenter(i);
       // Unit-card (story 2.1, DESIGN.md): YOUR units read side-blue — border +
       // ~15% wash — with the real class sprite; element stays the shared dot.
+      // Compact 64px card (story 4.2: five slots on a 360 base): sprite over
+      // code over the soldier NAME (FR37/dossier §7 — name under the code).
       // The card stays a Container so the drag contract (setSize hit area,
-      // unitIndex data, setDraggable) is untouched by the sprite swap.
-      const body = this.add.rectangle(0, 0, 72, 60, PALETTE.playerLine, 0.15).setStrokeStyle(2, PALETTE.playerLine);
-      const sprite = addUnitSprite(this, -17, 2, unit.class, 32);
-      const name = crispText(this, 14, -12, CLASS_ABBREVIATIONS[unit.class], {
+      // unitIndex data, setDraggable) is untouched by the layout change.
+      const body = this.add.rectangle(0, 0, 64, 64, PALETTE.playerLine, 0.15).setStrokeStyle(2, PALETTE.playerLine);
+      const sprite = addUnitSprite(this, 0, -12, unit.class, 28);
+      const code = crispText(this, 0, 10, CLASS_ABBREVIATIONS[unit.class], {
         fontFamily: 'Arial Black',
         fontSize: `${CARD_CLASS_FONT_PX}px`,
         color: PALETTE.playerText,
       }).setOrigin(0.5);
-      const el = crispText(this, 14, 6, unit.element, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
-      const badge = addElementBadge(this, 26, -20, unit.element);
-      const c = this.add.container(x, y, [body, sprite, name, el, badge]);
-      c.setSize(72, 60); // sets the centered rectangular hit area for input
+      const soldierName = crispText(this, 0, 24, unit.name, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
+      const badge = addElementBadge(this, 24, -24, unit.element);
+      const c = this.add.container(x, y, [body, sprite, code, soldierName, badge]);
+      c.setSize(64, 64); // sets the centered rectangular hit area for input
       c.setData('unitIndex', i);
       c.setInteractive({ useHandCursor: true });
       this.input.setDraggable(c);
@@ -153,7 +159,7 @@ export class PlacementScene extends Scene {
       if (state.playerPlacements[i] === null) return;
       // unit is on the grid → its tray slot is empty; mark it faintly.
       const { x, y } = this.trayCenter(i);
-      this.dynamic.push(this.add.rectangle(x, y, 96, 60, PALETTE.gridCellFill).setStrokeStyle(1, PALETTE.gridCellStroke).setDepth(-1));
+      this.dynamic.push(this.add.rectangle(x, y, 64, 64, PALETTE.gridCellFill).setStrokeStyle(1, PALETTE.gridCellStroke).setDepth(-1));
     });
 
     const placed = placedCount(state.playerPlacements);
@@ -162,7 +168,7 @@ export class PlacementScene extends Scene {
     const btn = this.add
       .rectangle(BASE_WIDTH / 2, btnY, 200, 50, ready ? PALETTE.buttonFillEnabled : PALETTE.buttonFill)
       .setStrokeStyle(2, ready ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke);
-    const label = crispText(this, BASE_WIDTH / 2, btnY, ready ? PLACEMENT_SUBMIT_LABEL : PLACEMENT_SUBMIT_HINT, {
+    const label = crispText(this, BASE_WIDTH / 2, btnY, ready ? PLACEMENT_SUBMIT_LABEL : placementSubmitHint(state.playerArmy.length), {
       fontFamily: 'Arial',
       fontSize: ready ? '18px' : '13px',
       color: ready ? PALETTE.buttonText : PALETTE.buttonTextDisabled,

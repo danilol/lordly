@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { chooseSetup, STRATEGY_POOL } from '../src/ai';
 import type { StrategyArchetype } from '../src/ai';
 import { BALANCE } from '../src/balance';
+import { rollName } from '../src/names';
 import { resolveBattle } from '../src/resolve';
 import { createStreams, rollElement } from '../src/rng';
-import type { MatchSetup } from '../src/types';
+import type { Stream } from '../src/rng';
+import type { MatchSetup, Unit, UnitClass } from '../src/types';
 import { runSweep } from '../sim/sweep';
 import type { ArchetypeStats } from '../sim/sweep';
 
@@ -109,36 +111,79 @@ describe('sim sweep (NFR4)', () => {
   });
 
   // DETERMINISM ANCHOR (rng-lessons convention), hand-derived — NOT pasted
-  // from a run: bulwark (3 knights, front row) vs three-mages (3 mages, back
-  // row). Mages (AGI 12) act before knights (AGI 8) every pass; each blast
-  // hits the whole knight row for 34: INT 30 − floor(MEN 14 / 2) = 23, ×3/2
-  // RPS (mage beats knight) = 34 (damage.test pins this). Knights (140 hp)
-  // survive 4 blasts (136) and die on the 5th, early in pass 2, before
-  // their AGI-8 turns — so they land EXACTLY 3 swings in pass 1, each 19 on
-  // its facing mage (26 base, ×3/4 disadvantage). Verdict: side A wiped;
-  // hpPct B = floor((3 × (80 − 19)) / 240 × 100) = 76. Both boards are
-  // left↔right symmetric, so mirror flips and elements (no witch) change
-  // NOTHING — the outcome holds for EVERY seed; 42 is pinned arbitrarily.
-  it('anchor: bulwark vs three-mages resolves to a B wipe at 0%/76% (hand-derived)', () => {
-    const bulwark = STRATEGY_POOL.find((a) => a.id === 'bulwark')!;
-    const mages = STRATEGY_POOL.find((a) => a.id === 'three-mages')!;
+  // from a run. Story 4.2 replaced the 3-unit bulwark-vs-three-mages anchor
+  // (the re-authored pool entries mix classes, ending hand-derivability) with
+  // a CUSTOM singleton pair built for it: a wall of 5 knights (front L/C/R +
+  // mid L/R) vs a battery of 5 mages (back L/C/R + mid L/R).
+  // No cross-side AGI ties exist (8 vs 12), both boards are left↔right
+  // symmetric, and no witch is present — so tie flips, mirror flips, and
+  // elements change NOTHING: the outcome holds for EVERY seed; 42 is pinned
+  // arbitrarily. The battle, by hand:
+  // • Pass 1 — all five mages (AGI 12, mid row before back, left before
+  //   right) blast the fullest enemy row: the 3-knight front. Each blast
+  //   deals 34 per knight: INT 30 − floor(MEN 14/2) = 23, ×3/2 RPS = 34
+  //   (damage.test pins this). Knights (140 hp) survive four (136) and all
+  //   three die on the fifth blast. The two mid knights (AGI 8, mid budget =
+  //   1 action) then swing: each reaches only the enemy MID row (front is
+  //   empty) and hits its facing mid mage for 19 (STR 30 − floor(VIT 8/2) =
+  //   26, ×3/4 RPS): both mid mages 80→61.
+  // • Pass 2 — only the three back mages still hold an action (back budget
+  //   2). The fullest living enemy row is now A's mid (2 knights): three
+  //   blasts × 34 = 102 each, 140→38. Nobody else acts; engagement ends.
+  // • Verdict — no wipe, judged on exact HP fractions: A = 76/700 → 10%,
+  //   B = (61 + 61 + 3×80)/400 = 362/400 → 90%. Winner B, 10% vs 90%.
+  it('anchor: knight wall vs mage battery resolves 10%/90% to B (hand-derived)', () => {
+    const wall: StrategyArchetype = {
+      id: 'anchor-wall',
+      name: 'Anchor Wall',
+      classes: ['knight', 'knight', 'knight', 'knight', 'knight'],
+      placement: [
+        { row: 'front', col: 'left' },
+        { row: 'front', col: 'center' },
+        { row: 'front', col: 'right' },
+        { row: 'mid', col: 'left' },
+        { row: 'mid', col: 'right' },
+      ],
+    };
+    const battery: StrategyArchetype = {
+      id: 'anchor-battery',
+      name: 'Anchor Battery',
+      classes: ['mage', 'mage', 'mage', 'mage', 'mage'],
+      placement: [
+        { row: 'back', col: 'left' },
+        { row: 'back', col: 'center' },
+        { row: 'back', col: 'right' },
+        { row: 'mid', col: 'left' },
+        { row: 'mid', col: 'right' },
+      ],
+    };
     const seed = 42;
     // Assemble exactly as sweep.ts/MatchFlow do (recorded spec decision 4).
     const streams = createStreams(seed);
-    const a = chooseSetup([bulwark], streams['ai/A']);
-    const b = chooseSetup([mages], streams['ai/B']);
+    const a = chooseSetup([wall], streams['ai/A']);
+    const b = chooseSetup([battery], streams['ai/B']);
+    const buildArmy = (classes: readonly UnitClass[], elements: Stream, names: Stream): Unit[] => {
+      const taken: string[] = [];
+      return classes.map((cls) => {
+        const unit = { class: cls, element: rollElement(elements), name: rollName(names, cls, taken) };
+        taken.push(unit.name);
+        return unit;
+      });
+    };
     const setup: MatchSetup = {
       seed,
       balanceVersion: BALANCE.version,
       mode: 'single',
+      tactics: { A: 'autonomous', B: 'autonomous' },
+      leaders: { A: 0, B: 0 },
       armies: {
-        A: a.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/A']) })),
-        B: b.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/B']) })),
+        A: buildArmy(a.classes, streams['elements/A'], streams['names/A']),
+        B: buildArmy(b.classes, streams['elements/B'], streams['names/B']),
       },
       placements: { A: a.placement, B: b.placement },
     };
     const ended = resolveBattle(setup).events.find((e) => e.type === 'BattleEnded');
-    expect(ended).toMatchObject({ winner: 'B', hpPct: { A: 0, B: 76 } });
+    expect(ended).toMatchObject({ winner: 'B', hpPct: { A: 10, B: 90 } });
   });
 
   it(`ACCEPTANCE BAND: no archetype exceeds ${ACCEPTANCE_BAND * 100}% aggregate win rate (AC3)`, () => {
@@ -154,20 +199,18 @@ describe('sim sweep (NFR4)', () => {
   });
 
   // Story 3.0: the band holds in BOTH modes (the wipeout knob deferred since
-  // 1.10). Wipeout battles run up to 5 engagements (~5× the compute), but the
-  // sweep is fast enough that the same runsPerPair: 15 stays well inside the
-  // test budget — no reduced sampling needed. The v1 baseline FAILED this
-  // band (three-mages 74.6% at runs=500): un-attenuated blasts compound
-  // across engagements, which is why blastAttenuation is wipeout-scoped.
-  // BINDING CONSTRAINT: `longbows` (archer+archer+knight) is the wipeout
-  // ceiling — ~63.7% at this runsPerPair, ~62.9% converged at runs=500, the
-  // thinnest margin in either mode. The archer-vs-caster hunt makes archer
-  // walls the near-dominant wipeout comp, so any future v2 retune should
-  // re-check wipeout longbows FIRST (same fragility class the single-mode
-  // ambushers comment above documents).
-  // Explicit 20s timeout: the wipeout sweep runs up to engagementCap engagements
-  // per match (~5× the single-mode compute), which brushes Vitest's 5s default on
-  // a loaded CI runner — a load flake, not a slow assertion (story 3.2 review).
+  // 1.10). Wipeout battles run up to BALANCE.engagementCap engagements — 10
+  // since story 4.2 (FR19) — so the wipeout sweep is ~10× the single-mode
+  // compute; still inside the test budget at the same runsPerPair: 15. The
+  // v1 baseline FAILED this band (three-mages 74.6% at runs=500):
+  // un-attenuated blasts compound across engagements, which is why
+  // blastAttenuation is wipeout-scoped. Story 4.2 re-authored the pool for
+  // 5-slot armies and re-swept both modes; the 3-unit-era longbows-ceiling
+  // note is superseded — read the failure table's top entries when this
+  // band ever trips.
+  // Explicit 30s timeout: cap-length wipeout matches brush Vitest's 5s
+  // default on a loaded CI runner — a load flake, not a slow assertion
+  // (story 3.2 review; widened for cap 10 in 4.2).
   it(`ACCEPTANCE BAND (wipeout): no archetype exceeds ${ACCEPTANCE_BAND * 100}% aggregate win rate in wipeout mode`, () => {
     const wipeoutReport = runSweep(STRATEGY_POOL, { ...CI_CONFIG, mode: 'wipeout' });
     const table = wipeoutReport.archetypes.map((a) => `${a.id}: ${(a.winRate * 100).toFixed(1)}%`).join('\n');
@@ -175,5 +218,5 @@ describe('sim sweep (NFR4)', () => {
       expect(a.winRate, `dominant archetype flagged (wipeout) — sweep table:\n${table}`).toBeLessThanOrEqual(ACCEPTANCE_BAND);
     }
     expect(wipeoutReport.flagged).toEqual([]);
-  }, 20_000);
+  }, 30_000);
 });

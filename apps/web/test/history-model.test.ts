@@ -10,16 +10,22 @@ const setup: MatchSetup = {
   seed: 7,
   balanceVersion: BALANCE.version, // tracks the engine — a future bump must not rot this fixture
   mode: 'single',
+  tactics: { A: 'autonomous', B: 'autonomous' },
+  leaders: { A: 0, B: 0 },
   armies: {
     A: [
-      { class: 'knight', element: 'fire' },
-      { class: 'knight', element: 'water' },
-      { class: 'mage', element: 'wind' },
+      { class: 'knight', element: 'fire', name: 'Kain' },
+      { class: 'knight', element: 'water', name: 'Aldric' },
+      { class: 'mage', element: 'wind', name: 'Magnus' },
+      { class: 'cleric', element: 'earth', name: 'Sela' },
+      { class: 'archer', element: 'fire', name: 'Lyra' },
     ],
     B: [
-      { class: 'archer', element: 'earth' },
-      { class: 'cleric', element: 'fire' },
-      { class: 'witch', element: 'water' },
+      { class: 'archer', element: 'earth', name: 'Vess' },
+      { class: 'cleric', element: 'fire', name: 'Ithil' },
+      { class: 'witch', element: 'water', name: 'Morwen' },
+      { class: 'knight', element: 'wind', name: 'Roland' },
+      { class: 'mercenary', element: 'water', name: 'Brand' },
     ],
   },
   placements: {
@@ -27,11 +33,15 @@ const setup: MatchSetup = {
       { row: 'front', col: 'left' },
       { row: 'front', col: 'center' },
       { row: 'back', col: 'left' },
+      { row: 'back', col: 'center' },
+      { row: 'mid', col: 'center' },
     ],
     B: [
       { row: 'back', col: 'left' },
       { row: 'back', col: 'center' },
       { row: 'back', col: 'right' },
+      { row: 'front', col: 'center' },
+      { row: 'mid', col: 'center' },
     ],
   },
 };

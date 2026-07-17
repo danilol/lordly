@@ -1,10 +1,10 @@
 import { GameObjects, Scene } from 'phaser';
-import { ALL_CLASSES, BALANCE } from '@lordly/engine';
+import { ALL_CLASSES, BALANCE, slotTotal } from '@lordly/engine';
 import type { UnitClass } from '@lordly/engine';
 import {
   BASE_WIDTH,
   DRAFT_CONTINUE_LABEL,
-  DRAFT_HINT,
+  draftHint,
   DRAFT_RULES_LABEL,
   DRAFT_TITLE,
   PALETTE,
@@ -55,7 +55,7 @@ export class DraftScene extends Scene {
       .on('pointerup', () => this.scene.start('Help', { from: 'Draft', flow: this.flow }));
 
     crispText(this, BASE_WIDTH / 2, 26, DRAFT_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
-    crispText(this, BASE_WIDTH / 2, 50, DRAFT_HINT, {
+    crispText(this, BASE_WIDTH / 2, 50, draftHint(BALANCE.slotBudget), {
       fontFamily: 'Arial',
       fontSize: '11px',
       color: PALETTE.mutedText,
@@ -118,47 +118,58 @@ export class DraftScene extends Scene {
     const army = this.flow.getState().playerArmy;
     const trayY = 360;
     this.dynamic.push(
-      crispText(this, BASE_WIDTH / 2, trayY - 22, `Your army  (${army.length}/${BALANCE.armySize})`, {
+      crispText(this, BASE_WIDTH / 2, trayY - 22, `Your army  (${slotTotal(army)}/${BALANCE.slotBudget})`, {
         fontFamily: 'Arial',
         fontSize: '12px',
         color: PALETTE.bodyText,
       }).setOrigin(0.5),
     );
 
-    const slotW = 96;
-    const gap = 12;
-    const totalW = BALANCE.armySize * slotW + (BALANCE.armySize - 1) * gap;
+    // Five 64px slots + 8px gaps = 352px, inside the 360 base (story 4.2 —
+    // the 96px 3-slot cards would overflow at 528). Slots stay ≥44px tap
+    // targets (UX-DR4); the compact card stacks sprite over code, with the
+    // per-card copy moved to one shared hint below the tray.
+    const slotW = 64;
+    const slotH = 60;
+    const gap = 8;
+    const totalW = BALANCE.slotBudget * slotW + (BALANCE.slotBudget - 1) * gap;
     const startX = (BASE_WIDTH - totalW) / 2;
-    for (let i = 0; i < BALANCE.armySize; i++) {
+    for (let i = 0; i < BALANCE.slotBudget; i++) {
       const x = startX + i * (slotW + gap);
       const unit = army[i];
       // Drafted units are YOURS: the unit-card reads side-blue (border + wash),
       // never a gold frame and never element-colored (story 2.1, DESIGN.md).
       const slot = unit
-        ? this.add.rectangle(x, trayY, slotW, 60, PALETTE.playerLine, 0.15).setOrigin(0, 0).setStrokeStyle(2, PALETTE.playerLine)
-        : this.add.rectangle(x, trayY, slotW, 60, PALETTE.gridCellFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.gridCellStroke);
+        ? this.add.rectangle(x, trayY, slotW, slotH, PALETTE.playerLine, 0.15).setOrigin(0, 0).setStrokeStyle(2, PALETTE.playerLine)
+        : this.add.rectangle(x, trayY, slotW, slotH, PALETTE.gridCellFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.gridCellStroke);
       this.dynamic.push(slot);
       if (unit) {
-        const sprite = addUnitSprite(this, x + 22, trayY + 26, unit.class, 32);
-        const badge = addElementBadge(this, x + slotW - 14, trayY + 12, unit.element);
-        const name = crispText(this, x + 42, trayY + 8, CLASS_ABBREVIATIONS[unit.class], {
+        const sprite = addUnitSprite(this, x + slotW / 2, trayY + 22, unit.class, 28);
+        const badge = addElementBadge(this, x + slotW - 10, trayY + 10, unit.element);
+        const code = crispText(this, x + slotW / 2, trayY + 46, CLASS_ABBREVIATIONS[unit.class], {
           fontFamily: 'Arial Black',
           fontSize: `${CARD_CLASS_FONT_PX}px`,
           color: PALETTE.playerText,
-        });
-        const el = crispText(this, x + 42, trayY + 26, unit.element, { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.bodyText });
-        const hint = crispText(this, x + 8, trayY + 46, 'tap to remove', { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.mutedText });
+        }).setOrigin(0.5);
         slot.setInteractive({ useHandCursor: true }).on('pointerup', () => {
           this.flow.removeUnit(i);
           this.redraw();
         });
-        this.dynamic.push(sprite, badge, name, el, hint);
+        this.dynamic.push(sprite, badge, code);
       } else {
         this.dynamic.push(
           crispText(this, x + slotW / 2, trayY + 30, 'empty', { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.mutedText }).setOrigin(0.5),
         );
       }
     }
+    // The shared removal hint (was a per-card label at the 96px width).
+    this.dynamic.push(
+      crispText(this, BASE_WIDTH / 2, trayY + slotH + 12, 'tap a drafted unit to remove it', {
+        fontFamily: 'Arial',
+        fontSize: `${MIN_FONT_PX}px`,
+        color: PALETTE.mutedText,
+      }).setOrigin(0.5),
+    );
 
     const ready = canContinue(army);
     const btnY = 470;

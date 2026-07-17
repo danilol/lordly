@@ -88,6 +88,9 @@ export class RevealScene extends Scene {
    * matching the Battle scene's unit treatment exactly, so Reveal → Battle
    * is the same stage. Side identity lives in the tile color + code color +
    * board position (the non-color anchor); the 2.1 card wash is retired here.
+   * Story 4.2 (FR37, dossier §7): Reveal is a NAME surface — the soldier's
+   * name sits under the code (the battle board keeps codes only). The name
+   * inherits the code's FR39f stroke treatment so it survives the tile fill.
    */
   private drawUnit(unit: UnitSnapshot) {
     const { x, y } = unitTileCenter(unit.side, unit.placement);
@@ -95,6 +98,11 @@ export class RevealScene extends Scene {
     crispText(this, x, y + 8, CLASS_ABBREVIATIONS[unit.class], unitCodeStyle(unit.side))
       .setOrigin(0.5)
       .setDepth(y);
+    if (unit.name) {
+      crispText(this, x, y + 21, unit.name, { ...unitCodeStyle(unit.side), fontFamily: 'Arial', fontSize: '10px' })
+        .setOrigin(0.5)
+        .setDepth(y);
+    }
     addElementBadge(this, x + 16, y - 26, unit.element).setDepth(y);
   }
 }

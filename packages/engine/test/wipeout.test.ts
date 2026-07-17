@@ -1,35 +1,66 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/balance';
 import { physicalDamage, resolveBattle } from '../src/resolve';
-import type { BattleEvent, BattleLog, MatchSetup } from '../src/types';
+import type { BattleEvent, BattleLog, MatchSetup, Unit } from '../src/types';
 
 /**
  * Until-wipeout mode (FR19, story 1.10): engagements repeat until a side is
- * wiped; statuses clear between engagements EXCEPT poison; poison ticks at
- * every natural engagement end; after `BALANCE.engagementCap` engagements
- * judging falls back to FR18. Structural assertions here; golden.test.ts
- * pins two full wipeout logs.
+ * wiped; statuses clear between engagements EXCEPT poison — narrated as
+ * `StatusCleared` events at the seam since story 4.2, which `segments()`
+ * places at the START of segments 2+; poison ticks at every natural
+ * engagement end; after `BALANCE.engagementCap` engagements judging falls
+ * back to FR18. Structural assertions here; golden.test.ts pins full logs.
  */
 function setup(partial: Pick<MatchSetup, 'armies' | 'placements'>, seed: number, mode: MatchSetup['mode'] = 'wipeout'): MatchSetup {
-  return { seed, balanceVersion: BALANCE.version, mode, ...partial };
+  return {
+    seed,
+    balanceVersion: BALANCE.version,
+    mode,
+    tactics: { A: 'autonomous', B: 'autonomous' },
+    leaders: { A: 0, B: 0 },
+    ...partial,
+  };
 }
 
-/** Knights vs mercenaries, mirrored front rows: no healer, so knights grind
- * the mercs down 110→70→30→0 over exactly three engagements (20 dmg × 2 hits
- * each per engagement) — a hand-verifiable multi-engagement wipe. */
+/** One drafted unit. Names are FR37 flavor — required data, zero gameplay effect. */
+function u(cls: Unit['class'], element: Unit['element'], name: string): Unit {
+  return { class: cls, element, name };
+}
+
+/** 5 knights vs 5 mercenaries, mirrored (front L/C/R + mid L/R): no healer,
+ * so the knights out-grind the mercs — a hand-verifiable multi-engagement
+ * wipe. Hand-derived (knight→merc 20 = 30 − floor(20/2), merc→knight 12 =
+ * 26 − floor(28/2), no RPS either way; fronts have 2 actions, mids 1; melee
+ * reach is COLUMN math, so mid units strike the front row, and once the
+ * enemy front falls the swings spill onto the mid row):
+ *   eng 1: fronts trade — flank mercs B:0/B:2 take 3 swings each (facing
+ *          front knight ×2 + a mid knight) 110→50, B:1 takes 2 →70; flank
+ *          knights A:0/A:2 take 3 merc swings 140→104, A:1 takes 2 →116.
+ *   eng 2: same pattern — B:0/B:2 die on the knights' second pass, B:1 →30;
+ *          A:0/A:2 →68, A:1 →92.
+ *   eng 3: all five knight lanes converge on B:1, who dies in pass 1; the
+ *          remaining five swings spill onto the mid mercs — B:3/B:4 110→50;
+ *          A:0/A:2 →56 (one mid-merc swing each), A:1 →80.
+ *   eng 4: pass 1 — B:4 dies (A:0, A:1, then A:3's kill), B:3 →10 (A:2, A:4);
+ *          pass 2 — A:0 idles (B:3 out of reach), A:1 kills B:3: wipe.
+ *          A ends 44 + 80 + 44 + 140 + 140 = 448/700 → 64% vs 0%. */
 function knightsVsMercs(seed: number): MatchSetup {
   return setup(
     {
       armies: {
         A: [
-          { class: 'knight', element: 'fire' },
-          { class: 'knight', element: 'water' },
-          { class: 'knight', element: 'wind' },
+          u('knight', 'fire', 'Aldric'),
+          u('knight', 'water', 'Berold'),
+          u('knight', 'wind', 'Cedric'),
+          u('knight', 'earth', 'Doran'),
+          u('knight', 'fire', 'Edmund'),
         ],
         B: [
-          { class: 'mercenary', element: 'earth' },
-          { class: 'mercenary', element: 'fire' },
-          { class: 'mercenary', element: 'water' },
+          u('mercenary', 'earth', 'Falk'),
+          u('mercenary', 'fire', 'Gorm'),
+          u('mercenary', 'water', 'Hask'),
+          u('mercenary', 'wind', 'Ivo'),
+          u('mercenary', 'earth', 'Jarek'),
         ],
       },
       placements: {
@@ -37,11 +68,15 @@ function knightsVsMercs(seed: number): MatchSetup {
           { row: 'front', col: 'left' },
           { row: 'front', col: 'center' },
           { row: 'front', col: 'right' },
+          { row: 'mid', col: 'left' },
+          { row: 'mid', col: 'right' },
         ],
         B: [
           { row: 'front', col: 'left' },
           { row: 'front', col: 'center' },
           { row: 'front', col: 'right' },
+          { row: 'mid', col: 'left' },
+          { row: 'mid', col: 'right' },
         ],
       },
     },
@@ -49,22 +84,39 @@ function knightsVsMercs(seed: number): MatchSetup {
   );
 }
 
-/** Golden #1's comp: knights vs a healing cleric column — the clerics (AGI 10)
- * heal before the knights (AGI 8) swing, settling into a perfect 24→90→24
- * equilibrium that can never wipe: the comp the engagement cap exists for. */
+/** Golden #1's comp grown to the 5-slot era: knights that can't break through
+ * healing (clerics AGI 10 act before knights AGI 8). B's two extra clerics
+ * stack the BACK line (back-left/back-center: 2 actions each → 8 cleric
+ * actions × 30 heal), which fully offsets the five knights' chip. Hand-derived
+ * damage lanes (knight→cleric 24 = 30 − floor(12/2), neutral RPS):
+ *   B:0 (front-right) absorbs A:0×2 + A:1×2 + A:3 = 120/eng — the col-right
+ *   knights A:2/A:4 reach only cols {left,center}, whose sole occupants are
+ *   the back-row clerics, facing column left → B:3 absorbs A:2×2 + A:4 = 72.
+ *   Steady state, re-established at the end of EVERY engagement from eng 1 on:
+ *   B:0 cycles 30 →(pass-1 heals) 90 →(knight pass 1) 18 →(pass-2 heals) 78
+ *   →(knight pass 2) 30; B:3 cycles 48 → 90 → 42 → 72 → 48. In-cycle minima
+ *   18 and 42 — nobody EVER dies, so only the cap can end it. Cleric staff
+ *   pokes (min-clamped 1 dmg, rearmost-in-reach → the mid knights): all five
+ *   clerics poke in eng 1 (A:3 −3, A:4 −2); from eng 2 on only B:2 still finds
+ *   everyone full at its turn (A:3 −1/eng). After 10 engagements A holds
+ *   140×3 + 128 + 138 = 686/700 → 98%; B holds 30+90+90+48+90 = 348/450 → 77%. */
 function knightsVsClerics(seed: number, mode: MatchSetup['mode'] = 'wipeout'): MatchSetup {
   return setup(
     {
       armies: {
         A: [
-          { class: 'knight', element: 'fire' },
-          { class: 'knight', element: 'water' },
-          { class: 'knight', element: 'wind' },
+          u('knight', 'fire', 'Aldric'),
+          u('knight', 'water', 'Berold'),
+          u('knight', 'wind', 'Cedric'),
+          u('knight', 'earth', 'Doran'),
+          u('knight', 'fire', 'Edmund'),
         ],
         B: [
-          { class: 'cleric', element: 'earth' },
-          { class: 'cleric', element: 'fire' },
-          { class: 'cleric', element: 'water' },
+          u('cleric', 'earth', 'Mira'),
+          u('cleric', 'fire', 'Nessa'),
+          u('cleric', 'water', 'Olwen'),
+          u('cleric', 'wind', 'Petra'),
+          u('cleric', 'earth', 'Quinn'),
         ],
       },
       placements: {
@@ -72,11 +124,15 @@ function knightsVsClerics(seed: number, mode: MatchSetup['mode'] = 'wipeout'): M
           { row: 'front', col: 'left' },
           { row: 'front', col: 'center' },
           { row: 'front', col: 'right' },
+          { row: 'mid', col: 'left' },
+          { row: 'mid', col: 'right' },
         ],
         B: [
           { row: 'front', col: 'right' },
           { row: 'mid', col: 'right' },
           { row: 'back', col: 'right' },
+          { row: 'back', col: 'left' },
+          { row: 'back', col: 'center' },
         ],
       },
     },
@@ -85,28 +141,35 @@ function knightsVsClerics(seed: number, mode: MatchSetup['mode'] = 'wipeout'): M
   );
 }
 
-/** Mirror clerics: heals outpace staff bonks — nobody ever wipes (cap-fallback comp). */
+/** Mirror clerics (back row 3 + mid 2): heals (30) outpace staff bonks
+ * (cleric→cleric 8 − 6 = 2) — nobody ever wipes (cap-fallback comp). */
 function mirrorClerics(seed: number): MatchSetup {
   const army = [
-    { class: 'cleric', element: 'fire' },
-    { class: 'cleric', element: 'water' },
-    { class: 'cleric', element: 'wind' },
+    u('cleric', 'fire', 'Rhea'),
+    u('cleric', 'water', 'Sela'),
+    u('cleric', 'wind', 'Tamsin'),
+    u('cleric', 'earth', 'Una'),
+    u('cleric', 'fire', 'Vesna'),
   ] as const;
   const placement = [
     { row: 'back', col: 'left' },
     { row: 'back', col: 'center' },
     { row: 'back', col: 'right' },
+    { row: 'mid', col: 'left' },
+    { row: 'mid', col: 'right' },
   ] as const;
   return setup(
     {
-      armies: { A: army.map((u) => ({ ...u })), B: army.map((u) => ({ ...u })) },
+      armies: { A: army.map((unit) => ({ ...unit })), B: army.map((unit) => ({ ...unit })) },
       placements: { A: placement.map((p) => ({ ...p })), B: placement.map((p) => ({ ...p })) },
     },
     seed,
   );
 }
 
-/** Splits a log into per-engagement segments (each ending with its EngagementEnded). */
+/** Splits a log into per-engagement segments (each ending with its
+ * EngagementEnded). The seam's StatusCleared events (story 4.2) are emitted
+ * AFTER an EngagementEnded, so they open the NEXT segment. */
 function segments(log: BattleLog): BattleEvent[][] {
   const out: BattleEvent[][] = [];
   let current: BattleEvent[] = [];
@@ -133,28 +196,29 @@ describe('wipeout mode (FR19)', () => {
   it('continues past engagement 1 and ends the battle when a side is wiped', () => {
     const log = resolveBattle(knightsVsMercs(0xdead));
     const segs = segments(log);
-    // Hand-verified: mercs at 110 HP take 2 × 20 per engagement (knight STR 30
-    // − merc VIT 20/2, mirrored lanes) → 70, 30, dead in engagement 3; knights
-    // take 2 × 12 → end at 68 each. Winner A, 48% vs 0%.
-    expect(segs.length).toBe(3);
-    for (const id of ['B:0', 'B:1', 'B:2']) {
+    // Hand-verified (full derivation on the fixture): flank mercs die in
+    // engagement 2, the center in 3, the mids in 4 — wipe at engagement 4
+    // with A holding 448/700 → 64% vs 0%.
+    expect(segs.length).toBe(4);
+    for (const id of ['B:0', 'B:1', 'B:2', 'B:3', 'B:4']) {
       expect(log.events.some((e) => e.type === 'UnitDied' && e.unit === id)).toBe(true);
     }
     const verdict = log.events[log.events.length - 1];
-    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 48, B: 0 } });
+    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 64, B: 0 } });
     // The wiping engagement is the last — nothing resolves after a wipe.
-    expect(segs[2]?.[segs[2].length - 1]).toMatchObject({ type: 'EngagementEnded', engagement: 3 });
+    expect(segs[3]?.[segs[3].length - 1]).toMatchObject({ type: 'EngagementEnded', engagement: 4 });
   });
 
   it('the equilibrium comp proves the cap is the termination guarantee — heals fully offset chip damage', () => {
-    // Golden #1's comp in wipeout: after engagement 1 the damaged cleric
-    // cycles 24 → healed to 90 → beaten back to 24, every engagement, forever.
-    // Hand-verified steady state: cap fires at 5 with A ahead 99% to 75%.
+    // Golden #1's comp in wipeout: from engagement 1 on the two damage sinks
+    // cycle B:0 30→90→18→78→30 and B:3 48→90→42→72→48, every engagement,
+    // forever (derivation on the fixture). Hand-verified: no death is ever
+    // possible, the cap fires at 10 with A ahead 98% to 77%.
     const log = resolveBattle(knightsVsClerics(0xdead));
     const segs = segments(log);
     expect(segs.length).toBe(BALANCE.engagementCap);
     expect(log.events.some((e) => e.type === 'UnitDied')).toBe(false);
-    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 99, B: 75 } });
+    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 98, B: 77 } });
   });
 
   it('EngagementEnded numbers run 1..N and PassStarted restarts at 1 in every engagement', () => {
@@ -164,7 +228,8 @@ describe('wipeout mode (FR19)', () => {
       const end = seg[seg.length - 1];
       expect(end).toMatchObject({ type: 'EngagementEnded', engagement: i + 1 });
       const firstPass = seg.find((e) => e.type === 'PassStarted');
-      // Every engagement has passes (actions were replenished) and restarts at 1.
+      // Every engagement has passes (actions were replenished) and restarts
+      // at 1 — the find-by-type skips the seam's StatusCleared openers.
       expect(firstPass).toMatchObject({ type: 'PassStarted', pass: 1 });
     });
   });
@@ -178,20 +243,29 @@ describe('wipeout mode (FR19)', () => {
   });
 
   it('poison persists across engagements and ticks at every natural engagement end', () => {
-    // Golden #5's comp: mirrored earth witches poison each other's sides early.
+    // Golden #5's comp grown to 5v5: mirrored earth witches poison each
+    // other's sides in engagement 1 (each targets the other, rearmost-in-
+    // reach, then a second victim on pass 2). A's hunt-boosted archers
+    // (4×28) kill B's witch by the end of engagement 1, but her poison has
+    // already stuck — it survives the seam and ticks again at every natural
+    // end while its carriers (A's untouched back line) live.
     const log = resolveBattle(
       setup(
         {
           armies: {
             A: [
-              { class: 'archer', element: 'fire' },
-              { class: 'archer', element: 'water' },
-              { class: 'witch', element: 'earth' },
+              u('archer', 'fire', 'Kestrel'),
+              u('archer', 'water', 'Lark'),
+              u('witch', 'earth', 'Morgause'),
+              u('knight', 'fire', 'Osric'),
+              u('knight', 'water', 'Percival'),
             ],
             B: [
-              { class: 'witch', element: 'earth' },
-              { class: 'knight', element: 'earth' },
-              { class: 'knight', element: 'water' },
+              u('witch', 'earth', 'Nimue'),
+              u('knight', 'earth', 'Ragnar'),
+              u('knight', 'water', 'Sigurd'),
+              u('mercenary', 'fire', 'Torvald'),
+              u('mercenary', 'water', 'Ulf'),
             ],
           },
           placements: {
@@ -199,11 +273,15 @@ describe('wipeout mode (FR19)', () => {
               { row: 'back', col: 'left' },
               { row: 'back', col: 'right' },
               { row: 'back', col: 'center' },
+              { row: 'front', col: 'left' },
+              { row: 'front', col: 'right' },
             ],
             B: [
               { row: 'back', col: 'center' },
               { row: 'front', col: 'left' },
               { row: 'front', col: 'right' },
+              { row: 'mid', col: 'left' },
+              { row: 'mid', col: 'right' },
             ],
           },
         },
@@ -219,42 +297,55 @@ describe('wipeout mode (FR19)', () => {
   });
 
   it('weaken does not persist between engagements — the same attacker deals FULL damage again', () => {
-    // Hand-verified (story 3.0 retune: B:0 is a BACK-ROW KNIGHT soaking the
-    // witch's first cast — the original fire witch there now dies to the
-    // hunt-boosted arrows (4×28 > 85) mid-engagement-1, which let the eng-2
-    // first cast re-weaken B:2 BEFORE his swing and destroyed the scenario;
-    // arrows bounce off the knight at 7). A's witch (A:2, back center,
-    // 2 actions) weakens B:0 then knight B:2 in engagement 1, so B:2's second
-    // swing on archer A:0 lands halved — 18 = floor(36/2). The
-    // between-engagement reset clears the status, and in engagement 2 the
-    // witch's FIRST cast re-targets B:0 (prefer-unaffected, rearmost), so
-    // B:2's pass-1 swing on A:0 is back to full damage before she gets around
-    // to re-weakening him: 36 = physicalDamage(knight, archer).
+    // Hand-verified 5v5 geometry (rebuilt for the era, same identity as the
+    // 3-unit original): A's fire witch sits at BACK-RIGHT, so her reach is
+    // enemy cols {left, center} — B's three extra knights all live in enemy
+    // col RIGHT (front/mid/back), permanently out of her reach. That pins her
+    // cast cycle to exactly two targets: cast 1 → B:0 (rearmost reachable,
+    // back-center), cast 2 → B:1 (the only other reachable enemy, front-
+    // center). B:1 (2 actions) swings at A:3 — the lone front-center knight,
+    // his facing column — full in pass 1 (the witch's pass-1 cast went to
+    // B:0), then halved in pass 2 after the witch (AGI 26, acts first)
+    // weakens him: 8 = floor(16/2). The between-engagement reset clears the
+    // status, and in engagement 2 her FIRST cast re-targets B:0 (prefer-
+    // unaffected, rearmost), so B:1's pass-1 swing is back to full damage
+    // before she gets around to re-weakening him: 16 = physicalDamage(knight,
+    // knight). A:3 soaks five knight lanes and dies mid-engagement-2 pass 1,
+    // but only AFTER B:1's swing — front row acts before mid/back, col
+    // center before col right, so B:1 precedes every other B knight.
     const log = resolveBattle(
       setup(
         {
           armies: {
             A: [
-              { class: 'archer', element: 'fire' },
-              { class: 'archer', element: 'water' },
-              { class: 'witch', element: 'fire' },
+              u('archer', 'fire', 'Vale'),
+              u('archer', 'water', 'Wren'),
+              u('witch', 'fire', 'Xanthe'),
+              u('knight', 'earth', 'Yorick'),
+              u('knight', 'wind', 'Zane'),
             ],
             B: [
-              { class: 'knight', element: 'fire' },
-              { class: 'knight', element: 'earth' },
-              { class: 'knight', element: 'water' },
+              u('knight', 'fire', 'Bram'),
+              u('knight', 'earth', 'Corwin'),
+              u('knight', 'water', 'Dietrich'),
+              u('knight', 'wind', 'Ebbe'),
+              u('knight', 'fire', 'Falkor'),
             ],
           },
           placements: {
             A: [
+              { row: 'back', col: 'center' },
               { row: 'back', col: 'left' },
               { row: 'back', col: 'right' },
-              { row: 'back', col: 'center' },
+              { row: 'front', col: 'center' },
+              { row: 'mid', col: 'center' },
             ],
             B: [
               { row: 'back', col: 'center' },
-              { row: 'front', col: 'left' },
+              { row: 'front', col: 'center' },
               { row: 'front', col: 'right' },
+              { row: 'mid', col: 'right' },
+              { row: 'back', col: 'right' },
             ],
           },
         },
@@ -265,44 +356,51 @@ describe('wipeout mode (FR19)', () => {
     // wiped at every EngagementEnded — the reset under test).
     const weakened = new Set<string>();
     let engagement = 1;
-    const hitsOnA0: { engagement: number; damage: number; weak: boolean }[] = [];
+    const hitsOnA3: { engagement: number; damage: number; weak: boolean }[] = [];
     for (const e of log.events) {
       if (e.type === 'StatusApplied' && e.spell === 'weaken') weakened.add(e.target);
       if (e.type === 'EngagementEnded') {
         engagement += 1;
         weakened.clear();
       }
-      if (e.type === 'UnitAttacked' && e.source === 'B:2') {
+      if (e.type === 'UnitAttacked' && e.source === 'B:1') {
         for (const t of e.targets) {
-          if (t.unit === 'A:0') hitsOnA0.push({ engagement, damage: t.damage, weak: weakened.has('B:2') });
+          if (t.unit === 'A:3') hitsOnA3.push({ engagement, damage: t.damage, weak: weakened.has('B:1') });
         }
       }
     }
-    const full = physicalDamage('knight', 'archer');
-    const halved = physicalDamage('knight', 'archer', true);
+    const full = physicalDamage('knight', 'knight');
+    const halved = physicalDamage('knight', 'knight', true);
     expect(halved).toBe(Math.floor(full / 2)); // weaken really halves (FR16)
-    expect(hitsOnA0).toContainEqual({ engagement: 1, damage: halved, weak: true });
-    expect(hitsOnA0).toContainEqual({ engagement: 2, damage: full, weak: false });
+    expect(hitsOnA3).toContainEqual({ engagement: 1, damage: halved, weak: true });
+    expect(hitsOnA3).toContainEqual({ engagement: 2, damage: full, weak: false });
   });
 
   it('sleep does not persist between engagements — the same target can be slept again (no-stack proves the clear)', () => {
-    // Golden #2's comp: the water witch sleeps A's attackers in engagement 1.
-    // FR16: the same spell never stacks and the witch prefers unaffected
-    // targets — a sleep landing on the SAME unit in a later engagement is
-    // only possible if the status cleared in between.
+    // Golden #2's comp grown to 5v5: B's water witch (back-right, reach
+    // {left, center}) sleeps A's back-line archers in engagement 1 — facing
+    // column left first (A:4), then the unaffected back-center (A:2). FR16:
+    // the same spell never stacks and the witch prefers unaffected targets —
+    // a sleep landing on the SAME unit in a later engagement (or a slept
+    // archer taking a real action again) is only possible if the status
+    // cleared in between.
     const log = resolveBattle(
       setup(
         {
           armies: {
             A: [
-              { class: 'knight', element: 'fire' },
-              { class: 'mercenary', element: 'water' },
-              { class: 'archer', element: 'wind' },
+              u('knight', 'fire', 'Gareth'),
+              u('mercenary', 'water', 'Hilda'),
+              u('archer', 'wind', 'Jora'),
+              u('mercenary', 'fire', 'Idris'),
+              u('archer', 'earth', 'Kell'),
             ],
             B: [
-              { class: 'mercenary', element: 'earth' },
-              { class: 'mercenary', element: 'fire' },
-              { class: 'witch', element: 'water' },
+              u('mercenary', 'earth', 'Lunn'),
+              u('mercenary', 'fire', 'Marek'),
+              u('witch', 'water', 'Ondine'),
+              u('knight', 'water', 'Pike'),
+              u('mercenary', 'wind', 'Njal'),
             ],
           },
           placements: {
@@ -310,11 +408,15 @@ describe('wipeout mode (FR19)', () => {
               { row: 'front', col: 'center' },
               { row: 'front', col: 'left' },
               { row: 'back', col: 'center' },
+              { row: 'front', col: 'right' },
+              { row: 'back', col: 'left' },
             ],
             B: [
               { row: 'front', col: 'center' },
               { row: 'mid', col: 'left' },
               { row: 'back', col: 'right' },
+              { row: 'front', col: 'left' },
+              { row: 'front', col: 'right' },
             ],
           },
         },

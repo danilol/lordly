@@ -9,16 +9,22 @@ function validSetup(): MatchSetup {
     seed: 12345,
     balanceVersion: BALANCE.version,
     mode: 'single',
+    tactics: { A: 'autonomous', B: 'autonomous' },
+    leaders: { A: 0, B: 0 },
     armies: {
       A: [
-        { class: 'knight', element: 'fire' },
-        { class: 'archer', element: 'water' },
-        { class: 'mage', element: 'wind' },
+        { class: 'knight', element: 'fire', name: 'Kain' },
+        { class: 'archer', element: 'water', name: 'Lyra' },
+        { class: 'mage', element: 'wind', name: 'Aldous' },
+        { class: 'mercenary', element: 'earth', name: 'Brand' },
+        { class: 'cleric', element: 'water', name: 'Sela' },
       ],
       B: [
-        { class: 'witch', element: 'earth' },
-        { class: 'cleric', element: 'fire' },
-        { class: 'mercenary', element: 'water' },
+        { class: 'witch', element: 'earth', name: 'Morwen' },
+        { class: 'cleric', element: 'fire', name: 'Ithil' },
+        { class: 'mercenary', element: 'water', name: 'Dario' },
+        { class: 'knight', element: 'wind', name: 'Gerhart' },
+        { class: 'archer', element: 'fire', name: 'Vess' },
       ],
     },
     placements: {
@@ -26,11 +32,15 @@ function validSetup(): MatchSetup {
         { row: 'front', col: 'left' },
         { row: 'mid', col: 'center' },
         { row: 'back', col: 'right' },
+        { row: 'front', col: 'right' },
+        { row: 'back', col: 'center' },
       ],
       B: [
         { row: 'front', col: 'center' },
         { row: 'back', col: 'left' },
         { row: 'back', col: 'right' },
+        { row: 'mid', col: 'left' },
+        { row: 'mid', col: 'right' },
       ],
     },
   };
@@ -88,11 +98,18 @@ describe('validateMatchSetup (AC2, spine errors convention)', () => {
     expectViolation(s, 'invalid-mode', /ranked/);
   });
 
-  it('rejects wrong army size, naming the side', () => {
+  it('rejects a wrong slot total, naming the side, the budget, and the total (AD-1, story 4.2)', () => {
     const s = validSetup();
-    s.armies.A = s.armies.A.slice(0, 2);
-    s.placements.A = s.placements.A.slice(0, 2);
-    expectViolation(s, 'wrong-army-size', /A/);
+    s.armies.A = s.armies.A.slice(0, 4);
+    s.placements.A = s.placements.A.slice(0, 4);
+    expectViolation(s, 'wrong-slot-total', /A.*5.*4|A.*budget/);
+  });
+
+  it('rejects an over-budget army by SLOTS, not unit count (AD-1)', () => {
+    const s = validSetup();
+    s.armies.B = [...s.armies.B, { class: 'knight', element: 'fire', name: 'Ulric' }];
+    s.placements.B = [...s.placements.B, { row: 'mid', col: 'left' }];
+    expectViolation(s, 'wrong-slot-total', /B/);
   });
 
   it('rejects an unknown class, naming side and index', () => {
@@ -105,6 +122,35 @@ describe('validateMatchSetup (AC2, spine errors convention)', () => {
     const s = validSetup();
     (s.armies.A[0] as { element: string }).element = 'void';
     expectViolation(s, 'unknown-element', /void/);
+  });
+
+  it('rejects an invalid or missing unit name, naming side and index (FR37, story 4.2)', () => {
+    const empty = validSetup();
+    (empty.armies.A[2] as { name: string }).name = '   ';
+    expectViolation(empty, 'invalid-name', /A.*2/);
+    const missing = validSetup();
+    delete (missing.armies.B[1] as { name?: string }).name;
+    expectViolation(missing, 'invalid-name', /B.*1/);
+  });
+
+  it('rejects a tactic outside ALL_TACTICS on either side (AD-9, story 4.2)', () => {
+    const s = validSetup();
+    (s as unknown as { tactics: { A: string; B: string } }).tactics.A = 'berserk';
+    expectViolation(s, 'invalid-tactic', /berserk/);
+    const missing = validSetup();
+    delete (missing as unknown as { tactics?: unknown }).tactics;
+    expectViolation(missing, 'invalid-tactic', /A/);
+  });
+
+  it('rejects a leader index that does not point into that side’s army (AD-9, story 4.2)', () => {
+    for (const bad of [-1, 5, 1.5, NaN]) {
+      const s = validSetup();
+      s.leaders.B = bad;
+      expectViolation(s, 'invalid-leader', /B/);
+    }
+    const missing = validSetup();
+    delete (missing as unknown as { leaders?: unknown }).leaders;
+    expectViolation(missing, 'invalid-leader', /A/);
   });
 
   it('rejects placements not parallel to armies, naming the side', () => {

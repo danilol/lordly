@@ -42,7 +42,7 @@
 
 ## Deferred from: code review of story-2.2 (2026-07-14)
 
-- **Status lifecycle rule is duplicated in the shell (sanctioned AD-2 exception — consider `StatusCleared` events at the next `LOG_VERSION` bump).** The event union has no status-expiry events, so the Battle scene's persistent status icons re-state the engine rule "EngagementEnded sheds every status except poison" (`resolve.ts:77-79`) in `clearStatusIconsExceptPoison()`. Story 2.2's spec explicitly sanctioned this (the rule is verified-exact and log-triggered), but it is the one place shell rendering would silently desync if the engine rule ever changed — no compile or test failure would catch it. When a future story bumps `LOG_VERSION` anyway, add explicit `StatusExpired`/`StatusCleared` events and delete the shell-side rule.
+- **RESOLVED (story 4.2, 2026-07-17).** ~~Status lifecycle rule is duplicated in the shell (sanctioned AD-2 exception — consider `StatusCleared` events at the next `LOG_VERSION` bump).~~ The v4 union (the era's single combined bump) added `StatusCleared {unit, spell}`, emitted at every between-engagement reset; `BattleScene` now removes icons log-driven (`removeStatusIcon`) and `clearStatusIconsExceptPoison()` is DELETED — the sanctioned exception is dead, exactly as this item prescribed. Original record: the event union had no status-expiry events, so the Battle scene's persistent status icons re-stated the engine rule "EngagementEnded sheds every status except poison" in `clearStatusIconsExceptPoison()` — the one place shell rendering would silently desync if the engine rule ever changed.
 
 ## Deferred from: code review of story-2.1 (2026-07-13)
 

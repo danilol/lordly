@@ -1,4 +1,4 @@
-import { BALANCE } from '@lordly/engine';
+import { BALANCE, slotTotal } from '@lordly/engine';
 import type { ClassStats, UnitClass } from '@lordly/engine';
 import type { DraftedUnit } from './MatchState';
 
@@ -29,14 +29,14 @@ const CLASS_TEXT: Record<UnitClass, { role: string; behavior: string }> = {
   witch: { role: 'Control', behavior: 'Casts an element-keyed status on a rear enemy; deals no damage' },
 };
 
-/** Whether another unit may still be drafted (FR1 — army capped at BALANCE.armySize). */
+/** Whether another unit may still be drafted (FR1/FR30 — SLOT budget, never a unit count: AD-1). */
 export function canAddUnit(army: readonly DraftedUnit[]): boolean {
-  return army.length < BALANCE.armySize;
+  return slotTotal(army) < BALANCE.slotBudget;
 }
 
-/** Whether the draft is complete and the player may continue to placement (exactly army size). */
+/** Whether the draft is complete and the player may continue to placement (slot budget exactly filled — AD-1). */
 export function canContinue(army: readonly DraftedUnit[]): boolean {
-  return army.length === BALANCE.armySize;
+  return slotTotal(army) === BALANCE.slotBudget;
 }
 
 /**

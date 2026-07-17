@@ -6,11 +6,21 @@ import type { BattleEvent, MatchSetup } from '../src/types';
 /**
  * FR16 Wind→Confusion integration tests. Misfires are seeded 50/50 draws, so
  * each scenario pins a PROBED seed where the desired branch occurs (seeds
- * scanned at implementation time; determinism makes the pin permanent).
- * Every misfire must be an `ActionMisfired` marker + effect pair.
+ * RE-PROBED for story 4.2's 5-unit armies — the squad-era stream consumes
+ * differently, so every 3-unit-era pin was stale; determinism makes the new
+ * pins permanent). Every misfire must be an `ActionMisfired` marker + effect
+ * pair.
  */
 function setup(armies: MatchSetup['armies'], placements: MatchSetup['placements'], seed: number): MatchSetup {
-  return { seed, balanceVersion: BALANCE.version, mode: 'single', armies, placements };
+  return {
+    seed,
+    balanceVersion: BALANCE.version,
+    mode: 'single',
+    tactics: { A: 'autonomous', B: 'autonomous' },
+    leaders: { A: 0, B: 0 },
+    armies,
+    placements,
+  };
 }
 
 /** All (marker, effect) pairs in the log. */
@@ -22,27 +32,42 @@ function misfirePairs(log: { events: readonly BattleEvent[] }): Array<[BattleEve
   return pairs;
 }
 
-const witchA = { class: 'witch', element: 'wind' } as const;
+// A-side fixture (5 units, story 4.2): the wind witch at back/center reaches
+// ALL enemy columns (FR7 mirrored reach) and casts on the REARMOST occupied
+// enemy row, preferring unaffected units (FR12) — so she keeps landing
+// confusion on B's back-row actors. The fillers stay in the FRONT row on
+// purpose: melee only reaches B's nearest occupied row, keeping B's back-row
+// confusion patients alive. Names are FR37 flavor, zero gameplay effect.
+const witchA = { class: 'witch', element: 'wind', name: 'Sylwen' } as const;
 const fillersA = [
-  { class: 'knight', element: 'fire' },
-  { class: 'cleric', element: 'water' },
+  { class: 'knight', element: 'fire', name: 'Bramgar' },
+  { class: 'cleric', element: 'water', name: 'Nerienne' },
+  { class: 'knight', element: 'earth', name: 'Thorvald' },
+  { class: 'mercenary', element: 'fire', name: 'Kestrel' },
 ] as const;
 const placementsA = [
   { row: 'back', col: 'center' },
   { row: 'front', col: 'center' },
   { row: 'back', col: 'left' },
+  { row: 'front', col: 'left' },
+  { row: 'front', col: 'right' },
 ] as const;
 
 describe('FR16 confusion misfires (seeded, probed pins)', () => {
   it('a confused MAGE blasts its own fullest row (itself included); a confused CLERIC heals an enemy', () => {
+    // B's back row holds EXACTLY the mage (B:1) and cleric (B:2): rows count
+    // front 2 / mid 1 / back 2, and FR10's fullest-row tie breaks REARMOST —
+    // so the misfired blast strikes the mage's own back row, itself included.
     const log = resolveBattle(
       setup(
         {
           A: [witchA, ...fillersA],
           B: [
-            { class: 'mercenary', element: 'fire' },
-            { class: 'mage', element: 'earth' },
-            { class: 'cleric', element: 'water' },
+            { class: 'mercenary', element: 'fire', name: 'Dorn' },
+            { class: 'mage', element: 'earth', name: 'Vexalia' },
+            { class: 'cleric', element: 'water', name: 'Miriel' },
+            { class: 'knight', element: 'fire', name: 'Hargen' },
+            { class: 'mercenary', element: 'earth', name: 'Rooke' },
           ],
         },
         {
@@ -51,9 +76,11 @@ describe('FR16 confusion misfires (seeded, probed pins)', () => {
             { row: 'front', col: 'center' },
             { row: 'back', col: 'center' },
             { row: 'back', col: 'left' },
+            { row: 'front', col: 'left' },
+            { row: 'mid', col: 'center' },
           ],
         },
-        1, // probed: mage self-blast AND cleric enemy-heal both misfire on this seed
+        1, // probed (re-probed for 4.2's 5-unit armies): mage self-blast AND cleric enemy-heal both misfire on this seed
       ),
     );
     const pairs = misfirePairs(log);
@@ -78,9 +105,11 @@ describe('FR16 confusion misfires (seeded, probed pins)', () => {
         {
           A: [witchA, ...fillersA],
           B: [
-            { class: 'mercenary', element: 'fire' },
-            { class: 'knight', element: 'earth' },
-            { class: 'knight', element: 'water' },
+            { class: 'mercenary', element: 'fire', name: 'Dorn' },
+            { class: 'knight', element: 'earth', name: 'Hargen' },
+            { class: 'knight', element: 'water', name: 'Ulfric' },
+            { class: 'archer', element: 'fire', name: 'Fenwick' },
+            { class: 'mercenary', element: 'earth', name: 'Rooke' },
           ],
         },
         {
@@ -89,9 +118,11 @@ describe('FR16 confusion misfires (seeded, probed pins)', () => {
             { row: 'front', col: 'center' },
             { row: 'back', col: 'center' },
             { row: 'mid', col: 'left' },
+            { row: 'mid', col: 'right' },
+            { row: 'front', col: 'left' },
           ],
         },
-        1, // probed: confused B:1 knight attacks its own B:2
+        1, // probed (re-probed for 4.2's 5-unit armies): a confused B striker attacks one of its own on this seed
       ),
     );
     const pairs = misfirePairs(log);
@@ -108,14 +139,18 @@ describe('FR16 confusion misfires (seeded, probed pins)', () => {
   });
 
   it('a confused WITCH applies her spell to a random living ally; repeat applications fizzle (no stack)', () => {
+    // B:0 is the ONLY back-row B unit, so A's witch confuses her first; she
+    // stays water-element — her misfired cast must land 'sleep' on her own side.
     const log = resolveBattle(
       setup(
         {
           A: [witchA, ...fillersA],
           B: [
-            { class: 'witch', element: 'water' },
-            { class: 'knight', element: 'earth' },
-            { class: 'mercenary', element: 'water' },
+            { class: 'witch', element: 'water', name: 'Morwenna' },
+            { class: 'knight', element: 'earth', name: 'Hargen' },
+            { class: 'mercenary', element: 'water', name: 'Skarn' },
+            { class: 'mercenary', element: 'fire', name: 'Dorn' },
+            { class: 'archer', element: 'earth', name: 'Fenwick' },
           ],
         },
         {
@@ -124,9 +159,11 @@ describe('FR16 confusion misfires (seeded, probed pins)', () => {
             { row: 'back', col: 'right' }, // acts AFTER A's witch (same AGI, higher col) → gets confused first
             { row: 'front', col: 'center' },
             { row: 'mid', col: 'right' },
+            { row: 'front', col: 'right' },
+            { row: 'mid', col: 'center' },
           ],
         },
-        1, // probed: confused B witch sleeps her OWN ally AND a later misfire fizzles
+        1, // probed (re-probed for 4.2's 5-unit armies): confused B witch sleeps her OWN ally AND a later misfire fizzles
       ),
     );
     const pairs = misfirePairs(log);

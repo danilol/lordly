@@ -24,7 +24,7 @@ function fnv(label: string): number {
 
 describe('named seed streams (AD-10)', () => {
   it('exposes exactly the closed stream set', () => {
-    expect([...STREAM_LABELS].sort()).toEqual(['ai/A', 'ai/B', 'battle', 'elements/A', 'elements/B'].sort());
+    expect([...STREAM_LABELS].sort()).toEqual(['ai/A', 'ai/B', 'battle', 'elements/A', 'elements/B', 'names/A', 'names/B'].sort());
     const streams = createStreams(42);
     expect(Object.keys(streams).sort()).toEqual([...STREAM_LABELS].sort());
   });
