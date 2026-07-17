@@ -155,6 +155,7 @@ Tasks executed in story order. Engine schema first (Tasks 1–3: slot schema →
 - **AC7 (tests):** all engine suites re-authored for 5-slot armies — determinism/termination/judging-symmetry properties over new arbitraries (names/tactics/leaders included), 8 goldens re-recorded ONCE with scenario intent preserved, both-mode sweep inside the ≤65% band with the re-tuned pool. Wardens note for 4.12 (the 3.0 melee-floor input): 30.9% single / 62.8% wipeout — melee is wipeout-viable; single mode is structurally a ranged damage race.
 - Pool doc comment records the 4.2 meta lessons; `sim/sweep.ts` builds armies exactly as MatchFlow does (elements + names per unit).
 - deferred-work.md: the 2.2 StatusCleared item CLOSED (the sanctioned AD-2 exception is dead — `clearStatusIconsExceptPoison()` deleted).
+- **Device session round 1 (Danilo, 2026-07-17):** names on cards approved ("i liked that we displayed the names, and on the battle we hide it"); "I am excited by having 5 characters in my party". One DEFECT caught: the Result screen's composition chips were still 3-unit-era 104px cards (5 × 104 + gaps = 560px — off the 360 base; the recon missed this coupling site) — FIXED same session: compact 64px chips matching the tray card language, soldier name included, element word dropped for the dot. Two PO wishes logged to deferred-work.md, NOT self-scoped: (1) hide board class codes and identify by sprite — flagged as a UX-spine conflict (dossier §7 / FR39f board-code treatment) needing an amendment decision; (2) a Result battle-stats summary (damage/blocks/status/heals, total + per char) — future, log-derivable shell work.
 
 ### File List
 
@@ -191,6 +192,7 @@ MODIFIED (engine):
 - packages/engine/test/purity.test.ts
 
 MODIFIED (web):
+- apps/web/src/scenes/ResultScene.ts (device-session fix: compact 5-unit chips + names)
 - apps/web/src/flow/MatchFlow.ts
 - apps/web/src/flow/MatchState.ts
 - apps/web/src/flow/storage.ts
@@ -216,4 +218,5 @@ MODIFIED (docs):
 
 ## Change Log
 
+- 2026-07-17 — Device-session fix: ResultScene composition chips re-worked from 104px 3-unit-era cards (560px overflow at five units) to the compact 64px tray-card language, with the soldier name on the chip. Two PO wishes from the same session logged to deferred-work.md (board-code removal — UX-spine conflict flagged; Result battle-stats summary).
 - 2026-07-17 — Story 4.2 implementation: the era turnover. ONE logVersion bump (3→4, complete union per dossier §5) + ONE balanceVersion bump (2→3: slotBudget 5, sizeClass, engagementCap 10). Names (FR37) via new `names/A|B` streams + engine `names.ts` (outside the balance hash). STRATEGY_POOL re-authored + re-tuned for the 5-unit meta (both-mode ≤65% band re-verified). Pre-era history display-tolerance fix (the storage catch). Shell reworked for five slots; names on placement/reveal cards and in narration; status-icon clears are log-driven.

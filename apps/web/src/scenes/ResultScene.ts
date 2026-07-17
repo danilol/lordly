@@ -111,32 +111,36 @@ export class ResultScene extends Scene {
   }
 
   /**
-   * One side's composition line: heading + a chip per unit with the real
-   * sprite, class code, element word, and the shared 12px element dot (the
-   * last placeholder-era square retired — story 2.3, closing 2.1's deferred
-   * Result-badge normalization).
+   * One side's composition line: heading + a compact chip per unit (story
+   * 4.2, Danilo's device catch: the 104px 3-unit-era chips put five units at
+   * 560px — off the 360 base). Same 64px card language as the draft/placement
+   * trays: sprite over code over the soldier NAME (a name surface — cards
+   * show names, the battle board keeps sprites), element as the shared dot
+   * (the word dropped with the width).
    */
   private drawComposition(side: Side, roster: UnitSnapshot[], heading: string, y: number, headingColor: string) {
     crispText(this, BASE_WIDTH / 2, y, heading, { fontFamily: 'Arial Black', fontSize: '13px', color: headingColor }).setOrigin(0.5);
     const units = roster.filter((u) => u.side === side);
-    const chipW = 104;
-    const chipH = 52;
-    const gap = 10;
+    const chipW = 64;
+    const chipH = 64;
+    const gap = 8;
     const totalW = units.length * chipW + (units.length - 1) * gap;
     const startX = (BASE_WIDTH - totalW) / 2;
     const sideLine = side === 'A' ? PALETTE.playerLine : PALETTE.enemyLine;
     units.forEach((unit, i) => {
       const x = startX + i * (chipW + gap) + chipW / 2;
-      const cy = y + 40;
+      const cy = y + 44;
       this.add.rectangle(x, cy, chipW, chipH, sideLine, 0.12).setStrokeStyle(1, sideLine);
-      addUnitSprite(this, x - 32, cy, unit.class, 32);
-      crispText(this, x + 8, cy - 10, CLASS_ABBREVIATIONS[unit.class], {
+      addUnitSprite(this, x, cy - 14, unit.class, 28);
+      crispText(this, x, cy + 8, CLASS_ABBREVIATIONS[unit.class], {
         fontFamily: 'Arial Black',
         fontSize: `${CARD_CLASS_FONT_PX}px`,
         color: PALETTE.title,
       }).setOrigin(0.5);
-      crispText(this, x + 8, cy + 9, unit.element, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
-      addElementBadge(this, x + chipW / 2 - 12, cy - 16, unit.element);
+      if (unit.name) {
+        crispText(this, x, cy + 23, unit.name, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
+      }
+      addElementBadge(this, x + chipW / 2 - 10, cy - 22, unit.element);
     });
   }
 
