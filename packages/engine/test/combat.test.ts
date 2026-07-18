@@ -400,6 +400,11 @@ describe('FR18 judging symmetry (property)', () => {
         ...s,
         armies: { A: s.armies.B, B: s.armies.A },
         placements: { A: s.placements.B, B: s.placements.A },
+        // Story 4.4: tactics and leaders are per-side battle inputs, so a true
+        // mirror must swap them too — otherwise A plays B's army under A's own
+        // (unswapped) tactic and the symmetry is broken by construction.
+        tactics: { A: s.tactics.B, B: s.tactics.A },
+        leaders: { A: s.leaders.B, B: s.leaders.A },
       };
       const v1 = ended(resolveBattle(s));
       const v2 = ended(resolveBattle(swapped));

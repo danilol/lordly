@@ -12,7 +12,7 @@ Draft to fill your five slots (duplicates allowed). Each unit also rolls one of 
 | --- | --- | --- | --- | --- |
 | Knight | Front-line tank | 140 | 2/1/1 | Melee: strikes the nearest reachable enemy row |
 | Mercenary | Neutral sellsword | 110 | 2/1/1 | Melee: nearest reachable enemy row, no class advantage |
-| Archer | Back-row sniper | 90 | 1/2/2 | Ranged: arcs over the front to hit the rearmost reachable row |
+| Archer | Back-row sniper | 90 | 1/2/2 | Ranged: arcs over the front to hit the rearmost enemy row |
 | Wizard | Row artillery | 80 | 1/1/2 | Blast: hits every unit in the enemy row with the most units |
 | Cleric | Support | 90 | 1/1/2 | Heals the most-hurt ally; a weak staff attack if none is hurt |
 | Witch | Control | 85 | 1/1/2 | Casts an element-keyed status on a rear enemy; deals no damage |
@@ -43,12 +43,23 @@ Where a unit stands decides how often it acts — the numbers above are actions 
 
 The two boards face each other, front rows nearest. Your left column faces the enemy's right — one straight lane.
 
-- **Reach.** A unit can act on its facing enemy column and the columns beside it. A corner unit reaches two enemy columns; a center unit reaches all three. When several targets in a row qualify, the attacker favors its facing column, then the column nearer the center. (The blast and the Cleric's healing ignore reach.)
-- **Melee (Knight, Berserker, Phalanx, Mercenary, Ninja, Valkyrie).** Strikes the **nearest occupied enemy row** — a living front unit shields the rows behind it. No bypassing the wall.
-- **Ranged (Archer).** Arrows arc over the front line and strike the **rearmost occupied row it can reach** — the counter to artillery hiding in the back.
+- **Reach — melee only.** A melee unit can strike its facing enemy column and the columns beside it: a corner unit reaches two enemy columns, a center unit all three. When several targets in a row qualify, it favors its facing column, then the column nearer the center. **Last Stand:** if nothing is in reach, a melee unit strikes an out-of-reach enemy instead — a soldier never stands idle while an enemy lives.
+- **Ranged and magic reach the whole board.** Archers, the Cleric's staff, the Witch's curse, and the Wizard's blast are not bound by columns — they choose across the entire enemy grid.
+- **Melee (Knight, Berserker, Phalanx, Mercenary, Ninja, Valkyrie).** Strikes the **nearest occupied enemy row** it can reach — a living front unit shields the rows behind it. No bypassing the wall.
+- **Ranged (Archer).** Arrows arc over the front line and strike the **rearmost occupied enemy row** — the counter to artillery hiding in the back.
 - **Blast (Wizard, Sorceress).** Each cast strikes **every unit in one enemy row** — the row with the most living enemies (ties go rearward). In **Wipeout**, each struck unit takes only ×0.75 of the damage — over a long war, the artillery spreads thin.
 - **Heal (Cleric).** Restores the **living ally with the lowest HP share** (herself included). If nobody is hurt, she pokes with her staff instead — feebly.
-- **Curse (Witch).** Applies her prepared spell to the rearmost enemy she can reach, preferring one not yet afflicted. She deals no damage; she doesn't need to.
+- **Curse (Witch).** Applies her prepared spell to the rearmost enemy, preferring one not yet afflicted. She deals no damage; she doesn't need to.
+
+## Your Army's Tactic
+
+Before battle you set one **tactic** for your whole army — how every unit chooses whom to hit. It is a second plan layered over your picks and placement, set at placement and hidden until the reveal (the enemy commits one too, unseen). It never changes *where* a unit can reach, only *which* legal target it prefers.
+
+- **Autonomous** — each unit targets by its own instinct: melee the nearest enemy row, ranged the rearmost.
+- **Attack Weakest** — the whole army focuses the enemy with the least HP left, to finish wounded units before they act again.
+- **Attack Strongest** — the whole army focuses the enemy with the most HP left, to break the toughest threat first.
+
+When two enemies are tied for weakest or strongest, the unit falls back to its Autonomous preference — the battle stays perfectly repeatable. (A fourth tactic, *Attack Leader*, joins once you can crown a leader.)
 
 ## Elements and the Witch's Spells
 

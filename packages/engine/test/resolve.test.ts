@@ -385,25 +385,27 @@ describe('resolveBattle chassis (FR13, FR17, AD-1, AD-12)', () => {
   });
 
   it('turn counts equal each unit’s row action budget (FR15/FR17)', () => {
-    // Columns chosen so nobody dies before spending their budget: only A:2
-    // (back R, reach {0,1}) can shoot B's lone back-row mage B:2 (back L) —
-    // 2 × 30 = 60 < 80 keeps him alive through both his blasts; A's other
-    // archers sit in col 0, whose reach {1,2} can't see enemy col 0.
+    // Both armies are all clerics — the least-lethal class (they heal allies,
+    // and their staff chip is tiny) — so NOBODY dies within the engagement and
+    // every unit spends its full row budget. This survives FR9 global range:
+    // the earlier archer/mage setup relied on reach to keep snipers off each
+    // other, which global range dissolves; all-clerics needs no reach trick.
+    // Turn count per unit therefore equals its row action budget (cleric 1/1/2).
     const log = resolveBattle(
       setup({
         armies: {
           A: army([
-            { class: 'archer', element: 'fire' }, // front L: 1
-            { class: 'archer', element: 'water' }, // mid L: 2
-            { class: 'archer', element: 'wind' }, // back R: 2
+            { class: 'cleric', element: 'fire' }, // front L: 1
+            { class: 'cleric', element: 'water' }, // mid L: 1
+            { class: 'cleric', element: 'wind' }, // back R: 2
             { class: 'cleric', element: 'earth' }, // mid C: 1
             { class: 'cleric', element: 'fire' }, // back C: 2
           ]),
           B: army(
             [
-              { class: 'mage', element: 'earth' }, // front C: 1
-              { class: 'mage', element: 'fire' }, // mid C: 1
-              { class: 'mage', element: 'water' }, // back L: 2
+              { class: 'cleric', element: 'earth' }, // front C: 1
+              { class: 'cleric', element: 'fire' }, // mid C: 1
+              { class: 'cleric', element: 'water' }, // back L: 2
               { class: 'cleric', element: 'wind' }, // mid L: 1
               { class: 'cleric', element: 'earth' }, // mid R: 1
             ],
@@ -430,16 +432,17 @@ describe('resolveBattle chassis (FR13, FR17, AD-1, AD-12)', () => {
     );
     const all = turnsByPass(log).flat();
     const count = (id: UnitId) => all.filter((u) => u === id).length;
-    expect(count('A:0')).toBe(1);
-    expect(count('A:1')).toBe(2);
-    expect(count('A:2')).toBe(2);
-    expect(count('A:3')).toBe(1);
-    expect(count('A:4')).toBe(2);
-    expect(count('B:0')).toBe(1);
-    expect(count('B:1')).toBe(1);
-    expect(count('B:2')).toBe(2);
-    expect(count('B:3')).toBe(1);
-    expect(count('B:4')).toBe(1);
+    expect(count('A:0')).toBe(1); // front cleric
+    expect(count('A:1')).toBe(1); // mid cleric
+    expect(count('A:2')).toBe(2); // back cleric
+    expect(count('A:3')).toBe(1); // mid cleric
+    expect(count('A:4')).toBe(2); // back cleric
+    expect(count('B:0')).toBe(1); // front cleric
+    expect(count('B:1')).toBe(1); // mid cleric
+    expect(count('B:2')).toBe(2); // back cleric
+    expect(count('B:3')).toBe(1); // mid cleric
+    expect(count('B:4')).toBe(1); // mid cleric
+    expect(log.events.filter((e) => e.type === 'UnitDied')).toHaveLength(0); // the no-death premise
   });
 
   it('throws InvalidMatchSetupError for malformed input (AC2 wiring)', () => {

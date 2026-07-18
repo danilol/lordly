@@ -24,7 +24,7 @@ export interface RulesCard {
 const CLASS_TEXT: Record<UnitClass, { role: string; behavior: string }> = {
   knight: { role: 'Front-line tank', behavior: 'Melee: strikes the nearest reachable enemy row' },
   mercenary: { role: 'Neutral sellsword', behavior: 'Melee: nearest reachable enemy row, no class advantage' },
-  archer: { role: 'Back-row sniper', behavior: 'Ranged: arcs over the front to hit the rearmost reachable row' },
+  archer: { role: 'Back-row sniper', behavior: 'Ranged: arcs over the front to hit the rearmost enemy row' },
   mage: { role: 'Row artillery', behavior: 'Blast: hits every unit in the enemy row with the most units' },
   cleric: { role: 'Support', behavior: 'Heals the most-hurt ally; a weak staff attack if none is hurt' },
   witch: { role: 'Control', behavior: 'Casts an element-keyed status on a rear enemy; deals no damage' },

@@ -421,40 +421,43 @@ describe('FR16 poison — ticks at natural engagement end, can kill, ordered by 
 });
 
 describe('FR12/FR16 witch cast fizzle (no stack, deterministic)', () => {
-  it('second cast fizzles when every reachable enemy already bears the spell', () => {
-    // Two water witches share the {1,2}-column reach: the mid-row helper (same
-    // AGI, nearer row → acts first) sleeps the rearmost reachable knight, A:0
-    // then sleeps the only unaffected one left. By her second action EVERY
-    // reachable enemy bears sleep → the cast is wasted, no stack.
+  it('second cast fizzles when every LIVING enemy already bears the spell (FR9 global range)', () => {
+    // Five water witches (AGI 26) vs five knights (AGI 8): under FR9 global
+    // range every enemy is a legal target, so in pass 1 the five witches — all
+    // acting before any knight (AGI) — sleep all five knights (rearmost-first,
+    // prefer-unafflicted). In pass 2 the three back-row witches still hold a
+    // second action, but EVERY living enemy now bears sleep → the cast is
+    // wasted, no stack (FR16). A tactic never changes this: prefer-unafflicted
+    // filters the legal list to empty, so the cast fizzles regardless.
     const log = resolveBattle(
       setup({
         armies: {
-          A: [u('witch', 'water'), u('witch', 'water'), u('knight', 'fire'), u('knight', 'wind'), u('knight', 'earth')],
-          B: [u('knight', 'earth'), u('knight', 'fire'), u('knight', 'water'), u('knight', 'wind'), u('knight', 'earth')],
+          A: [u('witch', 'water'), u('witch', 'water'), u('witch', 'water'), u('witch', 'water'), u('witch', 'water')],
+          B: [u('knight', 'fire'), u('knight', 'wind'), u('knight', 'earth'), u('knight', 'water'), u('knight', 'fire')],
         },
         placements: {
           A: [
-            { row: 'back', col: 'left' }, // witch under test: reaches enemy cols {1,2}, 2 actions
-            { row: 'mid', col: 'left' }, // helper witch: same reach, 1 action, acts first
+            { row: 'back', col: 'left' }, // witch under test: 2 actions
+            { row: 'back', col: 'center' }, // 2 actions
+            { row: 'back', col: 'right' }, // 2 actions
+            { row: 'mid', col: 'left' }, // 1 action (mid row acts first)
+            { row: 'mid', col: 'right' }, // 1 action
+          ],
+          B: [
             { row: 'front', col: 'left' },
             { row: 'front', col: 'center' },
             { row: 'front', col: 'right' },
-          ],
-          B: [
-            { row: 'front', col: 'center' }, // reachable — A:0's cast (helper slept B:3 first)
-            { row: 'front', col: 'left' }, // unreachable (col 0)
-            { row: 'mid', col: 'left' }, // unreachable (col 0)
-            { row: 'mid', col: 'center' }, // reachable — the helper's rearmost target
-            { row: 'back', col: 'left' }, // unreachable (col 0)
+            { row: 'mid', col: 'left' },
+            { row: 'mid', col: 'center' },
           ],
         },
       }),
     );
     const casts = byType(log, 'StatusApplied').filter((s) => s.source === 'A:0');
-    expect(casts).toHaveLength(1); // first cast sleeps the last unaffected reachable knight
-    expect(casts[0]).toMatchObject({ target: 'B:0', spell: 'sleep' });
+    expect(casts).toHaveLength(1); // pass 1: A:0 sleeps the rearmost still-unafflicted knight
+    expect(casts[0]).toMatchObject({ spell: 'sleep' });
     const fizzles = log.events.filter((e) => e.type === 'ActionFizzled' && e.unit === 'A:0');
-    expect(fizzles).toHaveLength(1); // second cast wasted — no stack
+    expect(fizzles).toHaveLength(1); // pass 2: everyone asleep → wasted, no stack
   });
 });
 
@@ -500,5 +503,109 @@ describe('FR14/FR32 roster wave 1 — new classes act by their ROLE (story 4.3)'
       expect(s.kind).toBe('slash');
       expect(s.targets).toHaveLength(1);
     }
+  });
+});
+
+describe('FR34 tactics wired through resolve (story 4.4)', () => {
+  // Override the autonomous defaults from the shared setup() helper.
+  const withTactics = (s: MatchSetup, tactics: MatchSetup['tactics'], leaders: MatchSetup['leaders']): MatchSetup => ({ ...s, tactics, leaders });
+
+  it('weakest: a melee unit targets the lowest ABSOLUTE-HP reachable enemy, not the Autonomous pick', () => {
+    // A lone knight (front-center) reaches enemy cols {0,1,2}. Two reachable
+    // enemies at the SAME nearest row: a knight (140 HP) in the facing column
+    // (Autonomous would pick it) and a mage (78 HP) off-facing. Weakest picks
+    // the mage by absolute HP; the rest of A/B are parked out of the way.
+    const base = setup({
+      armies: {
+        A: [u('knight', 'fire'), u('cleric', 'water'), u('cleric', 'wind'), u('cleric', 'earth'), u('cleric', 'fire')],
+        B: [u('knight', 'earth'), u('mage', 'fire'), u('cleric', 'water'), u('cleric', 'wind'), u('cleric', 'earth')],
+      },
+      placements: {
+        A: [
+          { row: 'front', col: 'center' }, // the knight under test (faces enemy col 1)
+          { row: 'back', col: 'left' },
+          { row: 'back', col: 'center' },
+          { row: 'back', col: 'right' },
+          { row: 'mid', col: 'left' },
+        ],
+        B: [
+          { row: 'front', col: 'center' }, // B:0 knight (140) — facing column, Autonomous pick
+          { row: 'front', col: 'left' }, // B:1 mage (78) — reachable, lower absolute HP
+          { row: 'back', col: 'left' },
+          { row: 'back', col: 'center' },
+          { row: 'back', col: 'right' },
+        ],
+      },
+    });
+    const autoFirst = byType(resolveBattle(withTactics(base, { A: 'autonomous', B: 'autonomous' }, { A: 0, B: 0 })), 'UnitAttacked').find(
+      (e) => e.source === 'A:0',
+    );
+    const weakFirst = byType(resolveBattle(withTactics(base, { A: 'weakest', B: 'autonomous' }, { A: 0, B: 0 })), 'UnitAttacked').find(
+      (e) => e.source === 'A:0',
+    );
+    expect(autoFirst?.targets[0]?.unit).toBe('B:0'); // Autonomous: facing-column knight
+    expect(weakFirst?.targets[0]?.unit).toBe('B:1'); // Weakest: the lower-HP mage
+  });
+
+  it('leader: a ranged unit snipes the designated enemy leader (else Autonomous)', () => {
+    const base = setup({
+      armies: {
+        A: [u('archer', 'fire'), u('cleric', 'water'), u('cleric', 'wind'), u('cleric', 'earth'), u('cleric', 'fire')],
+        B: [u('knight', 'earth'), u('knight', 'fire'), u('knight', 'water'), u('knight', 'wind'), u('mage', 'earth')],
+      },
+      placements: {
+        A: [
+          { row: 'back', col: 'center' }, // the archer under test
+          { row: 'front', col: 'left' },
+          { row: 'front', col: 'center' },
+          { row: 'front', col: 'right' },
+          { row: 'mid', col: 'left' },
+        ],
+        B: [
+          { row: 'front', col: 'left' }, // B:0
+          { row: 'front', col: 'center' }, // B:1 — the designated leader
+          { row: 'front', col: 'right' }, // B:2
+          { row: 'mid', col: 'center' }, // B:3 — Autonomous rearmost among front/mid... see below
+          { row: 'back', col: 'center' }, // B:4 mage — Autonomous (rearmost) pick
+        ],
+      },
+    });
+    const auto = byType(resolveBattle(withTactics(base, { A: 'autonomous', B: 'autonomous' }, { A: 0, B: 0 })), 'UnitAttacked').find((e) => e.source === 'A:0');
+    const leader = byType(resolveBattle(withTactics(base, { A: 'leader', B: 'autonomous' }, { A: 0, B: 1 })), 'UnitAttacked').find((e) => e.source === 'A:0');
+    expect(auto?.targets[0]?.unit).toBe('B:4'); // Autonomous ranged: rearmost (the back mage)
+    expect(leader?.targets[0]?.unit).toBe('B:1'); // Leader: the crowned front-center unit
+  });
+
+  it('blast under leader targets the LEADER row (D-2c), not the fullest row', () => {
+    // B stacks three in the front row (Autonomous blast → front) but crowns the
+    // lone back-row unit; under `leader` the Sorceress blasts the back row.
+    const base = setup({
+      armies: {
+        A: [u('sorceress', 'fire'), u('cleric', 'water'), u('cleric', 'wind'), u('cleric', 'earth'), u('cleric', 'fire')],
+        B: [u('knight', 'earth'), u('knight', 'fire'), u('knight', 'water'), u('cleric', 'wind'), u('mage', 'earth')],
+      },
+      placements: {
+        A: [
+          { row: 'back', col: 'center' }, // the Sorceress under test
+          { row: 'front', col: 'left' },
+          { row: 'front', col: 'center' },
+          { row: 'front', col: 'right' },
+          { row: 'mid', col: 'left' },
+        ],
+        B: [
+          { row: 'front', col: 'left' }, // B:0 ┐
+          { row: 'front', col: 'center' }, // B:1 ├ fullest row (3) — Autonomous blast
+          { row: 'front', col: 'right' }, // B:2 ┘
+          { row: 'mid', col: 'center' }, // B:3
+          { row: 'back', col: 'center' }, // B:4 — the designated leader, alone in the back row
+        ],
+      },
+    });
+    const auto = byType(resolveBattle(withTactics(base, { A: 'autonomous', B: 'autonomous' }, { A: 0, B: 0 })), 'UnitAttacked').find((e) => e.source === 'A:0');
+    const leader = byType(resolveBattle(withTactics(base, { A: 'leader', B: 'autonomous' }, { A: 0, B: 4 })), 'UnitAttacked').find((e) => e.source === 'A:0');
+    // Autonomous: the 3-unit front row.
+    expect(auto?.targets.map((t) => t.unit).sort()).toEqual(['B:0', 'B:1', 'B:2']);
+    // Leader: the back row — just the crowned B:4.
+    expect(leader?.targets.map((t) => t.unit)).toEqual(['B:4']);
   });
 });

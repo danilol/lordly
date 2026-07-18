@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { reachableEnemyCols, selectBlastRow, selectMeleeTarget, selectRearmostTarget } from '../src/targeting';
-import type { MeleeCandidate } from '../src/targeting';
+import { legalTargets, reachableEnemyCols, selectBlastRow, selectMeleeTarget, selectRangedTarget } from '../src/targeting';
+import type { TargetCandidate } from '../src/targeting';
+import type { UnitId } from '../src/types';
 
-/** Shorthand: candidate at enemy owner-local (rowIndex, colIndex). */
-function at(rowIndex: number, colIndex: number, alive = true): MeleeCandidate {
-  return { rowIndex, colIndex, alive };
+/** Shorthand: candidate at enemy owner-local (rowIndex, colIndex). Default id = `B:col`. */
+function at(rowIndex: number, colIndex: number, opts: { alive?: boolean; hp?: number; id?: UnitId } = {}): TargetCandidate {
+  return { rowIndex, colIndex, alive: opts.alive ?? true, hp: opts.hp ?? 100, id: opts.id ?? `B:${colIndex}` };
 }
 
 describe('FR7 reach (mirrored lanes, owner-local coords)', () => {
@@ -15,98 +16,155 @@ describe('FR7 reach (mirrored lanes, owner-local coords)', () => {
   });
 });
 
-describe('FR8 melee target selection', () => {
-  it('picks only from the nearest occupied reachable row (front shields back)', () => {
-    // Attacker at own right (2): reaches enemy cols {0, 1}.
-    const candidates = [at(0, 0), at(2, 1)]; // front/left alive shields back/center
-    expect(selectMeleeTarget(2, candidates)).toBe(0);
+describe('legalTargets — step ① (FR7 melee reach + Last Stand, FR9 ranged global)', () => {
+  it('melee: living enemies in reachable columns, restricted to the nearest row (FR8 blockade)', () => {
+    // Attacker at own right (2): reaches enemy cols {0,1}; col-2 unit is out of
+    // reach. Of the reachable pair — front/left (row 0) and mid/center (row 1) —
+    // only the nearest occupied row (front) is legal: the front shields the mid.
+    const candidates = [at(0, 0), at(0, 2), at(1, 1)];
+    expect(legalTargets('melee', 2, candidates)).toEqual([0]);
   });
 
-  it('an unreachable front unit shields nothing', () => {
-    // Attacker at own right (2): reach {0,1}; enemy front/right (col 2) is unreachable.
-    const candidates = [at(0, 2), at(2, 0)]; // front/right unreachable; back/left reachable
-    expect(selectMeleeTarget(2, candidates)).toBe(1);
+  it('melee Last Stand: empty reachable list falls back to ALL living (out-of-reach becomes legal)', () => {
+    // Attacker at own left (0): reach {1,2}; the only living enemy is at col 0.
+    const candidates = [at(0, 0), at(1, 0, { alive: false })];
+    expect(legalTargets('melee', 0, candidates)).toEqual([0]); // Last Stand
   });
 
-  it('prefers the facing column first', () => {
-    // Attacker at own left (0): facing enemy col 2, adjacent 1. Same row, both alive.
-    const candidates = [at(0, 1), at(0, 2)];
-    expect(selectMeleeTarget(0, candidates)).toBe(1); // col 2 = facing
-  });
-
-  it('nearest row dominates the column chain (row decides before any column key)', () => {
-    // Attacker at own left (0): reach {1,2}; the facing col 2 unit is in a
-    // FARTHER row, so the nearer center-column unit wins on the row key.
-    const candidates = [at(0, 1), at(1, 2)];
-    expect(selectMeleeTarget(0, candidates)).toBe(0);
-  });
-
-  it('corner attacker, facing column empty in the nearest row → takes the adjacent center', () => {
-    // Attacker at own left (0): reach {1,2}; nearest row has only col 1.
-    // (FR8 priority ② is provably inert at 3 columns — see targeting.ts note —
-    // so this pins the facing-empty branch outcome, not the center-distance key.)
-    const candidates = [at(0, 1), at(1, 2), at(2, 2)];
-    expect(selectMeleeTarget(0, candidates)).toBe(0);
-  });
-
-  it("breaks the center-attacker adjacency tie with the ATTACKER'S-view left (enemy owner-local right)", () => {
-    // Attacker at own center (1): facing col 1 empty; eligible row has cols 0 and 2.
-    const candidates = [at(0, 0), at(0, 2)];
-    expect(selectMeleeTarget(1, candidates)).toBe(1); // enemy col 2 = attacker-view left
-  });
-
-  it('ignores dead and unreachable units entirely', () => {
-    // Attacker at own left (0): reach {1,2}.
-    const candidates = [at(0, 2, false), at(0, 0), at(1, 1)];
-    // front/right dead; front/left unreachable; nearest occupied reachable row = mid.
-    expect(selectMeleeTarget(0, candidates)).toBe(2);
-  });
-
-  it('returns undefined when no living reachable enemy exists', () => {
-    // Attacker at own left (0): reach {1,2}; only enemy alive is at col 0 (unreachable).
-    expect(selectMeleeTarget(0, [at(0, 0), at(1, 0, false)])).toBeUndefined();
+  it('ranged: the whole living grid, no column filter (FR9 global range)', () => {
+    // Attacker at own left (0): reach would be {1,2}, but ranged ignores reach.
+    const candidates = [at(0, 0), at(2, 0), at(1, 1, { alive: false })];
+    expect(legalTargets('ranged', 0, candidates)).toEqual([0, 1]);
   });
 });
 
-describe('FR9 ranged/magic target selection (rearmost)', () => {
-  it('picks only from the rearmost occupied reachable row (arcs over the front line)', () => {
-    // Attacker at own left (0): reach {1,2}. Front unit does NOT shield.
+describe('FR8 melee target selection (Autonomous — bit-identical to pre-4.4)', () => {
+  const auto = 'autonomous' as const;
+
+  it('picks only from the nearest occupied reachable row (front shields back)', () => {
+    const candidates = [at(0, 0), at(2, 1)];
+    expect(selectMeleeTarget(2, candidates, auto)).toBe(0);
+  });
+
+  it('an unreachable front unit shields nothing', () => {
+    const candidates = [at(0, 2), at(2, 0)];
+    expect(selectMeleeTarget(2, candidates, auto)).toBe(1);
+  });
+
+  it('prefers the facing column first', () => {
+    const candidates = [at(0, 1), at(0, 2)];
+    expect(selectMeleeTarget(0, candidates, auto)).toBe(1); // col 2 = facing
+  });
+
+  it('nearest row dominates the column chain', () => {
+    const candidates = [at(0, 1), at(1, 2)];
+    expect(selectMeleeTarget(0, candidates, auto)).toBe(0);
+  });
+
+  it("breaks the center-attacker adjacency tie with the attacker's-view left", () => {
+    const candidates = [at(0, 0), at(0, 2)];
+    expect(selectMeleeTarget(1, candidates, auto)).toBe(1); // enemy col 2 = attacker-view left
+  });
+
+  it('ignores dead and unreachable units entirely', () => {
+    const candidates = [at(0, 2, { alive: false }), at(0, 0), at(1, 1)];
+    expect(selectMeleeTarget(0, candidates, auto)).toBe(2);
+  });
+
+  it('Last Stand: with nothing reachable, targets an out-of-reach living enemy instead of idling', () => {
+    // Pre-4.4 this returned undefined (idle skip); FR7 Last Stand now targets col 0.
+    expect(selectMeleeTarget(0, [at(0, 0), at(1, 0, { alive: false })], auto)).toBe(0);
+  });
+
+  it('returns undefined only when NO living enemy exists at all', () => {
+    expect(selectMeleeTarget(0, [at(0, 0, { alive: false }), at(1, 0, { alive: false })], auto)).toBeUndefined();
+  });
+});
+
+describe('FR9 ranged/magic target selection (Autonomous, GLOBAL range)', () => {
+  const auto = 'autonomous' as const;
+
+  it('picks the rearmost occupied row (arcs over the front line)', () => {
     const candidates = [at(0, 1), at(2, 2)];
-    expect(selectRearmostTarget(0, candidates)).toBe(1); // back row wins
+    expect(selectRangedTarget(0, candidates, auto)).toBe(1); // back row wins
   });
 
-  it('an unreachable rear unit does not extend eligibility', () => {
-    // Attacker at own right (2): reach {0,1}; rearmost REACHABLE is mid.
-    const candidates = [at(2, 2), at(1, 0)]; // back/right unreachable
-    expect(selectRearmostTarget(2, candidates)).toBe(1);
+  it('reaches a formerly-unreachable rear unit (global range, no reach filter)', () => {
+    // Attacker at own right (2): pre-4.4 reach {0,1} excluded col-2 back unit;
+    // FR9 global range now reaches it, and rearmost wins.
+    const candidates = [at(2, 2), at(1, 0)];
+    expect(selectRangedTarget(2, candidates, auto)).toBe(0); // back/right now legal + rearmost
   });
 
-  it('applies the ratified FR8 column chain within the rearmost row', () => {
-    // Attacker at own left (0): facing enemy col 2. Both in back row.
-    const candidates = [at(2, 1), at(2, 2)];
-    expect(selectRearmostTarget(0, candidates)).toBe(1); // facing wins
-    // Center attacker adjacency tie: attacker-view left = enemy col 2.
-    expect(selectRearmostTarget(1, [at(2, 0), at(2, 2)])).toBe(1);
+  it('applies the FR8 column chain within the rearmost row', () => {
+    expect(selectRangedTarget(0, [at(2, 1), at(2, 2)], auto)).toBe(1); // facing wins
+    expect(selectRangedTarget(1, [at(2, 0), at(2, 2)], auto)).toBe(1); // attacker-view left
   });
 
-  it('ignores dead units and returns undefined with no living reachable enemy', () => {
-    expect(selectRearmostTarget(0, [at(2, 2, false), at(0, 0)])).toBeUndefined();
+  it('ignores dead units; undefined only when no living enemy exists', () => {
+    expect(selectRangedTarget(0, [at(2, 2, { alive: false }), at(0, 0)], auto)).toBe(1);
+    expect(selectRangedTarget(0, [at(2, 2, { alive: false })], auto)).toBeUndefined();
+  });
+});
+
+describe('FR34 tactics over the legal list (deterministic — no randomness)', () => {
+  it('weakest picks the lowest absolute HP; strongest the highest', () => {
+    // Global (ranged) so reach never confounds; three back-row enemies.
+    const candidates = [at(2, 0, { hp: 40, id: 'B:0' }), at(2, 1, { hp: 10, id: 'B:1' }), at(2, 2, { hp: 90, id: 'B:2' })];
+    expect(selectRangedTarget(0, candidates, 'weakest')).toBe(1); // hp 10
+    expect(selectRangedTarget(0, candidates, 'strongest')).toBe(2); // hp 90
+  });
+
+  it('weakest/strongest ties fall back to the Autonomous priority (FR20 — no new randomness)', () => {
+    // Two equal-HP enemies; Autonomous rearmost+facing decides. Attacker col 0 faces enemy col 2.
+    const candidates = [at(2, 1, { hp: 50 }), at(2, 2, { hp: 50 })];
+    expect(selectRangedTarget(0, candidates, 'weakest')).toBe(1); // tie → facing col 2
+  });
+
+  it('melee weakest still respects reach — a tactic never expands reach', () => {
+    // Attacker col 2 reaches {0,1}; the col-2 enemy has the lowest HP but is out of reach.
+    const candidates = [at(0, 0, { hp: 30 }), at(0, 1, { hp: 60 }), at(0, 2, { hp: 5 })];
+    expect(selectMeleeTarget(2, candidates, 'weakest')).toBe(0); // hp 30 (reachable), NOT the hp-5 col-2
+  });
+
+  it('melee blockade holds under a tactic: cannot strike a weaker BACK-row enemy shielded by a front unit', () => {
+    // The exact bug Danilo caught: a front unit (hp 140) shields a back unit (hp
+    // 40). Weakest would prefer the back unit by HP, but melee is physically
+    // blocked by the front line — it hits the shield. Ranged arcs over it.
+    const candidates = [at(0, 1, { hp: 140, id: 'B:0' }), at(2, 1, { hp: 40, id: 'B:1' })];
+    expect(selectMeleeTarget(1, candidates, 'weakest')).toBe(0); // the front shield, NOT the weaker back unit
+    expect(selectRangedTarget(1, candidates, 'weakest')).toBe(1); // ranged bypasses → the weak back unit
+  });
+
+  it('leader targets the enemy leader when it is legal', () => {
+    const candidates = [at(0, 0, { id: 'B:0' }), at(2, 1, { id: 'B:1' }), at(1, 2, { id: 'B:2' })];
+    expect(selectRangedTarget(0, candidates, 'leader', 'B:1')).toBe(1);
+  });
+
+  it('leader falls back to Autonomous when the leader is not in the legal list (dead or out of reach)', () => {
+    // Leader B:2 is dead → not legal; Autonomous rearmost picks the living back unit.
+    const candidates = [at(0, 0, { id: 'B:0' }), at(2, 1, { id: 'B:1' }), at(1, 2, { id: 'B:2', alive: false })];
+    expect(selectRangedTarget(0, candidates, 'leader', 'B:2')).toBe(1); // autonomous rearmost
+  });
+
+  it('leader under melee falls back to Autonomous when the leader is out of reach', () => {
+    // Attacker col 2 reaches {0,1}; leader B:2 (col 2) is out of reach → autonomous nearest reachable.
+    const candidates = [at(0, 0, { id: 'B:0' }), at(0, 2, { id: 'B:2' })];
+    expect(selectMeleeTarget(2, candidates, 'leader', 'B:2')).toBe(0);
   });
 });
 
 describe('FR10 blast row selection', () => {
   it('picks the row with most living units, ignoring reach', () => {
-    const candidates = [at(0, 0), at(1, 1), at(1, 2)];
-    expect(selectBlastRow(candidates)).toBe(1); // mid has 2
+    expect(selectBlastRow([at(0, 0), at(1, 1), at(1, 2)])).toBe(1); // mid has 2
   });
 
   it('breaks count ties toward the rearmost row', () => {
-    const candidates = [at(0, 0), at(2, 2)];
-    expect(selectBlastRow(candidates)).toBe(2);
+    expect(selectBlastRow([at(0, 0), at(2, 2)])).toBe(2);
   });
 
   it('counts only living units; undefined when none live', () => {
-    expect(selectBlastRow([at(0, 0, false), at(2, 1)])).toBe(2);
-    expect(selectBlastRow([at(0, 0, false)])).toBeUndefined();
+    expect(selectBlastRow([at(0, 0, { alive: false }), at(2, 1)])).toBe(2);
+    expect(selectBlastRow([at(0, 0, { alive: false })])).toBeUndefined();
   });
 });

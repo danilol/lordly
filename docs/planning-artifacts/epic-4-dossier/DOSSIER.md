@@ -110,7 +110,7 @@ A unit whose row-move is Guard spends its action entering an **engagement-long g
 
 ### Tactics × non-standard actions (FR34 interactions, Open Item 3 closed)
 
-- Single-target actions (melee, arrows, staff, Witch cast): the FR34 pipeline applies verbatim (Danilo's OB64 source re-validated it: Autonomous = global columns + row preference; target tactics dissolve rows too).
+- Single-target actions (melee, arrows, staff, Witch cast): the FR34 pipeline applies verbatim (Danilo's OB64 source re-validated it: Autonomous = global columns + row preference; target tactics dissolve rows too). **AMENDED 2026-07-18 (Danilo, story 4.4 device review):** "target tactics dissolve rows" holds ONLY for ranged/magic (they arc over the front). **MELEE is ALWAYS blocked by the front line** — a living front unit shields the rows behind it even under Attack Weakest/Strongest; a melee unit can never strike the back row through a front unit. Must-have mechanic.
 - **Witch under a tactic:** prefer-unafflicted filters the legal list BEFORE the tactic sort; under Attack Leader she casts on the leader if unafflicted by her spell, else falls back to Autonomous.
 - **Blast under Attack Leader: targets the leader's row** (Danilo, with OB64 sourcing — AoE treats the leader as the focal point); under every other tactic the blast keeps its own rule (most living, tie rearmost).
 - Heals ignore tactics entirely. Last Stand precedes tactic application (pipeline unchanged).

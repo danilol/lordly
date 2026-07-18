@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Placement } from '@lordly/engine';
-import { placeUnit, placedCount, sameCell } from '../src/flow/placement';
+import { placeUnit, placedCount, sameCell, unplaceUnit } from '../src/flow/placement';
 
 const FRONT_C: Placement = { row: 'front', col: 'center' };
 const BACK_L: Placement = { row: 'back', col: 'left' };
@@ -45,6 +45,19 @@ describe('placement grid model (FR4, AD-11)', () => {
     const before: (Placement | null)[] = [FRONT_C, BACK_L, null];
     const after = placeUnit(before, 0, FRONT_C);
     expect(after).toEqual(before);
+  });
+
+  it('unplaceUnit returns a placed unit to the tray (double-tap-to-remove); a fresh board, others untouched', () => {
+    const before: (Placement | null)[] = [FRONT_C, BACK_L, null];
+    const after = unplaceUnit(before, 0);
+    expect(after[0]).toBeNull(); // back to the tray
+    expect(after[1]).toEqual(BACK_L); // others untouched
+    expect(before[0]).toEqual(FRONT_C); // input not mutated
+  });
+
+  it('unplaceUnit on a tray unit is a harmless no-op', () => {
+    const before: (Placement | null)[] = [null, BACK_L, null];
+    expect(unplaceUnit(before, 0)).toEqual(before);
   });
 
   it('never produces an illegal board: at most one unit per cell after any drop', () => {

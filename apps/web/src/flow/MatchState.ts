@@ -1,4 +1,4 @@
-import type { Element, MatchSetup, Mode, Placement, UnitClass } from '@lordly/engine';
+import type { Element, MatchSetup, Mode, Placement, Tactic, UnitClass } from '@lordly/engine';
 
 /**
  * A drafted unit before the battle: its class, its once-rolled element
@@ -64,6 +64,14 @@ export interface MatchState {
    * with the hook so 4.5 only adds the picker.
    */
   playerLeader: number | null;
+  /**
+   * The player's army-wide target-selection tactic (FR34, story 4.4), set by
+   * the Placement picker; defaults to `'autonomous'`. UNLIKE the leader, a
+   * tactic is not tied to any unit, so it is NOT cleared by army mutations —
+   * it persists through draft/remove. `'leader'` is only pickable once story
+   * 4.5 ships leader designation (the picker greys it out until then).
+   */
+  playerTactic: Tactic;
   /** Current phase of the flow (AD-5). */
   phase: MatchPhase;
   /** The assembled, validated setup once committed — the handoff to story 1.9's Reveal. */

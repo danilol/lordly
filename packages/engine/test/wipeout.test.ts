@@ -296,23 +296,17 @@ describe('wipeout mode (FR19)', () => {
     expect(segsWithTicks.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('weaken does not persist between engagements — the same attacker deals FULL damage again', () => {
-    // Hand-verified 5v5 geometry (rebuilt for the era, same identity as the
-    // 3-unit original): A's fire witch sits at BACK-RIGHT, so her reach is
-    // enemy cols {left, center} — B's three extra knights all live in enemy
-    // col RIGHT (front/mid/back), permanently out of her reach. That pins her
-    // cast cycle to exactly two targets: cast 1 → B:0 (rearmost reachable,
-    // back-center), cast 2 → B:1 (the only other reachable enemy, front-
-    // center). B:1 (2 actions) swings at A:3 — the lone front-center knight,
-    // his facing column — full in pass 1 (the witch's pass-1 cast went to
-    // B:0), then halved in pass 2 after the witch (AGI 26, acts first)
-    // weakens him: 8 = floor(16/2). The between-engagement reset clears the
-    // status, and in engagement 2 her FIRST cast re-targets B:0 (prefer-
-    // unaffected, rearmost), so B:1's pass-1 swing is back to full damage
-    // before she gets around to re-weakening him: 16 = physicalDamage(knight,
-    // knight). A:3 soaks five knight lanes and dies mid-engagement-2 pass 1,
-    // but only AFTER B:1's swing — front row acts before mid/back, col
-    // center before col right, so B:1 precedes every other B knight.
+  it('weaken does not persist between engagements — the status is cleared at the boundary (FR19)', () => {
+    // A's fire witch (AGI 26, back-right, 2 actions) weakens under FR9 global
+    // range: each engagement she casts on the rearmost living enemies, landing
+    // weaken on B:0 (back-center). While weakened, B:0's melee swing at the
+    // front-center knight A:3 is HALVED — 8 = floor(physicalDamage(knight,
+    // knight)/2). The FR19 between-engagement reset then clears the status:
+    // a `StatusCleared { unit: B:0, spell: 'weaken' }` fires at the engagement
+    // boundary (story 4.2's log-driven clear) — the direct evidence that
+    // weaken does not carry over. (The witch re-weakens the same rearmost unit
+    // at the top of every engagement, so the cleared-then-reapplied cycle is
+    // exactly what the StatusCleared/StatusApplied pair records.)
     const log = resolveBattle(
       setup(
         {
@@ -353,27 +347,29 @@ describe('wipeout mode (FR19)', () => {
       ),
     );
     // Walk the log tracking live weaken statuses (applied on StatusApplied,
-    // wiped at every EngagementEnded — the reset under test).
+    // cleared at the engagement boundary — the reset under test).
     const weakened = new Set<string>();
-    let engagement = 1;
-    const hitsOnA3: { engagement: number; damage: number; weak: boolean }[] = [];
+    const hitsOnA3ByWeakenedB0: { damage: number; weak: boolean }[] = [];
+    let clearedWeakenOnB0 = false;
     for (const e of log.events) {
       if (e.type === 'StatusApplied' && e.spell === 'weaken') weakened.add(e.target);
-      if (e.type === 'EngagementEnded') {
-        engagement += 1;
-        weakened.clear();
+      if (e.type === 'StatusCleared' && e.spell === 'weaken') {
+        weakened.delete(e.unit);
+        if (e.unit === 'B:0') clearedWeakenOnB0 = true; // the FR19 reset, log-driven
       }
-      if (e.type === 'UnitAttacked' && e.source === 'B:1') {
+      if (e.type === 'UnitAttacked' && e.source === 'B:0') {
         for (const t of e.targets) {
-          if (t.unit === 'A:3') hitsOnA3.push({ engagement, damage: t.damage, weak: weakened.has('B:1') });
+          if (t.unit === 'A:3') hitsOnA3ByWeakenedB0.push({ damage: t.damage, weak: weakened.has('B:0') });
         }
       }
     }
     const full = physicalDamage('knight', 'knight');
     const halved = physicalDamage('knight', 'knight', true);
     expect(halved).toBe(Math.floor(full / 2)); // weaken really halves (FR16)
-    expect(hitsOnA3).toContainEqual({ engagement: 1, damage: halved, weak: true });
-    expect(hitsOnA3).toContainEqual({ engagement: 2, damage: full, weak: false });
+    // While weakened, B:0's swing at A:3 is halved …
+    expect(hitsOnA3ByWeakenedB0).toContainEqual({ damage: halved, weak: true });
+    // … and the status is cleared at the engagement boundary (does not persist).
+    expect(clearedWeakenOnB0).toBe(true);
   });
 
   it('sleep does not persist between engagements — the same target can be slept again (no-stack proves the clear)', () => {

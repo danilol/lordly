@@ -104,7 +104,7 @@ export interface BalanceData {
  * forgotten (AD-8).
  */
 export const BALANCE: BalanceData = {
-  version: 4,
+  version: 5,
   slotBudget: 5,
   engagementCap: 10,
   classes: {

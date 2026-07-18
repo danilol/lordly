@@ -1,6 +1,6 @@
 import { BALANCE, chooseSetup, createStreams, resolveBattle, rollElement, rollName, slotTotal, STRATEGY_POOL, validateMatchSetup } from '@lordly/engine';
-import type { BattleEnded, BattleLog, Element, MatchSetup, Mode, Placement, Unit, UnitClass } from '@lordly/engine';
-import { placeUnit } from './placement';
+import type { BattleEnded, BattleLog, Element, MatchSetup, Mode, Placement, Tactic, Unit, UnitClass } from '@lordly/engine';
+import { placeUnit, unplaceUnit } from './placement';
 import type { DraftedUnit, MatchState } from './MatchState';
 import { createStorage } from './storage';
 import type { WebStorage } from './storage';
@@ -69,6 +69,7 @@ export class MatchFlow {
       elementsRolled: 0,
       nameRolls: [],
       playerLeader: null,
+      playerTactic: 'autonomous',
       phase: 'draft',
       lastAiArchetypeId,
     };
@@ -112,6 +113,7 @@ export class MatchFlow {
       // The names twin (story 4.2): one draw per stored unit, in army order.
       nameRolls: setup.armies.A.map((u) => u.class),
       playerLeader: setup.leaders.A,
+      playerTactic: setup.tactics.A,
       phase: 'committed',
       committedSetup: setup,
       // lastAiArchetypeId is deliberately UNSET: the archetype id isn't stored
@@ -170,9 +172,31 @@ export class MatchFlow {
     this.state.phase = 'placement';
   }
 
+  /** Returns the unit at `unitIndex` from the board to the tray (double-tap-to-remove — story 4.4 device feedback). */
+  unplaceUnit(unitIndex: number): void {
+    if (this.state.phase === 'committed') throw new Error('cannot unplace: match already committed');
+    if (!Number.isInteger(unitIndex) || unitIndex < 0 || unitIndex >= this.state.playerArmy.length) {
+      throw new Error(`unplaceUnit: index ${unitIndex} out of range`);
+    }
+    this.state.playerPlacements = unplaceUnit(this.state.playerPlacements, unitIndex);
+    this.state.phase = 'placement';
+  }
+
   /** How many player units are currently placed on the grid (drives submit gating — FR4/AC4). */
   placedCount(): number {
     return this.state.playerPlacements.filter((p) => p !== null).length;
+  }
+
+  /**
+   * Sets the player's army-wide tactic (FR34, story 4.4) — the Placement
+   * picker's write path (AD-13: scenes never mutate state directly). Unlike the
+   * leader designation, a tactic is army-independent, so it survives draft/remove
+   * and is never cleared. `'leader'` is a valid engine tactic but the picker
+   * keeps it disabled until story 4.5 ships leader designation.
+   */
+  setTactic(tactic: Tactic): void {
+    if (this.state.phase === 'committed') throw new Error('cannot set tactic: match already committed');
+    this.state.playerTactic = tactic;
   }
 
   /**
@@ -218,10 +242,11 @@ export class MatchFlow {
       seed: this.state.seed,
       balanceVersion: BALANCE.version,
       mode: this.state.mode,
-      // Explicit interim defaults (story 4.2): the tactic picker ships in 4.4,
-      // leader designation in 4.5 — until then every commit is 'autonomous'
-      // with leader index 0 (or the state's designation once 4.5 sets it).
-      tactics: { A: 'autonomous', B: 'autonomous' },
+      // Side A's tactic is the player's Placement pick (story 4.4); side B is
+      // the AI's own committed tactic, drawn from its `ai/B` stream (FR24 — the
+      // AI never sees the player). Leader designation still ships in 4.5, so
+      // leaders stay the interim index-0 default until then.
+      tactics: { A: this.state.playerTactic, B: ai.tactic },
       leaders: { A: this.state.playerLeader ?? 0, B: 0 },
       armies: {
         A: this.state.playerArmy.map((u) => ({ class: u.class, element: u.element, name: u.name })),

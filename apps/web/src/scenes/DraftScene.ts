@@ -23,6 +23,8 @@ import { attachPerfSampler } from '../config/perf';
 const GRID = { cols: 4, tileW: 80, tileH: 62, gapX: 8, gapY: 6, startX: 8, startY: 88 };
 /** The class-detail panel (below the grid) that fills in on selection. */
 const DETAIL = { x: 8, y: 300, w: BASE_WIDTH - 16, h: 116 };
+/** Two taps on the same tile within this window count as a double-tap (draft shortcut). */
+const DOUBLE_TAP_MS = 300;
 
 /**
  * Matchups are shown by DAMAGE TYPE, not by listing classes (Danilo's call —
@@ -56,6 +58,9 @@ export class DraftScene extends Scene {
   private tiles: { cls: UnitClass; x: number; y: number }[] = [];
   /** Selection-dependent objects (highlight + detail panel + army tray + Continue), rebuilt on each redraw. */
   private dynamic: GameObjects.GameObject[] = [];
+  /** Double-tap-to-add tracking: a second tap on the same tile within the window drafts it (Danilo's request). Reset every create() (singleton scenes). */
+  private lastTapClass: UnitClass | null = null;
+  private lastTapAt = 0;
 
   constructor() {
     super('Draft');
@@ -70,6 +75,8 @@ export class DraftScene extends Scene {
     attachPerfSampler(this);
     this.selected = ALL_CLASSES[0]; // reset: Phaser scenes are singletons
     this.dynamic = [];
+    this.lastTapClass = null; // reset double-tap state (singleton lesson: no stale carry-over)
+    this.lastTapAt = 0;
     this.tiles = [];
 
     this.cameras.main.setBackgroundColor(PALETTE.background);
@@ -116,10 +123,23 @@ export class DraftScene extends Scene {
         .setOrigin(0, 0)
         .setInteractive({ useHandCursor: true })
         .on('pointerup', () => {
+          // First tap SELECTS (fills the detail panel); a second tap on the SAME
+          // tile within the window DRAFTS it — the Add-to-army shortcut (Danilo).
+          const now = this.time.now;
+          const doubleTap = this.lastTapClass === cls && now - this.lastTapAt < DOUBLE_TAP_MS;
           this.selected = cls;
+          this.lastTapAt = now;
+          this.lastTapClass = doubleTap ? null : cls; // consume on double so a triple tap isn't two adds
+          if (doubleTap) this.addToArmy(cls); // drafts only if a slot remains
           this.redraw();
         });
     });
+  }
+
+  /** Drafts `cls` if a slot budget remains (shared by the Add-to-army button and double-tap). */
+  private addToArmy(cls: UnitClass) {
+    if (!canAddUnit(this.flow.getState().playerArmy)) return;
+    this.flow.draftUnit(cls);
   }
 
   /** A small colored matchup pill; returns its right edge x so the next pill can follow. */
@@ -212,7 +232,7 @@ export class DraftScene extends Scene {
     );
     if (canAdd) {
       addBtn.setInteractive({ useHandCursor: true }).on('pointerup', () => {
-        this.flow.draftUnit(this.selected);
+        this.addToArmy(this.selected);
         this.redraw();
       });
     }

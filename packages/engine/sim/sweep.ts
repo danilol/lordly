@@ -167,9 +167,11 @@ function playMatch(archA: StrategyArchetype, archB: StrategyArchetype, seed: num
     seed,
     balanceVersion: BALANCE.version,
     mode,
-    // Story 4.2 interim defaults, mirroring MatchFlow.commit exactly:
-    // pickers ship in 4.4 (tactics) and 4.5 (leaders).
-    tactics: { A: 'autonomous', B: 'autonomous' },
+    // Story 4.4: each side commits its OWN tactic from its stream (FR24),
+    // exactly as MatchFlow will — so the sweep exercises tactics as a real
+    // dimension (the three enabled tactics; `leader` waits for 4.5). Leaders
+    // stay the interim index-0 default until the 4.5 picker ships.
+    tactics: { A: a.tactic, B: b.tactic },
     leaders: { A: 0, B: 0 },
     armies: {
       A: buildArmy(a.classes, streams['elements/A'], streams['names/A']),

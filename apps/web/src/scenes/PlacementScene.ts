@@ -1,6 +1,6 @@
 import { GameObjects, Input, Scene } from 'phaser';
-import { ALL_COLS, ALL_ROWS, BALANCE } from '@lordly/engine';
-import type { Placement } from '@lordly/engine';
+import { ALL_COLS, ALL_ROWS, ALL_TACTICS, BALANCE } from '@lordly/engine';
+import type { Placement, Tactic } from '@lordly/engine';
 import {
   BASE_WIDTH,
   ENEMY_ARMY_LABEL,
@@ -11,6 +11,7 @@ import {
   MIN_FONT_PX,
   CARD_CLASS_FONT_PX,
   CLASS_ABBREVIATIONS,
+  TACTIC_DISPLAY_NAME,
 } from '../config/constants';
 import { applyHiDpiCamera, addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
@@ -21,6 +22,8 @@ const CELL = 84;
 const GAP = 6;
 const GRID_TOP = 150;
 const TRAY_Y = 486;
+/** Two taps on the same unit within this window = a double-tap (auto-place shortcut). */
+const DOUBLE_TAP_MS = 300;
 
 /**
  * Placement scene (FR4/FR30): the player's own 3×3 grid (owner-local — AD-11:
@@ -35,6 +38,11 @@ export class PlacementScene extends Scene {
   private gridLeft = 0;
   /** Unit containers + submit button — rebuilt each redraw; grid backdrop and drop zones are built once. */
   private dynamic: GameObjects.GameObject[] = [];
+  /** Double-tap-to-place tracking (a second tap on the same unit auto-places it). Reset every create() (singleton scenes). */
+  private lastTapIndex = -1;
+  private lastTapAt = 0;
+  /** Whether the tactic dropdown is expanded. Reset every create() (singleton scenes). */
+  private pickerOpen = false;
 
   constructor() {
     super('Placement');
@@ -54,7 +62,7 @@ export class PlacementScene extends Scene {
     this.gridLeft = (BASE_WIDTH - (3 * CELL + 2 * GAP)) / 2;
 
     crispText(this, BASE_WIDTH / 2, 28, PLACEMENT_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
-    crispText(this, BASE_WIDTH / 2, 54, 'Drag your units onto the grid. Front row faces the enemy (top).', {
+    crispText(this, BASE_WIDTH / 2, 54, 'Drag a unit onto the grid, or double-tap it to place it. Front row faces the enemy (top).', {
       fontFamily: 'Arial',
       fontSize: '10px',
       color: PALETTE.mutedText,
@@ -65,12 +73,39 @@ export class PlacementScene extends Scene {
     // FR6 groundwork + first-time legibility: mark the enemy-facing side (top
     // of the grid) so a new player knows where the opponent will appear.
     const gridWidth = 3 * CELL + 2 * GAP;
-    crispText(this, BASE_WIDTH / 2, 114, ENEMY_ARMY_LABEL, { fontFamily: 'Arial Black', fontSize: '13px', color: PALETTE.enemyText }).setOrigin(0.5);
+    crispText(this, BASE_WIDTH / 2, 116, ENEMY_ARMY_LABEL, { fontFamily: 'Arial', fontSize: '8px', color: PALETTE.mutedText }).setOrigin(0.5);
     this.add.rectangle(BASE_WIDTH / 2, GRID_TOP - 8, gridWidth, 3, PALETTE.enemyLine).setOrigin(0.5);
 
+    this.lastTapIndex = -1; // reset double-tap state (singleton scenes carry stale fields otherwise)
+    this.lastTapAt = 0;
+    this.pickerOpen = false;
+    // A draggable object starts a drag on the SLIGHTEST move by default (threshold
+    // 0), which swallowed the tap events double-tap-to-place needs. Require 10px
+    // of movement before a drag begins, so a still tap stays a clean pointerup.
+    this.input.dragDistanceThreshold = 10;
     this.buildGrid();
     this.wireDragAndDrop();
     this.redraw();
+  }
+
+  /**
+   * The first empty grid cell in reading order — front row left→right, then
+   * mid, then back (Danilo: "top row first, first available slot"). Returns
+   * `null` when the board is full. Drives double-tap auto-placement.
+   */
+  private firstFreeCell(): Placement | null {
+    const taken = new Set(
+      this.flow
+        .getState()
+        .playerPlacements.filter((p): p is Placement => p !== null)
+        .map((p) => `${p.row}/${p.col}`),
+    );
+    for (const row of ALL_ROWS) {
+      for (const col of ALL_COLS) {
+        if (!taken.has(`${row}/${col}`)) return { row, col };
+      }
+    }
+    return null;
   }
 
   /** The static 3×3 grid: a labeled backdrop cell + a drop zone per square (built once). */
@@ -151,6 +186,28 @@ export class PlacementScene extends Scene {
       c.setData('unitIndex', i);
       c.setInteractive({ useHandCursor: true });
       this.input.setDraggable(c);
+      // Double-tap toggles a unit: an UNPLACED one drops into the first free
+      // cell (top row first); a PLACED one goes back to the tray (Danilo). A
+      // drag also ends in pointerup, so ignore taps that moved the pointer —
+      // only a still tap (distance ~0) counts.
+      c.on('pointerup', (pointer: Input.Pointer) => {
+        if (pointer.getDistance() > 8) return; // it was a drag, not a tap
+        const now = this.time.now;
+        const doubleTap = this.lastTapIndex === i && now - this.lastTapAt < DOUBLE_TAP_MS;
+        this.lastTapAt = now;
+        this.lastTapIndex = doubleTap ? -1 : i; // consume on double so a triple tap isn't two actions
+        if (!doubleTap) return;
+        if (this.flow.getState().playerPlacements[i] !== null) {
+          this.flow.unplaceUnit(i); // placed → back to the tray
+          this.redraw();
+        } else {
+          const cell = this.firstFreeCell();
+          if (cell) {
+            this.flow.placeUnit(i, cell); // in tray → first free cell
+            this.redraw();
+          }
+        }
+      });
       this.dynamic.push(c);
     });
 
@@ -161,6 +218,8 @@ export class PlacementScene extends Scene {
       const { x, y } = this.trayCenter(i);
       this.dynamic.push(this.add.rectangle(x, y, 64, 64, PALETTE.gridCellFill).setStrokeStyle(1, PALETTE.gridCellStroke).setDepth(-1));
     });
+
+    this.buildTacticPicker(state.playerTactic);
 
     const placed = placedCount(state.playerPlacements);
     const ready = placed === state.playerArmy.length && state.playerArmy.length > 0;
@@ -180,5 +239,61 @@ export class PlacementScene extends Scene {
         this.scene.start('Reveal', { flow: this.flow });
       });
     }
+  }
+
+  /**
+   * The FR34 army-tactic picker (story 4.4): a COMPACT dropdown (Danilo's
+   * request — the button row took too much space). Collapsed, it is a single
+   * slim bar showing the current tactic; tapping expands a small option list
+   * that overlays the tray (transient, high depth). Defaults to Autonomous.
+   * `Attack Leader` is DISABLED (muted, no handler) until story 4.5 ships leader
+   * designation (D-3b). Hidden from the enemy until reveal (FR5). Player-only
+   * write path is `flow.setTactic` (AD-13).
+   */
+  private buildTacticPicker(selected: Tactic) {
+    // Centered in the clear band between the board (ends ~y372) and the tray
+    // (starts y454), so it sits in a proper place — not floating, not over the
+    // board. The option list drops DOWN over the tray when open (transient).
+    const bw = 200;
+    const bh = 24;
+    const bx = (BASE_WIDTH - bw) / 2;
+    const by = 416;
+    const bar = this.add.rectangle(bx, by, bw, bh, PALETTE.buttonFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.buttonStroke);
+    this.dynamic.push(
+      bar,
+      crispText(this, BASE_WIDTH / 2, by + bh / 2, `Tactic: ${TACTIC_DISPLAY_NAME[selected]}  ${this.pickerOpen ? '▲' : '▼'}`, {
+        fontFamily: 'Arial',
+        fontSize: '11px',
+        color: PALETTE.bodyText,
+      }).setOrigin(0.5),
+    );
+    bar.setInteractive({ useHandCursor: true }).on('pointerup', () => {
+      this.pickerOpen = !this.pickerOpen;
+      this.redraw();
+    });
+    if (!this.pickerOpen) return;
+    // Expanded option list — drops down over the tray (high depth), closes on pick.
+    ALL_TACTICS.forEach((t, i) => {
+      const disabled = t === 'leader'; // 4.4→4.5 window (D-3b)
+      const isSel = t === selected;
+      const oy = by + bh + i * bh;
+      const row = this.add
+        .rectangle(bx, oy, bw, bh, isSel ? PALETTE.buttonFillEnabled : PALETTE.cardFill)
+        .setOrigin(0, 0)
+        .setStrokeStyle(1, PALETTE.buttonStroke)
+        .setDepth(100);
+      const color = disabled ? PALETTE.buttonTextDisabled : isSel ? PALETTE.buttonText : PALETTE.bodyText;
+      const label = crispText(this, BASE_WIDTH / 2, oy + bh / 2, TACTIC_DISPLAY_NAME[t], { fontFamily: 'Arial', fontSize: '11px', color })
+        .setOrigin(0.5)
+        .setDepth(101);
+      this.dynamic.push(row, label);
+      if (!disabled) {
+        row.setInteractive({ useHandCursor: true }).on('pointerup', () => {
+          this.flow.setTactic(t); // AD-13: the scene never mutates state directly
+          this.pickerOpen = false;
+          this.redraw();
+        });
+      }
+    });
   }
 }

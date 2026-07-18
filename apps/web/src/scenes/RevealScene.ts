@@ -11,6 +11,7 @@ import {
   REVEAL_HINT,
   REVEAL_TITLE,
   CLASS_ABBREVIATIONS,
+  TACTIC_DISPLAY_NAME,
   unitCodeStyle,
 } from '../config/constants';
 import { addElementBadge, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText } from '../config/ui';
@@ -72,6 +73,25 @@ export class RevealScene extends Scene {
     // the same cached log. The initial roster is the BattleStarted event.
     const roster = (this.flow.resolve().events[0] as BattleStarted).units;
     for (const unit of roster) this.drawUnit(unit);
+
+    // FR6 disclosure (story 4.4): both army tactics revealed as labels — the
+    // FR5 fence lifts here, so the enemy's tactic (side B) is shown for the
+    // first time. The band below the player board is free; the "Attack Leader"
+    // option waits for 4.5, so only the three enabled tactics ever appear.
+    const setup = this.flow.getState().committedSetup;
+    if (setup) {
+      crispText(this, BASE_WIDTH / 2, 344, 'ARMY TACTICS', { fontFamily: 'Arial Black', fontSize: '12px', color: PALETTE.mutedText }).setOrigin(0.5);
+      crispText(this, BASE_WIDTH / 2, 366, `You — ${TACTIC_DISPLAY_NAME[setup.tactics.A]}`, {
+        fontFamily: 'Arial',
+        fontSize: '14px',
+        color: PALETTE.playerText,
+      }).setOrigin(0.5);
+      crispText(this, BASE_WIDTH / 2, 388, `Enemy — ${TACTIC_DISPLAY_NAME[setup.tactics.B]}`, {
+        fontFamily: 'Arial',
+        fontSize: '14px',
+        color: PALETTE.enemyText,
+      }).setOrigin(0.5);
+    }
 
     const btnY = BASE_HEIGHT - 44;
     const btn = this.add

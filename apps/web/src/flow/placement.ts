@@ -38,3 +38,10 @@ export function placeUnit(board: readonly (Placement | null)[], unitIndex: numbe
   if (occupant !== -1) next[occupant] = prev; // swap: displaced unit takes our old cell (or the tray)
   return next;
 }
+
+/** Returns the unit at `unitIndex` to the tray (its cell → `null`); a no-op if already there. Fresh board. */
+export function unplaceUnit(board: readonly (Placement | null)[], unitIndex: number): (Placement | null)[] {
+  const next = [...board];
+  next[unitIndex] = null;
+  return next;
+}

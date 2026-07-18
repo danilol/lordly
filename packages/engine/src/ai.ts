@@ -1,7 +1,15 @@
 import { nextInt } from './rng';
 import type { Stream } from './rng';
 import { ALL_COLS } from './types';
-import type { Placement, UnitClass } from './types';
+import type { Placement, Tactic, UnitClass } from './types';
+
+/**
+ * The tactics the AI may commit in the 4.4→4.5 window (FR24, dossier D-3b):
+ * `leader` is excluded until leader designation ships in story 4.5 — the
+ * player's picker greys it out for the same reason, so neither side uses it
+ * yet. Kept in `ALL_TACTICS` picker order minus `leader`.
+ */
+const AI_TACTICS: readonly Tactic[] = ['autonomous', 'weakest', 'strongest'];
 
 /**
  * One curated AI strategy (FR25): a composition + formation the AI can
@@ -24,12 +32,14 @@ export interface StrategyArchetype {
   placement: readonly [Placement, Placement, Placement, Placement, Placement];
 }
 
-/** What the AI committed (FR24): archetype identity + board. NO elements, NO names — see `chooseSetup`. */
+/** What the AI committed (FR24): archetype identity + board + tactic. NO elements, NO names — see `chooseSetup`. */
 export interface AiChoice {
   /** The picked archetype's id; thread it back via `options.exclude` next match. */
   archetypeId: string;
   classes: [UnitClass, UnitClass, UnitClass, UnitClass, UnitClass];
   placement: [Placement, Placement, Placement, Placement, Placement];
+  /** The AI's army-wide target-selection tactic (FR34/FR24), drawn from its own stream. */
+  tactic: Tactic;
 }
 
 /** Options for `chooseSetup`. Deliberately admits nothing player-derived (AD-6). */
@@ -94,13 +104,17 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
   {
     id: 'three-mages',
     name: 'Three Mages',
+    // Story 4.4 re-tune: FR9 global range let the triple-blast battery hide
+    // behind a full front screen and dominate (70% single). Pulling the two
+    // knights BACK exposes the mid-row mages to enemy melee/arrows — identity
+    // intact (still the anti-front-stack triple blast), win rate back in band.
     classes: ['mage', 'mage', 'mage', 'knight', 'knight'],
     placement: [
       { row: 'mid', col: 'left' },
       { row: 'mid', col: 'center' },
       { row: 'mid', col: 'right' },
-      { row: 'front', col: 'center' },
-      { row: 'front', col: 'left' },
+      { row: 'back', col: 'left' },
+      { row: 'back', col: 'center' },
     ],
   },
   {
@@ -169,25 +183,32 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
   {
     id: 'ambushers',
     name: 'Ambushers',
+    // Story 4.4 re-tune (after the melee-blockade fix): the all-back-caster
+    // ambush over-performed once FR9 gave it global range; one mercenary steps
+    // to the front and the mage exposes from back to mid, pulling it back into
+    // band. Identity intact — a mixed skirmish-and-cast ambush.
     classes: ['mercenary', 'witch', 'archer', 'mercenary', 'mage'],
     placement: [
       { row: 'front', col: 'center' },
       { row: 'back', col: 'left' },
       { row: 'mid', col: 'right' },
+      { row: 'front', col: 'left' },
       { row: 'mid', col: 'center' },
-      { row: 'back', col: 'center' },
     ],
   },
   {
     id: 'gale',
     name: 'Gale',
     // Story 4.3: one of the storm's artillery is a Sorceress (the Wizard's twin) — single-unit swap, covers the newcomer (sweep-placed).
+    // Story 4.4 re-tune: FR9 global range over-buffed the all-back caster/archer
+    // storm — the two archers move to the FRONT row (still snipe globally, now
+    // exposed as a screen), pulling gale back into band. Casters stay mid/back.
     classes: ['witch', 'archer', 'mage', 'archer', 'sorceress'],
     placement: [
+      { row: 'mid', col: 'center' },
+      { row: 'front', col: 'left' },
       { row: 'back', col: 'center' },
-      { row: 'mid', col: 'left' },
-      { row: 'back', col: 'right' },
-      { row: 'mid', col: 'right' },
+      { row: 'front', col: 'right' },
       { row: 'back', col: 'left' },
     ],
   },
@@ -206,9 +227,11 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
  *
  * AI-STREAM ORDERING INVARIANT (FR20 replay stability): per call, draws
  * from the ai stream happen in EXACTLY this order — ① one archetype pick
- * over the eligible pool, ② one placement-mirror coin flip. Nothing else
- * draws. Story 1.8's shell and the sim harness must produce identical
- * boards from identical stream states; reordering either draw breaks that.
+ * over the eligible pool, ② one placement-mirror coin flip, ③ one tactic
+ * pick (story 4.4, FR24 — appended LAST so existing archetype/board choices
+ * for a given stream state are unchanged). Nothing else draws. Story 1.8's
+ * shell and the sim harness must produce identical boards from identical
+ * stream states; reordering any draw breaks that.
  *
  * The mirror flip (recorded spec decision): on 1, every placement's col is
  * mirrored left↔right (owner-local; rows untouched) — doubling board
@@ -234,5 +257,9 @@ export function chooseSetup(pool: readonly StrategyArchetype[], stream: Stream, 
     return { row, col: mirrored ? (ALL_COLS[ALL_COLS.length - 1 - colIndex] as Placement['col']) : col };
   }) as AiChoice['placement'];
 
-  return { archetypeId: picked.id, classes: [...picked.classes], placement };
+  // ③ the tactic draw (FR24) — LAST, so archetype/board are unchanged for a
+  // given stream state. Restricted to AI_TACTICS (no `leader` until 4.5).
+  const tactic = AI_TACTICS[nextInt(stream, 0, AI_TACTICS.length - 1)] as Tactic;
+
+  return { archetypeId: picked.id, classes: [...picked.classes], placement, tactic };
 }

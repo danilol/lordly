@@ -307,16 +307,18 @@ describe('golden battles (story 1.10 — until-wipeout mode)', () => {
 
   it('golden #8: persisting poison — the earth-witch duel across engagements (FR19 Witch synergy)', () => {
     const log = resolveBattle(setup(POISON_DUEL, 5, 'wipeout'));
-    // Trace-verified for the 5-slot fixture: golden #5's comp in wipeout
-    // becomes the poison showcase — dots re-tick at every natural engagement
-    // end (19 ticks in all), compound into a FATAL tick (B:3 dies at a
-    // PoisonTicked hpAfter 0), and whittle both sides until the cap (10)
-    // judges what remains: A ahead 22% to 2%. StatusCleared seams narrate the
-    // non-poison lifts (the 4.2 emission) while poison visibly survives them.
-    expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(BALANCE.engagementCap);
-    expect(log.events.filter((e) => e.type === 'PoisonTicked').length).toBe(19);
+    // Trace-verified for the 5-slot fixture under the story-4.4 pipeline: golden
+    // #5's comp in wipeout is the poison showcase — dots re-tick at every
+    // natural engagement end (14 ticks in all) and compound into a FATAL tick
+    // (a PoisonTicked hpAfter 0). FR9 global range now lets A's two archers snipe
+    // across the whole grid, so the poison + arrows WIPE B at engagement 6
+    // (short of the cap) rather than grinding to the judged cap — A wins 16% to
+    // 0%. Poison still visibly survives every StatusCleared seam (the 4.2
+    // emission lifts the non-poison statuses) across all six engagements.
+    expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(6);
+    expect(log.events.filter((e) => e.type === 'PoisonTicked').length).toBe(14);
     expect(log.events.some((e) => e.type === 'PoisonTicked' && e.hpAfter === 0)).toBe(true);
-    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 22, B: 2 } });
+    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 16, B: 0 } });
     expect(log).toMatchSnapshot();
   });
 });

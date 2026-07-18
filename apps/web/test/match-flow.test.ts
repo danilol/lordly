@@ -148,14 +148,44 @@ describe('MatchFlow names (FR37, AD-9/AD-10, story 4.2)', () => {
   });
 });
 
-describe('MatchFlow tactics & leaders (FR34/FR35, AD-9, story 4.2 interim defaults)', () => {
-  it("commit() carries the EXPLICIT interim defaults: tactics 'autonomous', leader 0, both sides (AC2)", () => {
+describe('MatchFlow tactics & leaders (FR34/FR35, AD-9, story 4.4)', () => {
+  it("commit() carries side A's picked tactic and side B's OWN AI-drawn tactic (FR24); leaders still index 0 until 4.5", () => {
     const flow = flowWithSeed(0x2222);
     flow.startMatch();
     draftAndPlaceAll(flow);
+    flow.setTactic('weakest');
     const setup = flow.commit();
-    expect(setup.tactics).toEqual({ A: 'autonomous', B: 'autonomous' });
+    expect(setup.tactics.A).toBe('weakest'); // the player's Placement pick
+    // Side B is the AI's own committed tactic from its stream — one of the three
+    // enabled tactics (FR24; `leader` waits for 4.5), NOT hardcoded 'autonomous'.
+    expect(['autonomous', 'weakest', 'strongest']).toContain(setup.tactics.B);
     expect(setup.leaders).toEqual({ A: 0, B: 0 });
+  });
+
+  it("defaults to 'autonomous' when the player never touches the picker", () => {
+    const flow = flowWithSeed(0x2223);
+    flow.startMatch();
+    expect(flow.getState().playerTactic).toBe('autonomous');
+    draftAndPlaceAll(flow);
+    expect(flow.commit().tactics.A).toBe('autonomous');
+  });
+
+  it('a tactic is NOT army-dependent: it survives draft and remove (unlike the leader)', () => {
+    const flow = flowWithSeed(0x3334);
+    flow.startMatch();
+    flow.setTactic('strongest');
+    flow.draftUnit('knight'); // army mutation clears the leader …
+    flow.removeUnit(0);
+    expect(flow.getState().playerLeader).toBeNull(); // … but not the tactic
+    expect(flow.getState().playerTactic).toBe('strongest');
+  });
+
+  it('setTactic throws once the match is committed (AD-13 guard)', () => {
+    const flow = flowWithSeed(0x3335);
+    flow.startMatch();
+    draftAndPlaceAll(flow);
+    flow.commit();
+    expect(() => flow.setTactic('weakest')).toThrow(/already committed/);
   });
 
   it('the leader-clearing hook: draftUnit and removeUnit reset playerLeader to null (4.5 lands only the picker)', () => {

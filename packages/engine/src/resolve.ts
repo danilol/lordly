@@ -4,7 +4,7 @@ import { judge, wipedSide } from './judging';
 import type { WipeState } from './judging';
 import { createStreams, nextInt } from './rng';
 import type { Stream } from './rng';
-import { selectBlastRow, selectMeleeTarget, selectRearmostTarget } from './targeting';
+import { selectBlastRow, selectMeleeTarget, selectRangedTarget } from './targeting';
 import { ALL_COLS, ALL_ROWS, LOG_VERSION } from './types';
 import type { AttackTarget, BattleEvent, BattleLog, MatchSetup, MoveKind, Side, SpellKind, UnitClass, UnitId, UnitSnapshot } from './types';
 import { validateMatchSetup } from './validate';
@@ -128,7 +128,7 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
           continue;
         }
         unit.actionsLeft -= 1;
-        const turnEvents = takeTurn(unit, units, streams.battle, setup.mode);
+        const turnEvents = takeTurn(unit, units, streams.battle, setup);
         events.push(...turnEvents);
         // Only a death can change the alive-set — skip the wipe scan otherwise.
         if (turnEvents.some((e) => e.type === 'UnitDied')) {
@@ -184,7 +184,7 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
  * cast (FR12). Targeting is re-evaluated per attack — this runs fresh each
  * turn.
  */
-function takeTurn(unit: UnitState, units: UnitState[], battle: Stream, mode: 'single' | 'wipeout'): BattleEvent[] {
+function takeTurn(unit: UnitState, units: UnitState[], battle: Stream, setup: MatchSetup): BattleEvent[] {
   if (unit.statuses.has('confusion')) {
     // Data-driven misfire chance (AD-8): P(misfire) = num/den. The draw spans
     // [0, den-1] and misfires on the TOP `num` values, so at the shipped 1/2
@@ -194,15 +194,24 @@ function takeTurn(unit: UnitState, units: UnitState[], battle: Stream, mode: 'si
     const { num, den } = BALANCE.formulas.confusionMisfire;
     const misfires = nextInt(battle, 0, den - 1) >= den - num;
     if (misfires) {
-      return [{ type: 'ActionMisfired', unit: unit.id }, ...misfire(unit, units, battle, mode)];
+      return [{ type: 'ActionMisfired', unit: unit.id }, ...misfire(unit, units, battle, setup.mode)];
     }
   }
-  return act(unit, units, mode);
+  return act(unit, units, setup);
 }
 
-/** The unit's NORMAL action by class. */
-function act(unit: UnitState, units: UnitState[], mode: 'single' | 'wipeout'): BattleEvent[] {
+/**
+ * The unit's NORMAL action by class, under the acting side's tactic (FR34).
+ * Targeting is the fixed two-step (targeting.ts): legal list → tactic. Melee
+ * is reach-filtered with Last Stand (FR7); ranged/magic is global (FR9). The
+ * `leader` tactic reads the enemy leader's unit id (`${enemySide}:${index}`).
+ */
+function act(unit: UnitState, units: UnitState[], setup: MatchSetup): BattleEvent[] {
   const enemies = units.filter((u) => u.side !== unit.side);
+  const mode = setup.mode;
+  const tactic = setup.tactics[unit.side];
+  const enemySide: Side = unit.side === 'A' ? 'B' : 'A';
+  const enemyLeaderId: UnitId = `${enemySide}:${setup.leaders[enemySide]}`;
 
   switch (unit.class) {
     // Vanguard + Skirmisher all melee the nearest reachable target (story 4.3
@@ -215,24 +224,31 @@ function act(unit: UnitState, units: UnitState[], mode: 'single' | 'wipeout'): B
     case 'phalanx':
     case 'ninja':
     case 'valkyrie': {
-      const idx = selectMeleeTarget(unit.colIndex, enemies);
+      const idx = selectMeleeTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
       if (idx === undefined) return skip(unit);
       return strike(unit, [enemies[idx] as UnitState], physicalDamage);
     }
     case 'archer': {
-      const idx = selectRearmostTarget(unit.colIndex, enemies);
+      const idx = selectRangedTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
       if (idx === undefined) return skip(unit);
       return strike(unit, [enemies[idx] as UnitState], physicalDamage);
     }
     // Artillery row-blast (Sorceress = Wizard's Artillery twin, story 4.3).
+    // Tactic interaction (D-2c): under `leader` the blast targets the enemy
+    // leader's ROW (AoE treats the leader as the focal point); under every
+    // other tactic — and when the leader is not alive — it keeps its own rule
+    // (row with most living, tie rearmost).
     case 'mage':
     case 'sorceress': {
-      const row = selectBlastRow(enemies);
+      const leaderRow = tactic === 'leader' ? enemies.find((e) => e.id === enemyLeaderId && e.alive)?.rowIndex : undefined;
+      const row = leaderRow ?? selectBlastRow(enemies);
       if (row === undefined) return skip(unit);
       const targets = enemies.filter((e) => e.alive && e.rowIndex === row);
       return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode));
     }
     case 'cleric': {
+      // Heals ignore tactics entirely (dossier §4). The staff fallback is a
+      // single-target ranged attack and DOES obey the tactic.
       const allies = units.filter((u) => u.side === unit.side && u.alive);
       const patient = lowestHpFraction(allies);
       if (patient !== undefined && patient.hp < patient.snapshot.maxHp) {
@@ -240,28 +256,33 @@ function act(unit: UnitState, units: UnitState[], mode: 'single' | 'wipeout'): B
         patient.hp += amount;
         return [{ type: 'UnitHealed', source: unit.id, target: patient.id, amount, hpAfter: patient.hp }];
       }
-      // Nobody damaged: the weak STR staff attack with magic targeting (FR11).
-      const idx = selectRearmostTarget(unit.colIndex, enemies);
+      // Nobody damaged: the weak STR staff attack with magic targeting (FR11/FR9).
+      const idx = selectRangedTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
       if (idx === undefined) return skip(unit);
       return strike(unit, [enemies[idx] as UnitState], physicalDamage);
     }
     case 'witch': {
-      // Prefer unaffected targets (FR12): magic targeting over the unaffected
-      // pool first; if every reachable enemy already bears her spell, the
-      // cast is wasted — no stack (FR16) — and fizzles (recorded decision).
+      // Prefer-unafflicted (FR12) filters the legal list BEFORE the tactic sort
+      // (dossier §4): the candidate is "alive" only if unafflicted by her spell,
+      // so the two-step pipeline picks over the unafflicted pool. Under `leader`
+      // she casts on the leader if it is unafflicted, else Autonomous — the
+      // applyTactic leader→autonomous fallback handles it. If every living enemy
+      // already bears her spell the cast is wasted — no stack (FR16), fizzle;
+      // only a truly empty enemy grid is an idle skip.
       const unaffected = enemies.map((e) => ({
         rowIndex: e.rowIndex,
         colIndex: e.colIndex,
         alive: e.alive && !e.statuses.has(unit.witchSpell),
+        hp: e.hp,
+        id: e.id,
       }));
-      const preferredIdx = selectRearmostTarget(unit.colIndex, unaffected);
+      const preferredIdx = selectRangedTarget(unit.colIndex, unaffected, tactic, enemyLeaderId);
       if (preferredIdx !== undefined) {
         const target = enemies[preferredIdx] as UnitState;
         target.statuses.add(unit.witchSpell);
         return [{ type: 'StatusApplied', source: unit.id, target: target.id, spell: unit.witchSpell }];
       }
-      const anyIdx = selectRearmostTarget(unit.colIndex, enemies);
-      if (anyIdx === undefined) return skip(unit);
+      if (!enemies.some((e) => e.alive)) return skip(unit);
       return [{ type: 'ActionFizzled', unit: unit.id }];
     }
   }
