@@ -366,18 +366,24 @@ describe('FR18 deaths, wipe, and judging', () => {
 
 describe('FR18 judging symmetry (property)', () => {
   /**
-   * Swapping sides mirrors the battle exactly ONLY when no exact cross-side
-   * AGI tie exists (same class on the same owner-local cell on both sides):
-   * the per-engagement coin flip is not side-symmetric, so such setups are
-   * filtered out (documented nuance from the story spec).
+   * Swapping sides mirrors the battle exactly ONLY when no cross-side initiative
+   * tie exists on a mirrored cell: the per-engagement coin flip (resolve.ts
+   * `tieWinner`) is not side-symmetric, so a same-AGI pair on the same
+   * owner-local cell resolves by SIDE and breaks the mirror. Filtered out
+   * (documented nuance). Story 4.3 generalised the guard from same-CLASS to
+   * same-AGI: with the 6-class roster every AGI was distinct, so a tie implied
+   * a shared class; the wave-1 roster collides AGI across classes (Berserker
+   * and Wizard both 12), so equal AGI — not class identity — is the real tie.
    */
   const noMirrorTieArb = matchSetupArb.filter((s) => {
     for (let i = 0; i < s.armies.A.length; i++) {
       for (let j = 0; j < s.armies.B.length; j++) {
-        const sameClass = s.armies.A[i]?.class === s.armies.B[j]?.class;
+        const a = s.armies.A[i];
+        const b = s.armies.B[j];
+        const sameAgi = a !== undefined && b !== undefined && BALANCE.classes[a.class].agi === BALANCE.classes[b.class].agi;
         const pa = s.placements.A[i];
         const pb = s.placements.B[j];
-        if (sameClass && pa?.row === pb?.row && pa?.col === pb?.col) return false;
+        if (sameAgi && pa?.row === pb?.row && pa?.col === pb?.col) return false;
       }
     }
     return true;

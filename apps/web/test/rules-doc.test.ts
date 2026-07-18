@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_CLASSES, BALANCE } from '@lordly/engine';
 import type { UnitClass } from '@lordly/engine';
+import { CLASS_DISPLAY_NAME } from '../src/config/constants';
 import { classRulesCard } from '../src/flow/draftModel';
 import { isTableSeparator } from '../src/flow/rulesDoc';
 
@@ -18,7 +19,7 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** The class-table row cells for one class, split on `|`. */
 function tableRow(cls: UnitClass): string[] {
-  const row = raw.split('\n').find((line) => line.startsWith(`| ${cap(cls)} |`));
+  const row = raw.split('\n').find((line) => line.startsWith(`| ${CLASS_DISPLAY_NAME[cls]} |`));
   expect(row, `table row for ${cls}`).toBeDefined();
   // Slice off the OUTER pipe segments only — interior empties keep position
   // (mirrors the parser; review: a shared filter bug had correlated failures).
@@ -47,28 +48,19 @@ describe('docs/rules.md drift guard (story 2.4, AC2/AC6 — numbers are law)', (
     }
   });
 
-  it('states the RPS triangle pairs and the exact multipliers', () => {
-    for (const [attacker, target] of Object.entries(BALANCE.rpsBeats)) {
-      expect(raw).toContain(`${cap(attacker)} beats ${cap(target as string)}`);
+  it('states every ROLE matchup (story 4.3) and the exact multipliers', () => {
+    // Matchups live on the role now (AD-4): the doc states each relation as
+    // "<Attacker> beats <Defender>" (symmetric) or "<Attacker> hunts <Defender>"
+    // (one-way, no reverse penalty), derived straight from balance data.
+    for (const rel of BALANCE.roleRelations) {
+      const verb = rel.kind === 'hunt' ? 'hunts' : 'beats';
+      expect(raw, `${rel.attacker} ${verb} ${rel.defender}`).toContain(`${cap(rel.attacker)} ${verb} ${cap(rel.defender)}`);
     }
+    expect(BALANCE.roleRelations.some((r) => r.kind === 'hunt')).toBe(true); // the one-way hunt exists — a silently emptied set must fail here
     const advantage = BALANCE.formulas.rpsAdvantage.num / BALANCE.formulas.rpsAdvantage.den;
     const disadvantage = BALANCE.formulas.rpsDisadvantage.num / BALANCE.formulas.rpsDisadvantage.den;
     expect(raw).toContain(`×${advantage}`);
     expect(raw).toContain(`×${disadvantage}`);
-  });
-
-  it('states the one-way caster hunt: every hunter named with its full ×1.5 prey list (story 3.0)', () => {
-    const advantage = BALANCE.formulas.rpsAdvantage.num / BALANCE.formulas.rpsAdvantage.den;
-    expect(Object.keys(BALANCE.rpsHunts).length).toBeGreaterThan(0); // the rule exists — a silently emptied map must fail here
-    for (const [hunter, hunted] of Object.entries(BALANCE.rpsHunts)) {
-      // The doc states the hunter's COMPLETE ×1.5 prey list: triangle prey (if
-      // any — a hunter need not sit inside the triangle) + hunts, in data order.
-      const triangle = BALANCE.rpsBeats[hunter as UnitClass];
-      const prey = [...(triangle ? [triangle] : []), ...(hunted as readonly string[])].map(cap);
-      const list = prey.length === 1 ? (prey[0] as string) : `${prey.slice(0, -1).join(', ')}, and ${prey[prey.length - 1]}`;
-      expect(raw).toContain(`${cap(hunter)} hunts every caster`);
-      expect(raw).toContain(`×${advantage} to ${list}`);
-    }
   });
 
   it('states the wipeout blast attenuation with the exact ratio (story 3.0 — wipeout-scoped)', () => {
@@ -92,7 +84,7 @@ describe('docs/rules.md drift guard — the review additions (every STATED numbe
   it('the speed-order sentence lists classes exactly as balance AGI sorts them', () => {
     const order = [...ALL_CLASSES]
       .sort((a, b) => BALANCE.classes[b].agi - BALANCE.classes[a].agi)
-      .map(cap)
+      .map((c) => CLASS_DISPLAY_NAME[c])
       .join(', ');
     expect(raw).toContain(order);
   });

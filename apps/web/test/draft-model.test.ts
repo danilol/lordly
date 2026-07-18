@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_CLASSES, BALANCE } from '@lordly/engine';
 import { canAddUnit, canContinue, classRulesCard } from '../src/flow/draftModel';
+import { CLASS_DISPLAY_NAME } from '../src/config/constants';
 import type { DraftedUnit } from '../src/flow/MatchState';
 
 const army = (n: number): DraftedUnit[] => Array.from({ length: n }, (_, i) => ({ class: 'knight', element: 'fire', name: `Knight ${i}` }) as DraftedUnit);
@@ -24,7 +25,7 @@ describe('rules cards derive from BALANCE data, never hardcoded (FR2 + data-must
   it('builds a card for every class', () => {
     for (const cls of ALL_CLASSES) {
       const card = classRulesCard(cls);
-      expect(card.name.toLowerCase()).toBe(cls);
+      expect(card.name).toBe(CLASS_DISPLAY_NAME[cls]); // story 4.3: card shows the display name (mage → "Wizard", D-1d)
       expect(card.role.length).toBeGreaterThan(0);
       expect(card.behavior.length).toBeGreaterThan(0);
     }
@@ -37,16 +38,20 @@ describe('rules cards derive from BALANCE data, never hardcoded (FR2 + data-must
     }
   });
 
-  it('derives the RPS relation from BALANCE.rpsBeats (both directions)', () => {
-    // knight beats archer; is beaten by mage (rpsBeats: mage->knight, knight->archer, archer->mage).
+  it('derives matchups from the role relations (arrays — story 4.3, may be several)', () => {
+    // Knight is a Vanguard: beats Snipers (archer), loses to Artillery (Wizard/mage + Sorceress).
     const knight = classRulesCard('knight');
-    expect(knight.beats).toBe('archer');
-    expect(knight.beatenBy).toBe('mage');
+    expect(knight.beats).toEqual(['archer']);
+    expect(knight.beatenBy).toEqual(['mage', 'sorceress']);
 
-    // mercenary sits outside the triangle — no relation either way.
+    // Mercenary is a Skirmisher — fully neutral, no relation either way.
     const merc = classRulesCard('mercenary');
-    expect(merc.beats).toBeUndefined();
-    expect(merc.beatenBy).toBeUndefined();
+    expect(merc.beats).toEqual([]);
+    expect(merc.beatenBy).toEqual([]);
+
+    // A newcomer inherits its matchups BY ROLE: Berserker is a Vanguard, same as the Knight.
+    expect(classRulesCard('berserker').beats).toEqual(['archer']);
+    expect(classRulesCard('berserker').beatenBy).toEqual(['mage', 'sorceress']);
   });
 
   it('key stats echo BALANCE (a drift guard — no retyped numbers)', () => {

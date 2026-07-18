@@ -13,6 +13,7 @@ const EXPECTED_HASHES: Record<number, string> = {
   1: 'bfce425a',
   2: '19aeaa94', // story 3.0: rpsHunts (archer hunts casters) + blastAttenuation (wipeout-scoped ×3/4)
   3: 'b67d0f84', // story 4.2: slotBudget 5 + per-class sizeClass replace armySize (AD-1); engagementCap 10 (FR19)
+  4: '6d243f05', // story 4.3: role + roleRelations replace rpsBeats/rpsHunts (AD-4); +5 small classes (berserker/phalanx/ninja/valkyrie/sorceress)
 };
 
 describe('balance-hash guard (AD-8)', () => {

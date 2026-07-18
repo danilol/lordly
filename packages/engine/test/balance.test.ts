@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE, SLOT_COST, slotTotal } from '../src/balance';
+import { BALANCE, dealsAdvantage, rpsRatio, SLOT_COST, slotTotal } from '../src/balance';
 import type { Ratio } from '../src/balance';
 import { ALL_CLASSES } from '../src/types';
 import type { UnitClass } from '../src/types';
@@ -71,23 +71,76 @@ describe('balance data (FR14, FR15, FR16, AD-4)', () => {
     expect(BALANCE.classes.cleric.str).toBe(8);
   });
 
-  it('encodes the exact FR14 RPS triangle: mage > knight > archer > mage', () => {
-    expect(BALANCE.rpsBeats).toEqual({ mage: 'knight', knight: 'archer', archer: 'mage' });
+  it('assigns the shipped-six roles (FR14, dossier §1)', () => {
+    expect(BALANCE.classes.knight.role).toBe('vanguard');
+    expect(BALANCE.classes.mercenary.role).toBe('skirmisher');
+    expect(BALANCE.classes.archer.role).toBe('sniper');
+    expect(BALANCE.classes.mage.role).toBe('artillery');
+    expect(BALANCE.classes.cleric.role).toBe('support');
+    expect(BALANCE.classes.witch.role).toBe('control');
   });
 
-  it('encodes the FR14 one-way caster hunts: archer → cleric + witch, and nobody hunts back', () => {
-    expect(BALANCE.rpsHunts).toEqual({ archer: ['cleric', 'witch'] });
-    // One-way by construction: no hunted class may itself hunt the hunter,
-    // hunts must not duplicate a triangle pair (that would double-count), and
-    // a hunt must not contradict the triangle — if the hunted class BEATS the
-    // hunter in the triangle, the pipeline's advantage-OR would silently
-    // override the ×0.75 disadvantage with ×1.5 (resolve.ts damagePipeline).
-    for (const [hunter, hunted] of Object.entries(BALANCE.rpsHunts)) {
-      for (const target of hunted ?? []) {
-        expect(BALANCE.rpsHunts[target as UnitClass], `${target} hunts back`).toBeUndefined();
-        expect(BALANCE.rpsBeats[hunter as UnitClass], `${hunter} triangle/hunt overlap`).not.toBe(target);
-        expect(BALANCE.rpsBeats[target as UnitClass], `${target} beats hunter ${hunter} — hunt would flip a disadvantage to advantage`).not.toBe(hunter);
+  it('encodes the FR14 role relations: the RPS triangle (symmetric) + the caster hunts (one-way)', () => {
+    expect(BALANCE.roleRelations).toEqual([
+      { attacker: 'artillery', defender: 'vanguard', kind: 'symmetric' },
+      { attacker: 'vanguard', defender: 'sniper', kind: 'symmetric' },
+      { attacker: 'sniper', defender: 'artillery', kind: 'symmetric' },
+      { attacker: 'sniper', defender: 'support', kind: 'hunt' },
+      { attacker: 'sniper', defender: 'control', kind: 'hunt' },
+    ]);
+  });
+
+  it('CONTINUITY (FR14 degenerate case): role relations reproduce the pre-4.3 rpsBeats/rpsHunts matchups EXACTLY over the shipped six', () => {
+    // The known pre-4.3 truth, hardcoded: advantage (×3/2) pairs and the
+    // disadvantage (×3/4) reverses of the SYMMETRIC triangle only. The archer's
+    // caster hunts (archer→cleric, archer→witch) are one-way: cleric/witch hit
+    // the archer back at plain ×1.0 (no reverse penalty).
+    const advantage: ReadonlyArray<readonly [UnitClass, UnitClass]> = [
+      ['mage', 'knight'],
+      ['knight', 'archer'],
+      ['archer', 'mage'],
+      ['archer', 'cleric'],
+      ['archer', 'witch'],
+    ];
+    const disadvantage: ReadonlyArray<readonly [UnitClass, UnitClass]> = [
+      ['knight', 'mage'],
+      ['archer', 'knight'],
+      ['mage', 'archer'],
+    ];
+    const adv = new Set(advantage.map(([a, d]) => `${a}>${d}`));
+    const dis = new Set(disadvantage.map(([a, d]) => `${a}>${d}`));
+    const six: UnitClass[] = ['knight', 'mercenary', 'archer', 'mage', 'cleric', 'witch'];
+    for (const attacker of six) {
+      for (const defender of six) {
+        const key = `${attacker}>${defender}`;
+        const ratio = rpsRatio(attacker, defender);
+        if (adv.has(key)) {
+          expect(ratio, `${key} should be advantage`).toEqual({ num: 3, den: 2 });
+          expect(dealsAdvantage(attacker, defender), `${key} dealsAdvantage`).toBe(true);
+        } else if (dis.has(key)) {
+          expect(ratio, `${key} should be disadvantage`).toEqual({ num: 3, den: 4 });
+        } else {
+          expect(ratio, `${key} should be neutral`).toBeUndefined();
+        }
       }
+    }
+  });
+
+  it('new classes inherit matchups BY ROLE — no per-class rules (story 4.3, the flat-rule-count goal)', () => {
+    // Berserker & Phalanx are Vanguard, so they share Knight's relations.
+    expect(rpsRatio('berserker', 'archer')).toEqual({ num: 3, den: 2 }); // Vanguard beats Sniper
+    expect(rpsRatio('phalanx', 'archer')).toEqual({ num: 3, den: 2 });
+    expect(rpsRatio('berserker', 'sorceress')).toEqual({ num: 3, den: 4 }); // Vanguard disadvantaged vs Artillery
+    // Sorceress is Artillery, so it beats every Vanguard (like the Wizard/mage).
+    expect(rpsRatio('sorceress', 'knight')).toEqual({ num: 3, den: 2 });
+    expect(rpsRatio('sorceress', 'berserker')).toEqual({ num: 3, den: 2 });
+    expect(rpsRatio('archer', 'sorceress')).toEqual({ num: 3, den: 2 }); // Sniper beats Artillery
+    // Ninja & Valkyrie are Skirmisher — fully neutral, no relations either way.
+    for (const other of ALL_CLASSES) {
+      expect(rpsRatio('ninja', other), `ninja>${other}`).toBeUndefined();
+      expect(rpsRatio('valkyrie', other), `valkyrie>${other}`).toBeUndefined();
+      expect(rpsRatio(other, 'ninja'), `${other}>ninja`).toBeUndefined();
+      expect(rpsRatio(other, 'valkyrie'), `${other}>valkyrie`).toBeUndefined();
     }
   });
 

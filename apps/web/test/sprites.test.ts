@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_CLASSES } from '@lordly/engine';
+import type { UnitClass } from '@lordly/engine';
 import { UNITS_SHEET_KEY, UNIT_FRAME_SIZE, UNIT_FRAMES, UNIT_TWEENS, ALL_REPRESENTATIONS } from '../src/config/sprites';
 
 describe('unit sprite lookup (story 2.1, AC1/AC5)', () => {
@@ -9,13 +10,21 @@ describe('unit sprite lookup (story 2.1, AC1/AC5)', () => {
     }
   });
 
-  it('frame indices are unique (visually distinct sprites — AC1) and within the sheet', () => {
-    const frames = ALL_CLASSES.map((cls) => UNIT_FRAMES[cls]);
-    expect(new Set(frames).size).toBe(ALL_CLASSES.length);
-    for (const f of frames) {
+  it('the shipped six have unique in-sheet frames; every class points at a real frame (AC1)', () => {
+    // The units sheet is still SIX CC0 DCSS tiles. Story 4.3 ships 5 new classes
+    // on INTERIM sprites (they reuse an existing frame — see sprites.ts) until
+    // dedicated CC0 tiles are sourced + composited (Danilo's device veto). The
+    // shipped six stay visually distinct; every class maps to a valid frame so
+    // there is never a missing sprite at runtime.
+    const SHEET_FRAMES = 6;
+    const shipped: UnitClass[] = ['knight', 'mercenary', 'archer', 'mage', 'cleric', 'witch'];
+    const shippedFrames = shipped.map((cls) => UNIT_FRAMES[cls]);
+    expect(new Set(shippedFrames).size).toBe(shipped.length); // the six are distinct (story 2.1 AC1)
+    for (const cls of ALL_CLASSES) {
+      const f = UNIT_FRAMES[cls];
+      expect(Number.isInteger(f), `frame for ${cls}`).toBe(true);
       expect(f).toBeGreaterThanOrEqual(0);
-      expect(f).toBeLessThan(ALL_CLASSES.length);
-      expect(Number.isInteger(f)).toBe(true);
+      expect(f, `frame for ${cls} within the sheet`).toBeLessThan(SHEET_FRAMES);
     }
   });
 

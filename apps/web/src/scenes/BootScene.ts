@@ -1,7 +1,6 @@
 import { Scene, Textures } from 'phaser';
-import { ALL_CLASSES } from '@lordly/engine';
 import unitsUrl from '../assets/units.png';
-import { UNITS_SHEET_KEY, UNIT_FRAME_SIZE } from '../config/sprites';
+import { UNIT_FRAMES, UNITS_SHEET_KEY, UNIT_FRAME_SIZE } from '../config/sprites';
 import { showInitFallback } from '../flow/initFallback';
 
 /**
@@ -47,9 +46,14 @@ export class BootScene extends Scene {
     // wrong frame count (missing frames fall back to frame 0, so classes
     // would render duplicate sprites). Validate the slice before booting.
     // frameTotal counts Phaser's synthetic __BASE frame, hence the -1.
+    // The bar is "every frame UNIT_FRAMES references exists" — story 4.3's
+    // wave-1 newcomers ride INTERIM shared frames (sprites.ts), so the sheet
+    // need only cover the highest referenced index; when dedicated tiles land
+    // (frames 6–10) this bar auto-tightens to the full 11.
+    const requiredFrames = Math.max(...Object.values(UNIT_FRAMES)) + 1;
     const frames = this.textures.get(UNITS_SHEET_KEY).frameTotal - 1;
-    if (frames !== ALL_CLASSES.length) {
-      showInitFallback(document, new Error(`units sheet sliced to ${frames} frames, expected ${ALL_CLASSES.length}`));
+    if (frames < requiredFrames) {
+      showInitFallback(document, new Error(`units sheet sliced to ${frames} frames, need at least ${requiredFrames}`));
       return;
     }
 

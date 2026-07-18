@@ -1,4 +1,4 @@
-import { BALANCE } from './balance';
+import { BALANCE, rpsRatio } from './balance';
 import type { Ratio } from './balance';
 import { judge, wipedSide } from './judging';
 import type { WipeState } from './judging';
@@ -205,8 +205,16 @@ function act(unit: UnitState, units: UnitState[], mode: 'single' | 'wipeout'): B
   const enemies = units.filter((u) => u.side !== unit.side);
 
   switch (unit.class) {
+    // Vanguard + Skirmisher all melee the nearest reachable target (story 4.3
+    // "start generic" — Berserker/Phalanx are Vanguard, Ninja/Valkyrie are
+    // Skirmisher; their unique moves/Guard arrive in 4.7). Role only shifts the
+    // RPS multiplier, applied inside damagePipeline.
     case 'knight':
-    case 'mercenary': {
+    case 'mercenary':
+    case 'berserker':
+    case 'phalanx':
+    case 'ninja':
+    case 'valkyrie': {
       const idx = selectMeleeTarget(unit.colIndex, enemies);
       if (idx === undefined) return skip(unit);
       return strike(unit, [enemies[idx] as UnitState], physicalDamage);
@@ -216,7 +224,9 @@ function act(unit: UnitState, units: UnitState[], mode: 'single' | 'wipeout'): B
       if (idx === undefined) return skip(unit);
       return strike(unit, [enemies[idx] as UnitState], physicalDamage);
     }
-    case 'mage': {
+    // Artillery row-blast (Sorceress = Wizard's Artillery twin, story 4.3).
+    case 'mage':
+    case 'sorceress': {
       const row = selectBlastRow(enemies);
       if (row === undefined) return skip(unit);
       const targets = enemies.filter((e) => e.alive && e.rowIndex === row);
@@ -269,14 +279,21 @@ function misfire(unit: UnitState, units: UnitState[], battle: Stream, mode: 'sin
   const enemies = units.filter((u) => u.side !== unit.side && u.alive);
 
   switch (unit.class) {
+    // Every physical attacker misfires as a melee strike on a random ally
+    // (story 4.3: the melee newcomers join the shipped physical trio).
     case 'knight':
     case 'mercenary':
-    case 'archer': {
+    case 'archer':
+    case 'berserker':
+    case 'phalanx':
+    case 'ninja':
+    case 'valkyrie': {
       if (allies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
       const target = allies[nextInt(battle, 0, allies.length - 1)] as UnitState;
       return strike(unit, [target], physicalDamage);
     }
-    case 'mage': {
+    case 'mage':
+    case 'sorceress': {
       // Blasts its OWN fullest row (recorded decision: the mage itself counts
       // and can be struck by its own blast).
       const own = units.filter((u) => u.side === unit.side);
@@ -321,6 +338,12 @@ const CLASS_MOVE_KIND: Record<UnitClass, MoveKind> = {
   mage: 'blast',
   cleric: 'staff',
   witch: 'staff',
+  // Story 4.3 newcomers: the melee Vanguard/Skirmisher pair slash; the Artillery Sorceress blasts.
+  berserker: 'slash',
+  phalanx: 'slash',
+  ninja: 'slash',
+  valkyrie: 'slash',
+  sorceress: 'blast',
 };
 
 /**
@@ -408,17 +431,16 @@ export function healAmount(healer: UnitClass): number {
  * Shared FIXED-order damage pipeline (FR15/FR16/FR20):
  * base → preRps attenuation (blast only, FR10) → RPS → weaken → min clamp.
  *
- * The ×1.5 advantage comes from the triangle OR a one-way hunt (FR14
- * amendment); the ×0.75 disadvantage derives from the TRIANGLE ALONE —
- * deriving it from the hunts would hand the hunted casters the symmetric
- * penalty the amendment explicitly forbids.
+ * The ×1.5 advantage / ×0.75 disadvantage now derive from the role-relation
+ * table via `rpsRatio` (story 4.3, AD-4): symmetric edges penalise the reverse,
+ * one-way hunts do not — the exact FR14-amendment asymmetry the old
+ * `rpsBeats`/`rpsHunts` pair encoded, from a single source.
  */
 function damagePipeline(power: number, attacker: UnitClass, defender: UnitClass, weakened: boolean, mitigation: 'vit' | 'men', preRps?: Ratio): number {
-  const { formulas, rpsBeats, rpsHunts, classes } = BALANCE;
+  const { formulas, classes } = BALANCE;
   const base = power - Math.floor(classes[defender][mitigation] / 2);
   let modified = preRps === undefined ? base : Math.floor((base * preRps.num) / preRps.den);
-  const advantage = rpsBeats[attacker] === defender || (rpsHunts[attacker]?.includes(defender) ?? false);
-  const rps = advantage ? formulas.rpsAdvantage : rpsBeats[defender] === attacker ? formulas.rpsDisadvantage : undefined;
+  const rps = rpsRatio(attacker, defender);
   if (rps !== undefined) modified = Math.floor((modified * rps.num) / rps.den);
   if (weakened) modified = Math.floor(modified / 2);
   return Math.max(formulas.minDamage, modified);

@@ -69,7 +69,8 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
   {
     id: 'bulwark',
     name: 'Bulwark',
-    classes: ['knight', 'knight', 'knight', 'knight', 'knight'],
+    // Story 4.3: one of the wall is a Berserker (Vanguard bruiser) — single-unit swap, identity intact, covers the newcomer (sweep-placed).
+    classes: ['knight', 'berserker', 'knight', 'knight', 'knight'],
     placement: [
       { row: 'front', col: 'left' },
       { row: 'front', col: 'center' },
@@ -105,7 +106,8 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
   {
     id: 'talons',
     name: 'Talons',
-    classes: ['archer', 'archer', 'archer', 'archer', 'mercenary'],
+    // Story 4.3: one archer line-mate is a Valkyrie (Skirmisher) — single-unit swap, covers the newcomer (sweep-placed).
+    classes: ['archer', 'archer', 'archer', 'valkyrie', 'mercenary'],
     placement: [
       { row: 'back', col: 'left' },
       { row: 'mid', col: 'right' },
@@ -129,7 +131,8 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
   {
     id: 'cabal',
     name: 'Cabal',
-    classes: ['mage', 'witch', 'cleric', 'mage', 'witch'],
+    // Story 4.3: the coven's flank is a Ninja (Skirmisher) now — single-unit swap, covers the newcomer (sweep-placed).
+    classes: ['mage', 'witch', 'cleric', 'mage', 'ninja'],
     placement: [
       { row: 'back', col: 'left' },
       { row: 'mid', col: 'center' },
@@ -153,7 +156,8 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
   {
     id: 'wardens',
     name: 'Wardens',
-    classes: ['mercenary', 'knight', 'archer', 'mercenary', 'archer'],
+    // Story 4.3: one line-mate is a Phalanx (Vanguard wall) now — single-unit swap keeps the tuned identity, covers the newcomer (sweep-placed).
+    classes: ['mercenary', 'knight', 'archer', 'mercenary', 'phalanx'],
     placement: [
       { row: 'front', col: 'right' },
       { row: 'front', col: 'center' },
@@ -177,7 +181,8 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
   {
     id: 'gale',
     name: 'Gale',
-    classes: ['witch', 'archer', 'mage', 'archer', 'mage'],
+    // Story 4.3: one of the storm's artillery is a Sorceress (the Wizard's twin) — single-unit swap, covers the newcomer (sweep-placed).
+    classes: ['witch', 'archer', 'mage', 'archer', 'sorceress'],
     placement: [
       { row: 'back', col: 'center' },
       { row: 'mid', col: 'left' },

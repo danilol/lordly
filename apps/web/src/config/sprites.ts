@@ -18,6 +18,18 @@ export const UNIT_FRAMES: Record<UnitClass, number> = {
   mage: 3,
   cleric: 4,
   witch: 5,
+  // STORY 4.3 — INTERIM sprites (flagged for Danilo's device veto): the units
+  // sheet still has only the six original CC0 DCSS frames. Until 5 dedicated
+  // CC0 tiles are sourced and composited (a 352×32 sheet + attribution.ts +
+  // BootScene frame count), the newcomers REUSE the closest existing frame so
+  // the full 11-class loop runs and reads: Berserker/Phalanx borrow the Knight
+  // (Vanguard melee), Ninja/Valkyrie the Mercenary (Skirmisher), Sorceress the
+  // Wizard/mage (Artillery). These are placeholders, NOT final art.
+  berserker: 0,
+  phalanx: 0,
+  ninja: 1,
+  valkyrie: 1,
+  sorceress: 3,
 };
 
 // FR31 animation representations — tween-based (the CC0 tiles are single-frame,

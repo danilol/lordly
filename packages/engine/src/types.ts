@@ -12,11 +12,22 @@
  * redeclaring the sets (AD-4).
  */
 
-/** The six unit classes (FR1, FR15), in PRD table order. */
-export const ALL_CLASSES = ['knight', 'mercenary', 'archer', 'mage', 'cleric', 'witch'] as const;
+/** The unit classes (FR1, FR15), shipped-six first then the wave-1 additions (story 4.3), in roster order. Golem (monster) joins in 4.8 with its two-cell semantics. */
+export const ALL_CLASSES = ['knight', 'mercenary', 'archer', 'mage', 'cleric', 'witch', 'berserker', 'phalanx', 'ninja', 'valkyrie', 'sorceress'] as const;
 
-/** One of the six unit classes. RPS triangle: mage > knight > archer > mage (FR14). */
+/** One unit class. Matchups derive from the class's `role` and the role-relation table (FR14, AD-4 — story 4.3). */
 export type UnitClass = (typeof ALL_CLASSES)[number];
+
+/**
+ * The seven combat roles (FR14, dossier §1 — story 4.3). Matchups live on the
+ * ROLE, not the class: new classes inherit relations by role, so the rule count
+ * stays flat as the roster grows. The shipped-six role assignments reproduce the
+ * old `rpsBeats`/`rpsHunts` triangle exactly (the FR14 degenerate case).
+ */
+export const ALL_ROLES = ['vanguard', 'skirmisher', 'sniper', 'artillery', 'support', 'control', 'brute'] as const;
+
+/** One of the seven combat roles (FR14). */
+export type Role = (typeof ALL_ROLES)[number];
 
 /**
  * The four elements (FR3) in FIXED roll order — this order is part of the

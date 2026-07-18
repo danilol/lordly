@@ -28,6 +28,12 @@ export const CLASS_SEX: Record<UnitClass, NameSex> = {
   archer: 'f',
   cleric: 'f',
   witch: 'f',
+  // Story 4.3 (D-1f gender split): Berserker/Phalanx/Ninja male; Valkyrie/Sorceress female.
+  berserker: 'm',
+  phalanx: 'm',
+  ninja: 'm',
+  valkyrie: 'f',
+  sorceress: 'f',
 };
 
 /** ~48 male names, OB64-adjacent fantasy register. Plain data — edits are free (see module doc). */

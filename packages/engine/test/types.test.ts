@@ -56,7 +56,7 @@ describe('domain types (AD-4, AD-9, AD-11)', () => {
   });
 
   it('exports the runtime enumerations the unions derive from (AD-4)', () => {
-    expect(ALL_CLASSES).toEqual(['knight', 'mercenary', 'archer', 'mage', 'cleric', 'witch']);
+    expect(ALL_CLASSES).toEqual(['knight', 'mercenary', 'archer', 'mage', 'cleric', 'witch', 'berserker', 'phalanx', 'ninja', 'valkyrie', 'sorceress']);
     expect(ALL_ELEMENTS).toEqual(['fire', 'water', 'wind', 'earth']);
     expect(ALL_SIDES).toEqual(['A', 'B']);
     expect(ALL_ROWS).toEqual(['front', 'mid', 'back']);

@@ -81,9 +81,35 @@ export const CLASS_ABBREVIATIONS: Record<UnitClass, string> = {
   knight: 'KNI',
   mercenary: 'MER',
   archer: 'ARC',
-  mage: 'MAG',
+  mage: 'WIZ', // D-1d: Mage displays as Wizard (engine key stays `mage`)
   cleric: 'CLE',
   witch: 'WIT',
+  // Story 4.3 roster wave 1.
+  berserker: 'BER',
+  phalanx: 'PHA',
+  ninja: 'NIN',
+  valkyrie: 'VAL',
+  sorceress: 'SOR',
+};
+
+/**
+ * Full display names (story 4.3). SHELL-SIDE lookup keyed off the engine class
+ * (AD-11 — like the codes): `mage` → "Wizard" (D-1d, a display rename only; the
+ * engine key never changes, so pre-era history still renders). Everything else
+ * is the class capitalized.
+ */
+export const CLASS_DISPLAY_NAME: Record<UnitClass, string> = {
+  knight: 'Knight',
+  mercenary: 'Mercenary',
+  archer: 'Archer',
+  mage: 'Wizard',
+  cleric: 'Cleric',
+  witch: 'Witch',
+  berserker: 'Berserker',
+  phalanx: 'Phalanx',
+  ninja: 'Ninja',
+  valkyrie: 'Valkyrie',
+  sorceress: 'Sorceress',
 };
 export const CARD_CLASS_FONT_PX = 13;
 

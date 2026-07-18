@@ -457,3 +457,48 @@ describe('FR12/FR16 witch cast fizzle (no stack, deterministic)', () => {
     expect(fizzles).toHaveLength(1); // second cast wasted — no stack
   });
 });
+
+describe('FR14/FR32 roster wave 1 — new classes act by their ROLE (story 4.3)', () => {
+  // Sorceress (Artillery) blasts a row like the Wizard; Berserker (Vanguard) melees the
+  // nearest reachable like the Knight. "Start generic" — unique moves/Guard arrive in 4.7.
+  const log = resolveBattle(
+    setup({
+      armies: {
+        A: [u('sorceress', 'fire'), u('berserker', 'earth'), u('knight', 'water'), u('mercenary', 'wind'), u('knight', 'fire')],
+        B: [u('knight', 'earth'), u('knight', 'water'), u('knight', 'wind'), u('mercenary', 'fire'), u('archer', 'water')],
+      },
+      placements: {
+        A: [
+          { row: 'back', col: 'center' }, // sorceress: 2 back-row actions
+          { row: 'front', col: 'center' }, // berserker up front
+          { row: 'front', col: 'left' },
+          { row: 'mid', col: 'center' },
+          { row: 'front', col: 'right' },
+        ],
+        B: [
+          { row: 'front', col: 'left' }, // 3-knight front = the fullest row the blast finds
+          { row: 'front', col: 'center' },
+          { row: 'front', col: 'right' },
+          { row: 'mid', col: 'center' },
+          { row: 'back', col: 'center' },
+        ],
+      },
+    }),
+  );
+
+  it('the Sorceress row-blasts (Artillery): every attack is a blast, and one lands on the whole front row', () => {
+    const shots = byType(log, 'UnitAttacked').filter((a) => a.source === 'A:0');
+    expect(shots.length).toBeGreaterThan(0);
+    for (const s of shots) expect(s.kind).toBe('blast');
+    expect(shots.some((s) => s.targets.length > 1)).toBe(true); // a real row blast, not a single hit
+  });
+
+  it('the Berserker melees a single nearest target (Vanguard): every attack is a slash on one unit', () => {
+    const shots = byType(log, 'UnitAttacked').filter((a) => a.source === 'A:1');
+    expect(shots.length).toBeGreaterThan(0);
+    for (const s of shots) {
+      expect(s.kind).toBe('slash');
+      expect(s.targets).toHaveLength(1);
+    }
+  });
+});

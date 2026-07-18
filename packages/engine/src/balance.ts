@@ -1,4 +1,4 @@
-import type { Element, SpellKind, Unit, UnitClass } from './types';
+import type { Element, Role, SpellKind, Unit, UnitClass } from './types';
 
 /**
  * An exact integer ratio. All combat arithmetic is integer math (FR15/FR20):
@@ -31,7 +31,19 @@ export interface ClassStats {
   actions: { front: number; mid: number; back: number };
   /** Physical size (FR38): drives slot cost and (from 4.8) the two-cell footprint. */
   sizeClass: SizeClass;
+  /** Combat role (FR14, story 4.3): the ONLY thing matchups read — see `roleRelations`. */
+  role: Role;
 }
+
+/**
+ * A directed role matchup (FR14, AD-4 — story 4.3). `attacker`'s role deals the
+ * ×3/2 advantage to `defender`'s role.
+ * - `symmetric`: the reverse direction takes the ×3/4 disadvantage (the RPS
+ *   triangle — e.g. Artillery→Vanguard, and Vanguard→Artillery is penalised).
+ * - `hunt`: NO reverse penalty (the FR14 one-way amendment — e.g. Sniper→Support;
+ *   Support hits the Sniper back at plain ×1.0).
+ */
+export type RoleRelation = { attacker: Role; defender: Role; kind: 'symmetric' | 'hunt' };
 
 /** Shape of the versioned balance data (AD-4, AD-8). */
 export interface BalanceData {
@@ -48,18 +60,14 @@ export interface BalanceData {
   /** The FR15 class table. Initial tuning values — the rules are the requirements. */
   classes: Record<UnitClass, ClassStats>;
   /**
-   * The FR14 triangle: attacker class → the class it deals ×1.5 damage to
-   * (the reverse direction takes ×0.75). Tunable data — classes absent from
-   * the map (mercenary, cleric, witch in the MVP) have no triangle relation.
+   * The FR14 matchup table (AD-4, story 4.3 — REPLACES `rpsBeats`/`rpsHunts`):
+   * directed role relations, the SINGLE matchup source. A class deals the ×3/2
+   * advantage when its role is an `attacker` here; it takes the ×3/4
+   * disadvantage only when its role is the `defender` of a `symmetric` edge
+   * (hunts grant no reverse penalty). Roles absent as an attacker (Skirmisher,
+   * Brute) have no relation. Tunable data.
    */
-  rpsBeats: Partial<Record<UnitClass, UnitClass>>;
-  /**
-   * FR14 one-way hunts (2026-07-14 amendment): attacker class → classes it
-   * deals ×1.5 damage to with NO reverse penalty — the hunted classes attack
-   * the hunter at plain ×1.0. Kept separate from `rpsBeats` on purpose: the
-   * triangle's symmetric ×0.75 derivation must never see these pairs.
-   */
-  rpsHunts: Partial<Record<UnitClass, readonly UnitClass[]>>;
+  roleRelations: readonly RoleRelation[];
   /** Element → the Witch's prepared spell (FR16). Flavor pairing, swappable during UX. */
   elementSpells: Record<Element, SpellKind>;
   /** Formula constants (FR15/FR16), integer ratios floored in fixed order. */
@@ -96,19 +104,44 @@ export interface BalanceData {
  * forgotten (AD-8).
  */
 export const BALANCE: BalanceData = {
-  version: 3,
+  version: 4,
   slotBudget: 5,
   engagementCap: 10,
   classes: {
-    knight: { hp: 140, str: 30, vit: 28, int: 8, men: 14, agi: 8, dex: 16, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small' },
-    mercenary: { hp: 110, str: 26, vit: 20, int: 10, men: 14, agi: 14, dex: 18, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small' },
-    archer: { hp: 90, str: 24, vit: 12, int: 10, men: 12, agi: 22, dex: 24, actions: { front: 1, mid: 2, back: 2 }, sizeClass: 'small' },
-    mage: { hp: 80, str: 6, vit: 8, int: 30, men: 22, agi: 12, dex: 14, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small' },
-    cleric: { hp: 90, str: 8, vit: 12, int: 24, men: 24, agi: 10, dex: 12, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small' },
-    witch: { hp: 85, str: 6, vit: 10, int: 26, men: 20, agi: 26, dex: 16, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small' },
+    knight: { hp: 140, str: 30, vit: 28, int: 8, men: 14, agi: 8, dex: 16, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small', role: 'vanguard' },
+    mercenary: {
+      hp: 110,
+      str: 26,
+      vit: 20,
+      int: 10,
+      men: 14,
+      agi: 14,
+      dex: 18,
+      actions: { front: 2, mid: 1, back: 1 },
+      sizeClass: 'small',
+      role: 'skirmisher',
+    },
+    archer: { hp: 90, str: 24, vit: 12, int: 10, men: 12, agi: 22, dex: 24, actions: { front: 1, mid: 2, back: 2 }, sizeClass: 'small', role: 'sniper' },
+    mage: { hp: 80, str: 6, vit: 8, int: 30, men: 22, agi: 12, dex: 14, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small', role: 'artillery' },
+    cleric: { hp: 90, str: 8, vit: 12, int: 24, men: 24, agi: 10, dex: 12, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small', role: 'support' },
+    witch: { hp: 85, str: 6, vit: 10, int: 26, men: 20, agi: 26, dex: 16, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small', role: 'control' },
+    // Wave-1 additions (story 4.3, dossier §1 — TUNING DRAFTS, sweep-policed). Golem (monster) ships in 4.8.
+    berserker: { hp: 120, str: 34, vit: 14, int: 6, men: 10, agi: 12, dex: 18, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small', role: 'vanguard' },
+    phalanx: { hp: 150, str: 22, vit: 34, int: 6, men: 18, agi: 6, dex: 12, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small', role: 'vanguard' },
+    ninja: { hp: 85, str: 22, vit: 10, int: 8, men: 12, agi: 28, dex: 30, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small', role: 'skirmisher' },
+    valkyrie: { hp: 105, str: 24, vit: 16, int: 12, men: 16, agi: 20, dex: 20, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small', role: 'skirmisher' },
+    sorceress: { hp: 78, str: 6, vit: 8, int: 28, men: 20, agi: 16, dex: 15, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small', role: 'artillery' },
   },
-  rpsBeats: { mage: 'knight', knight: 'archer', archer: 'mage' },
-  rpsHunts: { archer: ['cleric', 'witch'] },
+  // FR14 role relations (story 4.3) — the shipped-six triangle + hunts, verbatim:
+  // Artillery→Vanguard→Sniper→Artillery (symmetric RPS); Sniper hunts Support &
+  // Control one-way (the 2026-07-14 amendment). Skirmisher/Brute have none.
+  roleRelations: [
+    { attacker: 'artillery', defender: 'vanguard', kind: 'symmetric' },
+    { attacker: 'vanguard', defender: 'sniper', kind: 'symmetric' },
+    { attacker: 'sniper', defender: 'artillery', kind: 'symmetric' },
+    { attacker: 'sniper', defender: 'support', kind: 'hunt' },
+    { attacker: 'sniper', defender: 'control', kind: 'hunt' },
+  ],
   elementSpells: { water: 'sleep', earth: 'poison', fire: 'weaken', wind: 'confusion' },
   formulas: {
     rpsAdvantage: { num: 3, den: 2 },
@@ -135,4 +168,31 @@ export const SLOT_COST: Record<SizeClass, number> = { small: 1, monster: 2 };
  */
 export function slotTotal(army: readonly Pick<Unit, 'class'>[]): number {
   return army.reduce((sum, unit) => sum + SLOT_COST[BALANCE.classes[unit.class].sizeClass], 0);
+}
+
+/**
+ * Whether `attacker` deals the FR14 class-advantage (×3/2) to `defender`,
+ * by role relation (AD-4, story 4.3 — the SINGLE matchup source). True when
+ * the attacker's role is an `attacker` of any relation whose `defender` is the
+ * defender's role (symmetric OR hunt).
+ */
+export function dealsAdvantage(attacker: UnitClass, defender: UnitClass): boolean {
+  const att = BALANCE.classes[attacker].role;
+  const def = BALANCE.classes[defender].role;
+  return BALANCE.roleRelations.some((r) => r.attacker === att && r.defender === def);
+}
+
+/**
+ * The FR14 damage multiplier `attacker` applies to `defender` (story 4.3):
+ * ×3/2 on advantage; ×3/4 on disadvantage (the defender's role holds a
+ * SYMMETRIC edge over the attacker's — hunts grant NO reverse penalty);
+ * `undefined` when the roles are unrelated. Advantage is checked first, so a
+ * role pair never reads as both.
+ */
+export function rpsRatio(attacker: UnitClass, defender: UnitClass): Ratio | undefined {
+  if (dealsAdvantage(attacker, defender)) return BALANCE.formulas.rpsAdvantage;
+  const att = BALANCE.classes[attacker].role;
+  const def = BALANCE.classes[defender].role;
+  const disadvantaged = BALANCE.roleRelations.some((r) => r.kind === 'symmetric' && r.attacker === def && r.defender === att);
+  return disadvantaged ? BALANCE.formulas.rpsDisadvantage : undefined;
 }

@@ -133,6 +133,11 @@ describe('the 4.2 emissions (AC4 — kind/outcome, actionsRemaining, StatusClear
     mage: 'blast',
     cleric: 'staff',
     witch: 'staff', // unreachable in 4.2 (witches cast, never strike) — the map stays total
+    berserker: 'slash',
+    phalanx: 'slash',
+    ninja: 'slash',
+    valkyrie: 'slash',
+    sorceress: 'blast',
   };
 
   it('every UnitAttacked carries the class-derived kind and unconditional outcome "hit" (no 4.6 draws yet)', () => {

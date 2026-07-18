@@ -50,6 +50,15 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
       mage: 'dc-mon/wizard.png',
       cleric: 'dc-mon/deep_elf_high_priest.png',
       witch: 'dc-mon/unique/psyche.png',
+      // Story 4.3 wave-1 newcomers — INTERIM: they reuse an existing tile
+      // (sprites.ts UNIT_FRAMES) until dedicated CC0 DCSS tiles are sourced and
+      // composited into the sheet (Danilo's device veto). Sources below name the
+      // tile currently rendered; swap to the dedicated tiles when they land.
+      berserker: 'dc-mon/vault_guard.png (INTERIM: shares the Knight tile)',
+      phalanx: 'dc-mon/vault_guard.png (INTERIM: shares the Knight tile)',
+      ninja: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
+      valkyrie: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
+      sorceress: 'dc-mon/wizard.png (INTERIM: shares the Wizard tile)',
     },
   },
 ];
