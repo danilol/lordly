@@ -22,16 +22,23 @@ import type { HistoryEntry } from '../flow/storage';
 const VIEW_TOP = 44;
 const MARGIN = 16;
 /**
- * Compact unit-card metrics (DESIGN `{components.unit-card}`): side-colored
- * border + wash, 32px sprite, 3-letter code, element dot. Story 3.2 shrank
- * the cards (46→42, gap 3→2, vs 20→12) to free a ≥44px Replay slot on the
- * right: yours end 148, vs ..160, enemy end 290, Replay 296..344, 16 margin.
+ * Two-line row metrics (DESIGN `{components.unit-card}`, story 4.2 senior-review
+ * layout fix). The squad era fields up to five units, and the story-3.2
+ * single side-by-side card line (your comp + vs + enemy comp) would run to
+ * ~468px off the 360 base. So each comp gets its OWN full-width, self-centring
+ * line — the ResultScene per-side pattern — and the Replay control lifts into
+ * the header BAND beside the date, where no comp/Replay overlap is possible.
+ * History cards are display-only (never tapped), so 64px matches the
+ * draft/placement/result card language with no tap-target concern; only the
+ * Replay control keeps the ≥44px floor (UX-DR4). A comp line centres its own
+ * cards, so pre-era 3-unit rows sit centred (5×64+4×8=352 ≤ 360 at the cap).
  */
-const CARD_W = 42;
+const CARD_W = 64;
 const CARD_H = 56;
-const CARD_GAP = 2;
-const VS_ADVANCE = 12;
+const CARD_GAP = 8;
+const HEADER_H = 44; // header band — holds the ≥44px Replay tap target above the comp lines
 const REPLAY_W = 48;
+const REPLAY_H = 44;
 const REPLAY_X = BASE_WIDTH - MARGIN - REPLAY_W;
 
 /**
@@ -104,47 +111,59 @@ export class HistoryScene extends Scene {
     );
   }
 
-  /** One match row: verdict + mode + date header, both compositions, and the Replay slot. Returns the next free y. */
+  /** One match row: header band (verdict + mode + date + Replay) then the two stacked composition lines. Returns the next free y. */
   private renderRow(content: GameObjects.Container, y: number, entry: HistoryEntry, wasDrag: () => boolean): number {
     const row = formatHistoryRow(entry);
+    const headerTop = y;
+    const headerCenter = y + HEADER_H / 2;
     const verdictColor = row.outcome === 'draw' ? PALETTE.drawText : row.outcome === 'loss' ? PALETTE.loseText : PALETTE.winText;
-    const verdict = crispText(this, MARGIN, y, row.verdictLabel, { fontFamily: 'Arial Black', fontSize: '15px', color: verdictColor }).setOrigin(0, 0);
-    // The battle mode, right after the verdict (PO amendment 2026-07-15).
-    const mode = crispText(this, MARGIN + verdict.width + 8, y + 2, `· ${row.modeLabel}`, {
+    // Header band: verdict + mode (PO amendment 2026-07-15) anchored LEFT, date
+    // anchored RIGHT just left of the Replay control — all vertically centred.
+    // Date is right-aligned (not left, after mode) so a long/non-ISO fallback
+    // dateLabel grows leftward, away from the Replay control, never into it.
+    const verdict = crispText(this, MARGIN, headerCenter, row.verdictLabel, { fontFamily: 'Arial Black', fontSize: '15px', color: verdictColor }).setOrigin(
+      0,
+      0.5,
+    );
+    const mode = crispText(this, MARGIN + verdict.width + 8, headerCenter, `· ${row.modeLabel}`, {
       fontFamily: 'Arial',
       fontSize: '11px',
       color: PALETTE.mutedText,
-    }).setOrigin(0, 0);
-    const date = crispText(this, BASE_WIDTH - MARGIN, y, row.dateLabel, { fontFamily: 'Arial', fontSize: '11px', color: PALETTE.mutedText }).setOrigin(1, 0);
+    }).setOrigin(0, 0.5);
+    const date = crispText(this, REPLAY_X - 10, headerCenter, row.dateLabel, {
+      fontFamily: 'Arial',
+      fontSize: '11px',
+      color: PALETTE.mutedText,
+    }).setOrigin(1, 0.5);
     content.add(verdict);
     content.add(mode);
     content.add(date);
-    const headerY = y;
-    y += Math.max(verdict.height, date.height) + 6;
-
-    const cardsY = y;
-    let x = MARGIN;
-    for (const unit of row.yourComp) {
-      x = this.renderUnitCard(content, x, cardsY, unit, PALETTE.playerLine);
-    }
-    const vs = crispText(this, x + VS_ADVANCE / 2, cardsY + CARD_H / 2, 'vs', { fontFamily: 'Arial', fontSize: '11px', color: PALETTE.mutedText }).setOrigin(
-      0.5,
-    );
-    content.add(vs);
-    x += VS_ADVANCE;
-    for (const unit of row.enemyComp) {
-      x = this.renderUnitCard(content, x, cardsY, unit, PALETTE.enemyLine);
-    }
 
     if (row.replayable) {
-      this.renderReplayButton(content, cardsY, headerY, entry, wasDrag);
+      this.renderReplayButton(content, headerTop, entry, wasDrag);
     } else {
-      this.renderNotReplayable(content, cardsY, headerY);
+      this.renderNotReplayable(content, headerTop);
     }
 
-    const rule = this.add.rectangle(BASE_WIDTH / 2, cardsY + CARD_H + 10, BASE_WIDTH - MARGIN * 2, 1, PALETTE.cardStroke).setOrigin(0.5, 0);
+    // Two stacked comp lines — each centres its own cards. Side colour is the
+    // identity anchor (AD-11: blue = you/side A, red = enemy), so no text label.
+    let cy = headerTop + HEADER_H + 4;
+    cy = this.renderCompLine(content, cy, row.yourComp, PALETTE.playerLine);
+    cy = this.renderCompLine(content, cy, row.enemyComp, PALETTE.enemyLine);
+
+    const rule = this.add.rectangle(BASE_WIDTH / 2, cy + 6, BASE_WIDTH - MARGIN * 2, 1, PALETTE.cardStroke).setOrigin(0.5, 0);
     content.add(rule);
-    return cardsY + CARD_H + 12;
+    return cy + 8;
+  }
+
+  /** One composition as a centred, full-width line of unit cards. Returns the next free y. */
+  private renderCompLine(content: GameObjects.Container, y: number, comp: readonly Unit[], sideColor: number): number {
+    const totalW = comp.length * CARD_W + (comp.length - 1) * CARD_GAP;
+    let x = (BASE_WIDTH - totalW) / 2;
+    for (const unit of comp) {
+      x = this.renderUnitCard(content, x, y, unit, sideColor);
+    }
+    return y + CARD_H + 4;
   }
 
   /**
@@ -153,13 +172,13 @@ export class HistoryScene extends Scene {
    * a render-valid but replay-invalid entry (the two-tier validation gap,
    * 3.1 review) demotes this row gracefully instead of crashing the scene.
    */
-  private renderReplayButton(content: GameObjects.Container, cardsY: number, headerY: number, entry: HistoryEntry, wasDrag: () => boolean): void {
+  private renderReplayButton(content: GameObjects.Container, headerTop: number, entry: HistoryEntry, wasDrag: () => boolean): void {
     const btn = this.add
-      .rectangle(REPLAY_X, cardsY, REPLAY_W, CARD_H, PALETTE.buttonFillEnabled)
+      .rectangle(REPLAY_X, headerTop, REPLAY_W, REPLAY_H, PALETTE.buttonFillEnabled)
       .setOrigin(0, 0)
       .setStrokeStyle(2, PALETTE.buttonStrokeEnabled)
       .setInteractive({ useHandCursor: true });
-    const glyph = crispText(this, REPLAY_X + REPLAY_W / 2, cardsY + CARD_H / 2, HISTORY_REPLAY_LABEL, {
+    const glyph = crispText(this, REPLAY_X + REPLAY_W / 2, headerTop + REPLAY_H / 2, HISTORY_REPLAY_LABEL, {
       fontFamily: 'Arial',
       fontSize: '18px',
       color: PALETTE.buttonText,
@@ -176,7 +195,7 @@ export class HistoryScene extends Scene {
         flow = new MatchFlow();
         flow.startReplay(entry.setup);
       } catch {
-        this.demoteToNonReplayable(content, btn, glyph, headerY);
+        this.demoteToNonReplayable(content, btn, glyph, headerTop);
         return;
       }
       this.transitioning = true;
@@ -187,33 +206,33 @@ export class HistoryScene extends Scene {
   }
 
   /** In-place demotion of a tapped-but-replay-invalid button: mute the EXISTING objects (no double-draw), then add only the marker. */
-  private demoteToNonReplayable(content: GameObjects.Container, btn: GameObjects.Rectangle, glyph: GameObjects.Text, headerY: number): void {
+  private demoteToNonReplayable(content: GameObjects.Container, btn: GameObjects.Rectangle, glyph: GameObjects.Text, headerTop: number): void {
     btn.disableInteractive();
     btn.setFillStyle(PALETTE.buttonFill).setStrokeStyle(1, PALETTE.buttonStroke);
-    glyph.setColor(PALETTE.buttonTextDisabled);
-    content.add(this.notReplayableMarker(headerY));
+    glyph.setColor(PALETTE.buttonTextDisabled).setY(headerTop + REPLAY_H / 2 - 6); // lift the glyph to make room for the marker under it
+    content.add(this.notReplayableMarker(headerTop));
   }
 
-  /** The EXPERIENCE.md:98 "visibly marked non-replayable" treatment: muted disabled slot + marker under the date. */
-  private renderNotReplayable(content: GameObjects.Container, cardsY: number, headerY: number): void {
-    const slot = this.add.rectangle(REPLAY_X, cardsY, REPLAY_W, CARD_H, PALETTE.buttonFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.buttonStroke);
-    const glyph = crispText(this, REPLAY_X + REPLAY_W / 2, cardsY + CARD_H / 2, HISTORY_REPLAY_LABEL, {
+  /** The EXPERIENCE.md:98 "visibly marked non-replayable" treatment: a compact muted slot in the header band with the caption beneath it. */
+  private renderNotReplayable(content: GameObjects.Container, headerTop: number): void {
+    const slot = this.add.rectangle(REPLAY_X, headerTop, REPLAY_W, 26, PALETTE.buttonFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.buttonStroke);
+    const glyph = crispText(this, REPLAY_X + REPLAY_W / 2, headerTop + 13, HISTORY_REPLAY_LABEL, {
       fontFamily: 'Arial',
-      fontSize: '18px',
+      fontSize: '15px',
       color: PALETTE.buttonTextDisabled,
     }).setOrigin(0.5);
     content.add(slot);
     content.add(glyph);
-    content.add(this.notReplayableMarker(headerY));
+    content.add(this.notReplayableMarker(headerTop));
   }
 
-  /** The muted "not replayable" marker under the date — one source for both the version gate and the tap-time demotion. */
-  private notReplayableMarker(headerY: number): GameObjects.Text {
-    return crispText(this, BASE_WIDTH - MARGIN, headerY + 14, HISTORY_NOT_REPLAYABLE_LABEL, {
+  /** The muted "not replayable" caption, centred under the Replay slot — one source for both the version gate and the tap-time demotion. */
+  private notReplayableMarker(headerTop: number): GameObjects.Text {
+    return crispText(this, REPLAY_X + REPLAY_W / 2, headerTop + 30, HISTORY_NOT_REPLAYABLE_LABEL, {
       fontFamily: 'Arial',
       fontSize: '10px',
       color: PALETTE.mutedText,
-    }).setOrigin(1, 0);
+    }).setOrigin(0.5, 0);
   }
 
   /** One compact unit card (DESIGN unit-card): side-colored border + ~15% wash, sprite, 3-letter code, element dot. Returns the next x. */

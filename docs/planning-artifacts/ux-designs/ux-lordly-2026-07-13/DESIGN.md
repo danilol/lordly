@@ -159,6 +159,8 @@ components:
     glyph: '🛡'
   golem-body:
     note: 'A monster renders ONE body ≥48px spanning both its cells, one HP bar + one code at the ANCHOR cell (AD-14: one unit, never two). Board-tile codes keep the FR39f outline treatment.'
+  history-row:
+    note: 'A History match row (story 4.2 squad-era amendment): the era fields up to five units, so the two compositions STACK on their own full-width, self-centring unit-card lines (your line then enemy line — the Result-scene per-side pattern), NOT side-by-side on one line (five-vs-five would run ~468px off the 360 base). Side colour is the identity anchor (blue = you, red = enemy — no text label). The Replay control lifts into the HEADER band beside verdict/mode/date, so no comp/Replay overlap is possible. History unit-cards are DISPLAY-ONLY (never tapped) so they need no 44px tap floor; only the Replay control keeps it.'
 ---
 
 # Lordly — Visual Identity (DESIGN.md)

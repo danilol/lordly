@@ -4,7 +4,7 @@ baseline_commit: 241a0ec3d128319f2cd94245acd9f7602c99a254
 
 # Story 4.2: The era turnover — five-slot armies and named soldiers
 
-Status: review
+Status: done  # senior review 2026-07-18: one HIGH finding (HistoryScene 5-unit overflow) fixed (two-line stacked-comp row) + date-alignment regression fixed in re-review; gate-green (395 tests); Danilo's device sign-off on the fresh 5-unit History + Result screens: "it looks great. let's ship."
 
 ## Story
 
@@ -220,3 +220,29 @@ MODIFIED (docs):
 
 - 2026-07-17 — Device-session fix: ResultScene composition chips re-worked from 104px 3-unit-era cards (560px overflow at five units) to the compact 64px tray-card language, with the soldier name on the chip. Two PO wishes from the same session logged to deferred-work.md (board-code removal — UX-spine conflict flagged; Result battle-stats summary).
 - 2026-07-17 — Story 4.2 implementation: the era turnover. ONE logVersion bump (3→4, complete union per dossier §5) + ONE balanceVersion bump (2→3: slotBudget 5, sizeClass, engagementCap 10). Names (FR37) via new `names/A|B` streams + engine `names.ts` (outside the balance hash). STRATEGY_POOL re-authored + re-tuned for the 5-unit meta (both-mode ≤65% band re-verified). Pre-era history display-tolerance fix (the storage catch). Shell reworked for five slots; names on placement/reveal cards and in narration; status-icon clears are log-driven.
+
+## Review Findings
+
+Senior code review 2026-07-17 (Opus 4.8, inline layers — the parallel Blind/Edge/Auditor subagents aborted on the org monthly spend limit, so all three lenses were run inline at session capability). Diff `241a0ec..HEAD`, golden snapshot treated as a regenerated artifact (verified: carries v4 `kind`/`actionsRemaining`; `StatusCleared` emission covered by dedicated `events.test.ts` fixtures, not goldens). Typecheck green both packages. Engine layer (slot schema, validation order, the complete v4 union, determinism/per-label stream derivation, name fast-forward replay, the storage catch, StatusCleared icon removal, all four shell scene reworks) verified correct — no findings there.
+
+- [x] [Review][Decision] **RESOLVED 2026-07-17 (Danilo): HistoryScene 5v5 overflow** — fix approach chosen: stack the two compositions on separate lines per row (the ResultScene per-side pattern) at the 64px card language, with the Replay control beside the row header. Needs a DESIGN.md `{components.unit-card}` / History-row amendment + a device re-check of a fresh 5-unit entry. Converts to the patch below.
+- [x] [Review][Patch] **APPLIED 2026-07-18: Re-layout HistoryScene rows as two stacked 64px comp lines (your line + enemy line), Replay in the header band** [apps/web/src/scenes/HistoryScene.ts] — `renderRow` now draws a 44px header band (verdict + mode + date cluster left, Replay control right — no comp/Replay overlap possible) then two full-width self-centring comp lines via a new `renderCompLine` (5×64+4×8=352 ≤ 360; pre-era 3-unit rows centre too); the `vs` separator and `VS_ADVANCE` are gone; Replay/non-replayable helpers repositioned into the header band (compact 26px muted slot + caption for the version-gate case, glyph-lift on tap-time demotion). DESIGN.md amended with a `{components.history-row}` entry. Gate green: typecheck + eslint + prettier + 395/395 tests. **PENDING: device re-check of a fresh 5-unit History row + redeploy before this flips to done (house device-signoff rule; the fix touches already-deployed code).**
+- [ ] [Review][Decision→resolved] Original finding detail retained for the record: The storage tolerance fix (`isRenderableArmy` → `length 1..slotBudget`, storage.ts:63) correctly ADMITS new 5-unit entries to render, but `HistoryScene`'s row layout still uses the story-3.2 three-unit sizing (`CARD_W=42`, `CARD_GAP=2`, `REPLAY_X=296`, `BASE_WIDTH=360`) and was never resized — it is absent from this story's File List and the recon coupling map. `formatHistoryRow` feeds the full armies, so for a new squad-era 5v5 entry: your 5 cards end at x=236, `vs`→248, enemy 5 cards run 248→**468** — past `REPLAY_X=296` and off the 360 canvas. The enemy composition is truncated/hidden and collides with the (top-drawn) Replay button. This is the exact class of overflow caught on-device for `ResultScene` (5×104px chips), in the sibling scene the device session did not exercise with a fresh 5-unit entry. HIGH: shipped, present on every new-era History row (FR28). Fix is a LAYOUT DECISION, not a mechanical patch — both compositions plus a Replay control cannot hold ten cards on one 360 row at a readable card size, and DESIGN.md `{components.unit-card}` governs the History row. Options: (a) stack the two comps on separate lines per row (the ResultScene per-side pattern) at 64px cards, Replay to the right of the header; (b) shrink History cards to fit 5+5+vs+Replay on one row (~26px cards — likely below the readability floor); (c) condensed per-row representation (code chips without sprites). Requires Danilo's call + a DESIGN.md amendment.
+
+Dismissed (recorded, not a defect): `rollName` total-exhaustion fallback (names.ts:154) returns a duplicate name if every table entry is taken — mathematically unreachable in wave 1 (48-name tables vs ≤5 same-sex draws) and documented in-code. Forward-note for story 4.8: size the construct-designation list ≥ the max monsters an army can field so the fallback stays unreachable.
+
+### Review Findings — round 2 (re-review of the round-1 fix, 2026-07-18)
+
+Re-reviewed the applied HistoryScene re-layout adversarially. One self-inflicted regression found and fixed:
+
+- [x] [Review][Patch] **APPLIED: History date right-aligned against the Replay control, not left-aligned after mode** [apps/web/src/scenes/HistoryScene.ts renderRow] — the round-1 rewrite left-aligned the date after `mode`, so a long or non-ISO fallback `dateLabel` (historyModel.ts:47 passes `entry.date` through verbatim when it fails the ISO regex) would grow rightward INTO the Replay control. Restored the story-3.2 right-alignment (origin (1,0.5) at `REPLAY_X - 10`) so a long date grows leftward, away from the button. Gate green (395 tests). Otherwise the re-layout verified sound: comp lines centre correctly for 1..5 units, header/comp bands never overlap, non-replayable caption sits within the 44px band clear of the comps, `renderUnitCard` fits the 64px card.
+
+Round-2 status: clean apart from the one fix above (same PENDING device re-check + redeploy as round 1).
+
+### Review Findings — round 3 (re-review, 2026-07-18)
+
+✅ Clean review — no new findings. Final adversarial pass over the full working diff verified band interactions (header vs comps, caption clearance, date/control adjacency), the tap-time demote edge path, comp centering for 1–5 units, and the absence of dangling refs. Gate green (395 tests).
+
+### Device sign-off + ship (2026-07-18)
+
+Danilo's on-device check of the fixed screens: **"it looks great. let's ship."** Screenshots confirmed the new two-line History rows (your comp + enemy comp each on their own centred line, verdict/mode/date + green Replay ▶ in the header band) render five-vs-five with no overflow across the newest Standard entry and older Wipeout entries; the Result screen shows five named soldiers cleanly. Both review patches (HistoryScene two-line re-layout; date right-alignment) shipped to main → CI deploy. Story flipped to done.
