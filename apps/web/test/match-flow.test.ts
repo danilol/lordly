@@ -281,12 +281,13 @@ describe('MatchFlow commit (FR5/FR24, AD-6/AD-9/AD-11/AD-13)', () => {
     expect(flow.getState().committedSetup).toBe(first);
   });
 
-  it('rejects draft/remove/place after commit — the board is locked (phase guard)', () => {
+  it('rejects draft/remove/place/unplace after commit — the board is locked (phase guard)', () => {
     const flow = readyToCommit(0xf00d);
     flow.commit();
     expect(() => flow.draftUnit('witch')).toThrow(/already committed/i);
     expect(() => flow.removeUnit(0)).toThrow(/already committed/i);
     expect(() => flow.placeUnit(0, { row: 'mid', col: 'center' })).toThrow(/already committed/i);
+    expect(() => flow.unplaceUnit(0)).toThrow(/already committed/i);
   });
 
   it('placeUnit bounds-checks its unit index (guards bad drag data)', () => {
@@ -308,6 +309,37 @@ describe('MatchFlow commit (FR5/FR24, AD-6/AD-9/AD-11/AD-13)', () => {
     expect(() => flow.removeUnit(Number.NaN)).toThrow(/out of range/i);
     // State is untouched — the guard threw before any mutation.
     expect(flow.getState().playerArmy).toHaveLength(1);
+  });
+
+  describe('MatchFlow.unplaceUnit (double-tap-to-remove, story 4.4 device review)', () => {
+    it('sends a placed unit back to the tray and flips the phase to placement', () => {
+      const flow = flowWithSeed(1);
+      flow.startMatch();
+      flow.draftUnit('knight');
+      flow.placeUnit(0, { row: 'front', col: 'center' });
+      flow.unplaceUnit(0);
+      expect(flow.getState().playerPlacements[0]).toBeNull();
+      expect(flow.getState().phase).toBe('placement');
+    });
+
+    it('bounds-checks its unit index, mirroring placeUnit', () => {
+      const flow = flowWithSeed(1);
+      flow.startMatch();
+      flow.draftUnit('knight');
+      expect(() => flow.unplaceUnit(5)).toThrow(/out of range/i);
+      expect(() => flow.unplaceUnit(-1)).toThrow(/out of range/i);
+    });
+
+    it('rejects a non-integer index (NaN/float slips past a bare </≥ guard)', () => {
+      const flow = flowWithSeed(1);
+      flow.startMatch();
+      flow.draftUnit('knight');
+      flow.placeUnit(0, { row: 'front', col: 'center' });
+      expect(() => flow.unplaceUnit(Number.NaN)).toThrow(/out of range/i);
+      expect(() => flow.unplaceUnit(1.5)).toThrow(/out of range/i);
+      // State is untouched — the guard threw before any mutation.
+      expect(flow.getState().playerPlacements[0]).toEqual({ row: 'front', col: 'center' });
+    });
   });
 });
 

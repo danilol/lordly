@@ -124,22 +124,6 @@ export const TACTIC_DISPLAY_NAME: Record<Tactic, string> = {
   strongest: 'Attack Strongest',
   leader: 'Attack Leader',
 };
-/** Short button labels for the picker (the spine's "Autonomous · Weakest · Strongest · Leader"). */
-export const TACTIC_SHORT_LABEL: Record<Tactic, string> = {
-  autonomous: 'Autonomous',
-  weakest: 'Weakest',
-  strongest: 'Strongest',
-  leader: 'Leader',
-};
-/** One-line behavior blurb per tactic for the picker's detail line. */
-export const TACTIC_BLURB: Record<Tactic, string> = {
-  autonomous: 'Each unit picks its own target by class instinct.',
-  weakest: 'Focus the enemy with the least HP remaining.',
-  strongest: 'Focus the enemy with the most HP remaining.',
-  leader: 'Hunt the enemy leader (unlocks with leaders, story 4.5).',
-};
-/** Heading over the Placement tactic picker. */
-export const TACTIC_PICKER_HEADING = 'ARMY TACTIC';
 
 // FR39f (story 4.0): the class-code contrast treatment for units standing ON
 // side-colored board tiles (Battle, Reveal). A dark outline stroke carries the

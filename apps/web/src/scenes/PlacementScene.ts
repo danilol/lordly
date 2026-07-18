@@ -24,6 +24,13 @@ const GRID_TOP = 150;
 const TRAY_Y = 486;
 /** Two taps on the same unit within this window = a double-tap (auto-place shortcut). */
 const DOUBLE_TAP_MS = 300;
+/**
+ * Shared drag-vs-tap boundary (review fix): Phaser's `dragDistanceThreshold`
+ * and the tap classifier below must agree, or a pointer move in the gap
+ * between two different cutoffs starts no drag AND is rejected as a tap —
+ * the gesture silently does nothing.
+ */
+const TAP_DISTANCE_PX = 10;
 
 /**
  * Placement scene (FR4/FR30): the player's own 3×3 grid (owner-local — AD-11:
@@ -80,9 +87,10 @@ export class PlacementScene extends Scene {
     this.lastTapAt = 0;
     this.pickerOpen = false;
     // A draggable object starts a drag on the SLIGHTEST move by default (threshold
-    // 0), which swallowed the tap events double-tap-to-place needs. Require 10px
-    // of movement before a drag begins, so a still tap stays a clean pointerup.
-    this.input.dragDistanceThreshold = 10;
+    // 0), which swallowed the tap events double-tap-to-place needs. Require
+    // TAP_DISTANCE_PX of movement before a drag begins, so a still tap stays a
+    // clean pointerup. Must match the tap classifier below exactly (review fix).
+    this.input.dragDistanceThreshold = TAP_DISTANCE_PX;
     this.buildGrid();
     this.wireDragAndDrop();
     this.redraw();
@@ -122,6 +130,13 @@ export class PlacementScene extends Scene {
   }
 
   private wireDragAndDrop() {
+    // A real drag starting means this pointer gesture is NOT a tap — clear the
+    // double-tap tracking so a stale pre-drag tap can never combine with a
+    // post-drag tap into an unintended double-tap (review fix).
+    this.input.on('dragstart', () => {
+      this.lastTapIndex = -1;
+      this.lastTapAt = 0;
+    });
     this.input.on('drag', (_pointer: Input.Pointer, obj: GameObjects.Container, dragX: number, dragY: number) => {
       obj.x = dragX;
       obj.y = dragY;
@@ -189,9 +204,10 @@ export class PlacementScene extends Scene {
       // Double-tap toggles a unit: an UNPLACED one drops into the first free
       // cell (top row first); a PLACED one goes back to the tray (Danilo). A
       // drag also ends in pointerup, so ignore taps that moved the pointer —
-      // only a still tap (distance ~0) counts.
+      // only a still tap counts. Must match TAP_DISTANCE_PX (the drag-start
+      // threshold) exactly — a gap between the two silently eats the gesture.
       c.on('pointerup', (pointer: Input.Pointer) => {
-        if (pointer.getDistance() > 8) return; // it was a drag, not a tap
+        if (pointer.getDistance() > TAP_DISTANCE_PX) return; // it was a drag, not a tap
         const now = this.time.now;
         const doubleTap = this.lastTapIndex === i && now - this.lastTapAt < DOUBLE_TAP_MS;
         this.lastTapAt = now;
@@ -249,6 +265,12 @@ export class PlacementScene extends Scene {
    * `Attack Leader` is DISABLED (muted, no handler) until story 4.5 ships leader
    * designation (D-3b). Hidden from the enemy until reveal (FR5). Player-only
    * write path is `flow.setTactic` (AD-13).
+   *
+   * RECORDED DEVIATION (review, 2026-07-19): the bar and every option row are
+   * 24px tall — under UX-DR4's 44px tap-target floor. This is deliberate:
+   * Danilo asked twice to shrink the picker, then confirmed the final size on
+   * his own device ("it works great now"). Do NOT resize this back to 44px to
+   * "fix" the spec gap — that would reverse a tested product decision.
    */
   private buildTacticPicker(selected: Tactic) {
     // Centered in the clear band between the board (ends ~y372) and the tray

@@ -608,4 +608,72 @@ describe('FR34 tactics wired through resolve (story 4.4)', () => {
     // Leader: the back row — just the crowned B:4.
     expect(leader?.targets.map((t) => t.unit)).toEqual(['B:4']);
   });
+
+  it("witch + weakest: casts on the lowest-HP unafflicted enemy, not the rearmost (dossier §4's prefer-unafflicted-then-tactic order)", () => {
+    // Global range (FR9), so row doesn't gate legality — only HP should decide
+    // under `weakest`. B fields no spellcaster (avoids an AGI-tied witch racing
+    // A:0's own cast, e.g. putting her to sleep first) — knight (140 hp, back,
+    // the Autonomous rearmost pick) vs. a sorceress (78 hp, front — STRICTLY
+    // lower than every other B unit, so weakest has no tie to fall through to
+    // Autonomous on) for weakest to prefer.
+    const base = setup({
+      armies: {
+        A: [u('witch', 'fire'), u('cleric', 'water'), u('cleric', 'wind'), u('cleric', 'earth'), u('cleric', 'fire')],
+        B: [u('knight', 'earth'), u('sorceress', 'water'), u('cleric', 'wind'), u('cleric', 'earth'), u('cleric', 'fire')],
+      },
+      placements: {
+        A: [
+          { row: 'back', col: 'center' }, // the witch under test
+          { row: 'front', col: 'left' },
+          { row: 'front', col: 'center' },
+          { row: 'front', col: 'right' },
+          { row: 'mid', col: 'left' },
+        ],
+        B: [
+          { row: 'back', col: 'center' }, // B:0 knight (140 hp) — rearmost, the Autonomous pick
+          { row: 'front', col: 'center' }, // B:1 sorceress (78 hp) — lowest HP, NOT rearmost
+          { row: 'front', col: 'left' },
+          { row: 'front', col: 'right' },
+          { row: 'mid', col: 'center' },
+        ],
+      },
+    });
+    const autoCast = byType(resolveBattle(withTactics(base, { A: 'autonomous', B: 'autonomous' }, { A: 0, B: 0 })), 'StatusApplied').find(
+      (e) => e.source === 'A:0',
+    );
+    const weakCast = byType(resolveBattle(withTactics(base, { A: 'weakest', B: 'autonomous' }, { A: 0, B: 0 })), 'StatusApplied').find(
+      (e) => e.source === 'A:0',
+    );
+    expect(autoCast?.target).toBe('B:0'); // Autonomous: rearmost
+    expect(weakCast?.target).toBe('B:1'); // Weakest: lowest HP, wherever it stands
+  });
+
+  it('witch + leader: casts on the designated leader when unafflicted, else falls back to Autonomous', () => {
+    const base = setup({
+      armies: {
+        A: [u('witch', 'fire'), u('cleric', 'water'), u('cleric', 'wind'), u('cleric', 'earth'), u('cleric', 'fire')],
+        B: [u('knight', 'earth'), u('cleric', 'water'), u('cleric', 'wind'), u('cleric', 'earth'), u('cleric', 'fire')],
+      },
+      placements: {
+        A: [
+          { row: 'back', col: 'center' },
+          { row: 'front', col: 'left' },
+          { row: 'front', col: 'center' },
+          { row: 'front', col: 'right' },
+          { row: 'mid', col: 'left' },
+        ],
+        B: [
+          { row: 'back', col: 'center' }, // B:0 — Autonomous rearmost pick
+          { row: 'front', col: 'center' }, // B:1 — the designated leader
+          { row: 'front', col: 'left' },
+          { row: 'front', col: 'right' },
+          { row: 'mid', col: 'center' },
+        ],
+      },
+    });
+    const leaderCast = byType(resolveBattle(withTactics(base, { A: 'leader', B: 'autonomous' }, { A: 0, B: 1 })), 'StatusApplied').find(
+      (e) => e.source === 'A:0',
+    );
+    expect(leaderCast?.target).toBe('B:1'); // the crowned unit, not the rearmost B:0
+  });
 });

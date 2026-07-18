@@ -152,6 +152,36 @@ describe('FR34 tactics over the legal list (deterministic — no randomness)', (
     const candidates = [at(0, 0, { id: 'B:0' }), at(0, 2, { id: 'B:2' })];
     expect(selectMeleeTarget(2, candidates, 'leader', 'B:2')).toBe(0);
   });
+
+  describe('tactics combined with Last Stand (review coverage — the cross-product Task 3 asked for)', () => {
+    // Attacker at own col 0 (reach {1,2}, facing col 2). Both enemies sit in the
+    // UNREACHABLE column 0, across two different rows, so Last Stand widens the
+    // pool to all living enemies — but the row-blockade still applies to that
+    // widened pool: only the nearest row (B:0) is legal; the farther row (B:1)
+    // stays shielded even though nothing is actually in reach.
+    const nearShield = at(0, 0, { hp: 80, id: 'B:0' }); // nearest out-of-reach row
+    const farBehind = at(1, 0, { hp: 10, id: 'B:1' }); // farther out-of-reach row, weaker
+    const candidates = [nearShield, farBehind];
+
+    it('weakest under Last Stand still respects the row-blockade: the shield is hit, not the weaker unit behind it', () => {
+      expect(selectMeleeTarget(0, candidates, 'weakest')).toBe(0); // B:0 (hp 80), NOT the weaker B:1 (hp 10)
+    });
+
+    it('strongest under Last Stand still respects the row-blockade', () => {
+      // Same geometry, HPs flipped: the farther unit is now the stronger one —
+      // still shielded, so strongest also lands on the near row.
+      const flipped = [at(0, 0, { hp: 50, id: 'B:0' }), at(1, 0, { hp: 200, id: 'B:1' })];
+      expect(selectMeleeTarget(0, flipped, 'strongest')).toBe(0); // B:0, NOT the stronger-but-shielded B:1
+    });
+
+    it('leader under Last Stand: found when the leader IS the nearest shield', () => {
+      expect(selectMeleeTarget(0, candidates, 'leader', 'B:0')).toBe(0);
+    });
+
+    it('leader under Last Stand: shielded by a nearer ally falls back to Autonomous (the leader is never reachable through a Last-Stand shield)', () => {
+      expect(selectMeleeTarget(0, candidates, 'leader', 'B:1')).toBe(0); // autonomous hits the shield, B:0
+    });
+  });
 });
 
 describe('FR10 blast row selection', () => {
