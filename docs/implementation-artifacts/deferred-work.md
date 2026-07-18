@@ -102,3 +102,9 @@
 ## Deferred from: code review of story-1.8 (2026-07-13)
 
 - Navigation is one-way with a dead-end: Home→Draft→Placement→Reveal has no back-navigation, and the Reveal placeholder has no exit (the player is stranded until a tab reload). Explicitly deferred to story 1.9, which owns the real post-submit screens (Reveal/Battle/Result) and the Result→Rematch→Home navigation. 1.8 ships as a demoable one-way milestone. When 1.9 lands, ensure: a Home/back affordance exists from every scene, and Placement→Draft back-nav (if wanted) accounts for the forward-only element stream (re-adding re-rolls).
+
+## Deferred from: code review of story-4-3-roster-wave-1-twelve-classes-on-role-relations (2026-07-18)
+
+- `card.beats`/`card.beatenBy` computed by `classRulesCard` (apps/web/src/flow/draftModel.ts:61-62) but never consumed by `DraftScene` — it independently re-derives "strong vs"/"weak to" pills straight from `BALANCE.roleRelations`. Harmless (both derivations bottom out in the same table, no drift risk), only exercised by `draft-model.test.ts`. Revisit if a future screen wants a class-name-list view instead of the damage-type pills.
+- `chip()` matchup-pill layout (apps/web/src/scenes/DraftScene.ts:126) has no width/right-edge bounds check against `BASE_WIDTH` (360). Currently safe (one damage-type string per side); the roster keeps growing (Golem in 4.8, then dragons/beasts per Danilo), so a future role/type combination with a longer `strongVs`/`weakTo` list could run off-canvas with nothing to catch it.
+- `sprites.test.ts` hardcodes an untracked `SHEET_FRAMES = 6` constant (apps/web/test/sprites.test.ts:695-712), duplicating knowledge already implicit in the sheet dimensions and independently re-derived at runtime in `BootScene.ts`. Nothing forces it to bump when the sheet is later extended to 11 frames (dedicated newcomer tiles).

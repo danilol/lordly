@@ -90,6 +90,19 @@ describe('balance data (FR14, FR15, FR16, AD-4)', () => {
     ]);
   });
 
+  it('role relations are structurally non-contradictory: no pair advantages both ways, no duplicate ordered pair', () => {
+    // Generic invariant over BALANCE.roleRelations (mirrors the pre-4.3 guard
+    // that checked rpsBeats/rpsHunts for hunt-backs and triangle overlaps) so a
+    // future relation addition (story 4.7+) can't silently create a two-way
+    // advantage loop or a contradictory duplicate for the same ordered pair.
+    for (const r of BALANCE.roleRelations) {
+      const reverseExists = BALANCE.roleRelations.some((x) => x.attacker === r.defender && x.defender === r.attacker);
+      expect(reverseExists, `${r.attacker}->${r.defender} (${r.kind}) must not also have a reverse relation`).toBe(false);
+    }
+    const orderedPairs = BALANCE.roleRelations.map((r) => `${r.attacker}>${r.defender}`);
+    expect(new Set(orderedPairs).size, 'every (attacker, defender) pair must appear at most once').toBe(orderedPairs.length);
+  });
+
   it('CONTINUITY (FR14 degenerate case): role relations reproduce the pre-4.3 rpsBeats/rpsHunts matchups EXACTLY over the shipped six', () => {
     // The known pre-4.3 truth, hardcoded: advantage (×3/2) pairs and the
     // disadvantage (×3/4) reverses of the SYMMETRIC triangle only. The archer's

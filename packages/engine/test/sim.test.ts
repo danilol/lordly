@@ -35,9 +35,13 @@ const CI_CONFIG = { baseSeed: 1, runsPerPair: 15, threshold: ACCEPTANCE_BAND };
 describe('sim sweep (NFR4)', () => {
   const report = runSweep(STRATEGY_POOL, CI_CONFIG);
 
+  // Explicit timeout (story 4.3 review): this test re-runs the full sweep a
+  // second time, and the heavier 11-class pool brushes Vitest's 5s default
+  // under a loaded CI runner — a load flake, not a slow assertion (same
+  // pattern as the wipeout band test below).
   it('is deterministic: the same config yields the bit-identical report', () => {
     expect(runSweep(STRATEGY_POOL, CI_CONFIG)).toEqual(report);
-  });
+  }, 15_000);
 
   it('accounts every game: pool² × runs battles; a self-pairing counts as ONE game, not two', () => {
     const n = STRATEGY_POOL.length;
@@ -194,9 +198,11 @@ describe('sim sweep (NFR4)', () => {
     expect(report.flagged).toEqual([]);
   });
 
+  // Explicit timeout (story 4.3 review): same re-run cost as the determinism
+  // test above.
   it('omitting mode is exactly single mode (the historical sweep behavior)', () => {
     expect(runSweep(STRATEGY_POOL, { ...CI_CONFIG, mode: 'single' })).toEqual(report);
-  });
+  }, 15_000);
 
   // Story 3.0: the band holds in BOTH modes (the wipeout knob deferred since
   // 1.10). Wipeout battles run up to BALANCE.engagementCap engagements — 10

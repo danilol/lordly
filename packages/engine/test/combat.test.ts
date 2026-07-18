@@ -389,16 +389,24 @@ describe('FR18 judging symmetry (property)', () => {
     return true;
   });
 
-  test.prop([noMirrorTieArb])('swapping sides swaps the result', (s) => {
-    const swapped: MatchSetup = {
-      ...s,
-      armies: { A: s.armies.B, B: s.armies.A },
-      placements: { A: s.placements.B, B: s.placements.A },
-    };
-    const v1 = ended(resolveBattle(s));
-    const v2 = ended(resolveBattle(swapped));
-    const flip = (w: BattleEnded['winner']) => (w === 'A' ? 'B' : w === 'B' ? 'A' : 'draw');
-    expect(v2.winner).toBe(flip(v1.winner));
-    expect(v2.hpPct).toEqual({ A: v1.hpPct.B, B: v1.hpPct.A });
-  });
+  // Explicit timeout (story 4.3 review): the wave-1 roster's AGI collisions
+  // (Berserker/Wizard both 12) make noMirrorTieArb reject more generated cases
+  // than the 6-class roster did, so this brushes Vitest's 5s default under a
+  // loaded CI runner — a load flake, not a slow assertion.
+  test.prop([noMirrorTieArb])(
+    'swapping sides swaps the result',
+    (s) => {
+      const swapped: MatchSetup = {
+        ...s,
+        armies: { A: s.armies.B, B: s.armies.A },
+        placements: { A: s.placements.B, B: s.placements.A },
+      };
+      const v1 = ended(resolveBattle(s));
+      const v2 = ended(resolveBattle(swapped));
+      const flip = (w: BattleEnded['winner']) => (w === 'A' ? 'B' : w === 'B' ? 'A' : 'draw');
+      expect(v2.winner).toBe(flip(v1.winner));
+      expect(v2.hpPct).toEqual({ A: v1.hpPct.B, B: v1.hpPct.A });
+    },
+    15_000,
+  );
 });

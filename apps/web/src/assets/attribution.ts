@@ -18,7 +18,7 @@ export interface ArtPackAttribution {
   licenseUrl: string;
   /** Files in this repo derived from the pack. */
   assets: readonly string[];
-  /** Which engine class each redistributed sprite came from (source tile path inside the pack). Partial: a pack may supply only some classes. */
+  /** Which engine class each redistributed sprite came from (source tile path inside the pack, optionally suffixed with an "(INTERIM: ...)" note when a class temporarily reuses another's tile). Partial: a pack may supply only some classes. */
   classSources: Partial<Record<UnitClass, string>>;
 }
 

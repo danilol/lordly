@@ -163,6 +163,7 @@ export class DraftScene extends Scene {
         fontFamily: 'Arial',
         fontSize: '11px',
         color: PALETTE.bodyText,
+        wordWrap: { width: textW },
       }),
     );
     this.dynamic.push(
@@ -177,8 +178,12 @@ export class DraftScene extends Scene {
     // the types of the roles that beat it, strong vs the types it beats.
     const myRole = BALANCE.classes[this.selected].role;
     const uniq = (xs: string[]) => [...new Set(xs)];
+    // Support/Control deal no damage type of their own, so a hunt landing on
+    // them (e.g. sniper->support) falls back to the role name itself — a hunt
+    // against them must still show as a strength/weakness, not vanish silently.
+    const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
     const types = (rels: readonly { attacker: Role; defender: Role }[], pick: 'attacker' | 'defender') =>
-      uniq(rels.map((r) => ROLE_DAMAGE_TYPE[r[pick]]).filter((t): t is string => t !== undefined));
+      uniq(rels.map((r) => ROLE_DAMAGE_TYPE[r[pick]] ?? capitalize(r[pick])));
     const weakTo = types(
       BALANCE.roleRelations.filter((r) => r.defender === myRole),
       'attacker',

@@ -30,7 +30,8 @@ Damage bonuses ride on a unit's **role**, not its class — so new soldiers slot
 - **Skirmisher** — Mercenary, Ninja, Valkyrie
 - **Sniper** — Archer
 - **Artillery** — Wizard, Sorceress
-- **Support** — Cleric · **Control** — Witch
+- **Support** — Cleric
+- **Control** — Witch
 
 The triangle: **Artillery beats Vanguard**, **Vanguard beats Sniper**, **Sniper beats Artillery**. An attack with the advantage deals ×1.5 damage; against its counter, ×0.75. And the archer's specialty — **Sniper hunts Support** and **Sniper hunts Control**: arrows deal ×1.5 to Cleric and Witch, one-way, with no bonus back. Skirmishers stand outside every relation — steady, never favored, never countered.
 
