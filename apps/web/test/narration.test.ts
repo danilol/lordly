@@ -46,6 +46,22 @@ describe('narration builder — the Log panel text (AC7, AD-2; names from story 
     expect(lines).toEqual(['Kain (KNI) struck Lyra (ARC) for 12 — 78→66 HP']);
   });
 
+  it('narrates a CRIT distinctly with the boosted damage (story 4.6)', () => {
+    const { lines } = run([
+      started,
+      { type: 'UnitAttacked', source: 'A:0', kind: 'slash', targets: [{ unit: 'B:1', damage: 18, hpAfter: 60, outcome: 'crit' }] },
+    ]);
+    expect(lines).toEqual(['Kain (KNI) CRIT Lyra (ARC) for 18 — 78→60 HP']);
+  });
+
+  it('narrates a DODGE distinctly — no damage, no HP delta (story 4.6)', () => {
+    const { lines } = run([
+      started,
+      { type: 'UnitAttacked', source: 'A:0', kind: 'slash', targets: [{ unit: 'B:1', damage: 0, hpAfter: 78, outcome: 'dodged' }] },
+    ]);
+    expect(lines).toEqual(['Kain (KNI) struck at Lyra (ARC) — dodged!']);
+  });
+
   it('falls back to the pre-era "Class id" form for a NAMELESS roster (old snapshots render code-only)', () => {
     const nameless: BattleEvent = {
       type: 'BattleStarted',

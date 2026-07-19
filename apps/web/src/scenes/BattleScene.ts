@@ -59,6 +59,10 @@ const BAR_H = 8;
 const LUNGE_PX = 12;
 /** How far a combat number floats up (px; damped under reduced motion). */
 const FLOAT_PX = 22;
+/** Crit combat numbers render larger than the 14px base (story 4.6) — still well above the ≥14px floor (UX-DR3). */
+const CRIT_FONT_PX = 20;
+/** The small "CRITICAL"/"DODGE" caption stacked over the number (story 4.6) — above the 10px floor, readable at full speed. */
+const CAPTION_FONT_PX = 11;
 /** Lines kept in the Log panel (newest at the bottom — a scrolling window). 11 logical lines leaves headroom for word-wrapped long lines inside the panel (review). */
 const LOG_PANEL_LINES = 11;
 
@@ -311,8 +315,17 @@ export class BattleScene extends Scene {
         const color = this.actorColor(event.source);
         for (const t of event.targets) {
           this.setHp(t.unit, t.hpAfter);
+          if (t.outcome === 'dodged') {
+            // A dodge is a whiff (story 4.6): no damage number, no hurt-flash,
+            // HP unchanged — a clear "DODGE" caption over a dash so the miss
+            // reads unambiguously even at full battle speed.
+            this.popup(t.unit, this.linked(linkedToMisfire, '—'), PALETTE.mutedText, true, 'DODGE');
+            continue;
+          }
           this.hurtFlash(t.unit);
-          this.popup(t.unit, this.linked(linkedToMisfire, `-${t.damage}`), color);
+          const crit = t.outcome === 'crit';
+          // A crit gets a small "CRITICAL" caption stacked over the boosted number.
+          this.popup(t.unit, this.linked(linkedToMisfire, `-${t.damage}`), color, crit, crit ? 'CRITICAL' : undefined);
         }
         return true;
       }
@@ -550,24 +563,53 @@ export class BattleScene extends Scene {
     });
   }
 
-  /** A floating combat number/word over a unit — ≥14px mono bold, rising and fading within the beat (damped under reduced motion). */
-  private popup(id: UnitId, text: string, color: string) {
+  /**
+   * A floating combat number/word over a unit — ≥14px mono bold, rising and
+   * fading within the beat (damped under reduced motion). An optional `caption`
+   * (story 4.6) renders a small uppercase word STACKED on top of the number —
+   * "CRITICAL" / "DODGE" — so a fast beat reads unambiguously at full speed.
+   */
+  private popup(id: UnitId, text: string, color: string, emphatic = false, caption?: string) {
     const v = this.views.get(id);
     if (!v) return;
+    const mainSize = emphatic ? CRIT_FONT_PX : 14;
+    // Crit numbers read BIGGER (story 4.6) — still the side-colored, bold,
+    // tabular combat-number token (DESIGN), never gold (UX-DR2 reserves it);
+    // the emphasis is size + a punch + the caption, not a new color. ≥14px.
     const label = crispText(this, v.x, v.y - 34, text, {
       fontFamily: 'Courier',
-      fontSize: '14px',
+      fontSize: `${mainSize}px`,
       fontStyle: '800', // the DESIGN combat-number weight token (bold = 700 fell one notch short — review)
       color,
     })
       .setOrigin(0.5)
       .setDepth(1000);
+    // The caption sits just above the number, small but readable (≥ the 10px
+    // floor), same color — a per-beat "what just happened" tag.
+    const caph = crispText(this, v.x, v.y - 34 - mainSize * 0.72, caption ?? '', {
+      fontFamily: 'Courier',
+      fontSize: `${CAPTION_FONT_PX}px`,
+      fontStyle: '800',
+      color,
+    })
+      .setOrigin(0.5)
+      .setDepth(1000);
+    const parts: GameObjects.Text[] = caption !== undefined ? [label, caph] : [label];
+    if (caption === undefined) caph.destroy();
+    // A crit gets a quick scale "punch" on top of the float (damped under
+    // reduced motion, which preserves the beat — UX-DR6).
+    if (emphatic && !this.reduceMotion) {
+      for (const p of parts) p.setScale(1.4);
+      this.tweens.add({ targets: parts, scale: 1, duration: 160, ease: 'Back.easeOut' });
+    }
     this.tweens.add({
-      targets: label,
-      y: label.y - (this.reduceMotion ? 8 : FLOAT_PX),
+      targets: parts,
+      y: `-=${this.reduceMotion ? 8 : FLOAT_PX}`,
       alpha: 0,
       duration: 500,
-      onComplete: () => label.destroy(),
+      onComplete: () => {
+        for (const p of parts) p.destroy();
+      },
     });
   }
 

@@ -249,11 +249,14 @@ describe('FR18 deaths, wipe, and judging', () => {
   // STR 26 vs highest VIT/2 = 14), so the min-1 clamp is guarded by the
   // property below rather than a specific pinned matchup; casters (1.6) will
   // exercise it concretely.
-  test.prop([matchSetupArb])('every attack deals at least minDamage and hpAfter never goes below 0', (s) => {
+  test.prop([matchSetupArb])('every LANDED attack deals at least minDamage and hpAfter never goes below 0 (a dodge deals 0 — story 4.6)', (s) => {
     const log = resolveBattle(s);
     for (const a of attacks(log)) {
       for (const t of a.targets) {
-        expect(t.damage).toBeGreaterThanOrEqual(BALANCE.formulas.minDamage);
+        // A dodged hit (ADR 0003) is the ONE attack outcome that deals 0 — it
+        // negates the hit, so it is exempt from the min-damage floor.
+        if (t.outcome === 'dodged') expect(t.damage).toBe(0);
+        else expect(t.damage).toBeGreaterThanOrEqual(BALANCE.formulas.minDamage);
         expect(t.hpAfter).toBeGreaterThanOrEqual(0);
       }
     }
@@ -321,43 +324,50 @@ describe('FR18 deaths, wipe, and judging', () => {
 
   it('exact tie → draw: mirrored knights, symmetric damage, nobody dies', () => {
     // Full front row plus mid/back center, identical on both sides — mirror
-    // symmetry means both sides deal identical totals (the heaviest-hit unit,
-    // each front/center knight, takes 4 × 16 = 64 of 140 — nobody dies), so
-    // the exact comparison lands on a true tie whatever the tie-flip does.
-    const mirror = setup({
-      armies: {
-        A: [
-          { class: 'knight', element: 'fire', name: 'Kain' },
-          { class: 'knight', element: 'water', name: 'Aldric' },
-          { class: 'knight', element: 'wind', name: 'Ulric' },
-          { class: 'knight', element: 'earth', name: 'Konrad' },
-          { class: 'knight', element: 'fire', name: 'Cedric' },
-        ],
-        B: [
-          { class: 'knight', element: 'earth', name: 'Gerhart' },
-          { class: 'knight', element: 'fire', name: 'Roland' },
-          { class: 'knight', element: 'water', name: 'Falk' },
-          { class: 'knight', element: 'wind', name: 'Odo' },
-          { class: 'knight', element: 'water', name: 'Doran' },
-        ],
+    // symmetry means both sides deal identical totals (each front/center knight
+    // takes ~4 × 16 — nobody dies), so the exact comparison lands on a true tie
+    // whatever the tie-flip does. Story 4.6 note: the crit/dodge draws (ADR 0003)
+    // are per-attack and NOT mirror-symmetric — a fired crit/dodge on one side
+    // only would break the tie — so this uses seed 10, verified to produce ZERO
+    // crits and ZERO dodges across the all-knight battle (knights are DEX 16 →
+    // 5% each), leaving the mirror perfectly symmetric.
+    const mirror = setup(
+      {
+        armies: {
+          A: [
+            { class: 'knight', element: 'fire', name: 'Kain' },
+            { class: 'knight', element: 'water', name: 'Aldric' },
+            { class: 'knight', element: 'wind', name: 'Ulric' },
+            { class: 'knight', element: 'earth', name: 'Konrad' },
+            { class: 'knight', element: 'fire', name: 'Cedric' },
+          ],
+          B: [
+            { class: 'knight', element: 'earth', name: 'Gerhart' },
+            { class: 'knight', element: 'fire', name: 'Roland' },
+            { class: 'knight', element: 'water', name: 'Falk' },
+            { class: 'knight', element: 'wind', name: 'Odo' },
+            { class: 'knight', element: 'water', name: 'Doran' },
+          ],
+        },
+        placements: {
+          A: [
+            { row: 'front', col: 'left' },
+            { row: 'front', col: 'center' },
+            { row: 'front', col: 'right' },
+            { row: 'mid', col: 'center' },
+            { row: 'back', col: 'center' },
+          ],
+          B: [
+            { row: 'front', col: 'left' },
+            { row: 'front', col: 'center' },
+            { row: 'front', col: 'right' },
+            { row: 'mid', col: 'center' },
+            { row: 'back', col: 'center' },
+          ],
+        },
       },
-      placements: {
-        A: [
-          { row: 'front', col: 'left' },
-          { row: 'front', col: 'center' },
-          { row: 'front', col: 'right' },
-          { row: 'mid', col: 'center' },
-          { row: 'back', col: 'center' },
-        ],
-        B: [
-          { row: 'front', col: 'left' },
-          { row: 'front', col: 'center' },
-          { row: 'front', col: 'right' },
-          { row: 'mid', col: 'center' },
-          { row: 'back', col: 'center' },
-        ],
-      },
-    });
+      10,
+    );
     const verdict = ended(resolveBattle(mirror));
     expect(verdict.winner).toBe('draw');
     expect(verdict.hpPct.A).toBe(verdict.hpPct.B);

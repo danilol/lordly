@@ -140,14 +140,20 @@ describe('the 4.2 emissions (AC4 — kind/outcome, actionsRemaining, StatusClear
     sorceress: 'blast',
   };
 
-  it('every UnitAttacked carries the class-derived kind and unconditional outcome "hit" (no 4.6 draws yet)', () => {
+  it('every UnitAttacked carries the class-derived kind; outcomes are the emitted set (4.6 crit/dodge landed, never the reserved "missed")', () => {
     const attacks = log.events.filter((e) => e.type === 'UnitAttacked');
     expect(attacks.length).toBeGreaterThan(0);
     for (const e of attacks) {
       if (e.type !== 'UnitAttacked') continue;
       expect(e.kind).toBe(EXPECTED_KIND[roster.get(e.source) as UnitClass]);
       expect(e.redirectedFrom).toBeUndefined(); // Guard interception is 4.7's
-      for (const t of e.targets) expect(t.outcome).toBe('hit');
+      for (const t of e.targets) {
+        // Story 4.6: physical hits now resolve hit/crit/dodged; magic (blast)
+        // stays 'hit'. 'missed' is reserved and never emitted in wave 1.
+        expect(['hit', 'crit', 'dodged']).toContain(t.outcome);
+        if (t.outcome === 'dodged') expect(t.damage).toBe(0);
+        if (e.kind === 'blast') expect(t.outcome).toBe('hit'); // magic never crits/dodges
+      }
     }
   });
 
