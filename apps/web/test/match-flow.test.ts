@@ -252,6 +252,21 @@ describe('MatchFlow tactics & leaders (FR34/FR35, AD-9, story 4.4/4.5)', () => {
     expect(flow.getState().playerTactic).toBe('autonomous');
   });
 
+  it("REGRESSION (review, 2026-07-19): toggling OFF the crown via setLeader ALSO resets a 'leader' tactic — not just draftUnit/removeUnit's clear", () => {
+    // The bug: setLeader's own toggle-off branch bypassed clearLeaderDesignation
+    // entirely, so playerTactic could be left at 'leader' with playerLeader
+    // null — exactly the "no crown to back it" state D-3b forbids.
+    const flow = flowWithSeed(0x4445);
+    flow.startMatch();
+    flow.draftUnit('knight');
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    flow.setLeader(0);
+    flow.setTactic('leader');
+    flow.setLeader(0); // toggle OFF the same unit — the buggy path
+    expect(flow.getState().playerLeader).toBeNull();
+    expect(flow.getState().playerTactic).toBe('autonomous');
+  });
+
   it('setLeader throws once the match is committed (AD-13 guard)', () => {
     const flow = flowWithSeed(0x4443);
     flow.startMatch();

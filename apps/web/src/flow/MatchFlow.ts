@@ -221,6 +221,9 @@ export class MatchFlow {
    * reject-and-ignore dead end — this codebase's no-dead-end philosophy). The
    * crown is tied to the unit's ARMY INDEX, not its board cell, so it persists
    * through unplace/re-place; only `draftUnit`/`removeUnit`'s AD-9 clear drops it.
+   * Toggling off (review fix) routes through `clearLeaderDesignation()` — the
+   * SAME crown-clear invariant as any other clear, so a `'leader'` tactic can
+   * never survive with no crown to back it (D-3b).
    */
   setLeader(index: number): void {
     if (this.state.phase === 'committed') throw new Error('cannot set leader: match already committed');
@@ -230,7 +233,11 @@ export class MatchFlow {
     if (this.state.playerPlacements[index] === null) {
       throw new Error(`setLeader: unit ${index} is not placed`);
     }
-    this.state.playerLeader = this.state.playerLeader === index ? null : index;
+    if (this.state.playerLeader === index) {
+      this.clearLeaderDesignation(); // toggle-off: the same crown-clear invariant as draft/remove
+    } else {
+      this.state.playerLeader = index; // new crown, or moved to a different placed unit
+    }
   }
 
   /**

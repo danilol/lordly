@@ -10,7 +10,7 @@ context:
 
 # Story 4.5: The squad leader
 
-Status: review
+Status: done
 
 ## Story
 
@@ -77,6 +77,24 @@ so that protecting — and hunting — a leader becomes part of the read.
 - [x] **Task 10: Gate + device sign-off (all ACs)**
   - [x] Full gate GREEN: typecheck (both packages), eslint + prettier clean, 447 tests (250 engine + 197 web), re-recorded goldens #4/#5/#6/#8 + both-mode sweep in band, engine coverage ≥90% (resolve.ts 99.46% lines).
   - [x] Danilo's device session — ACCEPTED 2026-07-19: initial pass ("it's working great. I loved it"), then two device follow-ups (leader crown on the battle board; Wipeout default + left) → **"it works great now. let's proceed."** Deploy to main + senior code review remain (the review handoff).
+
+### Review Findings (2026-07-19, commit c8c5b3b — Blind Hunter + Edge Case Hunter + Acceptance Auditor)
+
+- [x] **[Review][Decision] Open Question 4 (crown-cleared-notice home) — RESOLVED (Danilo, 2026-07-19): accept the defensive `DraftScene` placement as final.** No Placement→Draft back-path will be scoped; the notice stays where it is (fires if a future back-nav is ever added), and the load-bearing clearing invariant stays enforced + tested in `MatchFlow`. No code change.
+
+- [x] **[Review][Patch] Crown-tap fires as a side effect on the FIRST tap of every double-tap-remove, before it's known a second tap will follow** [apps/web/src/scenes/PlacementScene.ts:230-240] — **APPLIED:** the crown-toggle is now DEFERRED past `DOUBLE_TAP_MS` via a per-index `pendingCrownTimers` map (`this.time.delayedCall`), cancelled if a genuine second tap on the same unit confirms a double-tap-remove instead. A true single tap now crowns after a ~300ms confirm delay. Field reset in `create()` (with `.remove()` on any still-pending timers, matching this scene's singleton-scene discipline).
+
+- [x] **[Review][Patch] `MatchFlow.setLeader()`'s toggle-off branch doesn't reset a stale `'leader'` tactic** [apps/web/src/flow/MatchFlow.ts:225-234] — **APPLIED:** the toggle-off path now calls `clearLeaderDesignation()` (the same helper `draftUnit`/`removeUnit` use) instead of setting `playerLeader` directly, so the tactic reset is uniform across every crown-clear path. Regression test added (`match-flow.test.ts`, "toggling OFF the crown... ALSO resets a 'leader' tactic") — confirmed it fails against the pre-patch code (`Received: "leader"`) and passes now.
+
+- [x] **[Review][Patch] Leader-fall banners can visually overlap if both sides' leaders fall close together** [apps/web/src/scenes/BattleScene.ts, `leaderFellBanner()`] — **APPLIED:** an `activeLeaderBanner` field tracks the current strip+text pair; `leaderFellBanner()` now destroys any still-fading previous banner before building a new one (mirroring `DraftScene.flashCrownCleared`'s existing precedent), and clears the field on its own tween completion. Reset in `create()`.
+
+- [x] **[Review][Patch] Stale doc comment on `MatchSetup.leaders`** [packages/engine/src/types.ts:138-139] — **APPLIED:** comment updated to state designation UI + the sober package shipped in story 4.5, and that both flows always supply a real crowned index now.
+
+- [x] **[Review][Patch] `docs/rules.md`'s Attack Leader tactic bullet and "The Leader" section use similar "reverts/collapses to Autonomous" language for two DIFFERENT triggers** [docs/rules.md:61, 69] — **APPLIED:** line 61 now explicitly says "the *enemy's* crowned leader" and cross-references "The Leader" section; "The Leader" section now explicitly says "a side's OWN leader" and "regardless of tactic, and regardless of what happens to the enemy's leader." Verified no test hardcodes the old wording.
+
+Gate re-run after all 5 patches: 448 tests (250 engine + 198 web, +1 regression), typecheck + lint + prettier clean.
+
+**Verified, not findings (dismissed as noise/false-positive/handled-elsewhere):** the misfire same-side penalty's net ×0.9375 multiplier (×3/4 dealt × ×5/4 taken) is the story's own explicit, deliberate spec decision ("apply the SAME rule uniformly... even when both are the same side — no special-casing" — original Task 1 text) — verified correct, not a defect. `leaderPenaltyPhysical`'s export is consistent with the established `physicalDamage`/`magicDamage`/`blastDamage`/`healAmount` "exported for direct table-driven tests" convention in the same file. `BattleScene.buildUnit`'s added boolean parameter mirrors `HistoryScene.renderUnitCard`'s existing `isLeader` pattern shipped in this same diff. The AI's uniform-random leader draw and the leader-tactic's validation-via-aggregate-sweep-band both satisfy their ACs (FR24's "seeded variation, not always unit 0"; AC5's band-holds requirement) exactly as specified — a smarter/weighted leader pick is a future balance-pass idea, not a gap in this story. The Home mode-default flip and the battle-board crown addition are explicit, in-session Danilo requests already recorded with dated amendments in EXPERIENCE.md and deferred-work.md — not unauthorized scope creep.
 
 ## Dev Notes
 
@@ -161,23 +179,25 @@ Opus 4.8 (1M context) — dev-story workflow.
 - `test/ai.test.ts` — four-draw invariant, leader-draw coverage, `leader` tactic now allowed.
 - `test/resolve.test.ts`, `test/sim.test.ts`, `test/wipeout.test.ts`, `test/roster.test.ts` — anchors re-derived for the penalty.
 - `test/__snapshots__/golden.test.ts.snap` + `test/golden.test.ts` — goldens #4/#5/#6/#8 re-recorded + inline assertions updated.
+- `src/types.ts` — review patch: `MatchSetup.leaders` doc comment updated (was stale, still said "until 4.5 ships").
 
 **Web (`apps/web`)**
-- `src/flow/MatchFlow.ts` — `setLeader`; `clearLeaderDesignation` (crown + tactic reset); no-fallback `commit`.
-- `src/scenes/PlacementScene.ts` — crown-tap, ♛ render, Ready gate, submit-hint, Attack-Leader unlock, intro copy.
+- `src/flow/MatchFlow.ts` — `setLeader`; `clearLeaderDesignation` (crown + tactic reset); no-fallback `commit`. Review patch: `setLeader`'s toggle-off now routes through `clearLeaderDesignation` (was a confirmed bug — left a stale `'leader'` tactic with no crown).
+- `src/scenes/PlacementScene.ts` — crown-tap, ♛ render, Ready gate, submit-hint, Attack-Leader unlock, intro copy. Review patch: crown-toggle deferred past `DOUBLE_TAP_MS` via `pendingCrownTimers` (was a confirmed bug — every double-tap-remove also mutated the crown as a side effect).
 - `src/scenes/RevealScene.ts` — crown on the leader sprite.
-- `src/scenes/BattleScene.ts` — full-beat `leaderFellBanner()` + persistent HUD tint; label fields; ♛ crown on each leader ON the battle board (device follow-up).
+- `src/scenes/BattleScene.ts` — full-beat `leaderFellBanner()` + persistent HUD tint; label fields; ♛ crown on each leader ON the battle board (device follow-up). Review patch: `activeLeaderBanner` guard prevents overlapping banners on near-simultaneous mutual leader deaths.
 - `src/scenes/HomeScene.ts` — Wipeout default + on the left (device follow-up).
 - `src/scenes/HistoryScene.ts` — per-side tactic label + crown badge.
 - `src/scenes/DraftScene.ts` — defensive crown-cleared toast (`flashCrownCleared`).
 - `src/config/constants.ts` — `LEADER_CROWN_GLYPH`, `BATTLE_LEADER_FELL_BANNER`, `PLACEMENT_CROWN_HINT`, `PALETTE.penaltyTint`.
-- `test/match-flow.test.ts` — setLeader/commit/tactic-reset tests; helper crowns a leader.
+- `test/match-flow.test.ts` — setLeader/commit/tactic-reset tests; helper crowns a leader. Review patch: regression test for the toggle-off tactic-reset bug (confirmed failing pre-patch).
 - `test/rules-doc.test.ts` — leader-fall ratio drift guard.
 
 **Docs**
-- `docs/rules.md` — "The Leader" section + Attack Leader tactic bullet.
+- `docs/rules.md` — "The Leader" section + Attack Leader tactic bullet. Review patch: disambiguated "enemy's leader" (Attack Leader tactic fallback) vs. "your own leader" (the sober package) — adjacent sections used similar wording for two different triggers.
 
 ### Change Log
 
 - 2026-07-19 — Story 4.5 implemented: FR35 leader-fall sober package (engine) + squad-leader crown UI across Placement/Reveal/Battle/History (shell). `balanceVersion` 5→6 (two new physical-penalty ratios), `logVersion` unchanged (LeaderFell already in the v4 union). AI leader designation + `leader` tactic unlocked (Danilo-confirmed). Gate green (447 tests); device sign-off pending.
 - 2026-07-19 — Device follow-up (Danilo: "it's working great. I loved it"): (1) **Leader crown now rides the BATTLE board** for the whole fight (`BattleScene.buildUnit`), not just Reveal — groundwork for the mid-battle tactic switch ("go for the leader or not"); EXPERIENCE.md amended (supersedes the reveal-only framing for the Battle surface). (2) **Wipeout is now the Home default and on the LEFT** (`HomeScene`), Standard on the right — EXPERIENCE.md amended; PRD FR17 update logged to deferred-work.md (balance unaffected — sweep polices both modes). Gate re-run green (447 tests).
+- 2026-07-19 — Senior code review (Blind Hunter + Edge Case Hunter + Acceptance Auditor, commit c8c5b3b): 1 decision resolved by Danilo (crown-cleared-notice home stays in `DraftScene`, no back-nav scoped), 5 patches applied — 2 real confirmed bugs (crown-tap firing as a side effect of every double-tap-remove; `setLeader`'s toggle-off not resetting a stale `'leader'` tactic, regression-tested) + 3 low-severity polish (overlapping leader-fall banners, a stale doc comment, an ambiguous rules.md wording pair). 8 items verified as non-issues and dismissed (spec-compliant misfire math, established export/parameter conventions, AC-satisfying design choices, already-authorized scope). Gate green: 448 tests (250 engine + 198 web), typecheck + lint + prettier clean. Status → done.

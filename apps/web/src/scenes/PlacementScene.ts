@@ -1,4 +1,4 @@
-import { GameObjects, Input, Scene } from 'phaser';
+import { GameObjects, Input, Scene, Time } from 'phaser';
 import { ALL_COLS, ALL_ROWS, ALL_TACTICS, BALANCE } from '@lordly/engine';
 import type { Placement, Tactic } from '@lordly/engine';
 import {
@@ -52,6 +52,14 @@ export class PlacementScene extends Scene {
   private lastTapAt = 0;
   /** Whether the tactic dropdown is expanded. Reset every create() (singleton scenes). */
   private pickerOpen = false;
+  /**
+   * Pending single-tap crown-toggle timers, keyed by unit index (review fix,
+   * story 4.5): the crown-toggle is DEFERRED past `DOUBLE_TAP_MS` so a genuine
+   * double-tap-remove — which arrives here as tap 1 too — never also mutates
+   * the crown as an unwanted side effect before tap 2 confirms the removal.
+   * Reset every create() (singleton scenes).
+   */
+  private pendingCrownTimers = new Map<number, Time.TimerEvent>();
 
   constructor() {
     super('Placement');
@@ -93,6 +101,8 @@ export class PlacementScene extends Scene {
 
     this.lastTapIndex = -1; // reset double-tap state (singleton scenes carry stale fields otherwise)
     this.lastTapAt = 0;
+    for (const t of this.pendingCrownTimers.values()) t.remove(); // review fix: no stale crown-toggle fires into a fresh match
+    this.pendingCrownTimers.clear();
     this.pickerOpen = false;
     // A draggable object starts a drag on the SLIGHTEST move by default (threshold
     // 0), which swallowed the tap events double-tap-to-place needs. Require
@@ -227,28 +237,41 @@ export class PlacementScene extends Scene {
         const doubleTap = this.lastTapIndex === i && now - this.lastTapAt < DOUBLE_TAP_MS;
         this.lastTapAt = now;
         this.lastTapIndex = doubleTap ? -1 : i; // consume on double so a triple tap isn't two actions
-        if (!doubleTap) {
-          // Single tap on a PLACED unit crowns/uncrowns it (story 4.5, FR35),
-          // living in the existing double-tap no-op branch (NOT a second
-          // listener, which would double-fire). A tray unit can't be crowned
-          // (setLeader throws), so a single tap there stays a true no-op.
-          // Tap-to-toggle + move-crown behavior lives in flow.setLeader (AD-13).
+        if (doubleTap) {
+          // The confirmed second tap (review fix): cancel tap 1's still-pending
+          // crown-toggle so a double-tap-remove never ALSO mutates the crown as
+          // an unwanted side effect before this removal fires.
+          this.pendingCrownTimers.get(i)?.remove();
+          this.pendingCrownTimers.delete(i);
           if (this.flow.getState().playerPlacements[i] !== null) {
-            this.flow.setLeader(i);
+            this.flow.unplaceUnit(i); // placed → back to the tray
             this.redraw();
+          } else {
+            const cell = this.firstFreeCell();
+            if (cell) {
+              this.flow.placeUnit(i, cell); // in tray → first free cell
+              this.redraw();
+            }
           }
           return;
         }
-        if (this.flow.getState().playerPlacements[i] !== null) {
-          this.flow.unplaceUnit(i); // placed → back to the tray
-          this.redraw();
-        } else {
-          const cell = this.firstFreeCell();
-          if (cell) {
-            this.flow.placeUnit(i, cell); // in tray → first free cell
+        // A tray unit can't be crowned (setLeader throws) — stays a true no-op.
+        if (this.flow.getState().playerPlacements[i] === null) return;
+        // Single tap on a PLACED unit crowns/uncrowns it (story 4.5, FR35) —
+        // but DEFERRED past DOUBLE_TAP_MS (review fix): tap 1 of a genuine
+        // double-tap-remove lands here too, and must not crown/uncrown the
+        // unit before tap 2 arrives to confirm it as a removal instead. Only
+        // fires if no matching second tap on this same unit cancels it first.
+        // Tap-to-toggle + move-crown behavior lives in flow.setLeader (AD-13).
+        this.pendingCrownTimers.get(i)?.remove();
+        this.pendingCrownTimers.set(
+          i,
+          this.time.delayedCall(DOUBLE_TAP_MS, () => {
+            this.pendingCrownTimers.delete(i);
+            this.flow.setLeader(i);
             this.redraw();
-          }
-        }
+          }),
+        );
       });
       this.dynamic.push(c);
     });

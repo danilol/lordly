@@ -137,7 +137,8 @@ export interface Placement {
  * - `tactics` — each side's committed army-wide tactic (FR34, story 4.2).
  *   The picker ships in 4.4; until then flows commit 'autonomous' explicitly.
  * - `leaders` — each side's leader as an index into that side's army (FR35,
- *   story 4.2). Designation UI ships in 4.5; until then flows commit 0.
+ *   story 4.2 SHAPE). Designation UI + the leader-fall sober package shipped
+ *   in story 4.5 — both flows now always supply a real crowned index.
  */
 export interface MatchSetup {
   seed: number;

@@ -94,6 +94,8 @@ export class BattleScene extends Scene {
   /** The two side HUD labels — kept as fields so a LeaderFell can tint the fallen side persistently (story 4.5). */
   private enemyLabel!: GameObjects.Text;
   private playerLabel!: GameObjects.Text;
+  /** The currently-fading leader-fall banner, if any (review fix, story 4.5): destroyed before a new one is built, so two LeaderFell events landing close together (a mutual leader death) never stack two overlapping banners. */
+  private activeLeaderBanner?: [GameObjects.Rectangle, GameObjects.Text];
   // Log panel (AC7): narration ledger + a keep-last-N window; never touches the beat timer.
   private narration: NarrationState = createNarrationState();
   private logLines: string[] = [];
@@ -129,6 +131,7 @@ export class BattleScene extends Scene {
     this.currentSilent = false;
     this.pendingTimer = undefined;
     this.pendingMisfirePair = false;
+    this.activeLeaderBanner = undefined; // review fix: no stale banner reference carries into a fresh match
     this.narration = createNarrationState();
     this.logLines = [];
     this.logOpen = false;
@@ -577,6 +580,13 @@ export class BattleScene extends Scene {
    * `render` returned true for the event).
    */
   private leaderFellBanner() {
+    // Destroy any still-fading previous banner (review fix): otherwise a rare
+    // mutual-leader-death battle stacks two banners at the same screen position.
+    if (this.activeLeaderBanner) {
+      this.tweens.killTweensOf(this.activeLeaderBanner);
+      this.activeLeaderBanner.forEach((o) => o.destroy());
+      this.activeLeaderBanner = undefined;
+    }
     const cy = BASE_HEIGHT / 2 - 20;
     const strip = this.add
       .rectangle(BASE_WIDTH / 2, cy, BASE_WIDTH, 40, PALETTE.backgroundFill, 0.82)
@@ -589,6 +599,7 @@ export class BattleScene extends Scene {
     })
       .setOrigin(0.5)
       .setDepth(1601);
+    this.activeLeaderBanner = [strip, text];
     const drift = this.reduceMotion ? 0 : 10;
     this.tweens.add({
       targets: [strip, text],
@@ -596,7 +607,10 @@ export class BattleScene extends Scene {
       alpha: 0,
       delay: 500,
       duration: 500,
-      onComplete: () => [strip, text].forEach((o) => o.destroy()),
+      onComplete: () => {
+        [strip, text].forEach((o) => o.destroy());
+        if (this.activeLeaderBanner?.[0] === strip) this.activeLeaderBanner = undefined;
+      },
     });
   }
 
