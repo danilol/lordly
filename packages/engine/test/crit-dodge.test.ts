@@ -4,6 +4,7 @@ import { BALANCE } from '../src/balance';
 import { leaderPenaltyPhysical, physicalDamage, resolveBattle, rollHit } from '../src/resolve';
 import { createStreams, nextInt } from '../src/rng';
 import type { MatchSetup, Unit, UnitAttacked } from '../src/types';
+import { matchSetupArb } from './arbitraries';
 
 /**
  * Story 4.6 — FR36 crit & dodge, frozen by ADR 0003 (the battle-stream draw
@@ -200,5 +201,45 @@ describe('in-battle emission (AC3): crit & dodge fire, dodge = damage 0, magic n
   it('replays from the seed alone — same setup → byte-identical log (crits/dodges included, FR20)', () => {
     const s = setup(11);
     expect(resolveBattle(s)).toEqual(resolveBattle(s));
+  });
+});
+
+/**
+ * Review follow-up (AC4/Task 3): the direct `rollHit` tests above prove the
+ * EXACT draw count/order for that one function in isolation. This closes the
+ * gap flagged at review — that the invariant should also hold END-TO-END
+ * across every real call site, under fully arbitrary comps/placements/
+ * tactics/seeds (`matchSetupArb`), not just the two hand-picked fixtures
+ * above. `sawCrit`/`sawDodge` additionally close a related gap: proving the
+ * dodge/crit branches are actually REACHED across the generated cases, not
+ * merely correctly guarded if they were.
+ */
+describe('outcome invariant holds across ARBITRARY setups (matchSetupArb) — the AC4 end-to-end property', () => {
+  let sawCrit = false;
+  let sawDodge = false;
+
+  test.prop([matchSetupArb])(
+    'every physical UnitAttacked resolves hit/crit/dodged (never the reserved "missed"); every magic UnitAttacked always resolves "hit"',
+    (s) => {
+      const log = resolveBattle(s);
+      for (const e of log.events) {
+        if (e.type !== 'UnitAttacked') continue;
+        const isMagic = e.kind === 'blast';
+        for (const t of e.targets) {
+          if (isMagic) {
+            expect(t.outcome, 'magic never crits or is dodged (ADR 0003)').toBe('hit');
+          } else {
+            expect(['hit', 'crit', 'dodged'], 'missed is reserved, never emitted in wave 1').toContain(t.outcome);
+            if (t.outcome === 'crit') sawCrit = true;
+            if (t.outcome === 'dodged') sawDodge = true;
+          }
+        }
+      }
+    },
+  );
+
+  it('the generated cases above actually exercised BOTH the crit and dodge branches (branch-reachability, not just correctness-if-reached)', () => {
+    expect(sawCrit, 'no crit observed across the whole matchSetupArb property run').toBe(true);
+    expect(sawDodge, 'no dodge observed across the whole matchSetupArb property run').toBe(true);
   });
 });

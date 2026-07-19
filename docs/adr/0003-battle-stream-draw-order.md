@@ -31,8 +31,8 @@ A conditional crit draw (skipped on dodge) would make an action's draw COUNT dep
 
 ## Chances (tuning values — the RULES above are frozen, these numbers are sweep-policed balance data)
 
-- dodge% = floor(defender DEX / 3), as an integer `Ratio` in balance data
-- crit% = floor(attacker DEX / 3); crit multiplier ×3/2, applied in the FR15 fixed order immediately AFTER RPS (base → blast attenuation → RPS → **crit** → status modifiers)
+- dodge% = floor(defender DEX / `dexChanceDivisor`); crit% = floor(attacker DEX / `dexChanceDivisor`) — shipped as a plain divisor (`BALANCE.formulas.dexChanceDivisor: number`, currently 3), each drawn against the frozen 0–99 percent range
+- crit multiplier ×3/2 (`BALANCE.formulas.critMultiplier`, a `Ratio`), applied in the FR15 fixed order immediately AFTER RPS (base → blast attenuation → RPS → **crit** → status modifiers)
 - `missed` (attacker-attributed accuracy) exists in the event payload but is UNUSED in wave 1 — reserved, no draw allocated; adding it later means an ADR amendment inserting a declared-extensible position, not a reorder.
 
 ## Verification contract (story 4.2/4.6)

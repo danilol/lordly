@@ -202,8 +202,10 @@ describe('wipeout mode (FR19)', () => {
     // 4.5, FR35) — from then on B's surviving mercs deal ×3/4 PHYSICAL to A, so
     // A's knights outlast them (was 448/700 → 64% pre-4.5, 463/700 → 66% at 4.5).
     // Story 4.6 (ADR 0003): both sides now draw dodge/crit per physical swing
-    // (knight/merc DEX 16/18 → ~5-6% each). On seed 0xdead a single knight crit
-    // lands and no swing dodges, nudging A's final hold to 461/700 → 65% vs 0%.
+    // (knight/merc DEX 16/18 → ~5-6% each). On seed 0xdead exactly one crit
+    // fires and no swing dodges: B:0 (a mercenary) crits A:2 (a knight) for 18
+    // (12 neutral base × 3/2 — no role relation between skirmisher/vanguard),
+    // costing A the extra 6, nudging A's final hold to 461/700 → 65% vs 0%.
     // A's own leader never falls, so A is never penalised.
     expect(segs.length).toBe(4);
     for (const id of ['B:0', 'B:1', 'B:2', 'B:3', 'B:4']) {

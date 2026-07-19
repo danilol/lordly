@@ -161,6 +161,10 @@ components:
     note: 'A monster renders ONE body ≥48px spanning both its cells, one HP bar + one code at the ANCHOR cell (AD-14: one unit, never two). Board-tile codes keep the FR39f outline treatment.'
   history-row:
     note: 'A History match row (story 4.2 squad-era amendment): the era fields up to five units, so the two compositions STACK on their own full-width, self-centring unit-card lines (your line then enemy line — the Result-scene per-side pattern), NOT side-by-side on one line (five-vs-five would run ~468px off the 360 base). Side colour is the identity anchor (blue = you, red = enemy — no text label). The Replay control lifts into the HEADER band beside verdict/mode/date, so no comp/Replay overlap is possible. History unit-cards are DISPLAY-ONLY (never tapped) so they need no 44px tap floor; only the Replay control keeps it.'
+  crit-dodge-caption:
+    note: 'Story 4.6 (FR36) — a small uppercase word STACKED above the {components.combat-number} so a crit/dodge reads unambiguously at full battle speed (no 0.5× speed exists). Device-confirmed by Danilo after the plain enlarged-number-only version read as ambiguous.'
+    crit-number: '20px, {colors.blue-you}/{colors.red-enemy} (side-colored, never gold — gold stays leader-only), a brief scale-punch — the ONLY enlarged/animated treatment; a dodge stays the plain 14px combat-number size with no punch, so a whiff reads as understated, not dramatic.'
+    caption-text: "'CRITICAL' over the crit number, 'DODGE' over a muted dash (no damage figure) — 11px, above the {min-font-px} floor, same side color as the number it sits over."
 ---
 
 # Lordly — Visual Identity (DESIGN.md)
