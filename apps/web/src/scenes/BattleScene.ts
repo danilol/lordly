@@ -61,7 +61,7 @@ const LUNGE_PX = 12;
 const FLOAT_PX = 22;
 /** Crit combat numbers render larger than the 14px base (story 4.6) — still well above the ≥14px floor (UX-DR3). */
 const CRIT_FONT_PX = 20;
-/** The small "CRITICAL"/"DODGE" caption stacked over the number (story 4.6) — above the 10px floor, readable at full speed. */
+/** The small "CRITICAL"/"DODGE" caption stacked over the number (story 4.6) — above the MIN_FONT_PX floor, readable at full speed. */
 const CAPTION_FONT_PX = 11;
 /** Lines kept in the Log panel (newest at the bottom — a scrolling window). 11 logical lines leaves headroom for word-wrapped long lines inside the panel (review). */
 const LOG_PANEL_LINES = 11;
@@ -318,8 +318,10 @@ export class BattleScene extends Scene {
           if (t.outcome === 'dodged') {
             // A dodge is a whiff (story 4.6): no damage number, no hurt-flash,
             // HP unchanged — a clear "DODGE" caption over a dash so the miss
-            // reads unambiguously even at full battle speed.
-            this.popup(t.unit, this.linked(linkedToMisfire, '—'), PALETTE.mutedText, true, 'DODGE');
+            // reads unambiguously even at full battle speed. NOT emphatic (review):
+            // a whiff should read as understated — the caption + muted color +
+            // dash already distinguish it from a hit without the crit's punch.
+            this.popup(t.unit, this.linked(linkedToMisfire, '—'), PALETTE.mutedText, false, 'DODGE');
             continue;
           }
           this.hurtFlash(t.unit);
@@ -584,18 +586,23 @@ export class BattleScene extends Scene {
     })
       .setOrigin(0.5)
       .setDepth(1000);
-    // The caption sits just above the number, small but readable (≥ the 10px
-    // floor), same color — a per-beat "what just happened" tag.
-    const caph = crispText(this, v.x, v.y - 34 - mainSize * 0.72, caption ?? '', {
-      fontFamily: 'Courier',
-      fontSize: `${CAPTION_FONT_PX}px`,
-      fontStyle: '800',
-      color,
-    })
-      .setOrigin(0.5)
-      .setDepth(1000);
-    const parts: GameObjects.Text[] = caption !== undefined ? [label, caph] : [label];
-    if (caption === undefined) caph.destroy();
+    // The caption sits just above the number, small but readable (above the
+    // MIN_FONT_PX floor), same color — a per-beat "what just happened" tag.
+    // Only built when actually needed — this runs on every plain hit too, the
+    // most frequent event in a battle, so an unconditional construct+destroy
+    // would be wasted canvas-backed text-object churn (review).
+    const parts: GameObjects.Text[] = [label];
+    if (caption !== undefined) {
+      const caph = crispText(this, v.x, v.y - 34 - mainSize * 0.72, caption, {
+        fontFamily: 'Courier',
+        fontSize: `${CAPTION_FONT_PX}px`,
+        fontStyle: '800',
+        color,
+      })
+        .setOrigin(0.5)
+        .setDepth(1000);
+      parts.push(caph);
+    }
     // A crit gets a quick scale "punch" on top of the float (damped under
     // reduced motion, which preserves the beat — UX-DR6).
     if (emphatic && !this.reduceMotion) {
