@@ -4,12 +4,13 @@ import { ALL_COLS } from './types';
 import type { Placement, Tactic, UnitClass } from './types';
 
 /**
- * The tactics the AI may commit in the 4.4→4.5 window (FR24, dossier D-3b):
- * `leader` is excluded until leader designation ships in story 4.5 — the
- * player's picker greys it out for the same reason, so neither side uses it
- * yet. Kept in `ALL_TACTICS` picker order minus `leader`.
+ * The tactics the AI may commit (FR24, dossier D-3b). Story 4.5 ships leader
+ * designation, so `leader` is UNLOCKED here now — the AI can hunt the player's
+ * crowned leader (the story's headline fantasy: "a leader my opponent will
+ * hunt"), exactly as the player's picker unlocks Attack Leader once a crown
+ * exists. This is `ALL_TACTICS` in full picker order.
  */
-const AI_TACTICS: readonly Tactic[] = ['autonomous', 'weakest', 'strongest'];
+const AI_TACTICS: readonly Tactic[] = ['autonomous', 'weakest', 'strongest', 'leader'];
 
 /**
  * One curated AI strategy (FR25): a composition + formation the AI can
@@ -40,6 +41,8 @@ export interface AiChoice {
   placement: [Placement, Placement, Placement, Placement, Placement];
   /** The AI's army-wide target-selection tactic (FR34/FR24), drawn from its own stream. */
   tactic: Tactic;
+  /** The AI's designated leader as an index into its own 5-unit army (FR35/FR24, story 4.5), drawn from its own stream — seeded variation, never always 0. */
+  leader: number;
 }
 
 /** Options for `chooseSetup`. Deliberately admits nothing player-derived (AD-6). */
@@ -228,10 +231,11 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
  * AI-STREAM ORDERING INVARIANT (FR20 replay stability): per call, draws
  * from the ai stream happen in EXACTLY this order — ① one archetype pick
  * over the eligible pool, ② one placement-mirror coin flip, ③ one tactic
- * pick (story 4.4, FR24 — appended LAST so existing archetype/board choices
- * for a given stream state are unchanged). Nothing else draws. Story 1.8's
- * shell and the sim harness must produce identical boards from identical
- * stream states; reordering any draw breaks that.
+ * pick (story 4.4, FR24), ④ one leader-index pick (story 4.5, FR35 — appended
+ * LAST so the archetype/board/tactic choices for a given stream state are
+ * unchanged). Nothing else draws. Story 1.8's shell and the sim harness must
+ * produce identical boards from identical stream states; reordering any draw
+ * breaks that.
  *
  * The mirror flip (recorded spec decision): on 1, every placement's col is
  * mirrored left↔right (owner-local; rows untouched) — doubling board
@@ -257,9 +261,15 @@ export function chooseSetup(pool: readonly StrategyArchetype[], stream: Stream, 
     return { row, col: mirrored ? (ALL_COLS[ALL_COLS.length - 1 - colIndex] as Placement['col']) : col };
   }) as AiChoice['placement'];
 
-  // ③ the tactic draw (FR24) — LAST, so archetype/board are unchanged for a
-  // given stream state. Restricted to AI_TACTICS (no `leader` until 4.5).
+  // ③ the tactic draw (FR24). AI_TACTICS is the full picker set now that story
+  // 4.5 unlocked Attack Leader for both sides.
   const tactic = AI_TACTICS[nextInt(stream, 0, AI_TACTICS.length - 1)] as Tactic;
 
-  return { archetypeId: picked.id, classes: [...picked.classes], placement, tactic };
+  // ④ the leader draw (FR35, story 4.5) — LAST, so archetype/board/tactic are
+  // unchanged for a given stream state. A uniform index into the 5-unit army
+  // (all-smalls era, army length === slotBudget): seeded variation, never
+  // always unit 0 (FR24). Story 4.8's two-slot Golem comps revisit the bound.
+  const leader = nextInt(stream, 0, picked.classes.length - 1);
+
+  return { archetypeId: picked.id, classes: [...picked.classes], placement, tactic, leader };
 }

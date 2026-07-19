@@ -10,7 +10,7 @@ context:
 
 # Story 4.5: The squad leader
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -32,51 +32,51 @@ so that protecting — and hunting — a leader becomes part of the read.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Engine — track leader death, emit `LeaderFell`, apply the sober package (AC: 2)**
-  - [ ] Add per-side `leaderFallen: Record<Side, boolean>` resolution state in `resolveBattle()` (`resolve.ts`, alongside `let wiped: WipeState = undefined` near line 70) — persists across the whole battle, all engagements, like `wiped`.
-  - [ ] At BOTH death sites — `strike()`'s kill check (`resolve.ts:386-389`, `target.hp === 0 && target.alive`) and the poison-tick kill (`resolve.ts:157-158`) — check whether the dying unit's id equals `${side}:${setup.leaders[side]}` (the exact pattern `act()` already uses for `enemyLeaderId`, `resolve.ts:214`); if so and `leaderFallen[side]` isn't already true, push `{ type: 'LeaderFell', side, unit: target.id }` immediately after the `UnitDied` push, and set `leaderFallen[side] = true`. `strike()`'s signature (`resolve.ts:378`) and the poison-tick loop don't currently receive `setup`/`leaderFallen` — thread them in. **Caution:** `act()` (`resolve.ts:209`) already receives `setup`, but `misfire()` (`resolve.ts:298`) currently does NOT — it's called as `misfire(unit, units, battle, setup.mode)` (`:197`), receiving only `mode`. Since `misfire()` also calls `strike()` for melee/ranged/cleric ally-friendly-fire (and that hit should ALSO carry the leader-fall penalty per the Dev Notes below), `misfire()`'s signature must grow to receive `setup` (or at least `setup.leaders`/`leaderFallen`) too — don't assume it already has what it needs.
-  - [ ] **Tactic reversion**: at the point `act()` reads `setup.tactics[unit.side]` (`resolve.ts:212`), override to `'autonomous'` when `leaderFallen[unit.side]` is true — do NOT mutate `setup` itself (it's the validated input, treated as immutable elsewhere). This single override point covers the melee/ranged/blast/witch branches uniformly since they all read `tactic` from that one variable.
-  - [ ] **Damage penalty**: add `leaderFallDealt`/`leaderFallTaken` `Ratio` entries to `BALANCE.formulas` (`balance.ts:74-97`, follow the exact doc-comment-plus-`Ratio`-literal pattern as `rpsAdvantage`/`blastAttenuation`). Apply them ONLY to the `physicalDamage` call sites in `act()`/`misfire()` (melee/archer/cleric-staff — NOT the mage/sorceress blast path). Recommended shape: a small wrapper closure built at each `physicalDamage` call site, e.g. `leaderPenaltyPhysical(attackerSide, defenderSide, leaderFallen)` returning a `(attacker, defender, weakened?) => number` that calls `physicalDamage(...)`, then applies `leaderFallDealt` (keyed to `attackerSide`) then `leaderFallTaken` (keyed to `defenderSide`) as fixed-order floor multiplications, then **re-clamps to `BALANCE.formulas.minDamage`** — `physicalDamage` already clamped once internally; a ×3/4 or ×5/4 multiply AFTER that can push back under `minDamage` and must be re-floored. For melee/ranged/staff, `defenderSide` is simply `enemySide` (`act()` already computes this, `resolve.ts` per story 4.4). For the misfire path (ally-targeting), apply the SAME rule uniformly (dealt keyed to attacker's side, taken keyed to defender's side) even when both are the same side — no special-casing.
-  - [ ] `balance.ts` `version` 5 → 6; `test/balance-hash.test.ts`: add `6: '<new hash>'` (run once to learn it, per the AD-8 guard workflow).
-  - [ ] Unit tests: `LeaderFell` fires exactly once per side, at the right moment (combat death AND poison death); tactic reversion takes effect from the NEXT action onward; the dealt/taken multipliers apply correctly (including the re-clamp-to-minDamage edge case); a regression test locking "enemy `Attack Leader` tactic falls back to Autonomous once our leader is dead" (already covered by 4.4's code — this test proves it, don't reimplement the fallback).
+- [x] **Task 1: Engine — track leader death, emit `LeaderFell`, apply the sober package (AC: 2)**
+  - [x] Add per-side `leaderFallen: Record<Side, boolean>` resolution state in `resolveBattle()` (persists across the whole battle, like `wiped`).
+  - [x] At BOTH death sites — `strike()`'s kill check and the poison-tick kill — emit `LeaderFell` immediately after `UnitDied` via the shared `isLeaderFall()` guard; threaded `setup.leaders`/`leaderFallen` into `strike()` and grew `misfire()`'s signature to receive `setup`/`leaderFallen`.
+  - [x] **Tactic reversion**: `act()` overrides `tactic` to `'autonomous'` when `leaderFallen[unit.side]` (single read; `setup` never mutated).
+  - [x] **Damage penalty**: `leaderFallDealt` (×3/4) / `leaderFallTaken` (×5/4) added to `BALANCE.formulas`; applied via `leaderPenaltyPhysical()` wrapper built only when a leader has fallen (else bare `physicalDamage`, keeping the common path allocation-free + bit-identical), at the melee/archer/cleric-staff/misfire physical call sites — NOT blast. Re-clamps to `minDamage` LAST.
+  - [x] `balance.ts` `version` 5 → 6; `test/balance-hash.test.ts` pins `6: '49466cd4'`.
+  - [x] Unit tests (`test/leader.test.ts`): `LeaderFell` once-per-side + right moment (combat AND poison, property + deterministic); tactic reversion (control comparison); dealt/taken/combined + re-clamp (direct `leaderPenaltyPhysical` table tests + in-battle); enemy `Attack Leader` fallback regression. Goldens #4/#5/#6/#8 + resolve/wipeout/sim anchors re-derived for the penalty.
 
-- [ ] **Task 2: Engine — the AI designates its own leader (AC: 1, FR24)**
-  - [ ] Extend `AiChoice` (`ai.ts:36-43`) with `leader: number`, drawn from the AI's own stream inside `chooseSetup` as a **4th draw, appended LAST** (after the existing archetype pick → mirror flip → tactic pick chain documented at `ai.ts:228-238`) — uniform random index into the archetype's 5-unit army. Update the stream-ordering invariant doc comment to mention this 4th draw.
-  - [ ] `test/ai.test.ts`: the AI's leader draw is deterministic from its stream; confirm the new draw didn't shift archetype/board/tactic selection for a pinned seed (same regression-pin pattern story 4.4 used for the tactic draw).
+- [x] **Task 2: Engine — the AI designates its own leader (AC: 1, FR24)**
+  - [x] Extended `AiChoice` with `leader: number`, drawn as the 4th `chooseSetup` draw (appended LAST); stream-ordering invariant doc updated. **Also unlocked `leader` in `AI_TACTICS` (Danilo-confirmed) so the AI hunts the player's leader.**
+  - [x] `test/ai.test.ts`: four-int draw invariant, leader draw deterministic + in-range + seeded-variation, tactic now includes `leader`; archetype/board anchors held (draws ①② precede the leader draw).
 
-- [ ] **Task 3: Engine — the sweep sweeps leaders too (AC: 5)**
-  - [ ] `sim/sweep.ts:175` currently hardcodes `leaders: { A: 0, B: 0 }` — wire `leaders: { A: a.leader, B: b.leader }` (mirroring how `tactics: { A: a.tactic, B: b.tactic }` was wired for story 4.4's tactic dimension).
-  - [ ] `test/sim.test.ts`: both-mode ≤65% band MUST hold with leaders as a live dimension. Re-tune the POOL (not stats) if a comp dominates — mind the story-4.3/4.4 test-timeout lesson.
+- [x] **Task 3: Engine — the sweep sweeps leaders too (AC: 5)**
+  - [x] `sim/sweep.ts` wires `leaders: { A: a.leader, B: b.leader }`.
+  - [x] `test/sim.test.ts`: both-mode ≤65% band holds with leaders + `leader` tactic as live dimensions — NO pool re-tune needed (converged runs=150: single max 60.4%, wipeout max 62.4%; wardens viable 37–58%).
 
-- [ ] **Task 4: Shell — MatchFlow leader wiring (AC: 1)**
-  - [ ] `MatchFlow.ts`: add a guarded `setLeader(index: number)` setter mirroring `setTactic` (`:197-200`) — throw if committed, validate the index is in range AND the unit at that index is currently PLACED (EXPERIENCE.md: "tap a **placed** unit to crown it"). Toggling the same already-crowned index un-crowns it (tap-to-toggle); tapping a DIFFERENT placed unit MOVES the crown to it (no reject-and-ignore dead end — consistent with this codebase's no-dead-end interaction philosophy). **Decision (baked in, confirm on device): the crown is tied to the unit's ARMY INDEX, not board position — it persists through unplace/re-place** (only `draftUnit`/`removeUnit`'s existing AD-9 clear applies); since Ready already requires full placement, this is moot by commit time anyway.
-  - [ ] **Decision (baked in): if `playerTactic === 'leader'` and the crown then clears** (via `draftUnit`/`removeUnit`), reset `playerTactic` to `'autonomous'` in that same clearing code path — prevents the invalid state of an `'leader'`-tactic selection with no crown to back it (D-3b's "no invisible defaults" extended).
-  - [ ] `commit()` (`:250`): replace `leaders: { A: this.state.playerLeader ?? 0, B: ... }` — remove the silent `?? 0` fallback; throw an assembly-bug-style error if `playerLeader === null` at commit (mirrors the existing "cannot commit: place all N units first" throw — Ready should make this unreachable, so a throw here means Ready's gate itself is broken, not user error). Side B reads `ai.leader` (Task 2).
-  - [ ] `test/match-flow.test.ts`: `setLeader` guard tests (mirroring `setTactic`'s), toggle-off/move-to-different-unit behavior, the tactic-auto-reset-on-crown-clear behavior, and the commit-throws-without-a-crown case.
+- [x] **Task 4: Shell — MatchFlow leader wiring (AC: 1)**
+  - [x] `setLeader(index)` added (mirrors `setTactic`): throws if committed / out of range / unit not placed; tap-to-toggle (same index un-crowns) + move-crown (different placed unit); crown tied to army index, persists through unplace.
+  - [x] Crown-clear now routes through a shared `clearLeaderDesignation()` (draft/remove) that ALSO resets `playerTactic` `'leader'`→`'autonomous'` (D-3b — no crownless leader-tactic).
+  - [x] `commit()`: dropped the `?? 0` fallback; throws `cannot commit: designate a leader first` when `playerLeader === null`; side B reads `ai.leader`.
+  - [x] `test/match-flow.test.ts`: setLeader guards, toggle-off/move, tactic-auto-reset, commit-without-crown throw; `draftAndPlaceAll` now crowns (the new Ready requirement).
 
-- [ ] **Task 5: Shell — Placement crown UI + Ready gate + Attack Leader unlock (AC: 1)**
-  - [ ] `PlacementScene.ts`: bind crown-toggle to a SINGLE tap on a placed unit. The existing double-tap-to-remove gesture (`:209-226`) already treats a single tap as a no-op (`if (!doubleTap) return;` at `:215`) — add the crown toggle INSIDE that no-op branch (before the early return), not as a second `pointerup` listener (which would double-fire). Render the crown glyph (♛) on the crowned unit's card; reuse `PALETTE.title` (`'#e8d5a3'`) for its color — DESIGN.md's `{colors.gold}` token is documented as used for "title accent," and `PALETTE.title` is already this codebase's Night-theme rendering of that exact token; no new color needed.
-  - [ ] Ready gate (`:241`, `const ready = placed === state.playerArmy.length && state.playerArmy.length > 0`): add `&& state.playerLeader !== null`.
-  - [ ] A visible "crown cleared" notice when draft/remove clears it (EXPERIENCE.md: "any army mutation clears the crown WITH a visible notice") — nothing like this exists today; a transient toast/label is the simplest fit.
-  - [ ] Flip the tactic dropdown's `disabled = t === 'leader'` line (`:299`) to `disabled = t === 'leader' && state.playerLeader === null` — Attack Leader becomes pickable once a crown exists, still greyed out before one does.
-  - [ ] Confirm on device: crown-tap doesn't fight the double-tap-remove gesture in practice (both are real gestures on the same card now); the crown-persists-through-unplace decision above.
+- [x] **Task 5: Shell — Placement crown UI + Ready gate + Attack Leader unlock (AC: 1)**
+  - [x] Single-tap-on-placed-unit crown-toggle added INSIDE the existing double-tap no-op branch (not a second listener); ♛ rendered on the crowned card in `PALETTE.title` (gold); intro copy + crown-hint updated.
+  - [x] Ready gate gains `&& state.playerLeader !== null`; the submit hint switches to "tap a unit to crown a leader" once fully placed.
+  - [x] Crown-cleared notice — **DEVIATION: implemented in `DraftScene`, not `PlacementScene`.** draft/remove (the crown-clearing mutations) live in DraftScene, and the crown is set only in Placement (after drafting) with no Placement→Draft back-path, so the notice is defensive/unreachable in the current forward-only flow. Flagged for Danilo (see Open Questions). The model invariant + tactic reset are enforced + tested in MatchFlow.
+  - [x] Tactic dropdown `disabled = t === 'leader' && !hasLeader` — Attack Leader unlocks once a crown exists.
+  - [x] Confirm on device: crown-tap vs double-tap-remove; crown-persists-through-unplace. **DEVICE-ACCEPTED 2026-07-19 (Danilo: "it's working great. I loved it").**
 
-- [ ] **Task 6: Shell — Reveal shows both crowns (AC: 1)**
-  - [ ] `RevealScene.ts`'s `drawUnit()` (`:115-127`, reads `committedSetup` at `:81` as `setup`): layer the crown glyph on the sprite where `unit.id === \`${unit.side}:${setup.leaders[unit.side]}\`` — the same id-construction pattern used throughout the engine/shell. Crown belongs on the unit sprite itself (EXPERIENCE.md: "the read is the payoff" — a visual marker on the board, not a separate text line, unlike the tactic labels).
+- [x] **Task 6: Shell — Reveal shows both crowns (AC: 1)**
+  - [x] `RevealScene.drawUnit()` layers the ♛ on the sprite where `unit.id === \`${unit.side}:${setup.leaders[unit.side]}\`` (gold, on the board — "the read is the payoff"). Stale "leader waits for 4.5" comment updated.
 
-- [ ] **Task 7: Shell — Battle scene: full-beat banner + persistent HUD tint (AC: 3)**
-  - [ ] `BattleScene.ts`: replace the placeholder `LeaderFell` case (`:335-338`, currently a floating `popup()`) with a full-beat banner reading **"The leader has fallen!"** (exact text per EXPERIENCE.md) — a new, screen-width beat, not the per-unit floating popup pattern. Then apply a persistent penalty tint to that side's HUD label (`BATTLE_ENEMY_LABEL`/`BATTLE_PLAYER_LABEL`, `:145-146`) for the rest of the match.
-  - [ ] The Log panel narration string for `LeaderFell` **already exists** (`apps/web/src/flow/narration.ts:105-107`) — confirm it renders correctly; do not write a new one.
+- [x] **Task 7: Shell — Battle scene: full-beat banner + persistent HUD tint (AC: 3)**
+  - [x] `BattleScene` `LeaderFell` case now shows a full-beat screen-width banner "The leader has fallen!" (`leaderFellBanner()`) + a persistent `PALETTE.penaltyTint` on the fallen side's HUD label (labels stored as fields). Placeholder popup removed.
+  - [x] Log-panel narration for `LeaderFell` already existed (narration.ts) — reused, not rewritten.
 
-- [ ] **Task 8: Shell — History cards show tactic + leader (AC: 4)**
-  - [ ] `HistoryScene.ts`: `entry.setup.tactics`/`entry.setup.leaders` are already persisted (`storage.ts`) — add a per-side tactic label (a compact stacked line, similar treatment to Reveal's) and a crown badge on the correct unit's card in `renderCompLine`/`renderUnitCard` (`:239-253`). Badge the existing card rather than widening the row — the exact overflow risk the 4.2 review caught.
+- [x] **Task 8: Shell — History cards show tactic + leader (AC: 4)**
+  - [x] `HistoryScene` `renderCompLine`/`renderUnitCard`: compact per-side tactic label (stacked line, extra height — not a widened row) + ♛ badge on the leader's card (top-left, opposite the element dot). Pre-era entries (no stored tactics/leaders) optional-chain to omit both.
 
-- [ ] **Task 9: Docs — rules.md absorbs leader/penalty content**
-  - [ ] `docs/rules.md`: a short section on crowning a leader and the sober-package penalty (numbers pulled from `BALANCE.formulas`, per the drift-guard convention `rules-doc.test.ts` enforces).
+- [x] **Task 9: Docs — rules.md absorbs leader/penalty content**
+  - [x] `docs/rules.md`: new "The Leader" section + Attack Leader tactic bullet, stating the ×0.75 dealt / ×1.25 taken sober-package ratios; `rules-doc.test.ts` drift guard extended to pin them to `BALANCE.formulas`.
 
-- [ ] **Task 10: Gate + device sign-off (all ACs)**
-  - [ ] Full gate: typecheck, lint, prettier, all tests incl. re-recorded goldens (if any change) + both-mode sweep, engine coverage ≥90%.
-  - [ ] Deploy; Danilo's device session: crown a unit, confirm Ready gates on it, confirm Attack Leader unlocks, confirm hidden-until-reveal + both crowns at Reveal, force a leader death in a battle and confirm the banner + persistent HUD tint + a visible feel-difference from the penalty, confirm History shows tactic + leader. Quote his sign-off verbatim.
+- [x] **Task 10: Gate + device sign-off (all ACs)**
+  - [x] Full gate GREEN: typecheck (both packages), eslint + prettier clean, 447 tests (250 engine + 197 web), re-recorded goldens #4/#5/#6/#8 + both-mode sweep in band, engine coverage ≥90% (resolve.ts 99.46% lines).
+  - [x] Danilo's device session — ACCEPTED 2026-07-19: initial pass ("it's working great. I loved it"), then two device follow-ups (leader crown on the battle board; Wipeout default + left) → **"it works great now. let's proceed."** Deploy to main + senior code review remain (the review handoff).
 
 ## Dev Notes
 
@@ -123,14 +123,61 @@ No initiative perks in wave 1 (dossier: "no initiative perks in wave 1" — a de
 
 1. **Second crown-tap behavior:** defaulting to "moves the crown to the newly-tapped unit" (no reject-and-ignore dead end). Confirm on device.
 2. **Does unplacing a crowned unit clear the crown?** Defaulting to NO — the crown persists through unplace/re-place (tied to army index, not board position); only draft/remove clears it. Confirm this feels right, or say if you'd rather it clear.
-3. **Crown glyph size:** not specified by DESIGN.md — dev picks a reasonable size, confirm it reads well at 360px on device.
+3. **Crown glyph size:** not specified by DESIGN.md — dev picked 16px (board/placement/reveal) / 12px (history badge). Confirm it reads well at 360px on device.
+4. **Crown-cleared notice is architecturally stranded (RESOLVED as a deviation — please confirm the call):** EXPERIENCE.md/AC1 want a "visible notice" when an army mutation clears the crown. But draft/remove happen only in `DraftScene`, the crown is set only in `PlacementScene` (after drafting), and there is NO Placement→Draft back-path — so in the current forward-only flow the crown can never be cleared by a mutation while it exists. I implemented the notice defensively in `DraftScene` (fires if a mutation ever drops a live crown) and kept the load-bearing clearing invariant + tactic-reset in `MatchFlow` (unit-tested). Options if you want it truly live: (a) accept the defensive placement as-is (recommended — the invariant is real, the notice is future-proof); (b) add a Placement→Draft "edit army" back-path (new scope). Confirm on device / at review.
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Opus 4.8 (1M context) — dev-story workflow.
+
 ### Debug Log References
+
+- **Balance hash (AD-8):** `balanceVersion` 5 → 6, new content hash `49466cd4` pinned in `balance-hash.test.ts` (learned via a one-off `contentHash(BALANCE)` run).
+- **Goldens re-recorded (`vitest -u`):** #4, #5, #6, #8 — every diff audited to be ONLY `LeaderFell` insertions + physical-penalty deltas (A takes less / B takes more once B's default leader B:0 falls). #8 legitimately ends one engagement sooner (5, was 6) because the penalty accelerates B's collapse. #1/#2/#3/#7 unchanged (no index-0 death reaches the penalty).
+- **Hand-derived anchors re-derived** for the leader-fall penalty: resolve.ts determinism trace (`LeaderFell` after `died:A:0`; mid-knight hits 19→14; B verdict 90→93), sim anchor (10%/90%→10%/93%), wipeout multi-engagement (A 64%→66%). Comments updated with the new arithmetic, not pasted from runs.
+- **AI 'leader' tactic unlocked** (Danilo-confirmed, this session): `AI_TACTICS` gained `'leader'`. This shifts the AI's tactic pick range (3→4) but NOT the archetype/board draws (①② precede it), so the seed-1/seed-2 chooseSetup anchors held unchanged.
+- **Sweep:** both-mode ≤65% band holds with leaders + the `leader` tactic as live dimensions — NO pool re-tune. Converged (runs=150): single max 60.4% (bulwark), wipeout max 62.4% (bulwark); wardens viable (37.4% single / 58.0% wipeout).
 
 ### Completion Notes List
 
+- **Engine (Task 1–3):** `LeaderFell` emitted at both death sites (combat via `strike()`, poison via the tick loop) through a shared `isLeaderFall()` guard, once per side, immediately after the leader's `UnitDied`. The sober package: tactic reversion to `'autonomous'` (single override at `act()`'s tactic read; `setup` never mutated) + `leaderPenaltyPhysical()` wrapper (×3/4 dealt / ×5/4 taken, re-clamped to `minDamage`) applied ONLY at physical call sites (melee/archer/cleric-staff/misfire), never blast. The wrapper is built only when a leader has fallen, so the no-fall autonomous path stays allocation-free AND bit-identical (existing goldens without an index-0 death are byte-unchanged). `leaderFallen` persists across engagements like `wiped`. AI draws its own leader (4th `chooseSetup` draw, appended LAST) and can now commit the `leader` tactic; the sweep wires both.
+- **`leaderPenaltyPhysical` exported** for direct table-driven tests (the `physicalDamage` convention) — the re-clamp trap is pinned precisely there, not only through a battle.
+- **Enemy Attack-Leader fallback** left untouched (4.4's `applyTactic` already falls back when the leader isn't in the living legal list); a new battle-level regression proves B keeps fighting (no idle-stall) after the leader it hunts dies.
+- **Shell (Task 4–8):** MatchFlow `setLeader` + no-fallback `commit` + shared crown-clear (with tactic reset); Placement single-tap crown, Ready gate, Attack-Leader unlock; Reveal both crowns on the sprites; Battle full-beat banner + persistent HUD tint; History tactic label + crown badge (stacked, never a widened row — the 4.2 coupling lesson).
+- **DEVIATION — crown-cleared notice home:** the story assigned the "visible notice" to `PlacementScene`, but draft/remove (the crown-clearing mutations) live in `DraftScene`, and the crown is set only in Placement afterward, with no Placement→Draft return path — so the notice is unreachable in the current forward-only flow. Implemented defensively in `DraftScene` (fires if a mutation drops a live crown; becomes live the moment back-nav is added). The load-bearing clearing invariant + tactic reset are enforced and unit-tested in `MatchFlow`. Flagged for Danilo (Open Question 4).
+- **Verified:** 447 tests green (250 engine + 197 web), typecheck + eslint + prettier clean, engine line coverage ≥90%, both-mode sweep in band. NOT yet run in the browser / on device — that is the outstanding acceptance step.
+
 ### File List
+
+**Engine (`packages/engine`)**
+- `src/resolve.ts` — `leaderFallen` state; `LeaderFell` at both death sites; tactic reversion; `leaderPenaltyPhysical` (exported) at physical call sites; `isLeaderFall`; threaded `setup`/`leaderFallen` through `takeTurn`/`act`/`misfire`/`strike`.
+- `src/balance.ts` — `leaderFallDealt` (3/4) + `leaderFallTaken` (5/4); `version` 5 → 6.
+- `src/ai.ts` — `AiChoice.leader`; 4th stream draw; `'leader'` added to `AI_TACTICS`; invariant doc updated.
+- `sim/sweep.ts` — `leaders: { A: a.leader, B: b.leader }`.
+- `test/leader.test.ts` — NEW: LeaderFell emission (combat + poison + property), penalty math + re-clamp, tactic reversion, enemy-fallback regression.
+- `test/balance-hash.test.ts` — pinned `6: '49466cd4'`.
+- `test/ai.test.ts` — four-draw invariant, leader-draw coverage, `leader` tactic now allowed.
+- `test/resolve.test.ts`, `test/sim.test.ts`, `test/wipeout.test.ts`, `test/roster.test.ts` — anchors re-derived for the penalty.
+- `test/__snapshots__/golden.test.ts.snap` + `test/golden.test.ts` — goldens #4/#5/#6/#8 re-recorded + inline assertions updated.
+
+**Web (`apps/web`)**
+- `src/flow/MatchFlow.ts` — `setLeader`; `clearLeaderDesignation` (crown + tactic reset); no-fallback `commit`.
+- `src/scenes/PlacementScene.ts` — crown-tap, ♛ render, Ready gate, submit-hint, Attack-Leader unlock, intro copy.
+- `src/scenes/RevealScene.ts` — crown on the leader sprite.
+- `src/scenes/BattleScene.ts` — full-beat `leaderFellBanner()` + persistent HUD tint; label fields; ♛ crown on each leader ON the battle board (device follow-up).
+- `src/scenes/HomeScene.ts` — Wipeout default + on the left (device follow-up).
+- `src/scenes/HistoryScene.ts` — per-side tactic label + crown badge.
+- `src/scenes/DraftScene.ts` — defensive crown-cleared toast (`flashCrownCleared`).
+- `src/config/constants.ts` — `LEADER_CROWN_GLYPH`, `BATTLE_LEADER_FELL_BANNER`, `PLACEMENT_CROWN_HINT`, `PALETTE.penaltyTint`.
+- `test/match-flow.test.ts` — setLeader/commit/tactic-reset tests; helper crowns a leader.
+- `test/rules-doc.test.ts` — leader-fall ratio drift guard.
+
+**Docs**
+- `docs/rules.md` — "The Leader" section + Attack Leader tactic bullet.
+
+### Change Log
+
+- 2026-07-19 — Story 4.5 implemented: FR35 leader-fall sober package (engine) + squad-leader crown UI across Placement/Reveal/Battle/History (shell). `balanceVersion` 5→6 (two new physical-penalty ratios), `logVersion` unchanged (LeaderFell already in the v4 union). AI leader designation + `leader` tactic unlocked (Danilo-confirmed). Gate green (447 tests); device sign-off pending.
+- 2026-07-19 — Device follow-up (Danilo: "it's working great. I loved it"): (1) **Leader crown now rides the BATTLE board** for the whole fight (`BattleScene.buildUnit`), not just Reveal — groundwork for the mid-battle tactic switch ("go for the leader or not"); EXPERIENCE.md amended (supersedes the reveal-only framing for the Battle surface). (2) **Wipeout is now the Home default and on the LEFT** (`HomeScene`), Standard on the right — EXPERIENCE.md amended; PRD FR17 update logged to deferred-work.md (balance unaffected — sweep polices both modes). Gate re-run green (447 tests).

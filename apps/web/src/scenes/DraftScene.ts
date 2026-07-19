@@ -61,6 +61,8 @@ export class DraftScene extends Scene {
   /** Double-tap-to-add tracking: a second tap on the same tile within the window drafts it (Danilo's request). Reset every create() (singleton scenes). */
   private lastTapClass: UnitClass | null = null;
   private lastTapAt = 0;
+  /** The transient "crown cleared" toast (story 4.5). Reset every create() (singleton scenes). */
+  private crownNotice?: GameObjects.Text;
 
   constructor() {
     super('Draft');
@@ -77,6 +79,7 @@ export class DraftScene extends Scene {
     this.dynamic = [];
     this.lastTapClass = null; // reset double-tap state (singleton lesson: no stale carry-over)
     this.lastTapAt = 0;
+    this.crownNotice = undefined;
     this.tiles = [];
 
     this.cameras.main.setBackgroundColor(PALETTE.background);
@@ -139,7 +142,33 @@ export class DraftScene extends Scene {
   /** Drafts `cls` if a slot budget remains (shared by the Add-to-army button and double-tap). */
   private addToArmy(cls: UnitClass) {
     if (!canAddUnit(this.flow.getState().playerArmy)) return;
-    this.flow.draftUnit(cls);
+    const hadCrown = this.flow.getState().playerLeader !== null;
+    this.flow.draftUnit(cls); // AD-9: any army mutation clears the leader crown
+    if (hadCrown) this.flashCrownCleared();
+  }
+
+  /**
+   * The EXPERIENCE.md "army mutation clears the crown WITH a visible notice"
+   * (story 4.5, AD-9): a transient toast when a draft/remove drops a live crown.
+   * NOTE: in the current forward-only flow (Draft → Placement → Reveal, no
+   * back-path) the crown is set only in PlacementScene, AFTER drafting, so this
+   * cannot fire in normal play — it is a defensive guard on the real invariant
+   * that becomes live the moment a Placement→Draft return is added. The clearing
+   * itself is enforced + tested in MatchFlow regardless.
+   */
+  private flashCrownCleared() {
+    this.crownNotice?.destroy();
+    const toast = crispText(this, BASE_WIDTH / 2, 68, '♛ Leader crown cleared — crown a unit again in Placement', {
+      fontFamily: 'Arial',
+      fontSize: `${MIN_FONT_PX}px`,
+      color: PALETTE.title,
+      align: 'center',
+      wordWrap: { width: BASE_WIDTH - 24 },
+    })
+      .setOrigin(0.5)
+      .setDepth(200);
+    this.crownNotice = toast;
+    this.tweens.add({ targets: toast, alpha: 0, delay: 1400, duration: 500, onComplete: () => toast.destroy() });
   }
 
   /** A small colored matchup pill; returns its right edge x so the next pill can follow. */
@@ -268,7 +297,9 @@ export class DraftScene extends Scene {
           }).setOrigin(0.5),
         );
         slot.setInteractive({ useHandCursor: true }).on('pointerup', () => {
-          this.flow.removeUnit(i);
+          const hadCrown = this.flow.getState().playerLeader !== null;
+          this.flow.removeUnit(i); // AD-9: any army mutation clears the leader crown
+          if (hadCrown) this.flashCrownCleared();
           this.redraw();
         });
       } else {

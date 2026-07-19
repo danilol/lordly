@@ -6,12 +6,14 @@ import {
   ENEMY_ARMY_LABEL,
   PALETTE,
   placementSubmitHint,
+  PLACEMENT_CROWN_HINT,
   PLACEMENT_SUBMIT_LABEL,
   PLACEMENT_TITLE,
   MIN_FONT_PX,
   CARD_CLASS_FONT_PX,
   CLASS_ABBREVIATIONS,
   TACTIC_DISPLAY_NAME,
+  LEADER_CROWN_GLYPH,
 } from '../config/constants';
 import { applyHiDpiCamera, addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
@@ -69,13 +71,19 @@ export class PlacementScene extends Scene {
     this.gridLeft = (BASE_WIDTH - (3 * CELL + 2 * GAP)) / 2;
 
     crispText(this, BASE_WIDTH / 2, 28, PLACEMENT_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
-    crispText(this, BASE_WIDTH / 2, 54, 'Drag a unit onto the grid, or double-tap it to place it. Front row faces the enemy (top).', {
-      fontFamily: 'Arial',
-      fontSize: '10px',
-      color: PALETTE.mutedText,
-      align: 'center',
-      wordWrap: { width: BASE_WIDTH - 24 },
-    }).setOrigin(0.5);
+    crispText(
+      this,
+      BASE_WIDTH / 2,
+      54,
+      'Drag a unit onto the grid, or double-tap it to place it. Tap a placed unit to crown your leader (♛). Front row faces the enemy (top).',
+      {
+        fontFamily: 'Arial',
+        fontSize: '10px',
+        color: PALETTE.mutedText,
+        align: 'center',
+        wordWrap: { width: BASE_WIDTH - 24 },
+      },
+    ).setOrigin(0.5);
 
     // FR6 groundwork + first-time legibility: mark the enemy-facing side (top
     // of the grid) so a new player knows where the opponent will appear.
@@ -196,7 +204,14 @@ export class PlacementScene extends Scene {
       }).setOrigin(0.5);
       const soldierName = crispText(this, 0, 24, unit.name, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.bodyText }).setOrigin(0.5);
       const badge = addElementBadge(this, 24, -24, unit.element);
-      const c = this.add.container(x, y, [body, sprite, code, soldierName, badge]);
+      const children: GameObjects.GameObject[] = [body, sprite, code, soldierName, badge];
+      // FR35 crown (story 4.5): the ♛ insignia on the crowned card, top-left in
+      // gold (PALETTE.title = DESIGN's {colors.gold} "title accent" — gold marks
+      // the leader, never the side, which stays the border/wash blue).
+      if (state.playerLeader === i) {
+        children.push(crispText(this, -24, -24, LEADER_CROWN_GLYPH, { fontFamily: 'Arial', fontSize: '16px', color: PALETTE.title }).setOrigin(0.5));
+      }
+      const c = this.add.container(x, y, children);
       c.setSize(64, 64); // sets the centered rectangular hit area for input
       c.setData('unitIndex', i);
       c.setInteractive({ useHandCursor: true });
@@ -212,7 +227,18 @@ export class PlacementScene extends Scene {
         const doubleTap = this.lastTapIndex === i && now - this.lastTapAt < DOUBLE_TAP_MS;
         this.lastTapAt = now;
         this.lastTapIndex = doubleTap ? -1 : i; // consume on double so a triple tap isn't two actions
-        if (!doubleTap) return;
+        if (!doubleTap) {
+          // Single tap on a PLACED unit crowns/uncrowns it (story 4.5, FR35),
+          // living in the existing double-tap no-op branch (NOT a second
+          // listener, which would double-fire). A tray unit can't be crowned
+          // (setLeader throws), so a single tap there stays a true no-op.
+          // Tap-to-toggle + move-crown behavior lives in flow.setLeader (AD-13).
+          if (this.flow.getState().playerPlacements[i] !== null) {
+            this.flow.setLeader(i);
+            this.redraw();
+          }
+          return;
+        }
         if (this.flow.getState().playerPlacements[i] !== null) {
           this.flow.unplaceUnit(i); // placed → back to the tray
           this.redraw();
@@ -238,12 +264,19 @@ export class PlacementScene extends Scene {
     this.buildTacticPicker(state.playerTactic);
 
     const placed = placedCount(state.playerPlacements);
-    const ready = placed === state.playerArmy.length && state.playerArmy.length > 0;
+    // Ready gates on full placement AND a crown (story 4.5, FR35 — exactly one
+    // leader is required, same footing as full placement).
+    const ready = placed === state.playerArmy.length && state.playerArmy.length > 0 && state.playerLeader !== null;
     const btnY = 596;
     const btn = this.add
       .rectangle(BASE_WIDTH / 2, btnY, 200, 50, ready ? PALETTE.buttonFillEnabled : PALETTE.buttonFill)
       .setStrokeStyle(2, ready ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke);
-    const label = crispText(this, BASE_WIDTH / 2, btnY, ready ? PLACEMENT_SUBMIT_LABEL : placementSubmitHint(state.playerArmy.length), {
+    // When everything is placed the last gate is the crown, so the hint switches
+    // from "place all N units" to the crown prompt (story 4.5) instead of
+    // misleadingly repeating the placement ask.
+    const fullyPlaced = placed === state.playerArmy.length && state.playerArmy.length > 0;
+    const hint = fullyPlaced ? PLACEMENT_CROWN_HINT : placementSubmitHint(state.playerArmy.length);
+    const label = crispText(this, BASE_WIDTH / 2, btnY, ready ? PLACEMENT_SUBMIT_LABEL : hint, {
       fontFamily: 'Arial',
       fontSize: ready ? '18px' : '13px',
       color: ready ? PALETTE.buttonText : PALETTE.buttonTextDisabled,
@@ -262,9 +295,10 @@ export class PlacementScene extends Scene {
    * request — the button row took too much space). Collapsed, it is a single
    * slim bar showing the current tactic; tapping expands a small option list
    * that overlays the tray (transient, high depth). Defaults to Autonomous.
-   * `Attack Leader` is DISABLED (muted, no handler) until story 4.5 ships leader
-   * designation (D-3b). Hidden from the enemy until reveal (FR5). Player-only
-   * write path is `flow.setTactic` (AD-13).
+   * `Attack Leader` is DISABLED (muted, no handler) until a crown exists (story
+   * 4.5, D-3b — "no invisible defaults"); it unlocks the moment the player
+   * crowns a leader. Hidden from the enemy until reveal (FR5). Player-only write
+   * path is `flow.setTactic` (AD-13).
    *
    * RECORDED DEVIATION (review, 2026-07-19): the bar and every option row are
    * 24px tall — under UX-DR4's 44px tap-target floor. This is deliberate:
@@ -295,8 +329,13 @@ export class PlacementScene extends Scene {
     });
     if (!this.pickerOpen) return;
     // Expanded option list — drops down over the tray (high depth), closes on pick.
+    const hasLeader = this.flow.getState().playerLeader !== null;
     ALL_TACTICS.forEach((t, i) => {
-      const disabled = t === 'leader'; // 4.4→4.5 window (D-3b)
+      // Attack Leader unlocks once a crown exists (story 4.5, D-3b — "no invisible
+      // defaults"); before a crown it stays greyed. Clearing the crown resets a
+      // 'leader' selection back to autonomous in the flow, so the picker never
+      // shows a selected-but-disabled Attack Leader.
+      const disabled = t === 'leader' && !hasLeader;
       const isSel = t === selected;
       const oy = by + bh + i * bh;
       const row = this.add

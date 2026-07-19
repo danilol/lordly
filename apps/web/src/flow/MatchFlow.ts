@@ -147,7 +147,7 @@ export class MatchFlow {
     const unit: DraftedUnit = { class: cls, element: this.rollNextElement(), name: this.rollNextName(cls) };
     this.state.playerArmy.push(unit);
     this.state.playerPlacements.push(null);
-    this.state.playerLeader = null; // army mutated → leader designation clears (AD-9)
+    this.clearLeaderDesignation(); // army mutated → leader designation clears (AD-9)
     return unit;
   }
 
@@ -159,7 +159,20 @@ export class MatchFlow {
     }
     this.state.playerArmy.splice(index, 1);
     this.state.playerPlacements.splice(index, 1);
-    this.state.playerLeader = null; // army mutated → leader designation clears (AD-9)
+    this.clearLeaderDesignation(); // army mutated → leader designation clears (AD-9)
+  }
+
+  /**
+   * The AD-9 leader-clearing invariant, in ONE place (story 4.5): any army
+   * mutation drops the crown. Because a crown is REQUIRED to pick the Attack
+   * Leader tactic (D-3b — "no invisible defaults"), clearing the crown must also
+   * reset a `'leader'` tactic back to `'autonomous'` — otherwise the state would
+   * hold a leader-tactic selection with no crown to back it. The Placement scene
+   * surfaces the clear with a visible notice; this method only owns the state.
+   */
+  private clearLeaderDesignation(): void {
+    this.state.playerLeader = null;
+    if (this.state.playerTactic === 'leader') this.state.playerTactic = 'autonomous';
   }
 
   /** Places (or moves/swaps) the unit at `unitIndex` onto `target` via the pure placement model (FR4). */
@@ -200,6 +213,27 @@ export class MatchFlow {
   }
 
   /**
+   * Designates (or moves / un-designates) the player's leader (FR35, story 4.5)
+   * — the Placement crown-tap's write path (AD-13: scenes never mutate state).
+   * The index must be in range AND currently PLACED (EXPERIENCE.md: "tap a
+   * placed unit to crown it"). Tap-to-toggle: crowning the already-crowned unit
+   * un-crowns it; tapping a DIFFERENT placed unit MOVES the crown to it (no
+   * reject-and-ignore dead end — this codebase's no-dead-end philosophy). The
+   * crown is tied to the unit's ARMY INDEX, not its board cell, so it persists
+   * through unplace/re-place; only `draftUnit`/`removeUnit`'s AD-9 clear drops it.
+   */
+  setLeader(index: number): void {
+    if (this.state.phase === 'committed') throw new Error('cannot set leader: match already committed');
+    if (!Number.isInteger(index) || index < 0 || index >= this.state.playerArmy.length) {
+      throw new Error(`setLeader: index ${index} out of range`);
+    }
+    if (this.state.playerPlacements[index] === null) {
+      throw new Error(`setLeader: unit ${index} is not placed`);
+    }
+    this.state.playerLeader = this.state.playerLeader === index ? null : index;
+  }
+
+  /**
    * Assembles the committed `MatchSetup` (AD-9/AD-11) and commits the AI's
    * board via `chooseSetup` on the `ai/B` stream (AD-6/AD-13 — the AI never
    * sees the player). Validates before storing (spine errors convention);
@@ -227,6 +261,14 @@ export class MatchFlow {
       return p;
     });
 
+    // A crown is REQUIRED by commit time (story 4.5) — the Ready gate makes this
+    // unreachable, so a null here means Ready's own gate is broken, not user
+    // error. Surface it loudly (spine convention), never paper over it with a
+    // silent `?? 0` default (which would ship an unintended, unshown leader).
+    if (this.state.playerLeader === null) {
+      throw new Error('cannot commit: designate a leader first');
+    }
+
     // The AI side's elements AND names roll HERE, on the B streams — MatchFlow
     // rolls, never chooseSetup (AD-6: the AI module admits nothing but its own
     // stream). Per unit in army order: one element, one name (AD-9/AD-10).
@@ -242,12 +284,11 @@ export class MatchFlow {
       seed: this.state.seed,
       balanceVersion: BALANCE.version,
       mode: this.state.mode,
-      // Side A's tactic is the player's Placement pick (story 4.4); side B is
-      // the AI's own committed tactic, drawn from its `ai/B` stream (FR24 — the
-      // AI never sees the player). Leader designation still ships in 4.5, so
-      // leaders stay the interim index-0 default until then.
+      // Side A's tactic + leader are the player's Placement picks (story
+      // 4.4/4.5); side B is the AI's own committed tactic AND leader, drawn from
+      // its `ai/B` stream (FR24/FR35 — the AI never sees the player).
       tactics: { A: this.state.playerTactic, B: ai.tactic },
-      leaders: { A: this.state.playerLeader ?? 0, B: 0 },
+      leaders: { A: this.state.playerLeader, B: ai.leader },
       armies: {
         A: this.state.playerArmy.map((u) => ({ class: u.class, element: u.element, name: u.name })),
         B: armyB,

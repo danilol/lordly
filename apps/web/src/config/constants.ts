@@ -55,6 +55,10 @@ export const PALETTE = {
   // any ground, including the deferred landscape backdrops (deferred-work.md).
   codeTextPlayer: '#d6e8fa',
   codeTextEnemy: '#f8d9d2',
+  // Story 4.5 (FR35, EXPERIENCE.md): the persistent HUD-label tint marking a
+  // side whose leader has fallen — an ashen, demoralised red-grey, distinct
+  // from the bright side reds so it reads as "weakened," not "enemy."
+  penaltyTint: '#b0736a',
 } as const;
 
 // Text render resolution multiplier: the game renders at the 360×640 base and
@@ -125,6 +129,17 @@ export const TACTIC_DISPLAY_NAME: Record<Tactic, string> = {
   leader: 'Attack Leader',
 };
 
+/**
+ * The leader-crown insignia (`{components.leader-crown}`, DESIGN.md, story 4.5):
+ * glyph ♛ in gold — the crown color reuses `PALETTE.title` (the Night-theme
+ * rendering of DESIGN's `{colors.gold}` "title accent"), never a side color
+ * (gold = leader, side stays blue/red). Shown at placement/reveal/battle/history.
+ */
+export const LEADER_CROWN_GLYPH = '♛';
+
+/** The full-beat banner text when a side's leader falls (FR35, EXPERIENCE.md — exact wording). */
+export const BATTLE_LEADER_FELL_BANNER = 'The leader has fallen!';
+
 // FR39f (story 4.0): the class-code contrast treatment for units standing ON
 // side-colored board tiles (Battle, Reveal). A dark outline stroke carries the
 // letterform regardless of what's behind it — the token treatment DESIGN.md's
@@ -192,6 +207,8 @@ export const PLACEMENT_SUBMIT_LABEL = 'Ready';
 export function placementSubmitHint(unitCount: number): string {
   return `place all ${unitCount} units`;
 }
+/** Story 4.5: once every unit is placed, the Ready gate's last requirement is a crown — tell the player how. */
+export const PLACEMENT_CROWN_HINT = 'tap a unit to crown a leader';
 export const ENEMY_ARMY_LABEL = '▲  ENEMY ARMY  ▲';
 
 // Reveal / Battle / Result scene labels (story 1.9) — one source for tests + scenes.

@@ -11,7 +11,11 @@ function flowWithSeed(seed: number): MatchFlow {
   return new MatchFlow(() => seed);
 }
 
-/** Drafts a full slot-legal army (5 smalls — AD-1) and places every unit. */
+/**
+ * Drafts a full slot-legal army (5 smalls — AD-1), places every unit, and
+ * crowns a leader — the complete Ready state a commit now requires (story 4.5:
+ * commit throws without a crown). Callers testing the crown itself set their own.
+ */
 function draftAndPlaceAll(flow: MatchFlow): void {
   flow.draftUnit('knight');
   flow.draftUnit('archer');
@@ -23,6 +27,7 @@ function draftAndPlaceAll(flow: MatchFlow): void {
   flow.placeUnit(2, { row: 'back', col: 'right' });
   flow.placeUnit(3, { row: 'mid', col: 'center' });
   flow.placeUnit(4, { row: 'front', col: 'left' });
+  flow.setLeader(0); // story 4.5: a crown is required to commit
 }
 
 describe('MatchState serializability (AD-5)', () => {
@@ -148,18 +153,20 @@ describe('MatchFlow names (FR37, AD-9/AD-10, story 4.2)', () => {
   });
 });
 
-describe('MatchFlow tactics & leaders (FR34/FR35, AD-9, story 4.4)', () => {
-  it("commit() carries side A's picked tactic and side B's OWN AI-drawn tactic (FR24); leaders still index 0 until 4.5", () => {
+describe('MatchFlow tactics & leaders (FR34/FR35, AD-9, story 4.4/4.5)', () => {
+  it("commit() carries side A's picked tactic + leader and side B's OWN AI-drawn tactic + leader (FR24/FR35)", () => {
     const flow = flowWithSeed(0x2222);
     flow.startMatch();
-    draftAndPlaceAll(flow);
+    draftAndPlaceAll(flow); // crowns unit 0
     flow.setTactic('weakest');
     const setup = flow.commit();
     expect(setup.tactics.A).toBe('weakest'); // the player's Placement pick
-    // Side B is the AI's own committed tactic from its stream — one of the three
-    // enabled tactics (FR24; `leader` waits for 4.5), NOT hardcoded 'autonomous'.
-    expect(['autonomous', 'weakest', 'strongest']).toContain(setup.tactics.B);
-    expect(setup.leaders).toEqual({ A: 0, B: 0 });
+    expect(setup.leaders.A).toBe(0); // the player's crown
+    // Side B is the AI's own committed tactic + leader from its stream (FR24) —
+    // any of the four tactics now that story 4.5 unlocked `leader`.
+    expect(['autonomous', 'weakest', 'strongest', 'leader']).toContain(setup.tactics.B);
+    expect(setup.leaders.B).toBeGreaterThanOrEqual(0);
+    expect(setup.leaders.B).toBeLessThan(BALANCE.slotBudget);
   });
 
   it("defaults to 'autonomous' when the player never touches the picker", () => {
@@ -188,14 +195,86 @@ describe('MatchFlow tactics & leaders (FR34/FR35, AD-9, story 4.4)', () => {
     expect(() => flow.setTactic('weakest')).toThrow(/already committed/);
   });
 
-  it('the leader-clearing hook: draftUnit and removeUnit reset playerLeader to null (4.5 lands only the picker)', () => {
+  it('the leader-clearing hook: draftUnit and removeUnit reset playerLeader to null (AD-9 invariant)', () => {
     const flow = flowWithSeed(0x3333);
     flow.startMatch();
     expect(flow.getState().playerLeader).toBeNull();
     flow.draftUnit('knight');
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    flow.setLeader(0);
+    expect(flow.getState().playerLeader).toBe(0);
+    flow.draftUnit('archer'); // army mutation → crown clears
     expect(flow.getState().playerLeader).toBeNull();
-    flow.removeUnit(0);
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    flow.setLeader(0);
+    flow.removeUnit(1);
     expect(flow.getState().playerLeader).toBeNull();
+  });
+
+  it('setLeader crowns a placed unit; throws out of range and on an unplaced unit', () => {
+    const flow = flowWithSeed(0x4440);
+    flow.startMatch();
+    flow.draftUnit('knight');
+    flow.draftUnit('archer');
+    expect(() => flow.setLeader(0)).toThrow(/not placed/); // in tray
+    expect(() => flow.setLeader(5)).toThrow(/out of range/);
+    expect(() => flow.setLeader(-1)).toThrow(/out of range/);
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    flow.setLeader(0);
+    expect(flow.getState().playerLeader).toBe(0);
+  });
+
+  it('setLeader is tap-to-toggle: the same unit un-crowns; a different placed unit MOVES the crown', () => {
+    const flow = flowWithSeed(0x4441);
+    flow.startMatch();
+    flow.draftUnit('knight');
+    flow.draftUnit('archer');
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    flow.placeUnit(1, { row: 'front', col: 'left' });
+    flow.setLeader(0);
+    expect(flow.getState().playerLeader).toBe(0);
+    flow.setLeader(1); // different placed unit → moves
+    expect(flow.getState().playerLeader).toBe(1);
+    flow.setLeader(1); // same unit → un-crowns
+    expect(flow.getState().playerLeader).toBeNull();
+  });
+
+  it("clearing the crown while 'leader' is the tactic resets the tactic to 'autonomous' (D-3b: no crownless leader-tactic)", () => {
+    const flow = flowWithSeed(0x4442);
+    flow.startMatch();
+    flow.draftUnit('knight');
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    flow.setLeader(0);
+    flow.setTactic('leader');
+    expect(flow.getState().playerTactic).toBe('leader');
+    flow.draftUnit('archer'); // army mutation → crown clears → tactic must reset
+    expect(flow.getState().playerLeader).toBeNull();
+    expect(flow.getState().playerTactic).toBe('autonomous');
+  });
+
+  it('setLeader throws once the match is committed (AD-13 guard)', () => {
+    const flow = flowWithSeed(0x4443);
+    flow.startMatch();
+    draftAndPlaceAll(flow);
+    flow.commit();
+    expect(() => flow.setLeader(1)).toThrow(/already committed/);
+  });
+
+  it('commit throws without a crown — the Ready gate should make this unreachable (spine convention)', () => {
+    const flow = flowWithSeed(0x4444);
+    flow.startMatch();
+    flow.draftUnit('knight');
+    flow.draftUnit('archer');
+    flow.draftUnit('mage');
+    flow.draftUnit('cleric');
+    flow.draftUnit('witch');
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    flow.placeUnit(1, { row: 'back', col: 'left' });
+    flow.placeUnit(2, { row: 'back', col: 'right' });
+    flow.placeUnit(3, { row: 'mid', col: 'center' });
+    flow.placeUnit(4, { row: 'front', col: 'left' });
+    // fully placed, no crown → the placement check passes, the leader check trips
+    expect(() => flow.commit()).toThrow(/designate a leader/);
   });
 });
 
@@ -243,6 +322,7 @@ describe('MatchFlow commit (FR5/FR24, AD-6/AD-9/AD-11/AD-13)', () => {
     other.placeUnit(2, { row: 'back', col: 'right' });
     other.placeUnit(3, { row: 'front', col: 'center' });
     other.placeUnit(4, { row: 'front', col: 'right' });
+    other.setLeader(2); // a DIFFERENT crown than readyToCommit's — still must not reach the AI's board
     const boardB = other.commit();
 
     expect(boardB.armies.B).toEqual(boardA.armies.B);

@@ -1,5 +1,5 @@
 import { GameObjects, Scene } from 'phaser';
-import type { Unit } from '@lordly/engine';
+import type { Tactic, Unit } from '@lordly/engine';
 import {
   BASE_HEIGHT,
   BASE_WIDTH,
@@ -10,7 +10,9 @@ import {
   HISTORY_REPLAY_LABEL,
   HISTORY_TITLE,
   HOME_BACK_LABEL,
+  LEADER_CROWN_GLYPH,
   PALETTE,
+  TACTIC_DISPLAY_NAME,
 } from '../config/constants';
 import { applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText, enableDragScroll } from '../config/ui';
 import { formatHistoryRow } from '../flow/historyModel';
@@ -147,23 +149,41 @@ export class HistoryScene extends Scene {
 
     // Two stacked comp lines — each centres its own cards. Side colour is the
     // identity anchor (AD-11: blue = you/side A, red = enemy), so no text label.
+    // Story 4.5 (FR28, UX-DR10): each line gains a compact tactic label above it
+    // and a ♛ crown badge on the leader's card. Pre-era entries (stored before
+    // story 4.2 added tactics/leaders) simply omit both — optional-chained.
     let cy = headerTop + HEADER_H + 4;
-    cy = this.renderCompLine(content, cy, row.yourComp, PALETTE.playerLine);
-    cy = this.renderCompLine(content, cy, row.enemyComp, PALETTE.enemyLine);
+    cy = this.renderCompLine(content, cy, row.yourComp, PALETTE.playerLine, entry.setup.tactics?.A, entry.setup.leaders?.A);
+    cy = this.renderCompLine(content, cy, row.enemyComp, PALETTE.enemyLine, entry.setup.tactics?.B, entry.setup.leaders?.B);
 
     const rule = this.add.rectangle(BASE_WIDTH / 2, cy + 6, BASE_WIDTH - MARGIN * 2, 1, PALETTE.cardStroke).setOrigin(0.5, 0);
     content.add(rule);
     return cy + 8;
   }
 
-  /** One composition as a centred, full-width line of unit cards. Returns the next free y. */
-  private renderCompLine(content: GameObjects.Container, y: number, comp: readonly Unit[], sideColor: number): number {
+  /**
+   * One composition as a centred, full-width line of unit cards, with an
+   * optional compact tactic label above it (story 4.5) and a ♛ badge on the
+   * leader's card. The label is a STACKED line (extra height), never a widened
+   * row — the 4.2 army-row-coupling 360px-overflow lesson. Returns the next free y.
+   */
+  private renderCompLine(content: GameObjects.Container, y: number, comp: readonly Unit[], sideColor: number, tactic?: Tactic, leaderIndex?: number): number {
+    let top = y;
+    if (tactic) {
+      content.add(
+        crispText(this, BASE_WIDTH / 2, top, TACTIC_DISPLAY_NAME[tactic], { fontFamily: 'Arial', fontSize: '10px', color: PALETTE.mutedText }).setOrigin(
+          0.5,
+          0,
+        ),
+      );
+      top += 13;
+    }
     const totalW = comp.length * CARD_W + (comp.length - 1) * CARD_GAP;
     let x = (BASE_WIDTH - totalW) / 2;
-    for (const unit of comp) {
-      x = this.renderUnitCard(content, x, y, unit, sideColor);
-    }
-    return y + CARD_H + 4;
+    comp.forEach((unit, i) => {
+      x = this.renderUnitCard(content, x, top, unit, sideColor, i === leaderIndex);
+    });
+    return top + CARD_H + 4;
   }
 
   /**
@@ -235,8 +255,8 @@ export class HistoryScene extends Scene {
     }).setOrigin(0.5, 0);
   }
 
-  /** One compact unit card (DESIGN unit-card): side-colored border + ~15% wash, sprite, 3-letter code, element dot. Returns the next x. */
-  private renderUnitCard(content: GameObjects.Container, x: number, y: number, unit: Unit, sideColor: number): number {
+  /** One compact unit card (DESIGN unit-card): side-colored border + ~15% wash, sprite, 3-letter code, element dot, and (story 4.5) a ♛ badge if it's the leader. Returns the next x. */
+  private renderUnitCard(content: GameObjects.Container, x: number, y: number, unit: Unit, sideColor: number, isLeader = false): number {
     const card = this.add.rectangle(x, y, CARD_W, CARD_H, sideColor, 0.15).setOrigin(0, 0).setStrokeStyle(2, sideColor);
     const sprite = addUnitSprite(this, x + CARD_W / 2, y + 20, unit.class, 32);
     const code = crispText(this, x + CARD_W / 2, y + CARD_H - 3, CLASS_ABBREVIATIONS[unit.class], {
@@ -249,6 +269,11 @@ export class HistoryScene extends Scene {
     content.add(sprite);
     content.add(code);
     content.add(badge);
+    // ♛ badge ON the existing card (top-left, opposite the element dot) — never
+    // widens the row (the 4.2 overflow lesson). Gold = leader (PALETTE.title).
+    if (isLeader) {
+      content.add(crispText(this, x + 3, y + 2, LEADER_CROWN_GLYPH, { fontFamily: 'Arial', fontSize: '12px', color: PALETTE.title }).setOrigin(0, 0));
+    }
     return x + CARD_W + CARD_GAP;
   }
 }

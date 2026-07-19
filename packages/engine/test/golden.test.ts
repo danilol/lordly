@@ -241,8 +241,12 @@ describe('golden battles (story 1.6 — full roster era)', () => {
     if (killingBlast?.type === 'UnitAttacked') {
       expect(killingBlast.targets.every((t) => t.hpAfter === 0)).toBe(true);
       const i = log.events.indexOf(killingBlast);
-      expect(log.events[i + 1]?.type).toBe('UnitDied');
-      expect(log.events[i + 2]?.type).toBe('UnitDied');
+      // B:0 is B's default leader (index 0): its death rides the LeaderFell beat
+      // immediately after its UnitDied (story 4.5, FR35), between the two
+      // casualties in target order. The blast is MAGIC, so no penalty applies.
+      expect(log.events[i + 1]?.type).toBe('UnitDied'); // B:0
+      expect(log.events[i + 2]?.type).toBe('LeaderFell'); // B:0 was B's leader
+      expect(log.events[i + 3]?.type).toBe('UnitDied'); // B:1
     }
     expect(log).toMatchSnapshot();
   });
@@ -253,11 +257,16 @@ describe('golden battles (story 1.6 — full roster era)', () => {
     // poisonDamage 15: archer 90→75, witch 85→70, merc 110→95): three
     // non-fatal ticks at the natural end, while B's witch falls to the
     // hunt-boosted arrows (×3/2) mid-engagement — her death comes from a
-    // UnitAttacked, never a tick.
+    // UnitAttacked, never a tick. B:0 (the witch) is B's default leader, so her
+    // fall fires LeaderFell(B) and arms B's sober package (story 4.5, FR35):
+    // B's melee then deals ×3/4 and takes ×5/4 physical, nudging the verdict
+    // from the pre-4.5 76%/70% to 78%/69% (A survives a touch better, B a touch
+    // worse). Poison/magic are untouched — the physical-only penalty.
     expect(log.events.filter((e) => e.type === 'PoisonTicked').length).toBe(3);
     expect(log.events.some((e) => e.type === 'PoisonTicked' && e.hpAfter === 0)).toBe(false);
     expect(log.events.filter((e) => e.type === 'UnitDied').map((e) => e.unit)).toEqual(['B:0']);
-    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 76, B: 70 } });
+    expect(log.events.filter((e) => e.type === 'LeaderFell')).toEqual([{ type: 'LeaderFell', side: 'B', unit: 'B:0' }]);
+    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 78, B: 69 } });
     expect(log).toMatchSnapshot();
   });
 });
@@ -285,10 +294,14 @@ describe('golden battles (story 1.10 — until-wipeout mode)', () => {
     );
     // wipeout.test.ts's `knightsVsMercs` fixture verbatim — its comment
     // hand-derives the full grind (flank mercs die eng 2, center eng 3, mids
-    // eng 4; A ends 448/700). Winner A, 64% vs 0%, four engagements.
+    // eng 4). B:0 (front-left flank) is B's default leader: its fall in eng 2
+    // arms B's sober package (story 4.5, FR35), so B's mercs then deal ×3/4
+    // physical and A outlasts them with MORE hp than pre-4.5 (was 448/700 →
+    // 64%): A now holds 463/700 → 66% vs 0%, four engagements.
     expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(4);
+    expect(log.events.filter((e) => e.type === 'LeaderFell')).toEqual([{ type: 'LeaderFell', side: 'B', unit: 'B:0' }]);
     const verdict = log.events[log.events.length - 1];
-    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 64, B: 0 } });
+    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 66, B: 0 } });
     expect(log).toMatchSnapshot();
   });
 
@@ -307,18 +320,20 @@ describe('golden battles (story 1.10 — until-wipeout mode)', () => {
 
   it('golden #8: persisting poison — the earth-witch duel across engagements (FR19 Witch synergy)', () => {
     const log = resolveBattle(setup(POISON_DUEL, 5, 'wipeout'));
-    // Trace-verified for the 5-slot fixture under the story-4.4 pipeline: golden
+    // Trace-verified for the 5-slot fixture under the story-4.5 pipeline: golden
     // #5's comp in wipeout is the poison showcase — dots re-tick at every
     // natural engagement end (14 ticks in all) and compound into a FATAL tick
-    // (a PoisonTicked hpAfter 0). FR9 global range now lets A's two archers snipe
-    // across the whole grid, so the poison + arrows WIPE B at engagement 6
-    // (short of the cap) rather than grinding to the judged cap — A wins 16% to
-    // 0%. Poison still visibly survives every StatusCleared seam (the 4.2
-    // emission lifts the non-poison statuses) across all six engagements.
-    expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(6);
+    // (a PoisonTicked hpAfter 0). FR9 global range lets A's two archers snipe
+    // across the whole grid; B:0 (B's witch) is B's default leader, so her early
+    // fall arms B's sober package (story 4.5, FR35) — B's melee then deals ×3/4
+    // and takes ×5/4 physical, so B collapses ONE engagement sooner than pre-4.5
+    // (wipe at engagement 5, was 6) and A ends much higher (35% vs the pre-4.5
+    // 16%). Poison still survives every StatusCleared seam across all engagements.
+    expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(5);
     expect(log.events.filter((e) => e.type === 'PoisonTicked').length).toBe(14);
     expect(log.events.some((e) => e.type === 'PoisonTicked' && e.hpAfter === 0)).toBe(true);
-    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 16, B: 0 } });
+    expect(log.events.filter((e) => e.type === 'LeaderFell')).toEqual([{ type: 'LeaderFell', side: 'B', unit: 'B:0' }]);
+    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 35, B: 0 } });
     expect(log).toMatchSnapshot();
   });
 });

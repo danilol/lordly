@@ -94,6 +94,20 @@ export interface BalanceData {
     poisonDamage: number;
     /** Chance a confused unit's action misfires onto its own side (FR16). */
     confusionMisfire: Ratio;
+    /**
+     * FR35 sober package (story 4.5, dossier §4): once a side's designated
+     * leader falls, that side's units deal ×3/4 PHYSICAL damage for the rest
+     * of the battle. PHYSICAL only — melee/archer/cleric-staff; blast/magic is
+     * untouched (applied at the `physicalDamage` call sites, never inside the
+     * shared `strike`). Re-clamped to `minDamage` AFTER the multiply.
+     */
+    leaderFallDealt: Ratio;
+    /**
+     * FR35 sober package (story 4.5, dossier §4): once a side's leader falls,
+     * that side's units TAKE ×5/4 physical damage for the rest of the battle
+     * (the demoralised twin of `leaderFallDealt`, keyed to the DEFENDER's side).
+     */
+    leaderFallTaken: Ratio;
   };
 }
 
@@ -104,7 +118,7 @@ export interface BalanceData {
  * forgotten (AD-8).
  */
 export const BALANCE: BalanceData = {
-  version: 5,
+  version: 6,
   slotBudget: 5,
   engagementCap: 10,
   classes: {
@@ -151,6 +165,8 @@ export const BALANCE: BalanceData = {
     minDamage: 1,
     poisonDamage: 15,
     confusionMisfire: { num: 1, den: 2 },
+    leaderFallDealt: { num: 3, den: 4 },
+    leaderFallTaken: { num: 5, den: 4 },
   },
 };
 

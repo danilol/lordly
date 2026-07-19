@@ -12,8 +12,10 @@ import {
   REVEAL_TITLE,
   CLASS_ABBREVIATIONS,
   TACTIC_DISPLAY_NAME,
+  LEADER_CROWN_GLYPH,
   unitCodeStyle,
 } from '../config/constants';
+import type { MatchSetup } from '@lordly/engine';
 import { addElementBadge, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText } from '../config/ui';
 import { drawIsoBoard } from '../config/board';
 import { unitTileCenter } from '../flow/battleView';
@@ -72,12 +74,13 @@ export class RevealScene extends Scene {
     // resolve() runs the engine EXACTLY ONCE (AD-13); the Battle scene replays
     // the same cached log. The initial roster is the BattleStarted event.
     const roster = (this.flow.resolve().events[0] as BattleStarted).units;
-    for (const unit of roster) this.drawUnit(unit);
+    const committed = this.flow.getState().committedSetup;
+    for (const unit of roster) this.drawUnit(unit, committed);
 
-    // FR6 disclosure (story 4.4): both army tactics revealed as labels — the
+    // FR6 disclosure (story 4.4/4.5): both army tactics revealed as labels — the
     // FR5 fence lifts here, so the enemy's tactic (side B) is shown for the
-    // first time. The band below the player board is free; the "Attack Leader"
-    // option waits for 4.5, so only the three enabled tactics ever appear.
+    // first time. Any of the four tactics can appear now (story 4.5 unlocked
+    // Attack Leader); the leader crowns themselves are on the sprites (drawUnit).
     const setup = this.flow.getState().committedSetup;
     if (setup) {
       crispText(this, BASE_WIDTH / 2, 344, 'ARMY TACTICS', { fontFamily: 'Arial Black', fontSize: '12px', color: PALETTE.mutedText }).setOrigin(0.5);
@@ -112,9 +115,17 @@ export class RevealScene extends Scene {
    * name sits under the code (the battle board keeps codes only). The name
    * inherits the code's FR39f stroke treatment so it survives the tile fill.
    */
-  private drawUnit(unit: UnitSnapshot) {
+  private drawUnit(unit: UnitSnapshot, setup?: MatchSetup) {
     const { x, y } = unitTileCenter(unit.side, unit.placement);
     addUnitSprite(this, x, y - 12, unit.class, 32).setDepth(y);
+    // FR6 leader disclosure (story 4.5): the ♛ crown sits ON the leader's sprite
+    // (a board marker, "the read is the payoff" — not a separate text line like
+    // the tactic labels). Gold (PALETTE.title = {colors.gold}), never a side color.
+    if (setup && unit.id === `${unit.side}:${setup.leaders[unit.side]}`) {
+      crispText(this, x, y - 30, LEADER_CROWN_GLYPH, { fontFamily: 'Arial', fontSize: '16px', color: PALETTE.title })
+        .setOrigin(0.5)
+        .setDepth(y + 1);
+    }
     crispText(this, x, y + 8, CLASS_ABBREVIATIONS[unit.class], unitCodeStyle(unit.side))
       .setOrigin(0.5)
       .setDepth(y);

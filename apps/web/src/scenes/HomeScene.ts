@@ -27,8 +27,8 @@ import { MatchFlow } from '../flow/MatchFlow';
 import { applyHiDpiCamera, crispText } from '../config/ui';
 
 export class HomeScene extends Scene {
-  /** The battle mode the next match starts in (FR17/FR19) — Standard by default. */
-  private mode: Mode = 'single';
+  /** The battle mode the next match starts in (FR17/FR19) — Wipeout by default (Danilo, 2026-07-19: Wipeout is the headline experience). */
+  private mode: Mode = 'wipeout';
   /** The mode toggle's dynamic objects, rebuilt on each selection change. */
   private modeUi: GameObjects.GameObject[] = [];
 
@@ -38,9 +38,9 @@ export class HomeScene extends Scene {
 
   create() {
     // Phaser reuses the scene INSTANCE across restarts, so the class-field
-    // initializer above only runs once — re-assert the Standard default on
+    // initializer above only runs once — re-assert the Wipeout default on
     // every Home entry (mode persistence is story 2.3's settings gateway).
-    this.mode = 'single';
+    this.mode = 'wipeout';
     this.modeUi = [];
 
     this.cameras.main.setBackgroundColor(PALETTE.background);
@@ -109,9 +109,10 @@ export class HomeScene extends Scene {
     for (const obj of this.modeUi) obj.destroy();
     this.modeUi = [];
 
+    // Wipeout on the LEFT and default-selected (Danilo, 2026-07-19); Standard right.
     const options: { mode: Mode; label: string }[] = [
-      { mode: 'single', label: MODE_STANDARD_LABEL },
       { mode: 'wipeout', label: MODE_WIPEOUT_LABEL },
+      { mode: 'single', label: MODE_STANDARD_LABEL },
     ];
     const w = MODE_BUTTON_WIDTH;
     const h = MODE_BUTTON_HEIGHT;

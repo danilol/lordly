@@ -68,6 +68,12 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
   // golden/seed pin) are bit-identical to before the loop existed.
   const maxEngagements = setup.mode === 'wipeout' ? BALANCE.engagementCap : 1;
   let wiped: WipeState = undefined;
+  // FR35 sober package (story 4.5): once a side's designated leader falls it
+  // stays fallen for the WHOLE battle — like `wiped`, this persists across
+  // every engagement, so a leader lost in engagement 1 keeps its side penalised
+  // (and its tactic reverted) through the wipeout loop. Mutated in place by
+  // `strike()` and the poison-tick kill as the leader's death is observed.
+  const leaderFallen: Record<Side, boolean> = { A: false, B: false };
   for (let engagement = 1; engagement <= maxEngagements; engagement++) {
     if (engagement > 1) {
       // FR19 between-engagement reset: living units replenish their per-row
@@ -128,7 +134,7 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
           continue;
         }
         unit.actionsLeft -= 1;
-        const turnEvents = takeTurn(unit, units, streams.battle, setup);
+        const turnEvents = takeTurn(unit, units, streams.battle, setup, leaderFallen);
         events.push(...turnEvents);
         // Only a death can change the alive-set — skip the wipe scan otherwise.
         if (turnEvents.some((e) => e.type === 'UnitDied')) {
@@ -156,6 +162,13 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
         if (unit.hp === 0) {
           unit.alive = false;
           events.push({ type: 'UnitDied', unit: unit.id });
+          // FR35: a leader lost to poison triggers the sober package too — the
+          // penalty has no more actions to bite at the natural engagement end,
+          // but the beat still narrates (banner/history). Same guard as strike().
+          if (isLeaderFall(unit, setup, leaderFallen)) {
+            events.push({ type: 'LeaderFell', side: unit.side, unit: unit.id });
+            leaderFallen[unit.side] = true;
+          }
         }
       }
       wiped = wipedSide(units);
@@ -184,7 +197,7 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
  * cast (FR12). Targeting is re-evaluated per attack — this runs fresh each
  * turn.
  */
-function takeTurn(unit: UnitState, units: UnitState[], battle: Stream, setup: MatchSetup): BattleEvent[] {
+function takeTurn(unit: UnitState, units: UnitState[], battle: Stream, setup: MatchSetup, leaderFallen: Record<Side, boolean>): BattleEvent[] {
   if (unit.statuses.has('confusion')) {
     // Data-driven misfire chance (AD-8): P(misfire) = num/den. The draw spans
     // [0, den-1] and misfires on the TOP `num` values, so at the shipped 1/2
@@ -194,10 +207,10 @@ function takeTurn(unit: UnitState, units: UnitState[], battle: Stream, setup: Ma
     const { num, den } = BALANCE.formulas.confusionMisfire;
     const misfires = nextInt(battle, 0, den - 1) >= den - num;
     if (misfires) {
-      return [{ type: 'ActionMisfired', unit: unit.id }, ...misfire(unit, units, battle, setup.mode)];
+      return [{ type: 'ActionMisfired', unit: unit.id }, ...misfire(unit, units, battle, setup, leaderFallen)];
     }
   }
-  return act(unit, units, setup);
+  return act(unit, units, setup, leaderFallen);
 }
 
 /**
@@ -206,12 +219,22 @@ function takeTurn(unit: UnitState, units: UnitState[], battle: Stream, setup: Ma
  * is reach-filtered with Last Stand (FR7); ranged/magic is global (FR9). The
  * `leader` tactic reads the enemy leader's unit id (`${enemySide}:${index}`).
  */
-function act(unit: UnitState, units: UnitState[], setup: MatchSetup): BattleEvent[] {
+function act(unit: UnitState, units: UnitState[], setup: MatchSetup, leaderFallen: Record<Side, boolean>): BattleEvent[] {
   const enemies = units.filter((u) => u.side !== unit.side);
   const mode = setup.mode;
-  const tactic = setup.tactics[unit.side];
+  // FR35 tactic reversion (story 4.5): once THIS unit's side has lost its
+  // leader, the whole army fights on plain Autonomous for the rest of the
+  // battle (the "sober package" — deterministic, zero new stream draws). The
+  // override lives at this ONE read so every branch (melee/ranged/blast/witch)
+  // reverts uniformly. `setup` itself is never mutated (validated input, AD-9).
+  const tactic = leaderFallen[unit.side] ? 'autonomous' : setup.tactics[unit.side];
   const enemySide: Side = unit.side === 'A' ? 'B' : 'A';
   const enemyLeaderId: UnitId = `${enemySide}:${setup.leaders[enemySide]}`;
+  // Physical-only sober-package multiplier (dossier §4): wrap `physicalDamage`
+  // only when a leader has actually fallen — otherwise pass the bare function
+  // so the no-fall autonomous path stays allocation-free AND bit-identical
+  // (blast/magic never wraps — the penalty is physical-only).
+  const physical = leaderFallen.A || leaderFallen.B ? leaderPenaltyPhysical(unit.side, enemySide, leaderFallen) : physicalDamage;
 
   switch (unit.class) {
     // Vanguard + Skirmisher all melee the nearest reachable target (story 4.3
@@ -226,12 +249,12 @@ function act(unit: UnitState, units: UnitState[], setup: MatchSetup): BattleEven
     case 'valkyrie': {
       const idx = selectMeleeTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
       if (idx === undefined) return skip(unit);
-      return strike(unit, [enemies[idx] as UnitState], physicalDamage);
+      return strike(unit, [enemies[idx] as UnitState], physical, setup.leaders, leaderFallen);
     }
     case 'archer': {
       const idx = selectRangedTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
       if (idx === undefined) return skip(unit);
-      return strike(unit, [enemies[idx] as UnitState], physicalDamage);
+      return strike(unit, [enemies[idx] as UnitState], physical, setup.leaders, leaderFallen);
     }
     // Artillery row-blast (Sorceress = Wizard's Artillery twin, story 4.3).
     // Tactic interaction (D-2c): under `leader` the blast targets the enemy
@@ -244,7 +267,8 @@ function act(unit: UnitState, units: UnitState[], setup: MatchSetup): BattleEven
       const row = leaderRow ?? selectBlastRow(enemies);
       if (row === undefined) return skip(unit);
       const targets = enemies.filter((e) => e.alive && e.rowIndex === row);
-      return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode));
+      // Blast is MAGIC — no leader-fall penalty (dossier §4: physical only).
+      return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode), setup.leaders, leaderFallen);
     }
     case 'cleric': {
       // Heals ignore tactics entirely (dossier §4). The staff fallback is a
@@ -257,9 +281,10 @@ function act(unit: UnitState, units: UnitState[], setup: MatchSetup): BattleEven
         return [{ type: 'UnitHealed', source: unit.id, target: patient.id, amount, hpAfter: patient.hp }];
       }
       // Nobody damaged: the weak STR staff attack with magic targeting (FR11/FR9).
+      // The staff is PHYSICAL (STR-based) — it carries the sober-package penalty.
       const idx = selectRangedTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
       if (idx === undefined) return skip(unit);
-      return strike(unit, [enemies[idx] as UnitState], physicalDamage);
+      return strike(unit, [enemies[idx] as UnitState], physical, setup.leaders, leaderFallen);
     }
     case 'witch': {
       // Prefer-unafflicted (FR12) filters the legal list BEFORE the tactic sort
@@ -295,9 +320,15 @@ function act(unit: UnitState, units: UnitState[], setup: MatchSetup): BattleEven
  * Misfire ally picks EXCLUDE the confused unit itself; the cleric's enemy
  * pick is any living enemy (recorded decisions).
  */
-function misfire(unit: UnitState, units: UnitState[], battle: Stream, mode: 'single' | 'wipeout'): BattleEvent[] {
+function misfire(unit: UnitState, units: UnitState[], battle: Stream, setup: MatchSetup, leaderFallen: Record<Side, boolean>): BattleEvent[] {
+  const mode = setup.mode;
   const allies = units.filter((u) => u.side === unit.side && u.alive && u.id !== unit.id);
   const enemies = units.filter((u) => u.side !== unit.side && u.alive);
+  // Friendly-fire is a PHYSICAL strike on an ALLY: both attacker and defender
+  // are this unit's own side, so the sober package applies dealt AND taken to
+  // the same side uniformly (dossier §4 — no special-casing). Same guard as
+  // act(): wrap only after a leader has fallen so the common path is unchanged.
+  const physical = leaderFallen.A || leaderFallen.B ? leaderPenaltyPhysical(unit.side, unit.side, leaderFallen) : physicalDamage;
 
   switch (unit.class) {
     // Every physical attacker misfires as a melee strike on a random ally
@@ -311,17 +342,17 @@ function misfire(unit: UnitState, units: UnitState[], battle: Stream, mode: 'sin
     case 'valkyrie': {
       if (allies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
       const target = allies[nextInt(battle, 0, allies.length - 1)] as UnitState;
-      return strike(unit, [target], physicalDamage);
+      return strike(unit, [target], physical, setup.leaders, leaderFallen);
     }
     case 'mage':
     case 'sorceress': {
       // Blasts its OWN fullest row (recorded decision: the mage itself counts
-      // and can be struck by its own blast).
+      // and can be struck by its own blast). Magic — no leader-fall penalty.
       const own = units.filter((u) => u.side === unit.side);
       const row = selectBlastRow(own);
       if (row === undefined) return [{ type: 'ActionFizzled', unit: unit.id }];
       const targets = own.filter((u) => u.alive && u.rowIndex === row);
-      return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode));
+      return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode), setup.leaders, leaderFallen);
     }
     case 'cleric': {
       if (enemies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
@@ -375,7 +406,13 @@ const CLASS_MOVE_KIND: Record<UnitClass, MoveKind> = {
  * Every target resolves `outcome: 'hit'` unconditionally in 4.2 — ADR 0003's
  * dodge/crit draws are story 4.6's and MUST NOT land early (frozen table).
  */
-function strike(source: UnitState, targets: UnitState[], formula: (a: UnitClass, d: UnitClass, weakened?: boolean) => number): BattleEvent[] {
+function strike(
+  source: UnitState,
+  targets: UnitState[],
+  formula: (a: UnitClass, d: UnitClass, weakened?: boolean) => number,
+  leaders: MatchSetup['leaders'],
+  leaderFallen: Record<Side, boolean>,
+): BattleEvent[] {
   const weakened = source.statuses.has('weaken');
   const hits: AttackTarget[] = [];
   const deaths: BattleEvent[] = [];
@@ -386,9 +423,57 @@ function strike(source: UnitState, targets: UnitState[], formula: (a: UnitClass,
     if (target.hp === 0 && target.alive) {
       target.alive = false;
       deaths.push({ type: 'UnitDied', unit: target.id });
+      // FR35 (story 4.5): if the just-killed unit was its side's designated
+      // leader, the LeaderFell beat rides IMMEDIATELY after its UnitDied — so
+      // a blast that kills the leader and two others narrates the fall between
+      // the leader's death and the next casualty (target order). Fires once per
+      // side (the `leaderFallen` guard), and flips the flag the sober-package
+      // penalty/tactic-reversion read from the very next action onward.
+      if (isLeaderFall(target, { leaders }, leaderFallen)) {
+        deaths.push({ type: 'LeaderFell', side: target.side, unit: target.id });
+        leaderFallen[target.side] = true;
+      }
     }
   }
   return [{ type: 'UnitAttacked', source: source.id, kind: CLASS_MOVE_KIND[source.class], targets: hits }, ...deaths];
+}
+
+/**
+ * Whether `unit`'s death is its side's LEADER falling for the FIRST time (FR35).
+ * The exact `${side}:${index}` id construction `act()` uses for `enemyLeaderId`,
+ * gated by the once-per-side `leaderFallen` flag. `setup` is read for `leaders`
+ * only (the poison-tick site passes the whole setup; `strike` passes a `leaders`
+ * shim — both satisfy the single field this reads).
+ */
+function isLeaderFall(unit: UnitState, setup: Pick<MatchSetup, 'leaders'>, leaderFallen: Record<Side, boolean>): boolean {
+  if (leaderFallen[unit.side]) return false;
+  return unit.id === `${unit.side}:${setup.leaders[unit.side]}`;
+}
+
+/**
+ * The FR35 sober-package physical multiplier (story 4.5, dossier §4), built at
+ * a `physicalDamage` call site (never inside `strike`, which blast shares —
+ * the penalty is PHYSICAL only). Applies `leaderFallDealt` (×3/4, keyed to the
+ * attacker's fallen side) then `leaderFallTaken` (×5/4, keyed to the defender's
+ * fallen side) as fixed-order floor multiplications, then RE-CLAMPS to
+ * `minDamage` — `physicalDamage` already floored once, but a ×3/4 after that can
+ * push back under the floor (base 1 → 0), so the clamp must run LAST again.
+ *
+ * Exported for direct table-driven tests (the `physicalDamage`/`blastDamage`
+ * convention) — the re-clamp trap is pinned there, not only through a battle.
+ */
+export function leaderPenaltyPhysical(
+  attackerSide: Side,
+  defenderSide: Side,
+  leaderFallen: Record<Side, boolean>,
+): (a: UnitClass, d: UnitClass, weakened?: boolean) => number {
+  const { leaderFallDealt, leaderFallTaken, minDamage } = BALANCE.formulas;
+  return (a, d, weakened) => {
+    let dmg = physicalDamage(a, d, weakened);
+    if (leaderFallen[attackerSide]) dmg = Math.floor((dmg * leaderFallDealt.num) / leaderFallDealt.den);
+    if (leaderFallen[defenderSide]) dmg = Math.floor((dmg * leaderFallTaken.num) / leaderFallTaken.den);
+    return Math.max(minDamage, dmg);
+  };
 }
 
 /**

@@ -58,8 +58,21 @@ Before battle you set one **tactic** for your whole army — how every unit choo
 - **Autonomous** — each unit targets by its own instinct: melee the nearest enemy row, ranged the rearmost.
 - **Attack Weakest** — the whole army focuses the enemy with the least HP left, to finish wounded units before they act again.
 - **Attack Strongest** — the whole army focuses the enemy with the most HP left, to break the toughest threat first.
+- **Attack Leader** — the whole army hunts the enemy's crowned leader. When the leader can't be reached — or once it has fallen — each unit reverts to Autonomous. (This tactic unlocks only after you crown your own leader.)
 
-When two enemies are tied for weakest or strongest, the unit falls back to its Autonomous preference — the battle stays perfectly repeatable. (A fourth tactic, *Attack Leader*, joins once you can crown a leader.)
+When two enemies are tied for weakest or strongest, the unit falls back to its Autonomous preference — the battle stays perfectly repeatable.
+
+## The Leader
+
+At placement you **crown one unit as your leader** (♛) — and the enemy crowns one too. Both crowns stay hidden until the reveal, where each army's leader is marked on the board: protecting your own leader, and hunting theirs, becomes part of the read.
+
+A crown is a risk as much as an honor. **When a side's leader falls, that whole army loses heart** for the rest of the battle — the *sober package*:
+
+- Its target tactic collapses back to **Autonomous** — no more coordinated focus-fire.
+- Its units **deal only ×0.75** of their physical damage (melee, arrows, and the cleric's staff) …
+- … and **take ×1.25** physical damage in return.
+
+Magic and healing are unaffected — only physical blows carry the penalty. The leader's fall is permanent: there is no re-crowning mid-battle, and the malus never lifts.
 
 ## Elements and the Witch's Spells
 

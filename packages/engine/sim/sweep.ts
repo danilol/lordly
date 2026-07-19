@@ -167,12 +167,13 @@ function playMatch(archA: StrategyArchetype, archB: StrategyArchetype, seed: num
     seed,
     balanceVersion: BALANCE.version,
     mode,
-    // Story 4.4: each side commits its OWN tactic from its stream (FR24),
-    // exactly as MatchFlow will — so the sweep exercises tactics as a real
-    // dimension (the three enabled tactics; `leader` waits for 4.5). Leaders
-    // stay the interim index-0 default until the 4.5 picker ships.
+    // Story 4.4/4.5: each side commits its OWN tactic AND leader from its
+    // stream (FR24/FR35), exactly as MatchFlow will — so the sweep exercises
+    // both as real dimensions. Story 4.5 unlocked `leader` (the tactic) and
+    // wired the AI's designated leader index here, so the leader-fall sober
+    // package is now policed by the acceptance band too.
     tactics: { A: a.tactic, B: b.tactic },
-    leaders: { A: 0, B: 0 },
+    leaders: { A: a.leader, B: b.leader },
     armies: {
       A: buildArmy(a.classes, streams['elements/A'], streams['names/A']),
       B: buildArmy(b.classes, streams['elements/B'], streams['names/B']),

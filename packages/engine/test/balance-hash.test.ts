@@ -15,6 +15,7 @@ const EXPECTED_HASHES: Record<number, string> = {
   3: 'b67d0f84', // story 4.2: slotBudget 5 + per-class sizeClass replace armySize (AD-1); engagementCap 10 (FR19)
   4: '6d243f05', // story 4.3: role + roleRelations replace rpsBeats/rpsHunts (AD-4); +5 small classes (berserker/phalanx/ninja/valkyrie/sorceress)
   5: '69280a50', // story 4.4: RULES changed, no stat-data change (AD-8) — the fixed two-step target pipeline (FR34 tactics) + FR7 Last Stand + FR9 global range; same setup must not silently replay differently
+  6: '49466cd4', // story 4.5: +leaderFallDealt (×3/4) + leaderFallTaken (×5/4) — the FR35 leader-fall sober-package physical ratios (dossier §4)
 };
 
 describe('balance-hash guard (AD-8)', () => {

@@ -73,6 +73,13 @@ describe('docs/rules.md drift guard (story 2.4, AC2/AC6 — numbers are law)', (
     expect(raw).toContain(`after ${BALANCE.engagementCap} engagements`);
   });
 
+  it('states the leader-fall sober-package ratios with the exact multipliers (story 4.5)', () => {
+    const dealt = BALANCE.formulas.leaderFallDealt.num / BALANCE.formulas.leaderFallDealt.den;
+    const taken = BALANCE.formulas.leaderFallTaken.num / BALANCE.formulas.leaderFallTaken.den;
+    expect(raw).toContain(`deal only ×${dealt}`);
+    expect(raw).toContain(`take ×${taken}`);
+  });
+
   it('names every witch spell with its element pairing', () => {
     for (const [element, spell] of Object.entries(BALANCE.elementSpells)) {
       expect(raw.toLowerCase()).toContain(`${element} → ${spell}`.toLowerCase());

@@ -5,6 +5,7 @@ import {
   BASE_WIDTH,
   BATTLE_BEAT_MS,
   BATTLE_ENEMY_LABEL,
+  BATTLE_LEADER_FELL_BANNER,
   BATTLE_LOG_LABEL,
   BATTLE_PLAYER_LABEL,
   BATTLE_SKIP_LABEL,
@@ -14,6 +15,7 @@ import {
   engagementEndedLabel,
   PALETTE,
   MIN_FONT_PX,
+  LEADER_CROWN_GLYPH,
   CLASS_ABBREVIATIONS,
   POISON_TEXT,
   STATUS_COLORS,
@@ -89,6 +91,9 @@ export class BattleScene extends Scene {
   /** True while the NEXT beat is the redirected effect of an `ActionMisfired` one beat back (1.9 pairing). */
   private pendingMisfirePair = false;
   private passLabel!: GameObjects.Text;
+  /** The two side HUD labels — kept as fields so a LeaderFell can tint the fallen side persistently (story 4.5). */
+  private enemyLabel!: GameObjects.Text;
+  private playerLabel!: GameObjects.Text;
   // Log panel (AC7): narration ledger + a keep-last-N window; never touches the beat timer.
   private narration: NarrationState = createNarrationState();
   private logLines: string[] = [];
@@ -142,15 +147,25 @@ export class BattleScene extends Scene {
     // brighter fills + gold-lite edge (FR39e, story 4.0: the redundant FRONT text labels are gone).
     drawIsoBoard(this, 'B');
     drawIsoBoard(this, 'A');
-    crispText(this, 20, 56, BATTLE_ENEMY_LABEL, { fontFamily: 'Courier', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.enemyText }).setOrigin(0, 0.5);
-    crispText(this, BASE_WIDTH - 20, 322, BATTLE_PLAYER_LABEL, { fontFamily: 'Courier', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.playerText }).setOrigin(
-      1,
+    this.enemyLabel = crispText(this, 20, 56, BATTLE_ENEMY_LABEL, { fontFamily: 'Courier', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.enemyText }).setOrigin(
+      0,
       0.5,
     );
+    this.playerLabel = crispText(this, BASE_WIDTH - 20, 322, BATTLE_PLAYER_LABEL, {
+      fontFamily: 'Courier',
+      fontSize: `${MIN_FONT_PX}px`,
+      color: PALETTE.playerText,
+    }).setOrigin(1, 0.5);
 
     const log = this.flow.resolve(); // same cached log the Reveal scene resolved (AD-13)
     const roster = (log.events[0] as BattleStarted).units;
-    for (const unit of roster) this.buildUnit(unit);
+    // Both crowned leaders (story 4.5 device follow-up): the ♛ rides each leader
+    // ON the battle board through the fight — the read the mid-battle tactic
+    // switch (4.10/4.11) will build on ("go for the leader or not"). Ids follow
+    // the engine's `${side}:${index}` convention from the committed setup.
+    const committed = this.flow.getState().committedSetup;
+    const leaderIds = new Set<UnitId>(committed ? [`A:${committed.leaders.A}`, `B:${committed.leaders.B}`] : []);
+    for (const unit of roster) this.buildUnit(unit, leaderIds.has(unit.id));
 
     this.buildControlBar();
     this.beats = buildBeatSchedule(log.events, BATTLE_BEAT_MS);
@@ -198,8 +213,8 @@ export class BattleScene extends Scene {
     this.scene.start('Result', { flow: this.flow });
   }
 
-  /** Builds one unit standing on its iso tile: sprite + class code + element dot + HP bar, all in one container. */
-  private buildUnit(unit: UnitSnapshot) {
+  /** Builds one unit standing on its iso tile: sprite + class code + element dot + HP bar (+ ♛ crown if it's a leader), all in one container. */
+  private buildUnit(unit: UnitSnapshot, isLeader: boolean) {
     const { x, y } = unitTileCenter(unit.side, unit.placement);
 
     // Chrome hugs the sprite tightly — units on the same lane diagonal sit a
@@ -212,7 +227,14 @@ export class BattleScene extends Scene {
     const fillColor = unit.side === 'A' ? PALETTE.hpBarPlayer : PALETTE.hpBarEnemy;
     const hpFill = this.add.rectangle(-BAR_W / 2, 14, BAR_W, BAR_H, fillColor).setOrigin(0, 0.5);
 
-    const container = this.add.container(x, y, [sprite, code, badge, barBack, hpFill]);
+    const children: GameObjects.GameObject[] = [sprite, code, badge, barBack, hpFill];
+    // The ♛ crown sits top-LEFT (opposite the element badge on the right), in
+    // gold (PALETTE.title = {colors.gold}) — it dies WITH the unit's container,
+    // so a leader's fall clears its crown automatically. Story 4.5 board follow-up.
+    if (isLeader) {
+      children.push(crispText(this, -16, -28, LEADER_CROWN_GLYPH, { fontFamily: 'Arial', fontSize: '14px', color: PALETTE.title }).setOrigin(0.5));
+    }
+    const container = this.add.container(x, y, children);
     container.setDepth(y); // iso depth: lower on screen renders in front
 
     this.views.set(unit.id, {
@@ -333,8 +355,11 @@ export class BattleScene extends Scene {
         this.removeStatusIcon(event.unit, event.spell);
         return true;
       case 'LeaderFell':
-        // In the v4 union from 4.2; emitted from 4.5 (FR35).
-        this.popup(event.unit, 'leader falls!', this.actorColor(event.unit));
+        // FR35 (story 4.5): a FULL-BEAT banner (not the per-unit floating popup)
+        // plus a PERSISTENT penalty tint on the fallen side's HUD label for the
+        // rest of the match — the sober-package onset made visible (dossier §6).
+        this.leaderFellBanner();
+        (event.side === 'A' ? this.playerLabel : this.enemyLabel).setColor(PALETTE.penaltyTint);
         return true;
       case 'EngagementEnded':
         // Defensive resync to the authoritative per-unit HP snapshot, plus a
@@ -540,6 +565,38 @@ export class BattleScene extends Scene {
       alpha: 0,
       duration: 500,
       onComplete: () => label.destroy(),
+    });
+  }
+
+  /**
+   * The FR35 full-beat leader-fall banner (story 4.5, EXPERIENCE.md): a
+   * screen-width gold-framed strip across the board reading "The leader has
+   * fallen!" — a whole-beat moment, distinct from the per-unit floating popups.
+   * It rises and fades within the beat (damped under reduced motion), riding the
+   * same schedule as every other beat (it holds the full beat duration because
+   * `render` returned true for the event).
+   */
+  private leaderFellBanner() {
+    const cy = BASE_HEIGHT / 2 - 20;
+    const strip = this.add
+      .rectangle(BASE_WIDTH / 2, cy, BASE_WIDTH, 40, PALETTE.backgroundFill, 0.82)
+      .setStrokeStyle(2, ISO_TILES.frontStroke)
+      .setDepth(1600);
+    const text = crispText(this, BASE_WIDTH / 2, cy, BATTLE_LEADER_FELL_BANNER, {
+      fontFamily: 'Arial Black',
+      fontSize: '20px',
+      color: PALETTE.title,
+    })
+      .setOrigin(0.5)
+      .setDepth(1601);
+    const drift = this.reduceMotion ? 0 : 10;
+    this.tweens.add({
+      targets: [strip, text],
+      y: `-=${drift}`,
+      alpha: 0,
+      delay: 500,
+      duration: 500,
+      onComplete: () => [strip, text].forEach((o) => o.destroy()),
     });
   }
 

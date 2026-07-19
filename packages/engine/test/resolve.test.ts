@@ -585,13 +585,19 @@ describe('chassis properties (NFR2, FR20)', () => {
       'atk:B:1>A:0-34,A:1-34,A:2-34',
       'atk:B:2>A:0-34,A:1-34,A:2-34',
       'died:A:0',
+      // A:0 is A's default leader (index 0): its death rides the LeaderFell beat
+      // immediately after (story 4.5, FR35), and from A's next action on, its
+      // PHYSICAL damage is the ×3/4 sober-package cut — the two mid knights that
+      // hit for 19 pre-fall now hit for 14 (26 base ×3/4 RPS = 19, ×3/4 penalty
+      // = floor(14.25) = 14). The mages' magic blasts are untouched (physical-only).
+      'LeaderFell',
       'died:A:1',
       'died:A:2',
       'skip:A:0:dead',
       'skip:A:1:dead',
       'skip:A:2:dead',
-      'atk:A:3>B:4-19',
-      'atk:A:4>B:3-19',
+      'atk:A:3>B:4-14',
+      'atk:A:4>B:3-14',
       'pass:2',
       'atk:B:0>A:3-34,A:4-34',
       'atk:B:1>A:3-34,A:4-34',
@@ -601,7 +607,9 @@ describe('chassis properties (NFR2, FR20)', () => {
     ]);
     const verdict = log.events[log.events.length - 1];
     if (verdict?.type === 'BattleEnded') {
-      expect(verdict).toEqual({ type: 'BattleEnded', winner: 'B', hpPct: { A: 10, B: 90 } });
+      // B higher than the pre-4.5 90%: the two mid mages take 14 not 19 from the
+      // penalised knights (66 hp each, not 61) → B = (3×80 + 2×66)/400 = 93%.
+      expect(verdict).toEqual({ type: 'BattleEnded', winner: 'B', hpPct: { A: 10, B: 93 } });
     }
   });
 });

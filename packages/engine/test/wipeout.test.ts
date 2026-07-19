@@ -197,14 +197,20 @@ describe('wipeout mode (FR19)', () => {
     const log = resolveBattle(knightsVsMercs(0xdead));
     const segs = segments(log);
     // Hand-verified (full derivation on the fixture): flank mercs die in
-    // engagement 2, the center in 3, the mids in 4 — wipe at engagement 4
-    // with A holding 448/700 → 64% vs 0%.
+    // engagement 2, the center in 3, the mids in 4 — wipe at engagement 4.
+    // B:0 (front-left flank) is B's DEFAULT leader (index 0): it falls in
+    // engagement 2, arming B's sober package (story 4.5, FR35) — from then on
+    // B's surviving mercs deal ×3/4 PHYSICAL to A, so A's knights outlast them
+    // with MORE hp than pre-4.5 (was 448/700 → 64%): A now holds 463/700 → 66%
+    // vs 0%. A's own leader never falls, so A is never penalised.
     expect(segs.length).toBe(4);
     for (const id of ['B:0', 'B:1', 'B:2', 'B:3', 'B:4']) {
       expect(log.events.some((e) => e.type === 'UnitDied' && e.unit === id)).toBe(true);
     }
+    // Exactly one leader falls (B's, once) — the once-per-side guard holds.
+    expect(log.events.filter((e) => e.type === 'LeaderFell')).toEqual([{ type: 'LeaderFell', side: 'B', unit: 'B:0' }]);
     const verdict = log.events[log.events.length - 1];
-    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 64, B: 0 } });
+    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 66, B: 0 } });
     // The wiping engagement is the last — nothing resolves after a wipe.
     expect(segs[3]?.[segs[3].length - 1]).toMatchObject({ type: 'EngagementEnded', engagement: 4 });
   });

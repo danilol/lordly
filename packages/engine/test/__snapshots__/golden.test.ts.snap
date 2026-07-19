@@ -418,6 +418,11 @@ exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage bl
       "unit": "B:0",
     },
     {
+      "side": "B",
+      "type": "LeaderFell",
+      "unit": "B:0",
+    },
+    {
       "type": "UnitDied",
       "unit": "B:1",
     },
@@ -431,8 +436,8 @@ exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage bl
       "source": "B:2",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 92,
+          "damage": 12,
+          "hpAfter": 96,
           "outcome": "hit",
           "unit": "A:3",
         },
@@ -444,8 +449,8 @@ exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage bl
       "source": "A:3",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 84,
+          "damage": 20,
+          "hpAfter": 80,
           "outcome": "hit",
           "unit": "B:2",
         },
@@ -458,11 +463,11 @@ exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage bl
         "A:0": 36,
         "A:1": 36,
         "A:2": 23,
-        "A:3": 92,
+        "A:3": 96,
         "A:4": 94,
         "B:0": 0,
         "B:1": 0,
-        "B:2": 84,
+        "B:2": 80,
         "B:3": 140,
         "B:4": 110,
       },
@@ -810,12 +815,17 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "unit": "B:0",
     },
     {
+      "side": "B",
+      "type": "LeaderFell",
+      "unit": "B:0",
+    },
+    {
       "kind": "slash",
       "source": "B:3",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 88,
+          "damage": 9,
+          "hpAfter": 91,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -827,8 +837,8 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "source": "A:3",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 108,
+          "damage": 20,
+          "hpAfter": 104,
           "outcome": "hit",
           "unit": "B:2",
         },
@@ -840,8 +850,8 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "source": "B:1",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 72,
+          "damage": 12,
+          "hpAfter": 79,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -853,8 +863,8 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "source": "A:4",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 70,
+          "damage": 25,
+          "hpAfter": 65,
           "outcome": "hit",
           "unit": "B:3",
         },
@@ -866,8 +876,8 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "source": "B:2",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 108,
+          "damage": 12,
+          "hpAfter": 112,
           "outcome": "hit",
           "unit": "A:3",
         },
@@ -898,20 +908,20 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
         "A:0": 90,
         "A:1": 75,
         "A:2": 70,
-        "A:3": 108,
-        "A:4": 72,
+        "A:3": 112,
+        "A:4": 79,
         "B:0": 0,
         "B:1": 140,
-        "B:2": 108,
-        "B:3": 70,
+        "B:2": 104,
+        "B:3": 65,
         "B:4": 95,
       },
       "type": "EngagementEnded",
     },
     {
       "hpPct": {
-        "A": 76,
-        "B": 70,
+        "A": 78,
+        "B": 69,
       },
       "type": "BattleEnded",
       "winner": "A",
@@ -1564,6 +1574,11 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "unit": "B:0",
     },
     {
+      "side": "B",
+      "type": "LeaderFell",
+      "unit": "B:0",
+    },
+    {
       "engagement": 2,
       "hp": {
         "A:0": 68,
@@ -1600,8 +1615,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "B:1",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 80,
+          "damage": 9,
+          "hpAfter": 83,
           "outcome": "hit",
           "unit": "A:1",
         },
@@ -1613,8 +1628,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "B:3",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 56,
+          "damage": 9,
+          "hpAfter": 59,
           "outcome": "hit",
           "unit": "A:2",
         },
@@ -1626,8 +1641,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "B:4",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 56,
+          "damage": 9,
+          "hpAfter": 59,
           "outcome": "hit",
           "unit": "A:0",
         },
@@ -1639,8 +1654,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "A:0",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 10,
+          "damage": 25,
+          "hpAfter": 5,
           "outcome": "hit",
           "unit": "B:1",
         },
@@ -1652,7 +1667,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "A:1",
       "targets": [
         {
-          "damage": 20,
+          "damage": 25,
           "hpAfter": 0,
           "outcome": "hit",
           "unit": "B:1",
@@ -1669,8 +1684,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "A:2",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 90,
+          "damage": 25,
+          "hpAfter": 85,
           "outcome": "hit",
           "unit": "B:3",
         },
@@ -1682,8 +1697,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "A:3",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 90,
+          "damage": 25,
+          "hpAfter": 85,
           "outcome": "hit",
           "unit": "B:4",
         },
@@ -1695,8 +1710,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "A:4",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 70,
+          "damage": 25,
+          "hpAfter": 60,
           "outcome": "hit",
           "unit": "B:3",
         },
@@ -1724,8 +1739,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "A:0",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 70,
+          "damage": 25,
+          "hpAfter": 60,
           "outcome": "hit",
           "unit": "B:4",
         },
@@ -1737,8 +1752,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "A:1",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 50,
+          "damage": 25,
+          "hpAfter": 35,
           "outcome": "hit",
           "unit": "B:4",
         },
@@ -1750,8 +1765,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "A:2",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 50,
+          "damage": 25,
+          "hpAfter": 35,
           "outcome": "hit",
           "unit": "B:3",
         },
@@ -1761,16 +1776,16 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
     {
       "engagement": 3,
       "hp": {
-        "A:0": 56,
-        "A:1": 80,
-        "A:2": 56,
+        "A:0": 59,
+        "A:1": 83,
+        "A:2": 59,
         "A:3": 140,
         "A:4": 140,
         "B:0": 0,
         "B:1": 0,
         "B:2": 0,
-        "B:3": 50,
-        "B:4": 50,
+        "B:3": 35,
+        "B:4": 35,
       },
       "type": "EngagementEnded",
     },
@@ -1795,8 +1810,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "B:3",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 44,
+          "damage": 9,
+          "hpAfter": 50,
           "outcome": "hit",
           "unit": "A:2",
         },
@@ -1808,8 +1823,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "B:4",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 44,
+          "damage": 9,
+          "hpAfter": 50,
           "outcome": "hit",
           "unit": "A:0",
         },
@@ -1821,8 +1836,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "A:0",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 30,
+          "damage": 25,
+          "hpAfter": 10,
           "outcome": "hit",
           "unit": "B:4",
         },
@@ -1834,33 +1849,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "A:1",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 10,
-          "outcome": "hit",
-          "unit": "B:4",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "A:2",
-      "targets": [
-        {
-          "damage": 20,
-          "hpAfter": 30,
-          "outcome": "hit",
-          "unit": "B:3",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "A:3",
-      "targets": [
-        {
-          "damage": 20,
+          "damage": 25,
           "hpAfter": 0,
           "outcome": "hit",
           "unit": "B:4",
@@ -1874,10 +1863,10 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
     },
     {
       "kind": "slash",
-      "source": "A:4",
+      "source": "A:2",
       "targets": [
         {
-          "damage": 20,
+          "damage": 25,
           "hpAfter": 10,
           "outcome": "hit",
           "unit": "B:3",
@@ -1886,27 +1875,11 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "type": "UnitAttacked",
     },
     {
-      "actionsRemaining": {
-        "A:0": 1,
-        "A:1": 1,
-        "A:2": 1,
-        "A:3": 0,
-        "A:4": 0,
-        "B:0": 0,
-        "B:1": 0,
-        "B:2": 0,
-        "B:3": 0,
-        "B:4": 0,
-      },
-      "pass": 2,
-      "type": "PassStarted",
-    },
-    {
       "kind": "slash",
-      "source": "A:0",
+      "source": "A:3",
       "targets": [
         {
-          "damage": 20,
+          "damage": 25,
           "hpAfter": 0,
           "outcome": "hit",
           "unit": "B:3",
@@ -1921,9 +1894,9 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
     {
       "engagement": 4,
       "hp": {
-        "A:0": 44,
-        "A:1": 80,
-        "A:2": 44,
+        "A:0": 50,
+        "A:1": 83,
+        "A:2": 50,
         "A:3": 140,
         "A:4": 140,
         "B:0": 0,
@@ -1936,7 +1909,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
     },
     {
       "hpPct": {
-        "A": 64,
+        "A": 66,
         "B": 0,
       },
       "type": "BattleEnded",
@@ -4591,12 +4564,17 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "unit": "B:0",
     },
     {
+      "side": "B",
+      "type": "LeaderFell",
+      "unit": "B:0",
+    },
+    {
       "kind": "slash",
       "source": "B:3",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 88,
+          "damage": 9,
+          "hpAfter": 91,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4608,8 +4586,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:3",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 108,
+          "damage": 20,
+          "hpAfter": 104,
           "outcome": "hit",
           "unit": "B:2",
         },
@@ -4621,8 +4599,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "B:1",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 72,
+          "damage": 12,
+          "hpAfter": 79,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4634,8 +4612,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:4",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 70,
+          "damage": 25,
+          "hpAfter": 65,
           "outcome": "hit",
           "unit": "B:3",
         },
@@ -4647,8 +4625,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "B:2",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 108,
+          "damage": 12,
+          "hpAfter": 112,
           "outcome": "hit",
           "unit": "A:3",
         },
@@ -4679,12 +4657,12 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
         "A:0": 90,
         "A:1": 75,
         "A:2": 70,
-        "A:3": 108,
-        "A:4": 72,
+        "A:3": 112,
+        "A:4": 79,
         "B:0": 0,
         "B:1": 140,
-        "B:2": 108,
-        "B:3": 70,
+        "B:2": 104,
+        "B:3": 65,
         "B:4": 95,
       },
       "type": "EngagementEnded",
@@ -4716,8 +4694,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:0",
       "targets": [
         {
-          "damage": 14,
-          "hpAfter": 81,
+          "damage": 17,
+          "hpAfter": 78,
           "outcome": "hit",
           "unit": "B:4",
         },
@@ -4729,8 +4707,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:1",
       "targets": [
         {
-          "damage": 14,
-          "hpAfter": 67,
+          "damage": 17,
+          "hpAfter": 61,
           "outcome": "hit",
           "unit": "B:4",
         },
@@ -4742,8 +4720,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "B:3",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 60,
+          "damage": 9,
+          "hpAfter": 70,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4755,8 +4733,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "B:4",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 48,
+          "damage": 9,
+          "hpAfter": 61,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4768,8 +4746,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "B:1",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 32,
+          "damage": 12,
+          "hpAfter": 49,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4781,8 +4759,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:3",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 92,
+          "damage": 20,
+          "hpAfter": 84,
           "outcome": "hit",
           "unit": "B:2",
         },
@@ -4794,8 +4772,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:4",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 50,
+          "damage": 25,
+          "hpAfter": 40,
           "outcome": "hit",
           "unit": "B:3",
         },
@@ -4807,8 +4785,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "B:2",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 92,
+          "damage": 12,
+          "hpAfter": 100,
           "outcome": "hit",
           "unit": "A:3",
         },
@@ -4842,8 +4820,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:0",
       "targets": [
         {
-          "damage": 14,
-          "hpAfter": 53,
+          "damage": 17,
+          "hpAfter": 44,
           "outcome": "hit",
           "unit": "B:4",
         },
@@ -4855,8 +4833,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:1",
       "targets": [
         {
-          "damage": 14,
-          "hpAfter": 39,
+          "damage": 17,
+          "hpAfter": 27,
           "outcome": "hit",
           "unit": "B:4",
         },
@@ -4868,8 +4846,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "B:3",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 20,
+          "damage": 9,
+          "hpAfter": 40,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4881,8 +4859,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "B:1",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 4,
+          "damage": 12,
+          "hpAfter": 28,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4894,8 +4872,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:3",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 76,
+          "damage": 20,
+          "hpAfter": 64,
           "outcome": "hit",
           "unit": "B:2",
         },
@@ -4907,8 +4885,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:4",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 30,
+          "damage": 25,
+          "hpAfter": 15,
           "outcome": "hit",
           "unit": "B:3",
         },
@@ -4920,8 +4898,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "B:2",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 76,
+          "damage": 12,
+          "hpAfter": 88,
           "outcome": "hit",
           "unit": "A:3",
         },
@@ -4942,19 +4920,23 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
     },
     {
       "damage": 15,
-      "hpAfter": 61,
+      "hpAfter": 49,
       "type": "PoisonTicked",
       "unit": "B:2",
     },
     {
       "damage": 15,
-      "hpAfter": 15,
+      "hpAfter": 0,
       "type": "PoisonTicked",
       "unit": "B:3",
     },
     {
+      "type": "UnitDied",
+      "unit": "B:3",
+    },
+    {
       "damage": 15,
-      "hpAfter": 24,
+      "hpAfter": 12,
       "type": "PoisonTicked",
       "unit": "B:4",
     },
@@ -4964,13 +4946,13 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
         "A:0": 90,
         "A:1": 60,
         "A:2": 55,
-        "A:3": 76,
-        "A:4": 4,
+        "A:3": 88,
+        "A:4": 28,
         "B:0": 0,
         "B:1": 140,
-        "B:2": 61,
-        "B:3": 15,
-        "B:4": 24,
+        "B:2": 49,
+        "B:3": 0,
+        "B:4": 12,
       },
       "type": "EngagementEnded",
     },
@@ -4984,7 +4966,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
         "B:0": 0,
         "B:1": 2,
         "B:2": 2,
-        "B:3": 2,
+        "B:3": 0,
         "B:4": 1,
       },
       "pass": 1,
@@ -5001,20 +4983,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:0",
       "targets": [
         {
-          "damage": 14,
-          "hpAfter": 10,
-          "outcome": "hit",
-          "unit": "B:4",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "arrow",
-      "source": "A:1",
-      "targets": [
-        {
-          "damage": 14,
+          "damage": 17,
           "hpAfter": 0,
           "outcome": "hit",
           "unit": "B:4",
@@ -5027,8 +4996,265 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "unit": "B:4",
     },
     {
+      "kind": "arrow",
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 8,
+          "hpAfter": 132,
+          "outcome": "hit",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "dead",
+      "type": "ActionSkipped",
+      "unit": "B:4",
+    },
+    {
       "kind": "slash",
-      "source": "B:3",
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 16,
+          "outcome": "hit",
+          "unit": "A:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 29,
+          "outcome": "hit",
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:4",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 9,
+          "outcome": "hit",
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 76,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "actionsRemaining": {
+        "A:0": 1,
+        "A:1": 1,
+        "A:2": 1,
+        "A:3": 1,
+        "A:4": 1,
+        "B:0": 0,
+        "B:1": 1,
+        "B:2": 1,
+        "B:3": 0,
+        "B:4": 0,
+      },
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "type": "ActionFizzled",
+      "unit": "A:2",
+    },
+    {
+      "kind": "arrow",
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 8,
+          "hpAfter": 1,
+          "outcome": "hit",
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "arrow",
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 8,
+          "hpAfter": 124,
+          "outcome": "hit",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 4,
+          "outcome": "hit",
+          "unit": "A:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 0,
+          "outcome": "hit",
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "B:2",
+    },
+    {
+      "kind": "slash",
+      "source": "A:4",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 104,
+          "outcome": "hit",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "dead",
+      "type": "ActionSkipped",
+      "unit": "B:2",
+    },
+    {
+      "damage": 15,
+      "hpAfter": 45,
+      "type": "PoisonTicked",
+      "unit": "A:1",
+    },
+    {
+      "damage": 15,
+      "hpAfter": 40,
+      "type": "PoisonTicked",
+      "unit": "A:2",
+    },
+    {
+      "damage": 15,
+      "hpAfter": 89,
+      "type": "PoisonTicked",
+      "unit": "B:1",
+    },
+    {
+      "engagement": 3,
+      "hp": {
+        "A:0": 90,
+        "A:1": 45,
+        "A:2": 40,
+        "A:3": 76,
+        "A:4": 4,
+        "B:0": 0,
+        "B:1": 89,
+        "B:2": 0,
+        "B:3": 0,
+        "B:4": 0,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "actionsRemaining": {
+        "A:0": 2,
+        "A:1": 2,
+        "A:2": 2,
+        "A:3": 2,
+        "A:4": 2,
+        "B:0": 0,
+        "B:1": 2,
+        "B:2": 0,
+        "B:3": 0,
+        "B:4": 0,
+      },
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "type": "ActionFizzled",
+      "unit": "A:2",
+    },
+    {
+      "kind": "arrow",
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 8,
+          "hpAfter": 81,
+          "outcome": "hit",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "arrow",
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 8,
+          "hpAfter": 73,
+          "outcome": "hit",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 53,
+          "outcome": "hit",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:1",
       "targets": [
         {
           "damage": 12,
@@ -5046,51 +5272,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
     {
       "reason": "dead",
       "type": "ActionSkipped",
-      "unit": "B:4",
-    },
-    {
-      "kind": "slash",
-      "source": "B:1",
-      "targets": [
-        {
-          "damage": 36,
-          "hpAfter": 24,
-          "outcome": "hit",
-          "unit": "A:1",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "A:3",
-      "targets": [
-        {
-          "damage": 16,
-          "hpAfter": 45,
-          "outcome": "hit",
-          "unit": "B:2",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "reason": "dead",
-      "type": "ActionSkipped",
       "unit": "A:4",
-    },
-    {
-      "kind": "slash",
-      "source": "B:2",
-      "targets": [
-        {
-          "damage": 16,
-          "hpAfter": 60,
-          "outcome": "hit",
-          "unit": "A:3",
-        },
-      ],
-      "type": "UnitAttacked",
     },
     {
       "actionsRemaining": {
@@ -5101,8 +5283,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
         "A:4": 0,
         "B:0": 0,
         "B:1": 1,
-        "B:2": 1,
-        "B:3": 1,
+        "B:2": 0,
+        "B:3": 0,
         "B:4": 0,
       },
       "pass": 2,
@@ -5117,10 +5299,10 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:0",
       "targets": [
         {
-          "damage": 7,
-          "hpAfter": 38,
+          "damage": 8,
+          "hpAfter": 45,
           "outcome": "hit",
-          "unit": "B:2",
+          "unit": "B:1",
         },
       ],
       "type": "UnitAttacked",
@@ -5130,8 +5312,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:1",
       "targets": [
         {
-          "damage": 7,
-          "hpAfter": 133,
+          "damage": 8,
+          "hpAfter": 37,
           "outcome": "hit",
           "unit": "B:1",
         },
@@ -5140,13 +5322,13 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
     },
     {
       "kind": "slash",
-      "source": "B:3",
+      "source": "A:3",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 48,
+          "damage": 20,
+          "hpAfter": 17,
           "outcome": "hit",
-          "unit": "A:3",
+          "unit": "B:1",
         },
       ],
       "type": "UnitAttacked",
@@ -5156,8 +5338,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "B:1",
       "targets": [
         {
-          "damage": 36,
-          "hpAfter": 0,
+          "damage": 27,
+          "hpAfter": 18,
           "outcome": "hit",
           "unit": "A:1",
         },
@@ -5165,213 +5347,20 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "type": "UnitAttacked",
     },
     {
-      "type": "UnitDied",
+      "damage": 15,
+      "hpAfter": 3,
+      "type": "PoisonTicked",
       "unit": "A:1",
     },
     {
-      "kind": "slash",
-      "source": "A:3",
-      "targets": [
-        {
-          "damage": 16,
-          "hpAfter": 22,
-          "outcome": "hit",
-          "unit": "B:2",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "B:2",
-      "targets": [
-        {
-          "damage": 16,
-          "hpAfter": 32,
-          "outcome": "hit",
-          "unit": "A:3",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
       "damage": 15,
-      "hpAfter": 40,
+      "hpAfter": 25,
       "type": "PoisonTicked",
       "unit": "A:2",
     },
     {
       "damage": 15,
-      "hpAfter": 118,
-      "type": "PoisonTicked",
-      "unit": "B:1",
-    },
-    {
-      "damage": 15,
-      "hpAfter": 7,
-      "type": "PoisonTicked",
-      "unit": "B:2",
-    },
-    {
-      "damage": 15,
-      "hpAfter": 0,
-      "type": "PoisonTicked",
-      "unit": "B:3",
-    },
-    {
-      "type": "UnitDied",
-      "unit": "B:3",
-    },
-    {
-      "engagement": 3,
-      "hp": {
-        "A:0": 90,
-        "A:1": 0,
-        "A:2": 40,
-        "A:3": 32,
-        "A:4": 0,
-        "B:0": 0,
-        "B:1": 118,
-        "B:2": 7,
-        "B:3": 0,
-        "B:4": 0,
-      },
-      "type": "EngagementEnded",
-    },
-    {
-      "actionsRemaining": {
-        "A:0": 2,
-        "A:1": 0,
-        "A:2": 2,
-        "A:3": 2,
-        "A:4": 0,
-        "B:0": 0,
-        "B:1": 2,
-        "B:2": 2,
-        "B:3": 0,
-        "B:4": 0,
-      },
-      "pass": 1,
-      "type": "PassStarted",
-    },
-    {
-      "type": "ActionFizzled",
-      "unit": "A:2",
-    },
-    {
-      "kind": "arrow",
-      "source": "A:0",
-      "targets": [
-        {
-          "damage": 7,
-          "hpAfter": 0,
-          "outcome": "hit",
-          "unit": "B:2",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "type": "UnitDied",
-      "unit": "B:2",
-    },
-    {
-      "kind": "slash",
-      "source": "A:3",
-      "targets": [
-        {
-          "damage": 16,
-          "hpAfter": 102,
-          "outcome": "hit",
-          "unit": "B:1",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "B:1",
-      "targets": [
-        {
-          "damage": 25,
-          "hpAfter": 15,
-          "outcome": "hit",
-          "unit": "A:2",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "reason": "dead",
-      "type": "ActionSkipped",
-      "unit": "B:2",
-    },
-    {
-      "actionsRemaining": {
-        "A:0": 1,
-        "A:1": 0,
-        "A:2": 1,
-        "A:3": 1,
-        "A:4": 0,
-        "B:0": 0,
-        "B:1": 1,
-        "B:2": 0,
-        "B:3": 0,
-        "B:4": 0,
-      },
-      "pass": 2,
-      "type": "PassStarted",
-    },
-    {
-      "type": "ActionFizzled",
-      "unit": "A:2",
-    },
-    {
-      "kind": "arrow",
-      "source": "A:0",
-      "targets": [
-        {
-          "damage": 7,
-          "hpAfter": 95,
-          "outcome": "hit",
-          "unit": "B:1",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "A:3",
-      "targets": [
-        {
-          "damage": 16,
-          "hpAfter": 79,
-          "outcome": "hit",
-          "unit": "B:1",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "B:1",
-      "targets": [
-        {
-          "damage": 25,
-          "hpAfter": 0,
-          "outcome": "hit",
-          "unit": "A:2",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "type": "UnitDied",
-      "unit": "A:2",
-    },
-    {
-      "damage": 15,
-      "hpAfter": 64,
+      "hpAfter": 2,
       "type": "PoisonTicked",
       "unit": "B:1",
     },
@@ -5379,12 +5368,12 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "engagement": 4,
       "hp": {
         "A:0": 90,
-        "A:1": 0,
-        "A:2": 0,
-        "A:3": 32,
+        "A:1": 3,
+        "A:2": 25,
+        "A:3": 76,
         "A:4": 0,
         "B:0": 0,
-        "B:1": 64,
+        "B:1": 2,
         "B:2": 0,
         "B:3": 0,
         "B:4": 0,
@@ -5394,8 +5383,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
     {
       "actionsRemaining": {
         "A:0": 2,
-        "A:1": 0,
-        "A:2": 0,
+        "A:1": 2,
+        "A:2": 2,
         "A:3": 2,
         "A:4": 0,
         "B:0": 0,
@@ -5408,165 +5397,33 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "type": "PassStarted",
     },
     {
-      "kind": "arrow",
-      "source": "A:0",
-      "targets": [
-        {
-          "damage": 7,
-          "hpAfter": 57,
-          "outcome": "hit",
-          "unit": "B:1",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "A:3",
-      "targets": [
-        {
-          "damage": 16,
-          "hpAfter": 41,
-          "outcome": "hit",
-          "unit": "B:1",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "B:1",
-      "targets": [
-        {
-          "damage": 16,
-          "hpAfter": 16,
-          "outcome": "hit",
-          "unit": "A:3",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "actionsRemaining": {
-        "A:0": 1,
-        "A:1": 0,
-        "A:2": 0,
-        "A:3": 1,
-        "A:4": 0,
-        "B:0": 0,
-        "B:1": 1,
-        "B:2": 0,
-        "B:3": 0,
-        "B:4": 0,
-      },
-      "pass": 2,
-      "type": "PassStarted",
+      "type": "ActionFizzled",
+      "unit": "A:2",
     },
     {
       "kind": "arrow",
       "source": "A:0",
       "targets": [
         {
-          "damage": 7,
-          "hpAfter": 34,
-          "outcome": "hit",
-          "unit": "B:1",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "A:3",
-      "targets": [
-        {
-          "damage": 16,
-          "hpAfter": 18,
-          "outcome": "hit",
-          "unit": "B:1",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "B:1",
-      "targets": [
-        {
-          "damage": 16,
+          "damage": 8,
           "hpAfter": 0,
           "outcome": "hit",
-          "unit": "A:3",
+          "unit": "B:1",
         },
       ],
       "type": "UnitAttacked",
     },
     {
       "type": "UnitDied",
-      "unit": "A:3",
-    },
-    {
-      "damage": 15,
-      "hpAfter": 3,
-      "type": "PoisonTicked",
       "unit": "B:1",
     },
     {
       "engagement": 5,
       "hp": {
         "A:0": 90,
-        "A:1": 0,
-        "A:2": 0,
-        "A:3": 0,
-        "A:4": 0,
-        "B:0": 0,
-        "B:1": 3,
-        "B:2": 0,
-        "B:3": 0,
-        "B:4": 0,
-      },
-      "type": "EngagementEnded",
-    },
-    {
-      "actionsRemaining": {
-        "A:0": 2,
-        "A:1": 0,
-        "A:2": 0,
-        "A:3": 0,
-        "A:4": 0,
-        "B:0": 0,
-        "B:1": 2,
-        "B:2": 0,
-        "B:3": 0,
-        "B:4": 0,
-      },
-      "pass": 1,
-      "type": "PassStarted",
-    },
-    {
-      "kind": "arrow",
-      "source": "A:0",
-      "targets": [
-        {
-          "damage": 7,
-          "hpAfter": 0,
-          "outcome": "hit",
-          "unit": "B:1",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "type": "UnitDied",
-      "unit": "B:1",
-    },
-    {
-      "engagement": 6,
-      "hp": {
-        "A:0": 90,
-        "A:1": 0,
-        "A:2": 0,
-        "A:3": 0,
+        "A:1": 3,
+        "A:2": 25,
+        "A:3": 76,
         "A:4": 0,
         "B:0": 0,
         "B:1": 0,
@@ -5578,7 +5435,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
     },
     {
       "hpPct": {
-        "A": 16,
+        "A": 35,
         "B": 0,
       },
       "type": "BattleEnded",

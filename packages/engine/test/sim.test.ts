@@ -133,16 +133,20 @@ describe('sim sweep (NFR4)', () => {
   //   right) blast the fullest enemy row: the 3-knight front. Each blast
   //   deals 34 per knight: INT 30 − floor(MEN 14/2) = 23, ×3/2 RPS = 34
   //   (damage.test pins this). Knights (140 hp) survive four (136) and all
-  //   three die on the fifth blast. The two mid knights (AGI 8, mid budget =
-  //   1 action) then swing: each reaches only the enemy MID row (front is
-  //   empty) and hits its facing mid mage for 19 (STR 30 − floor(VIT 8/2) =
-  //   26, ×3/4 RPS): both mid mages 80→61.
+  //   three die on the fifth blast. A:0 (front-left) is A's DEFAULT LEADER
+  //   (index 0), so its death fires LeaderFell(A) and arms A's sober package
+  //   (story 4.5, FR35): from A's next action on, A's PHYSICAL damage is cut
+  //   ×3/4. The two mid knights (AGI 8, mid budget = 1 action) then swing: each
+  //   reaches only the enemy MID row (front is empty) and hits its facing mid
+  //   mage for 14 — STR 30 − floor(VIT 8/2) = 26, ×3/4 RPS = 19, ×3/4 penalty =
+  //   floor(14.25) = 14: both mid mages 80→66. (Magic is untouched — the mages'
+  //   blasts stay 34; the penalty is physical-only.)
   // • Pass 2 — only the three back mages still hold an action (back budget
   //   2). The fullest living enemy row is now A's mid (2 knights): three
   //   blasts × 34 = 102 each, 140→38. Nobody else acts; engagement ends.
   // • Verdict — no wipe, judged on exact HP fractions: A = 76/700 → 10%,
-  //   B = (61 + 61 + 3×80)/400 = 362/400 → 90%. Winner B, 10% vs 90%.
-  it('anchor: knight wall vs mage battery resolves 10%/90% to B (hand-derived)', () => {
+  //   B = (66 + 66 + 3×80)/400 = 372/400 → 93%. Winner B, 10% vs 93%.
+  it('anchor: knight wall vs mage battery resolves 10%/93% to B (hand-derived)', () => {
     const wall: StrategyArchetype = {
       id: 'anchor-wall',
       name: 'Anchor Wall',
@@ -193,7 +197,7 @@ describe('sim sweep (NFR4)', () => {
       placements: { A: a.placement, B: b.placement },
     };
     const ended = resolveBattle(setup).events.find((e) => e.type === 'BattleEnded');
-    expect(ended).toMatchObject({ winner: 'B', hpPct: { A: 10, B: 90 } });
+    expect(ended).toMatchObject({ winner: 'B', hpPct: { A: 10, B: 93 } });
   });
 
   it(`ACCEPTANCE BAND: no archetype exceeds ${ACCEPTANCE_BAND * 100}% aggregate win rate (AC3)`, () => {

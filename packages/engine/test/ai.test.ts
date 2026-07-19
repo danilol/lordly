@@ -74,26 +74,39 @@ describe('chooseSetup (FR24/FR25, AD-6, AD-10)', () => {
     expect(second).toEqual(first);
   });
 
-  it('draws EXACTLY three ints — archetype pick, mirror flip, tactic — and nothing else (stream-ordering invariant)', () => {
+  it('draws EXACTLY four ints — archetype pick, mirror flip, tactic, leader — and nothing else (stream-ordering invariant)', () => {
     const consumed = aiStream(42);
     chooseSetup(STRATEGY_POOL, consumed);
     const manual = aiStream(42);
     nextInt(manual, 0, STRATEGY_POOL.length - 1); // ① archetype pick
     nextInt(manual, 0, 1); // ② mirror flip
-    nextInt(manual, 0, 2); // ③ tactic pick over the 3 AI-window tactics (story 4.4)
+    nextInt(manual, 0, 3); // ③ tactic pick over the 4 tactics (story 4.5 unlocked `leader`)
+    nextInt(manual, 0, 4); // ④ leader index over the 5-unit army (story 4.5)
     // Both streams must now sit at the same position: the next draw agrees.
     expect(nextInt(consumed, 0, 0xffff)).toBe(nextInt(manual, 0, 0xffff));
   });
 
-  it('commits a tactic from its own stream: always one of the 3 enabled tactics, never `leader` in the 4.4 window (FR24, D-3b)', () => {
+  it('commits a tactic from its own stream: any of the four tactics — `leader` unlocked in story 4.5 (FR24)', () => {
     const seen = new Set<string>();
     for (let seed = 0; seed < 200; seed++) {
       const { tactic } = chooseSetup(STRATEGY_POOL, aiStream(seed));
-      expect(['autonomous', 'weakest', 'strongest']).toContain(tactic);
-      expect(tactic).not.toBe('leader');
+      expect(['autonomous', 'weakest', 'strongest', 'leader']).toContain(tactic);
       seen.add(tactic);
     }
-    expect(seen).toEqual(new Set(['autonomous', 'weakest', 'strongest'])); // all three appear (coverage)
+    expect(seen).toEqual(new Set(['autonomous', 'weakest', 'strongest', 'leader'])); // all four appear (coverage)
+  });
+
+  it('commits a leader index from its own stream: always a valid army index, deterministic, with seeded variation — never always 0 (FR24/FR35, story 4.5)', () => {
+    const seen = new Set<number>();
+    for (let seed = 0; seed < 200; seed++) {
+      const choice = chooseSetup(STRATEGY_POOL, aiStream(seed));
+      expect(Number.isInteger(choice.leader)).toBe(true);
+      expect(choice.leader).toBeGreaterThanOrEqual(0);
+      expect(choice.leader).toBeLessThan(choice.classes.length); // in range for the 5-unit army
+      seen.add(choice.leader);
+    }
+    expect(seen.size).toBeGreaterThan(1); // seeded variation, not pinned to unit 0
+    expect(chooseSetup(STRATEGY_POOL, aiStream(123)).leader).toBe(chooseSetup(STRATEGY_POOL, aiStream(123)).leader); // deterministic
   });
 
   test.prop([fc.integer({ min: 0, max: 0xffffffff })])('never picks the excluded archetype (no repeat — FR25)', (seed) => {

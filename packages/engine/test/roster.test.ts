@@ -108,8 +108,12 @@ describe('FR10 Mage — row blast, reach ignored, per-target RPS, multi-kill', (
     const killingBlast = byType(log, 'UnitAttacked').filter((a) => a.source === 'A:2')[1];
     expect(killingBlast?.targets.every((t) => t.hpAfter === 0)).toBe(true);
     const i = log.events.indexOf(killingBlast as BattleEvent);
-    expect(log.events[i + 1]?.type).toBe('UnitDied');
-    expect(log.events[i + 2]?.type).toBe('UnitDied');
+    // B:0 is B's default leader (index 0), so its death rides a LeaderFell beat
+    // IMMEDIATELY after its UnitDied (story 4.5, FR35) — between the two
+    // casualties, in target order. The blast is MAGIC, so no penalty applies.
+    expect(log.events[i + 1]?.type).toBe('UnitDied'); // B:0
+    expect(log.events[i + 2]?.type).toBe('LeaderFell'); // B:0 was B's leader
+    expect(log.events[i + 3]?.type).toBe('UnitDied'); // B:1
   });
 
   it('most-living wins over rearmost when there is no tie', () => {
