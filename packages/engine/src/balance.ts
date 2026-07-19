@@ -1,4 +1,4 @@
-import type { Element, Role, SpellKind, Unit, UnitClass } from './types';
+import type { Element, Role, RowMove, SpellKind, Unit, UnitClass } from './types';
 
 /**
  * An exact integer ratio. All combat arithmetic is integer math (FR15/FR20):
@@ -29,6 +29,14 @@ export interface ClassStats {
   dex: number;
   /** Actions per engagement by the row the unit starts in (FR15). */
   actions: { front: number; mid: number; back: number };
+  /**
+   * The move the class performs from each row (FR32/FR33, story 4.7, dossier
+   * §4 — DATA, not code): `act()` dispatches on the looked-up value, never on
+   * `class` alone. Total over all three rows — classes whose move is
+   * row-invariant repeat the same `MoveKind` in all three slots so the table
+   * stays total and the FR2 drift guard can read it as real data.
+   */
+  moves: { front: RowMove; mid: RowMove; back: RowMove };
   /** Physical size (FR38): drives slot cost and (from 4.8) the two-cell footprint. */
   sizeClass: SizeClass;
   /** Combat role (FR14, story 4.3): the ONLY thing matchups read — see `roleRelations`. */
@@ -124,6 +132,14 @@ export interface BalanceData {
      * both-mode band moves.
      */
     dexChanceDivisor: number;
+    /**
+     * FR33 Half Guard (Knight, story 4.7, dossier §4): the next landed
+     * single-target physical hit on a shielded cell is reduced to
+     * `max(minDamage, floor(dmg × num/den))`, applied as the OUTERMOST
+     * post-pipeline step (after `physicalDamage`/`leaderPenaltyPhysical`
+     * return). Full Guard (Phalanx) needs no ratio — it sets damage to `0`.
+     */
+    guardHalf: Ratio;
   };
 }
 
@@ -134,11 +150,28 @@ export interface BalanceData {
  * forgotten (AD-8).
  */
 export const BALANCE: BalanceData = {
-  version: 7,
+  version: 8,
   slotBudget: 5,
   engagementCap: 10,
   classes: {
-    knight: { hp: 140, str: 30, vit: 28, int: 8, men: 14, agi: 8, dex: 16, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small', role: 'vanguard' },
+    // Per-row moves (FR32/FR33, story 4.7, dossier §4 — the frozen START-GENERIC
+    // table, TUNABLE with Danilo as a follow-up pass): only Knight, Phalanx,
+    // Wizard(mage), Sorceress vary by row — everyone else repeats its uniform
+    // attack kind in all three slots (row only changes ACTION COUNT for them,
+    // FR15, unchanged).
+    knight: {
+      hp: 140,
+      str: 30,
+      vit: 28,
+      int: 8,
+      men: 14,
+      agi: 8,
+      dex: 16,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'guard-half', back: 'slash' },
+      sizeClass: 'small',
+      role: 'vanguard',
+    },
     mercenary: {
       hp: 110,
       str: 26,
@@ -148,19 +181,130 @@ export const BALANCE: BalanceData = {
       agi: 14,
       dex: 18,
       actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'slash' },
       sizeClass: 'small',
       role: 'skirmisher',
     },
-    archer: { hp: 90, str: 24, vit: 12, int: 10, men: 12, agi: 22, dex: 24, actions: { front: 1, mid: 2, back: 2 }, sizeClass: 'small', role: 'sniper' },
-    mage: { hp: 80, str: 6, vit: 8, int: 30, men: 22, agi: 12, dex: 14, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small', role: 'artillery' },
-    cleric: { hp: 90, str: 8, vit: 12, int: 24, men: 24, agi: 10, dex: 12, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small', role: 'support' },
-    witch: { hp: 85, str: 6, vit: 10, int: 26, men: 20, agi: 26, dex: 16, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small', role: 'control' },
+    archer: {
+      hp: 90,
+      str: 24,
+      vit: 12,
+      int: 10,
+      men: 12,
+      agi: 22,
+      dex: 24,
+      actions: { front: 1, mid: 2, back: 2 },
+      moves: { front: 'arrow', mid: 'arrow', back: 'arrow' },
+      sizeClass: 'small',
+      role: 'sniper',
+    },
+    mage: {
+      hp: 80,
+      str: 6,
+      vit: 8,
+      int: 30,
+      men: 22,
+      agi: 12,
+      dex: 14,
+      actions: { front: 1, mid: 1, back: 2 },
+      moves: { front: 'staff', mid: 'blast', back: 'blast' },
+      sizeClass: 'small',
+      role: 'artillery',
+    },
+    cleric: {
+      hp: 90,
+      str: 8,
+      vit: 12,
+      int: 24,
+      men: 24,
+      agi: 10,
+      dex: 12,
+      actions: { front: 1, mid: 1, back: 2 },
+      moves: { front: 'staff', mid: 'staff', back: 'staff' },
+      sizeClass: 'small',
+      role: 'support',
+    },
+    witch: {
+      hp: 85,
+      str: 6,
+      vit: 10,
+      int: 26,
+      men: 20,
+      agi: 26,
+      dex: 16,
+      actions: { front: 1, mid: 1, back: 2 },
+      // Unreachable in play (the Witch casts/fizzles, never strikes) — kept
+      // total, mirroring the retired CLASS_MOVE_KIND convention.
+      moves: { front: 'staff', mid: 'staff', back: 'staff' },
+      sizeClass: 'small',
+      role: 'control',
+    },
     // Wave-1 additions (story 4.3, dossier §1 — TUNING DRAFTS, sweep-policed). Golem (monster) ships in 4.8.
-    berserker: { hp: 120, str: 34, vit: 14, int: 6, men: 10, agi: 12, dex: 18, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small', role: 'vanguard' },
-    phalanx: { hp: 150, str: 22, vit: 34, int: 6, men: 18, agi: 6, dex: 12, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small', role: 'vanguard' },
-    ninja: { hp: 85, str: 22, vit: 10, int: 8, men: 12, agi: 28, dex: 30, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small', role: 'skirmisher' },
-    valkyrie: { hp: 105, str: 24, vit: 16, int: 12, men: 16, agi: 20, dex: 20, actions: { front: 2, mid: 1, back: 1 }, sizeClass: 'small', role: 'skirmisher' },
-    sorceress: { hp: 78, str: 6, vit: 8, int: 28, men: 20, agi: 16, dex: 15, actions: { front: 1, mid: 1, back: 2 }, sizeClass: 'small', role: 'artillery' },
+    berserker: {
+      hp: 120,
+      str: 34,
+      vit: 14,
+      int: 6,
+      men: 10,
+      agi: 12,
+      dex: 18,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'slash' },
+      sizeClass: 'small',
+      role: 'vanguard',
+    },
+    phalanx: {
+      hp: 150,
+      str: 22,
+      vit: 34,
+      int: 6,
+      men: 18,
+      agi: 6,
+      dex: 12,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'guard-full', mid: 'guard-full', back: 'bash' },
+      sizeClass: 'small',
+      role: 'vanguard',
+    },
+    ninja: {
+      hp: 85,
+      str: 22,
+      vit: 10,
+      int: 8,
+      men: 12,
+      agi: 28,
+      dex: 30,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'slash' },
+      sizeClass: 'small',
+      role: 'skirmisher',
+    },
+    valkyrie: {
+      hp: 105,
+      str: 24,
+      vit: 16,
+      int: 12,
+      men: 16,
+      agi: 20,
+      dex: 20,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'slash' },
+      sizeClass: 'small',
+      role: 'skirmisher',
+    },
+    sorceress: {
+      hp: 78,
+      str: 6,
+      vit: 8,
+      int: 28,
+      men: 20,
+      agi: 16,
+      dex: 15,
+      actions: { front: 1, mid: 1, back: 2 },
+      moves: { front: 'staff', mid: 'blast', back: 'blast' },
+      sizeClass: 'small',
+      role: 'artillery',
+    },
   },
   // FR14 role relations (story 4.3) — the shipped-six triangle + hunts, verbatim:
   // Artillery→Vanguard→Sniper→Artillery (symmetric RPS); Sniper hunts Support &
@@ -190,6 +334,9 @@ export const BALANCE: BalanceData = {
     // (DEX_CHANCE_DEN in resolve.ts). Crit multiplies post-RPS damage by ×3/2.
     critMultiplier: { num: 3, den: 2 },
     dexChanceDivisor: 3,
+    // Story 4.7 (dossier §4, D-2a revised) — Half Guard halves a landed hit;
+    // Full Guard (no ratio needed) negates it outright.
+    guardHalf: { num: 1, den: 2 },
   },
 };
 

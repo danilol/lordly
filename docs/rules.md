@@ -10,17 +10,17 @@ Draft to fill your five slots (duplicates allowed). Each unit also rolls one of 
 
 | Class | Role | HP | Actions (front/mid/back) | Behavior |
 | --- | --- | --- | --- | --- |
-| Knight | Front-line tank | 140 | 2/1/1 | Melee: strikes the nearest reachable enemy row |
+| Knight | Front-line tank | 140 | 2/1/1 | Melee: nearest reachable row. Mid row Guards instead of attacking |
 | Mercenary | Neutral sellsword | 110 | 2/1/1 | Melee: nearest reachable enemy row, no class advantage |
 | Archer | Back-row sniper | 90 | 1/2/2 | Ranged: arcs over the front to hit the rearmost enemy row |
-| Wizard | Row artillery | 80 | 1/1/2 | Blast: hits every unit in the enemy row with the most units |
+| Wizard | Row artillery | 80 | 1/1/2 | Front: a weak staff jab. Mid/back: blasts the fullest enemy row |
 | Cleric | Support | 90 | 1/1/2 | Heals the most-hurt ally; a weak staff attack if none is hurt |
 | Witch | Control | 85 | 1/1/2 | Casts an element-keyed status on a rear enemy; deals no damage |
 | Berserker | Vanguard bruiser | 120 | 2/1/1 | Melee: nearest reachable enemy row; hits hard, lightly armored |
-| Phalanx | Vanguard wall | 150 | 2/1/1 | Melee: nearest reachable enemy row; heavily armored, slow |
+| Phalanx | Vanguard wall | 150 | 2/1/1 | Melee: nearest reachable row. Front/mid Guard instead of attacking |
 | Ninja | Skirmisher | 85 | 2/1/1 | Melee: nearest reachable enemy row; very fast, no class advantage |
 | Valkyrie | Skirmisher | 105 | 2/1/1 | Melee: nearest reachable enemy row; no class advantage |
-| Sorceress | Row artillery | 78 | 1/1/2 | Blast: hits every unit in the enemy row with the most units |
+| Sorceress | Row artillery | 78 | 1/1/2 | Front: a weak staff jab. Mid/back: blasts the fullest enemy row |
 
 ### Roles and matchups
 
@@ -38,6 +38,12 @@ The triangle: **Artillery beats Vanguard**, **Vanguard beats Sniper**, **Sniper 
 ### Rows matter
 
 Where a unit stands decides how often it acts — the numbers above are actions per engagement by row. Front-line fighters swing twice from the front rank; archers, casters, and the witch do their best work from the middle and back.
+
+For most classes, row only changes that count. Four classes' row also changes **what they do**:
+
+- **Knight** — front and back rows slash as normal; the **mid row raises a Guard shield instead of attacking**.
+- **Phalanx** — front and mid rows raise a Guard shield instead of attacking; the **back row bashes** as normal.
+- **Wizard and Sorceress** — mid and back rows blast the row as normal; the **front row swings a weak, melee-targeted staff jab** instead of blasting (a real physical hit, not the row-wide spell).
 
 ## How Units Fight
 
@@ -59,6 +65,12 @@ A unit's **DEX** governs the drama of a physical blow. Every melee strike, arrow
 - **Dodge.** The defender may slip the blow entirely and take **no damage** — the chance is the defender's **DEX ÷ 3** (as a percent).
 
 Higher-DEX units — the Ninja above all — both crit more and dodge more. **Magic and healing never crit and can never be dodged** (a Wizard's blast, a Witch's curse, and a Cleric's heal always land as cast). Like everything else, both rolls come from the battle's seed, so the same battle always replays the same crits and dodges.
+
+## Guard
+
+A Knight in the mid row, or a Phalanx in the front or mid row, spends its action raising a **Guard shield** instead of attacking. The shield covers two cells: the guarding unit's own, and the ally's directly behind it.
+
+The next single-target physical hit that lands on either shielded cell is cut down before it's counted — a **Phalanx's shield negates it completely** (zero damage), a **Knight's halves it**. Either way, the shield is then spent: the guard has to raise it again on a later action to protect anyone a second time. Magic, healing, and status effects pass straight through a shield untouched, and a dodged blow never spends the charge — only a landed hit does.
 
 ## Your Army's Tactic
 

@@ -32,18 +32,31 @@ function u(cls: Unit['class'], element: Unit['element'], name: string): Unit {
  * wipe. Hand-derived (knight→merc 20 = 30 − floor(20/2), merc→knight 12 =
  * 26 − floor(28/2), no RPS either way; fronts have 2 actions, mids 1; melee
  * reach is COLUMN math, so mid units strike the front row, and once the
- * enemy front falls the swings spill onto the mid row):
- *   eng 1: fronts trade — flank mercs B:0/B:2 take 3 swings each (facing
- *          front knight ×2 + a mid knight) 110→50, B:1 takes 2 →70; flank
- *          knights A:0/A:2 take 3 merc swings 140→104, A:1 takes 2 →116.
- *   eng 2: same pattern — B:0/B:2 die on the knights' second pass, B:1 →30;
- *          A:0/A:2 →68, A:1 →92.
- *   eng 3: all five knight lanes converge on B:1, who dies in pass 1; the
- *          remaining five swings spill onto the mid mercs — B:3/B:4 110→50;
- *          A:0/A:2 →56 (one mid-merc swing each), A:1 →80.
- *   eng 4: pass 1 — B:4 dies (A:0, A:1, then A:3's kill), B:3 →10 (A:2, A:4);
- *          pass 2 — A:0 idles (B:3 out of reach), A:1 kills B:3: wipe.
- *          A ends 44 + 80 + 44 + 140 + 140 = 448/700 → 64% vs 0%. */
+ * enemy front falls the swings spill onto the mid row).
+ *
+ * Story 4.7: A's two MID knights (A:3, A:4) now Guard-half instead of
+ * swinging (the Knight's per-row move table) — each raises a charge every
+ * engagement that nothing ever tests (B fields no Guard-eligible attacker
+ * reaching A's mid row here), so both simply expire (`GuardEnded`) unconsumed
+ * at every natural engagement end. B's mid mercs (B:3/B:4) therefore take
+ * ONLY the front knights' swings, not a third from A's mid pair — the grind
+ * runs one engagement SLOWER than pre-4.7 (5 engagements, not 4):
+ *   eng 1: flank mercs B:0/B:2 take 2 swings each (facing front knight only)
+ *          110→70, B:1 takes 2 →70 (unchanged — no mid knight ever reached
+ *          it); flank knights A:0/A:2 still take 3 merc swings (front + a mid
+ *          merc) 140→104, A:1 takes 2 →116 (A's own losses are UNCHANGED by
+ *          the mid knights guarding instead of attacking).
+ *   eng 2: same pattern — B:0/B:2 →30, B:1 →20 (a knight crit on seed 0xdead
+ *          lands one extra point of damage); A:0/A:2 →68, A:1 →92.
+ *   eng 3: B:1 dies pass 1; B:0/B:2 die pass 2 — B:0 (B's leader) falls last,
+ *          arming B's sober package immediately (the SAME pass's next A
+ *          action already lands the ×5/4-taken 25 on a mid merc, not the
+ *          neutral 20); B's front row is now fully dead, so A's front trio's
+ *          melee reach falls to B's mid row (FR8 nearest-occupied-row).
+ *   eng 4: A's front trio (all three, front row now empty) grinds B:3/B:4 at
+ *          the ×5/4-taken 25/hit; B's survivors deal the ×3/4-dealt 9 back.
+ *   eng 5: B:4 dies pass 1, B:3 dies pass 2 — wipe.
+ *          A ends 14 + 80 + 14 + 140 + 140 = 388/700 → 55% vs 0%. */
 function knightsVsMercs(seed: number): MatchSetup {
   return setup(
     {
@@ -89,17 +102,22 @@ function knightsVsMercs(seed: number): MatchSetup {
  * stack the BACK line (back-left/back-center: 2 actions each → 8 cleric
  * actions × 30 heal), which fully offsets the five knights' chip. Hand-derived
  * damage lanes (knight→cleric 24 = 30 − floor(12/2), neutral RPS):
- *   B:0 (front-right) absorbs A:0×2 + A:1×2 + A:3 = 120/eng — the col-right
- *   knights A:2/A:4 reach only cols {left,center}, whose sole occupants are
- *   the back-row clerics, facing column left → B:3 absorbs A:2×2 + A:4 = 72.
- *   Steady state, re-established at the end of EVERY engagement from eng 1 on:
- *   B:0 cycles 30 →(pass-1 heals) 90 →(knight pass 1) 18 →(pass-2 heals) 78
- *   →(knight pass 2) 30; B:3 cycles 48 → 90 → 42 → 72 → 48. In-cycle minima
- *   18 and 42 — nobody EVER dies, so only the cap can end it. Cleric staff
- *   pokes (min-clamped 1 dmg, rearmost-in-reach → the mid knights): all five
- *   clerics poke in eng 1 (A:3 −3, A:4 −2); from eng 2 on only B:2 still finds
- *   everyone full at its turn (A:3 −1/eng). After 10 engagements A holds
- *   140×3 + 128 + 138 = 686/700 → 98%; B holds 30+90+90+48+90 = 348/450 → 77%. */
+ *   B:0 (front-right) absorbs A:0×2 + A:1×2 = 96/eng — A's front-right knight
+ *   A:2 reaches cols {left,center}, whose sole occupants are the back-row
+ *   clerics, facing column left → B:3 absorbs A:2×2 = 48/eng.
+ *
+ * Story 4.7: A's two MID knights (A:3, A:4) now Guard-half instead of
+ * swinging at B:0/B:3 (the Knight's per-row move table) — each raises a
+ * charge every engagement that nothing physical ever tests (B's clerics never
+ * melee), so both simply expire (`GuardEnded`) unconsumed at the natural end.
+ * B therefore takes LESS chip than pre-4.7 (was 120/72 per lane, now 96/48),
+ * so its healers offset it even more comfortably — still nobody EVER dies,
+ * only the cap (10) ends it. Cleric staff pokes (min-clamped 1 dmg,
+ * rearmost-in-reach → A's mid knights) chip A:3/A:4 a little every engagement
+ * — unaffected by A's Guard change (Guard shields against PHYSICAL SINGLE-
+ * TARGET hits landing on A's own cells; it does nothing to what A's knights
+ * themselves take). After 10 engagements A holds
+ * 140×3 + 128 + 128 = 676/700 → 96%; B holds 30+90+90+66+90 = 366/450 → 81%. */
 function knightsVsClerics(seed: number, mode: MatchSetup['mode'] = 'wipeout'): MatchSetup {
   return setup(
     {
@@ -196,39 +214,37 @@ describe('wipeout mode (FR19)', () => {
   it('continues past engagement 1 and ends the battle when a side is wiped', () => {
     const log = resolveBattle(knightsVsMercs(0xdead));
     const segs = segments(log);
-    // Hand-verified structure (unchanged by story 4.6): the mercs are ground
-    // out over four engagements — wipe at engagement 4. B:0 (front-left) is B's
-    // DEFAULT leader (index 0): it falls early, arming B's sober package (story
-    // 4.5, FR35) — from then on B's surviving mercs deal ×3/4 PHYSICAL to A, so
-    // A's knights outlast them (was 448/700 → 64% pre-4.5, 463/700 → 66% at 4.5).
-    // Story 4.6 (ADR 0003): both sides now draw dodge/crit per physical swing
-    // (knight/merc DEX 16/18 → ~5-6% each). On seed 0xdead exactly one crit
-    // fires and no swing dodges: B:0 (a mercenary) crits A:2 (a knight) for 18
-    // (12 neutral base × 3/2 — no role relation between skirmisher/vanguard),
-    // costing A the extra 6, nudging A's final hold to 461/700 → 65% vs 0%.
-    // A's own leader never falls, so A is never penalised.
-    expect(segs.length).toBe(4);
+    // Hand-verified structure: the mercs are ground out over FIVE engagements
+    // now (was four pre-4.7) — story 4.7's Knight mid row Guards instead of
+    // attacking, so B's mid mercs take one fewer swing per engagement and the
+    // grind runs a beat slower (see knightsVsMercs's derivation above). B:0
+    // (front-left) is B's DEFAULT leader (index 0): it falls in engagement 3,
+    // arming B's sober package (story 4.5, FR35) — from then on B's surviving
+    // mercs deal ×3/4 PHYSICAL and take ×5/4. A's own leader never falls, so
+    // A is never penalised. A ends 55% vs 0%.
+    expect(segs.length).toBe(5);
     for (const id of ['B:0', 'B:1', 'B:2', 'B:3', 'B:4']) {
       expect(log.events.some((e) => e.type === 'UnitDied' && e.unit === id)).toBe(true);
     }
     // Exactly one leader falls (B's, once) — the once-per-side guard holds.
     expect(log.events.filter((e) => e.type === 'LeaderFell')).toEqual([{ type: 'LeaderFell', side: 'B', unit: 'B:0' }]);
     const verdict = log.events[log.events.length - 1];
-    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 65, B: 0 } });
+    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 55, B: 0 } });
     // The wiping engagement is the last — nothing resolves after a wipe.
-    expect(segs[3]?.[segs[3].length - 1]).toMatchObject({ type: 'EngagementEnded', engagement: 4 });
+    expect(segs[4]?.[segs[4].length - 1]).toMatchObject({ type: 'EngagementEnded', engagement: 5 });
   });
 
   it('the equilibrium comp proves the cap is the termination guarantee — heals fully offset chip damage', () => {
-    // Golden #1's comp in wipeout: from engagement 1 on the two damage sinks
-    // cycle B:0 30→90→18→78→30 and B:3 48→90→42→72→48, every engagement,
-    // forever (derivation on the fixture). Hand-verified: no death is ever
-    // possible, the cap fires at 10 with A ahead 98% to 77%.
+    // Golden #1's comp in wipeout, story 4.7: A's mid knights Guard instead of
+    // attacking B's mid/back clerics (derivation on the fixture above) — B's
+    // healers offset the lighter chip even more comfortably than pre-4.7.
+    // Hand-verified: no death is ever possible, the cap fires at 10 with A
+    // ahead 96% to 81%.
     const log = resolveBattle(knightsVsClerics(0xdead));
     const segs = segments(log);
     expect(segs.length).toBe(BALANCE.engagementCap);
     expect(log.events.some((e) => e.type === 'UnitDied')).toBe(false);
-    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 98, B: 77 } });
+    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 96, B: 81 } });
   });
 
   it('EngagementEnded numbers run 1..N and PassStarted restarts at 1 in every engagement', () => {

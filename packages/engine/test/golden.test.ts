@@ -101,10 +101,12 @@ describe('golden battles', () => {
     const log = resolveBattle(setup(CLERIC_COLUMN, 0xdead));
     // Verdict matches wipeout.test.ts's hand-derived engagement-1 state
     // exactly: A loses only eng-1 staff pokes (A:3 −3, A:4 −2 → 695/700 =
-    // 99%); B's back-line heals hold the lanes at 348/450 = 77%.
+    // 99%). Story 4.7: A's mid knights (A:3, A:4) Guard instead of swinging
+    // at B's mid/back clerics, so B takes LESS chip than pre-4.7 — its
+    // back-line heals hold the lanes even more comfortably, at 378/450 = 84%.
     const verdict = log.events[log.events.length - 1];
     if (verdict?.type === 'BattleEnded') {
-      expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 99, B: 77 } });
+      expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 99, B: 84 } });
     }
     expect(log.events.some((e) => e.type === 'UnitHealed')).toBe(true);
     expect(log).toMatchSnapshot();
@@ -240,6 +242,15 @@ describe('golden battles (story 1.6 — full roster era)', () => {
     // interleaved the pair sits at 1 hp), and the pass-2 blast finishes BOTH
     // with one two-target event. A's front pair now screens the back row from
     // B's melee, so — unlike the 3-unit era — only the two mages fall.
+    //
+    // Story 4.7: B:3 (a Knight, mid-left) Guard-halves on pass 1 instead of
+    // swinging — its shielded cells are itself AND the ally directly behind
+    // it, back-left, which is B:0 (the mage this golden kills). A:1's pass-2
+    // arrow at B:0 (would-be 30) is halved to 15 (`redirectedFrom: 'B:3'`,
+    // `GuardEnded` right after) — B:0 survives that ONE shot a little longer
+    // (16 hp instead of dying to it outright) but still falls two events
+    // later to A:2's finishing blast, so the death order/LeaderFell beat
+    // below are UNCHANGED; only the exact hp numbers move.
     expect(log.events.filter((e) => e.type === 'UnitDied').map((e) => e.unit)).toEqual(['B:0', 'B:1']);
     const killingBlast = log.events.filter((e) => e.type === 'UnitAttacked' && e.source === 'A:2')[1];
     if (killingBlast?.type === 'UnitAttacked') {
@@ -276,7 +287,7 @@ describe('golden battles (story 1.6 — full roster era)', () => {
 });
 
 describe('golden battles (story 1.10 — until-wipeout mode)', () => {
-  it('golden #6: the multi-engagement wipe — knights grind mercs down over four engagements', () => {
+  it('golden #6: the multi-engagement wipe — knights grind mercs down over five engagements', () => {
     const log = resolveBattle(
       setup(
         {
@@ -297,28 +308,31 @@ describe('golden battles (story 1.10 — until-wipeout mode)', () => {
       ),
     );
     // wipeout.test.ts's `knightsVsMercs` fixture verbatim — the mercs are ground
-    // out over four engagements. B:0 (front-left) is B's default leader: its fall
-    // arms B's sober package (story 4.5, FR35), so B's mercs then deal ×3/4
-    // physical. Story 4.6 (ADR 0003): both sides now draw dodge/crit per physical
-    // swing; on seed 0xdead one knight crit lands and no swing dodges, so A holds
-    // 461/700 → 65% vs 0% (was 66% at 4.5), still four engagements.
-    expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(4);
+    // out over FIVE engagements (was four pre-4.7). B:0 (front-left) is B's
+    // default leader: its fall arms B's sober package (story 4.5, FR35), so
+    // B's mercs then deal ×3/4 physical. Story 4.7: A's mid knights Guard
+    // instead of attacking, so B's mid mercs take one fewer swing per
+    // engagement — the grind runs a beat slower, A holds 388/700 → 55% vs 0%
+    // (was 65% at 4.6, over four engagements).
+    expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(5);
     expect(log.events.filter((e) => e.type === 'LeaderFell')).toEqual([{ type: 'LeaderFell', side: 'B', unit: 'B:0' }]);
     const verdict = log.events[log.events.length - 1];
-    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 65, B: 0 } });
+    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 55, B: 0 } });
     expect(log).toMatchSnapshot();
   });
 
   it('golden #7: the cap fallback — a healing equilibrium runs all ten engagements, then FR18 judges', () => {
     const log = resolveBattle(setup(CLERIC_COLUMN, 0xdead, 'wipeout'));
-    // wipeout.test.ts hand-derives the steady state (B:0 cycles 30→90→18→78→30,
-    // B:3 48→90→42→72→48 — in-cycle minima 18/42, no death is ever possible):
-    // the BALANCE.engagementCap (10 since 4.2) fires and FR18 judges A ahead
-    // 98% (686/700 after the accumulating staff pokes) to 77% (348/450).
+    // wipeout.test.ts hand-derives the steady state — story 4.7: A's mid
+    // knights Guard instead of attacking B's mid/back clerics, so B takes
+    // less chip than pre-4.7 and its heals hold even more comfortably; no
+    // death is ever possible: the BALANCE.engagementCap (10 since 4.2) fires
+    // and FR18 judges A ahead 96% (676/700 after the accumulating staff
+    // pokes) to 81% (366/450).
     expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(BALANCE.engagementCap);
     expect(log.events.some((e) => e.type === 'UnitDied')).toBe(false);
     const verdict = log.events[log.events.length - 1];
-    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 98, B: 77 } });
+    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 96, B: 81 } });
     expect(log).toMatchSnapshot();
   });
 
@@ -395,5 +409,68 @@ describe('golden battles (story 4.6 — crits & dodge)', () => {
       for (const t of e.targets) if (t.outcome === 'dodged') expect(t.damage).toBe(0);
     }
     expect(log).toMatchSnapshot();
+  });
+});
+
+describe('golden battles (story 4.7 — per-row moves and Guard)', () => {
+  it('golden #10: a Full Guard negates an arrow aimed at the ally directly behind the Phalanx', () => {
+    // A:0 = Phalanx front-center (guard-full, dossier §4) — shields itself AND
+    // the ally directly behind it, A:1 (archer, mid-center). A:1 is A's
+    // designated leader; B's tactic 'leader' makes its archer (and its
+    // clerics' staff fallback) hunt A:1 directly, guaranteeing the shielded
+    // cell gets hit (guard.test.ts verifies this fixture's mechanics in
+    // isolation; this golden pins the FULL battle log).
+    const matchSetup: MatchSetup = {
+      ...setup(
+        {
+          armies: {
+            A: [
+              u('phalanx', 'fire', 'Bram'),
+              u('archer', 'water', 'Vess'),
+              u('knight', 'wind', 'Cedric'),
+              u('knight', 'earth', 'Doran'),
+              u('mercenary', 'fire', 'Edmund'),
+            ],
+            B: [
+              u('archer', 'earth', 'Falk'),
+              u('cleric', 'fire', 'Gorm'),
+              u('cleric', 'water', 'Hask'),
+              u('cleric', 'wind', 'Ivo'),
+              u('cleric', 'earth', 'Jarek'),
+            ],
+          },
+          placements: {
+            A: [
+              { row: 'front', col: 'center' },
+              { row: 'mid', col: 'center' },
+              { row: 'front', col: 'left' },
+              { row: 'front', col: 'right' },
+              { row: 'mid', col: 'left' },
+            ],
+            B: [
+              { row: 'back', col: 'center' },
+              { row: 'back', col: 'left' },
+              { row: 'back', col: 'right' },
+              { row: 'mid', col: 'left' },
+              { row: 'mid', col: 'right' },
+            ],
+          },
+        },
+        1,
+      ),
+      tactics: { A: 'autonomous', B: 'leader' },
+      leaders: { A: 1, B: 0 },
+    };
+    const resolved = resolveBattle(matchSetup);
+    const guardedHit = resolved.events.find((e) => e.type === 'UnitAttacked' && e.redirectedFrom === 'A:0');
+    expect(guardedHit).toBeDefined();
+    if (guardedHit?.type === 'UnitAttacked') {
+      // The Phalanx's own cell stays untouched — only the ally BEHIND it (A:1)
+      // is the actual target, taking the negated 0 (no redirect, ADR-0003-safe).
+      expect(guardedHit.targets).toEqual([{ unit: 'A:1', damage: 0, hpAfter: expect.any(Number), outcome: 'hit' }]);
+    }
+    expect(resolved.events.filter((e) => e.type === 'GuardRaised' && e.unit === 'A:0').length).toBeGreaterThanOrEqual(1);
+    expect(resolved.events.filter((e) => e.type === 'GuardEnded' && e.unit === 'A:0').length).toBeGreaterThanOrEqual(1);
+    expect(resolved).toMatchSnapshot();
   });
 });

@@ -161,9 +161,16 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
   {
     id: 'farshot',
     name: 'Farshot',
+    // Story 4.7 re-tune: Guard tankifies knight-heavy comps' fronts and the
+    // Wizard-front staff loses its blast, both of which weakened farshot's
+    // rivals — farshot itself has no front-row melee at all, so its RELATIVE
+    // wipeout win rate rose above band. One archer steps to the front (a
+    // screen, exposed to melee) — identity intact (still the two-archer
+    // snipe-and-support comp), pulling it back into band (mirrors gale's 4.4
+    // re-tune: move an archer forward to expose it).
     classes: ['archer', 'mage', 'cleric', 'archer', 'witch'],
     placement: [
-      { row: 'mid', col: 'left' },
+      { row: 'front', col: 'left' },
       { row: 'back', col: 'right' },
       { row: 'back', col: 'center' },
       { row: 'mid', col: 'right' },

@@ -174,14 +174,16 @@ describe('chooseSetup (FR24/FR25, AD-6, AD-10)', () => {
   // — NOT pasted from a test run. A silent change to stream derivation, pool
   // order, or draw order trips these loudly.
   it('anchor: seed 1 on ai/A picks farshot (index 6) with placements VERBATIM (flip 0)', () => {
-    // The raw draws (seed 1 ai/A → pick 6, flip 0) are unchanged by 4.2 —
-    // only the pool literals grew; expectations re-mapped by hand onto the
-    // re-authored 5-slot farshot.
+    // The raw draws (seed 1 ai/A → pick 6, flip 0) are unchanged by 4.2/4.7 —
+    // only the pool literals changed; expectations re-mapped by hand onto the
+    // re-authored 5-slot farshot. Story 4.7 re-tune: the first archer moved
+    // mid-left → front-left (a pool re-tune after Guard/Wizard-front-staff
+    // shifted the wipeout band — see ai.ts's farshot comment).
     const choice = chooseSetup(STRATEGY_POOL, aiStream(1));
     expect(choice.archetypeId).toBe('farshot');
     expect(choice.classes).toEqual(['archer', 'mage', 'cleric', 'archer', 'witch']);
     expect(choice.placement).toEqual([
-      { row: 'mid', col: 'left' },
+      { row: 'front', col: 'left' },
       { row: 'back', col: 'right' },
       { row: 'back', col: 'center' },
       { row: 'mid', col: 'right' },

@@ -249,18 +249,28 @@ describe('FR18 deaths, wipe, and judging', () => {
   // STR 26 vs highest VIT/2 = 14), so the min-1 clamp is guarded by the
   // property below rather than a specific pinned matchup; casters (1.6) will
   // exercise it concretely.
-  test.prop([matchSetupArb])('every LANDED attack deals at least minDamage and hpAfter never goes below 0 (a dodge deals 0 — story 4.6)', (s) => {
-    const log = resolveBattle(s);
-    for (const a of attacks(log)) {
-      for (const t of a.targets) {
-        // A dodged hit (ADR 0003) is the ONE attack outcome that deals 0 — it
-        // negates the hit, so it is exempt from the min-damage floor.
-        if (t.outcome === 'dodged') expect(t.damage).toBe(0);
-        else expect(t.damage).toBeGreaterThanOrEqual(BALANCE.formulas.minDamage);
-        expect(t.hpAfter).toBeGreaterThanOrEqual(0);
+  test.prop([matchSetupArb])(
+    'every LANDED attack deals at least minDamage and hpAfter never goes below 0 (a dodge or a Full Guard deals 0 — stories 4.6/4.7)',
+    (s) => {
+      const log = resolveBattle(s);
+      for (const a of attacks(log)) {
+        for (const t of a.targets) {
+          // A dodged hit (ADR 0003) deals exactly 0 — it negates the hit, exempt
+          // from the min-damage floor. A Guard block (story 4.7 — `redirectedFrom`
+          // set) is where the floor DOESN'T universally hold: a Full Guard negates
+          // to 0, a Half Guard re-clamps to minDamage — this property can't tell
+          // the two tiers apart from the event alone, so it asserts only the
+          // weakest safe bound (>= 0). The EXACT per-tier floors (Full === 0,
+          // Half === max(minDamage, floor(dmg/2))) are pinned precisely in
+          // guard.test.ts, NOT here.
+          if (t.outcome === 'dodged') expect(t.damage).toBe(0);
+          else if (a.redirectedFrom !== undefined) expect(t.damage).toBeGreaterThanOrEqual(0);
+          else expect(t.damage).toBeGreaterThanOrEqual(BALANCE.formulas.minDamage);
+          expect(t.hpAfter).toBeGreaterThanOrEqual(0);
+        }
       }
-    }
-  });
+    },
+  );
 
   it('judging: higher HP-percentage side wins (exact comparison, not floored)', () => {
     // Asymmetric knight-vs-mercenary trade, 5-a-side (4.2 migration).
@@ -273,14 +283,22 @@ describe('FR18 deaths, wipe, and judging', () => {
     //
     // Hand-derived trace (K→merc 30−10=20; merc→K 26−14=12; K→K 30−14=16;
     // mercs act before knights; front units act twice, mid/back once; melee
-    // picks the nearest row, so each column's front unit soaks everything):
+    // picks the nearest row, so each column's front unit soaks everything).
+    // Story 4.7: A's two MID knights (A:1, A:4) now Guard-half instead of
+    // attacking (the Knight's per-row move table) — each raises a charge pass
+    // 1 that nothing hits (B never reaches A's mid row), so it simply expires
+    // (GuardEnded) at the engagement's natural end, unconsumed:
     //   pass 1: B:2→A:3 12 | B:0→A:0 12 | B:3→A:3 12 | B:4→A:3 12
-    //           A:0→B:0 20 | A:3→B:2 20 | A:1→B:0 20 | A:4→B:2 20
+    //           A:0→B:0 20 | A:3→B:2 20 | A:1 guards | A:4 guards
     //           A:2→B:0 20 | B:1→A:0 16
     //   pass 2: B:2→A:3 12 | B:0→A:0 12 | A:0→B:0 20 | A:3→B:2 20
-    // Nobody dies. A ends 100+140+140+92+140 = 612/700; B ends
-    // 30+140+50+110+110 = 440/580. Exact: 612×580 = 354,960 > 440×700 =
-    // 308,000 → A wins; floored report percentages are 87 and 75.
+    // Nobody dies. A ends 100+140+140+92+140 = 612/700 (A itself is untouched
+    // by the change — A:1/A:4 guarding instead of attacking doesn't change
+    // what A takes). B no longer takes A:1/A:4's two 20-damage swings (pre-4.7
+    // each landed once on B:0/B:2 in pass 1), so B ends
+    // 50+140+70+110+110 = 480/580 (was 440/580 pre-4.7). Exact:
+    // 612×580 = 354,960 > 480×700 = 336,000 → A still wins; floored report
+    // percentages are 87 and 82.
     const log = resolveBattle(
       setup({
         armies: {
@@ -319,7 +337,7 @@ describe('FR18 deaths, wipe, and judging', () => {
     );
     const verdict = ended(log);
     expect(verdict.winner).toBe('A');
-    expect(verdict.hpPct).toEqual({ A: 87, B: 75 });
+    expect(verdict.hpPct).toEqual({ A: 87, B: 82 });
   });
 
   it('exact tie → draw: mirrored knights, symmetric damage, nobody dies', () => {

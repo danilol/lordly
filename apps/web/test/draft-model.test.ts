@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_CLASSES, BALANCE } from '@lordly/engine';
-import { canAddUnit, canContinue, classRulesCard } from '../src/flow/draftModel';
+import { ALL_CLASSES, ALL_ROWS, BALANCE } from '@lordly/engine';
+import { canAddUnit, canContinue, classRulesCard, moveLabel, movesVaryByRow } from '../src/flow/draftModel';
 import { CLASS_DISPLAY_NAME } from '../src/config/constants';
 import type { DraftedUnit } from '../src/flow/MatchState';
 
@@ -59,5 +59,32 @@ describe('rules cards derive from BALANCE data, never hardcoded (FR2 + data-must
     expect(mage.stats.hp).toBe(BALANCE.classes.mage.hp);
     expect(mage.stats.str).toBe(BALANCE.classes.mage.str);
     expect(mage.stats.int).toBe(BALANCE.classes.mage.int);
+  });
+
+  it('reports per-row moves straight from BALANCE.classes[c].moves (story 4.7, FR32/FR33)', () => {
+    for (const cls of ALL_CLASSES) {
+      expect(classRulesCard(cls).moves).toEqual(BALANCE.classes[cls].moves);
+    }
+  });
+});
+
+describe('per-row move labels (story 4.7, FR32/FR33)', () => {
+  it('exactly Knight, Phalanx, Wizard(mage), Sorceress vary by row (the DraftScene breakdown-line gate)', () => {
+    const varying = ALL_CLASSES.filter(movesVaryByRow);
+    expect(new Set(varying)).toEqual(new Set(['knight', 'phalanx', 'mage', 'sorceress']));
+    for (const cls of ALL_CLASSES) {
+      const uniform = new Set(ALL_ROWS.map((row) => BALANCE.classes[cls].moves[row])).size === 1;
+      expect(movesVaryByRow(cls), cls).toBe(!uniform);
+    }
+  });
+
+  it('names Guard by tier and Title-Cases every other move', () => {
+    expect(moveLabel('guard-full')).toBe('Guard (full)');
+    expect(moveLabel('guard-half')).toBe('Guard (half)');
+    expect(moveLabel('slash')).toBe('Slash');
+    expect(moveLabel('bash')).toBe('Bash');
+    expect(moveLabel('arrow')).toBe('Arrow');
+    expect(moveLabel('blast')).toBe('Blast');
+    expect(moveLabel('staff')).toBe('Staff');
   });
 });

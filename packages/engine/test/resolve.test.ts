@@ -29,10 +29,15 @@ function setup(partial: Pick<MatchSetup, 'armies' | 'placements'>, seed = 7): Ma
 
 /**
  * The ordered actor ids of every taken turn, grouped by pass. A turn's FIRST
- * event identifies the actor: `ActionSkipped`/`ActionFizzled`/`ActionMisfired`
- * or an effect event (`UnitAttacked`/`UnitHealed`/`StatusApplied`). An effect
- * event immediately following an `ActionMisfired` for the same actor is that
- * SAME turn's redirect, not a new turn (marker + effect pair — story 1.6).
+ * event identifies the actor: `ActionSkipped`/`ActionFizzled`/`ActionMisfired`/
+ * `GuardRaised` (story 4.7 — a Guard-move turn is spent with no attack) or an
+ * effect event (`UnitAttacked`/`UnitHealed`/`StatusApplied`). An effect event
+ * immediately following an `ActionMisfired` for the same actor is that SAME
+ * turn's redirect, not a new turn (marker + effect pair — story 1.6).
+ * `GuardEnded` is deliberately NOT an actor marker: it can ride a DIFFERENT
+ * unit's turn (the guardian's, appended right after the attacker's
+ * `UnitAttacked` when a hit lands on a shielded cell) or fire outside any pass
+ * at the engagement's natural end — never itself the acting unit's turn.
  */
 function turnsByPass(log: ReturnType<typeof resolveBattle>): UnitId[][] {
   const passes: UnitId[][] = [];
@@ -44,7 +49,7 @@ function turnsByPass(log: ReturnType<typeof resolveBattle>): UnitId[][] {
       continue;
     }
     const actor =
-      e.type === 'ActionSkipped' || e.type === 'ActionFizzled' || e.type === 'ActionMisfired'
+      e.type === 'ActionSkipped' || e.type === 'ActionFizzled' || e.type === 'ActionMisfired' || e.type === 'GuardRaised'
         ? e.unit
         : e.type === 'UnitAttacked' || e.type === 'UnitHealed' || e.type === 'StatusApplied'
           ? e.source
@@ -518,11 +523,15 @@ describe('chassis properties (NFR2, FR20)', () => {
     // Pass 1: mages (mid L, mid R, back L, back C, back R) each blast A's
     // 3-knight front row for 34 (30 − floor(14/2) = 23, ×3/2 RPS); all three
     // die on the FIFTH blast (4 × 34 = 136 < 140). The dead knights' queued
-    // turns skip; A's mid knights swing 19 (26 × 3/4) at the enemy mid mages
-    // (mirrored reach: mid L col 0 reaches enemy cols {1,2} → mid R mage).
+    // turns skip. Story 4.7: A's MID knights (A:3, A:4) now Guard-half instead
+    // of swinging at the enemy mid mages (the Knight's per-row move table) —
+    // each raises a charge that nothing physical ever tests (only magic
+    // blasts reach them), so both simply expire (GuardEnded) at the
+    // engagement's natural end, unconsumed.
     // Pass 2: only the three back mages (2 actions) still act — three blasts
-    // × 34 onto A's 2-knight mid row (140 → 38). Verdict: A 76/700 → 10%,
-    // B 362/400 → 90%, winner B (exact-fraction comparison).
+    // × 34 onto A's 2-knight mid row (140 → 38). B's mid mages, no longer
+    // struck by A:3/A:4, stay at full HP. Verdict: A 76/700 → 10%,
+    // B 400/400 → 100%, winner B (exact-fraction comparison).
     const s = setup(
       {
         armies: {
@@ -596,20 +605,22 @@ describe('chassis properties (NFR2, FR20)', () => {
       'skip:A:0:dead',
       'skip:A:1:dead',
       'skip:A:2:dead',
-      'atk:A:3>B:4-14',
-      'atk:A:4>B:3-14',
+      'GuardRaised',
+      'GuardRaised',
       'pass:2',
       'atk:B:0>A:3-34,A:4-34',
       'atk:B:1>A:3-34,A:4-34',
       'atk:B:2>A:3-34,A:4-34',
+      'GuardEnded',
+      'GuardEnded',
       'EngagementEnded',
       'BattleEnded',
     ]);
     const verdict = log.events[log.events.length - 1];
     if (verdict?.type === 'BattleEnded') {
-      // B higher than the pre-4.5 90%: the two mid mages take 14 not 19 from the
-      // penalised knights (66 hp each, not 61) → B = (3×80 + 2×66)/400 = 93%.
-      expect(verdict).toEqual({ type: 'BattleEnded', winner: 'B', hpPct: { A: 10, B: 93 } });
+      // Story 4.7: A's mid knights Guard instead of attacking, so B's mid
+      // mages are never struck — B holds a clean 400/400 = 100%.
+      expect(verdict).toEqual({ type: 'BattleEnded', winner: 'B', hpPct: { A: 10, B: 100 } });
     }
   });
 });

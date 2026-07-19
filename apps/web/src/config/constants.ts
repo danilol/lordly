@@ -140,6 +140,19 @@ export const LEADER_CROWN_GLYPH = '♛';
 /** The full-beat banner text when a side's leader falls (FR35, EXPERIENCE.md — exact wording). */
 export const BATTLE_LEADER_FELL_BANNER = 'The leader has fallen!';
 
+/**
+ * The Guard stance marker (`{components.guard-marker}`, DESIGN.md, story
+ * 4.7): a persistent shield glyph from `GuardRaised` to `GuardEnded` — the
+ * SAME status-icon treatment as `STATUS_GLYPHS` (2.2 AC6), but keyed
+ * separately since Guard isn't a Witch `SpellKind`. A dedicated color (not a
+ * side color, not gold — leader-crown reserves gold) keeps it visually
+ * distinct from both.
+ */
+export const GUARD_MARKER_GLYPH = '🛡';
+export const GUARD_MARKER_COLOR = '#8ea6c2';
+/** The caption stacked over a Guard-blocked hit's number (story 4.7) — the crit/dodge caption's sibling. */
+export const GUARD_BLOCKED_CAPTION = 'GUARDED';
+
 // FR39f (story 4.0): the class-code contrast treatment for units standing ON
 // side-colored board tiles (Battle, Reveal). A dark outline stroke carries the
 // letterform regardless of what's behind it — the token treatment DESIGN.md's

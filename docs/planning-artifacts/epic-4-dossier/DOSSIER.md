@@ -22,7 +22,7 @@ updated: 2026-07-17
 | D-1d | Mage → "Wizard" is a DISPLAY rename only (engine key stays `mage`; code MAG → WIZ shell-side) | DECIDED | 2026-07-17 | AD-11: display names are shell-side lookups (the Turn/pass pattern); full engine rename would orphan pre-era history rendering |
 | D-1e | Golem's magic weakness is PURE STATS (low MEN), no Artillery→Brute relation | DECIDED | 2026-07-17 | The FR15 formula does it natively (magic = INT − MEN/2); nothing for the next monster wave to inherit unwanted |
 | D-1f | Gender split (M: Knight/Wizard/Berserker/Phalanx/Ninja · F: Cleric/Witch/Valkyrie/Archer/Sorceress) is recorded product direction — flavor now, growth/promotion hooks post-link-play | DECIDED | 2026-07-17 | OB64-authentic; Sorceress = Wizard twin "differentiated by growth", so wave-1 stats are a close variant |
-| D-2a | Guard = column BODYGUARD: engagement-long stance, redirects single-target PHYSICAL attacks aimed at the ally directly behind; magic/status bypass | DECIDED | 2026-07-17 | Danilo's design ("a knight in the middle guards a mage"); arrows MUST be interceptable or Guard protects nothing (melee already blocked by FR8, magic bypasses by rule) |
+| D-2a | Guard = column BODYGUARD: engagement-long stance, redirects single-target PHYSICAL attacks aimed at the ally directly behind; magic/status bypass | DECIDED | 2026-07-17 | Danilo's design ("a knight in the middle guards a mage"); arrows MUST be interceptable or Guard protects nothing (melee already blocked by FR8, magic bypasses by rule) — **SUPERSEDED 2026-07-19 (Danilo, story 4.7): Guard is now a one-shot Full/Half damage SHIELD (self + the ally behind), not a redirect. No retarget: the attacked unit stays the target and takes the reduced/zero number; the guard takes nothing. See §4's amendment below for the full revision.** |
 | D-2b | Move table minimal: Knight mid=Guard, Phalanx front+mid=Guard, Wizard/Sorceress front=Staff Attack; all else uniform | DECIDED | 2026-07-17 | "Start generic"; Guard rows are the rows with someone behind |
 | D-2c | Blast under Attack Leader targets the leader's row; other tactics leave the blast autonomous | DECIDED | 2026-07-17 | Danilo + OB64 sourcing: AoE treats the leader as focal point; magic always reaches the leader |
 | D-2d | Leader fall = sober package: plain-Autonomous reversion, dealt ×3/4 / taken ×5/4, no perks | DECIDED | 2026-07-17 | Deterministic — zero new stream draws; "panicked" variant rejected for this era |
@@ -91,22 +91,35 @@ Structure (frozen forever — see `docs/adr/0003-battle-stream-draw-order.md` fo
 - **Always exactly 2 draws per finalized physical single-target hit, order [dodge, crit]** — crit drawn even on a dodge, result discarded. Fixed count = auditable forever.
 - **Magic neither crits nor is dodged** (OB64 rule): blast/heals/status = 0 draws. Confusion draws keep their shipped positions verbatim.
 - Chances (tuning data): dodge% = defender DEX/3, crit% = attacker DEX/3, crit ×3/2 applied immediately after RPS in the FR15 fixed order. `missed` outcome reserved, unused wave 1 (one dodge draw, defender-attributed).
-- Draws roll against the FINALIZED target — after tactics selection and Guard redirect (both deterministic).
+- Draws roll against the FINALIZED target — after tactics selection (Guard is no longer a redirect — see §4's amendment; the finalized target IS the actually-attacked unit, so A3/A4 resolve against it directly).
 
 ## §4 Moves, Guard, tactics, leader (FR32/FR33/FR34/FR35) — DECIDED 2026-07-17
 
-### Guard (FR33) — the column bodyguard (Danilo's design)
+### Guard (FR33) — the column bodyguard (Danilo's design) — SUPERSEDED, see amendment below
 
 A unit whose row-move is Guard spends its action entering an **engagement-long guard stance**: while it stands, **single-target PHYSICAL attacks** (melee, arrows — including tactic-steered and misfire-redirected ones) aimed at **the ally directly behind it in its own column** are intercepted — **the attack redirects to the guard**, resolving against the guard's own defenses (dodge/crit roll vs the guard, per ADR 0003). **Magic and status bypass the guard entirely** — the Wizard's blast, the Witch's cast, and anything under Attack Leader that is magical reaches the protected unit ("magic always hits the leader"). Rationale: melee is already stopped by the FR8 blockade and magic bypasses by design — arrows are precisely what a bodyguard exists to stop; magic is the counter to turtling. Guarding with nobody behind = the stance does nothing (legal, wasted — the placement read is the player's).
+
+#### Amendment (story 4.7, 2026-07-19, Danilo) — Guard is a Full/Half damage SHIELD, not a redirect
+
+Danilo replaced the column-bodyguard redirect above with a cleaner two-tier shield, confirmed during 4.7's dev session ("one attack only" + "protects the ally behind too"):
+
+- A Guard move (still one-shot, still engagement-scoped, still self + the ally directly behind) raises a charge that, on the NEXT landed single-target physical hit against either shielded cell, reduces the damage — **Full (Phalanx) → 0**, **Half (Knight) → floor(damage/2)**, re-clamped to `minDamage` — then the charge is spent (`GuardEnded`).
+- **No redirect.** The attacked unit stays the target and takes the reduced/zero number; the guard itself takes nothing and is never retargeted onto. Because there's no retarget, story 4.6's A3 dodge (defender DEX) and A4 crit (attacker DEX) draws resolve against the ACTUAL target exactly as shipped — the frozen ADR 0003 draw order/count is completely untouched (the Guard reduction is the OUTERMOST post-pipeline step, after crit/Weaken/leader-fall, taking zero draws of its own).
+- Magic/heals/status still bypass entirely (unchanged from the original design).
+- `UnitAttacked.redirectedFrom` is repurposed (no union-structure change, comment-only) to carry the GUARDING unit's id — block attribution for the shell, not "the original target a bodyguard stepped in front of" (there is no such thing anymore).
+
+This session's item 3 (re-read: "RPS recomputes against the guard") is GONE under the shield model — there is no retarget, so RPS/dodge/crit resolve against the real target as normal; there is nothing to recompute.
 
 ### The wave-1 move table (FR32 — minimal, "start generic")
 
 | Class | Front | Middle | Back |
 |---|---|---|---|
-| Knight | 2× Sword Slash | **Guard** | 1× Sword Slash |
-| Phalanx | **Guard** | **Guard** | 1× Shield Bash |
+| Knight | 2× Sword Slash | **Guard (Half)** | 1× Sword Slash |
+| Phalanx | **Guard (Full)** | **Guard (Full)** | 1× Shield Bash |
 | Wizard / Sorceress | 1× weak Staff Attack (physical, melee targeting) | 1× blast | 2× blast |
 | everyone else | unchanged — action COUNTS vary by row (FR15), move kind uniform | | |
+
+Full vs Half tier is per-class balance data (`BALANCE.formulas.guardHalf` for the Half ratio; Full needs none — it sets damage to exactly 0).
 
 ### Tactics × non-standard actions (FR34 interactions, Open Item 3 closed)
 
@@ -127,7 +140,7 @@ On a side's leader dying: tactic reverts to **plain Autonomous** (deterministic 
 |---|---|---|
 | `UnitAttacked.targets[].outcome: 'hit' \| 'crit' \| 'dodged'` (+ reserved `'missed'`, unused wave 1; damage 0 on dodge) | FR36 narration/animation | 4.6 |
 | `UnitAttacked.kind: MoveKind` (`slash` / `arrow` / `blast` / `staff` / `bash`) | FR32 — the renderer's attackFlavor stops inferring from class (row-varied moves make class-inference WRONG) | 4.7 |
-| `UnitAttacked.redirectedFrom?: UnitId` | Guard interception is visible: the scene animates the bodyguard stepping in; narration names it | 4.7 |
+| `UnitAttacked.redirectedFrom?: UnitId` | REPURPOSED 2026-07-19 (comment-only, no union change): a Guard shield reduced this landed hit — carries the GUARDING unit's id (block attribution for the shell), not a retarget — the attacked unit stays `targets[].unit` | 4.7 |
 | `GuardRaised { unit }` + `GuardEnded { unit }` | the stance beat + its engagement-end expiry as explicit events — NO shell-side lifecycle rule (the 2.2 StatusCleared lesson, applied from birth) | 4.7 |
 | `StatusCleared { unit, spell }` | the story-2.2 deferral — between-engagement clears become log-driven; `clearStatusIconsExceptPoison()` dies | 4.2 |
 | `LeaderFell { side, unit }` | FR35 penalty onset beat (ratios are static balance facts) | 4.5 |

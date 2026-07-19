@@ -25,6 +25,7 @@ export type {
   MoveKind,
   PassStarted,
   PoisonTicked,
+  RowMove,
   StatusApplied,
   StatusCleared,
   UnitAttacked,

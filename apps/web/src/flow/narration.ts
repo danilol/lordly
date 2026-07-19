@@ -58,6 +58,10 @@ export function narrateEvent(state: NarrationState, event: BattleEvent): { lines
       return { lines: [turnBoundaryLine(event.pass)], state };
     case 'UnitAttacked': {
       const hp = new Map(state.hp);
+      // Story 4.7: `redirectedFrom` names the unit whose Guard shield reduced
+      // this landed hit (FR33) — the attacked unit stays the target (no
+      // redirect), so this only changes the WORDING, not who took the hit.
+      const guardian = event.redirectedFrom !== undefined ? unitName(state, event.redirectedFrom) : undefined;
       const lines = event.targets.map((t) => {
         const before = hp.get(t.unit) ?? t.hpAfter + t.damage;
         hp.set(t.unit, t.hpAfter);
@@ -65,6 +69,11 @@ export function narrateEvent(state: NarrationState, event: BattleEvent): { lines
         const tgt = unitName(state, t.unit);
         // Story 4.6: each outcome narrates distinctly (a dodge shows no damage).
         if (t.outcome === 'dodged') return `${src} struck at ${tgt} — dodged!`;
+        if (guardian !== undefined) {
+          return t.damage === 0
+            ? `${src} struck ${tgt} — ${guardian}'s guard holds, fully blocked!`
+            : `${src} struck ${tgt} — ${guardian}'s guard halves it to ${t.damage} — ${before}→${t.hpAfter} HP`;
+        }
         if (t.outcome === 'crit') return `${src} CRIT ${tgt} for ${t.damage} — ${before}→${t.hpAfter} HP`;
         return `${src} struck ${tgt} for ${t.damage} — ${before}→${t.hpAfter} HP`;
       });

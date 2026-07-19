@@ -14,7 +14,7 @@ import {
   MIN_FONT_PX,
   PALETTE,
 } from '../config/constants';
-import { canAddUnit, canContinue, classRulesCard } from '../flow/draftModel';
+import { canAddUnit, canContinue, classRulesCard, moveLabel, movesVaryByRow } from '../flow/draftModel';
 import type { MatchFlow } from '../flow/MatchFlow';
 import { applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
@@ -215,11 +215,20 @@ export class DraftScene extends Scene {
         wordWrap: { width: textW },
       }),
     );
+    // The per-row move breakdown (FR32/FR33, story 4.7) REPLACES the prose
+    // behavior line for the four classes whose move actually VARIES by row
+    // (Knight, Phalanx, Wizard, Sorceress) — the DETAIL panel has room for
+    // exactly one text block here (device review: stacking both wrapped onto
+    // the matchup chips below). Compact F/M/B prefixes keep it short enough
+    // to fit; everyone else keeps the unchanged prose line (their move IS
+    // uniform, so a restated "front/mid/back: X" would be redundant noise).
+    const varies = movesVaryByRow(this.selected);
+    const m = card.moves;
     this.dynamic.push(
-      crispText(this, tx, DETAIL.y + 56, card.behavior, {
+      crispText(this, tx, DETAIL.y + 56, varies ? `F ${moveLabel(m.front)} · M ${moveLabel(m.mid)} · B ${moveLabel(m.back)}` : card.behavior, {
         fontFamily: 'Arial',
         fontSize: `${MIN_FONT_PX}px`,
-        color: PALETTE.mutedText,
+        color: varies ? PALETTE.title : PALETTE.mutedText,
         wordWrap: { width: textW },
       }),
     );

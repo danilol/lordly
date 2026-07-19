@@ -1,5 +1,5 @@
 import { GameObjects, Scene, Time } from 'phaser';
-import type { BattleEvent, BattleStarted, Side, SpellKind, UnitClass, UnitId, UnitSnapshot } from '@lordly/engine';
+import type { BattleEvent, BattleStarted, MoveKind, Side, SpellKind, UnitClass, UnitId, UnitSnapshot } from '@lordly/engine';
 import {
   BASE_HEIGHT,
   BASE_WIDTH,
@@ -16,6 +16,9 @@ import {
   PALETTE,
   MIN_FONT_PX,
   LEADER_CROWN_GLYPH,
+  GUARD_MARKER_GLYPH,
+  GUARD_MARKER_COLOR,
+  GUARD_BLOCKED_CAPTION,
   CLASS_ABBREVIATIONS,
   POISON_TEXT,
   STATUS_COLORS,
@@ -48,6 +51,8 @@ interface UnitView {
   cls: UnitClass;
   /** Persistent status icons (story 2.2 AC6), keyed by spell. */
   statuses: Map<SpellKind, GameObjects.Text>;
+  /** The Guard stance marker (story 4.7, FR33) — separate from `statuses`: Guard isn't a Witch spell. */
+  guardMarker?: GameObjects.Text;
   x: number;
   y: number;
   dead: boolean;
@@ -310,9 +315,11 @@ export class BattleScene extends Scene {
       case 'UnitAttacked': {
         this.attackFlavor(
           event.source,
+          event.kind,
           event.targets.map((t) => t.unit),
         );
         const color = this.actorColor(event.source);
+        const guarded = event.redirectedFrom !== undefined;
         for (const t of event.targets) {
           this.setHp(t.unit, t.hpAfter);
           if (t.outcome === 'dodged') {
@@ -322,6 +329,18 @@ export class BattleScene extends Scene {
             // a whiff should read as understated — the caption + muted color +
             // dash already distinguish it from a hit without the crit's punch.
             this.popup(t.unit, this.linked(linkedToMisfire, '—'), PALETTE.mutedText, false, 'DODGE');
+            continue;
+          }
+          if (guarded) {
+            // Story 4.7 (FR33): a Guard shield reduced this LANDED hit — a
+            // block reads distinctly from a plain hit (a shield flash, not the
+            // hurt flinch) and from a dodge (the reduced/0 number still shows,
+            // it isn't a whiff). NOT emphatic — a held guard is a calm, sturdy
+            // beat, not a punch like a crit.
+            this.guardFlash(t.unit);
+            // A Full Guard negates to 0 — show a plain "0", never "-0" (review).
+            const blockedText = t.damage === 0 ? '0' : `-${t.damage}`;
+            this.popup(t.unit, this.linked(linkedToMisfire, blockedText), GUARD_MARKER_COLOR, false, GUARD_BLOCKED_CAPTION);
             continue;
           }
           this.hurtFlash(t.unit);
@@ -361,12 +380,15 @@ export class BattleScene extends Scene {
         this.kill(event.unit);
         return true;
       case 'GuardRaised':
-        // In the v4 union from 4.2; emitted from 4.7 (FR33) — the full stance
-        // marker (spine Epic 4 tokens) lands with the emitting story.
-        this.popup(event.unit, 'guards', PALETTE.mutedText);
+        // FR33 (story 4.7): the persistent shield marker (status-icon infra) —
+        // NOT a floating popup, since Guard is an ongoing stance, not a beat.
+        this.applyGuardMarker(event.unit);
         return true;
       case 'GuardEnded':
-        return false; // silent until 4.7 renders the stance marker to remove
+        // Fires on consume (a landed hit spent the charge) AND on unconsumed
+        // natural-end expiry (engine resolve.ts) — either way the marker clears.
+        this.removeGuardMarker(event.unit);
+        return true;
       case 'StatusCleared':
         // Story 4.2: log-driven icon removal (dossier §5) — the engine
         // narrates every clear; the scene applies exactly what it hears.
@@ -430,16 +452,19 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * The class-flavored attack beat (AD-11 shell-side flavor lookup — damage
-   * itself comes only from the payload): melee steps into the clash gap and
-   * strikes; the archer's arrow crosses the diagonal; the mage's blast washes
-   * EVERY struck tile in the row. All procedural — zero art.
+   * The move-flavored attack beat (FR32, story 4.7 — reads `event.kind` from
+   * the payload, NEVER re-derives it from the attacker's class: AD-2 applies
+   * inside the shell too. Per-row moves mean a front Wizard staffs while its
+   * back row blasts — the SAME class, different flavor by row): melee-style
+   * moves (slash/bash/staff) step into the clash gap and strike; the arrow
+   * crosses the diagonal; the blast washes EVERY struck tile in the row. All
+   * procedural — zero art.
    */
-  private attackFlavor(source: UnitId, targetIds: UnitId[]) {
+  private attackFlavor(source: UnitId, moveKind: MoveKind, targetIds: UnitId[]) {
     const attacker = this.views.get(source);
     if (!attacker || attacker.dead) return;
     const target = targetIds[0] !== undefined ? this.views.get(targetIds[0]) : undefined;
-    const kind: 'arrow' | 'blast' | 'melee' = attacker.cls === 'archer' ? 'arrow' : attacker.cls === 'mage' ? 'blast' : 'melee';
+    const kind: 'arrow' | 'blast' | 'melee' = moveKind === 'arrow' ? 'arrow' : moveKind === 'blast' ? 'blast' : 'melee';
     // Effects are side-colored by the ACTOR (same rule as the combat numbers).
     const actorFill = attacker.side === 'A' ? PALETTE.playerLine : PALETTE.enemyLine;
 
@@ -545,6 +570,58 @@ export class BattleScene extends Scene {
     icon.destroy();
     v.statuses.delete(spell);
     this.layoutStatusIcons(v);
+  }
+
+  /**
+   * The Guard stance marker (`{components.guard-marker}` 🛡, story 4.7,
+   * FR33) — same status-icon treatment as `applyStatusIcon`, but a dedicated
+   * field (not the `statuses` map): Guard isn't a Witch `SpellKind`. Driven
+   * entirely by `GuardRaised`/`GuardEnded` — no shell-side lifecycle rule.
+   * Re-raising while already live (a 2-action Guard row's 2nd action, engine
+   * resolve.ts) just leaves the marker in place — idempotent.
+   */
+  private applyGuardMarker(id: UnitId) {
+    const v = this.views.get(id);
+    if (!v || v.dead || v.guardMarker) return;
+    const icon = crispText(this, 0, -34, GUARD_MARKER_GLYPH, {
+      fontFamily: 'Arial Black',
+      fontSize: `${MIN_FONT_PX}px`,
+      color: GUARD_MARKER_COLOR,
+    }).setOrigin(0.5);
+    v.container.add(icon);
+    v.guardMarker = icon;
+    this.layoutStatusIcons(v); // shares the same left-of-sprite row as spell icons
+  }
+
+  /** Removes the Guard marker — fires on consume (a landed hit spent the charge) AND on unconsumed natural-end expiry (engine resolve.ts). */
+  private removeGuardMarker(id: UnitId) {
+    const v = this.views.get(id);
+    if (!v || !v.guardMarker) return;
+    v.guardMarker.destroy();
+    v.guardMarker = undefined;
+    this.layoutStatusIcons(v);
+  }
+
+  /**
+   * The "guard held" beat (story 4.7, FR33): a shield-colored ring pulse over
+   * the shielded target — distinct from `hurtFlash` (a block isn't a flinch)
+   * and from a dodge's plain whiff (a reduced/zero number still lands). ≥300ms,
+   * damped under reduced motion (UX-DR6).
+   */
+  private guardFlash(id: UnitId) {
+    const v = this.views.get(id);
+    if (!v || v.dead) return;
+    const ring = this.add
+      .circle(v.x, v.y - 8, 20, 0x000000, 0)
+      .setStrokeStyle(3, ISO_TILES.frontStroke)
+      .setDepth(950);
+    this.tweens.add({
+      targets: ring,
+      scale: this.reduceMotion ? 1.1 : 1.6,
+      alpha: { from: 1, to: 0 },
+      duration: 320,
+      onComplete: () => ring.destroy(),
+    });
   }
 
   /** The death beat: fade + topple (UNIT_TWEENS.death) from a clean rest pose, then the corpse LEAVES the lane — container destroyed, tile vacated. */

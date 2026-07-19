@@ -1,4 +1,4 @@
-import { ALL_CLASSES, BALANCE, dealsAdvantage, slotTotal } from '@lordly/engine';
+import { ALL_CLASSES, ALL_ROWS, BALANCE, dealsAdvantage, slotTotal } from '@lordly/engine';
 import type { ClassStats, UnitClass } from '@lordly/engine';
 import { CLASS_DISPLAY_NAME } from '../config/constants';
 import type { DraftedUnit } from './MatchState';
@@ -16,25 +16,53 @@ export interface RulesCard {
   beatenBy: UnitClass[];
   /** Per-row action counts (FR15), read from BALANCE. */
   actions: ClassStats['actions'];
+  /** Per-row MOVE — what the class actually DOES from each row (FR32/FR33, story 4.7), read from BALANCE. Uniform for most classes; Knight/Phalanx/Wizard/Sorceress vary. */
+  moves: ClassStats['moves'];
   /** The full stat block (FR15), read from BALANCE — the card shows a subset, this is the source. */
   stats: ClassStats;
 }
 
-/** Static flavor text per class (role + behavior). The NUMBERS live in BALANCE; only prose lives here. */
+/**
+ * Static flavor text per class (role + behavior). The NUMBERS live in
+ * BALANCE; only prose lives here. Story 4.7 (FR32/FR33): four classes' moves
+ * now vary by ROW (Knight, Phalanx, Wizard/mage, Sorceress) — their behavior
+ * line says so; the exact per-row breakdown renders separately from
+ * `RulesCard.moves` (DraftScene, for these four only — everyone else is
+ * uniform and the act-count line already covers row differences for them).
+ */
 const CLASS_TEXT: Record<UnitClass, { role: string; behavior: string }> = {
-  knight: { role: 'Front-line tank', behavior: 'Melee: strikes the nearest reachable enemy row' },
+  knight: { role: 'Front-line tank', behavior: 'Melee: nearest reachable row. Mid row Guards instead of attacking' },
   mercenary: { role: 'Neutral sellsword', behavior: 'Melee: nearest reachable enemy row, no class advantage' },
   archer: { role: 'Back-row sniper', behavior: 'Ranged: arcs over the front to hit the rearmost enemy row' },
-  mage: { role: 'Row artillery', behavior: 'Blast: hits every unit in the enemy row with the most units' },
+  mage: { role: 'Row artillery', behavior: 'Front: a weak staff jab. Mid/back: blasts the fullest enemy row' },
   cleric: { role: 'Support', behavior: 'Heals the most-hurt ally; a weak staff attack if none is hurt' },
   witch: { role: 'Control', behavior: 'Casts an element-keyed status on a rear enemy; deals no damage' },
   // Story 4.3 wave 1 — "start generic": role/stat variants of the shipped six.
   berserker: { role: 'Vanguard bruiser', behavior: 'Melee: nearest reachable enemy row; hits hard, lightly armored' },
-  phalanx: { role: 'Vanguard wall', behavior: 'Melee: nearest reachable enemy row; heavily armored, slow' },
+  phalanx: { role: 'Vanguard wall', behavior: 'Melee: nearest reachable row. Front/mid Guard instead of attacking' },
   ninja: { role: 'Skirmisher', behavior: 'Melee: nearest reachable enemy row; very fast, no class advantage' },
   valkyrie: { role: 'Skirmisher', behavior: 'Melee: nearest reachable enemy row; no class advantage' },
-  sorceress: { role: 'Row artillery', behavior: 'Blast: hits every unit in the enemy row with the most units' },
+  sorceress: { role: 'Row artillery', behavior: 'Front: a weak staff jab. Mid/back: blasts the fullest enemy row' },
 };
+
+/**
+ * Whether this class's move actually varies by row (FR32/FR33, story 4.7) —
+ * DraftScene reads this to decide whether to render the per-row breakdown line.
+ * DERIVED from BALANCE (not a hardcoded class set): the move table is TUNABLE
+ * (Danilo's queued per-class/row pass), so the single source of truth stays the
+ * data — a class that gains or loses a row-varied move flips this automatically.
+ */
+export function movesVaryByRow(cls: UnitClass): boolean {
+  const { moves } = BALANCE.classes[cls];
+  return new Set(ALL_ROWS.map((row) => moves[row])).size > 1;
+}
+
+/** A short player-facing label for one row's move (FR32/FR33) — Guard names its tier; everything else is Title Case. */
+export function moveLabel(move: ClassStats['moves']['front']): string {
+  if (move === 'guard-full') return 'Guard (full)';
+  if (move === 'guard-half') return 'Guard (half)';
+  return move.charAt(0).toUpperCase() + move.slice(1);
+}
 
 /** Whether another unit may still be drafted (FR1/FR30 — SLOT budget, never a unit count: AD-1). */
 export function canAddUnit(army: readonly DraftedUnit[]): boolean {
@@ -61,6 +89,7 @@ export function classRulesCard(cls: UnitClass): RulesCard {
     beats: ALL_CLASSES.filter((other) => dealsAdvantage(cls, other)),
     beatenBy: ALL_CLASSES.filter((other) => dealsAdvantage(other, cls)),
     actions: stats.actions,
+    moves: stats.moves,
     stats,
   };
 }

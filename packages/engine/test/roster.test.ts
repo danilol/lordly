@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/balance';
 import { resolveBattle } from '../src/resolve';
-import type { BattleEvent, Element, MatchSetup, Unit, UnitClass } from '../src/types';
+import { ALL_CLASSES, ALL_ROWS } from '../src/types';
+import type { BattleEvent, Element, MatchSetup, RowMove, Unit, UnitClass } from '../src/types';
 
 function setup(partial: Pick<MatchSetup, 'armies' | 'placements'>, seed = 7): MatchSetup {
   return {
@@ -679,5 +680,89 @@ describe('FR34 tactics wired through resolve (story 4.4)', () => {
       (e) => e.source === 'A:0',
     );
     expect(leaderCast?.target).toBe('B:1'); // the crowned unit, not the rearmost B:0
+  });
+});
+
+describe('FR32/FR33 per-row moves (story 4.7, dossier §4) — the frozen table is TOTAL over every (class, row)', () => {
+  // The dossier's start-generic table: only Knight, Phalanx, Wizard(mage),
+  // Sorceress vary their move by row — everyone else repeats one uniform kind
+  // in all three slots (row only changes ACTION COUNT for them, unchanged).
+  const FROZEN_TABLE: Record<UnitClass, { front: RowMove; mid: RowMove; back: RowMove }> = {
+    knight: { front: 'slash', mid: 'guard-half', back: 'slash' },
+    mercenary: { front: 'slash', mid: 'slash', back: 'slash' },
+    archer: { front: 'arrow', mid: 'arrow', back: 'arrow' },
+    mage: { front: 'staff', mid: 'blast', back: 'blast' },
+    cleric: { front: 'staff', mid: 'staff', back: 'staff' },
+    witch: { front: 'staff', mid: 'staff', back: 'staff' }, // unreachable — the Witch never strikes
+    berserker: { front: 'slash', mid: 'slash', back: 'slash' },
+    phalanx: { front: 'guard-full', mid: 'guard-full', back: 'bash' },
+    ninja: { front: 'slash', mid: 'slash', back: 'slash' },
+    valkyrie: { front: 'slash', mid: 'slash', back: 'slash' },
+    sorceress: { front: 'staff', mid: 'blast', back: 'blast' },
+  };
+
+  it('every (class, row) resolves the exact frozen move — total over ALL_CLASSES × ALL_ROWS, no gaps', () => {
+    for (const cls of ALL_CLASSES) {
+      for (const row of ALL_ROWS) {
+        expect(BALANCE.classes[cls].moves[row], `${cls}/${row}`).toBe(FROZEN_TABLE[cls][row]);
+      }
+    }
+  });
+
+  it('exactly Knight, Phalanx, Wizard(mage), and Sorceress vary their move by row — everyone else is uniform across all three rows', () => {
+    const varies = (cls: UnitClass) => new Set(ALL_ROWS.map((row) => BALANCE.classes[cls].moves[row])).size > 1;
+    const varying = ALL_CLASSES.filter(varies);
+    expect(new Set(varying)).toEqual(new Set(['knight', 'phalanx', 'mage', 'sorceress']));
+  });
+
+  it('the Wizard(mage)/Sorceress FRONT row uses MELEE targeting for its physical staff — distinct from mid/back row-blast (dossier §4)', () => {
+    // A:0 = mage, front-center (staff, melee-targeted); an enemy sits directly
+    // across from it AND another off to the side, out of melee reach — if the
+    // staff used global/ranged targeting (like the Cleric's fallback) it could
+    // reach the off-reach unit too; melee targeting proves it can't.
+    const log = resolveBattle(
+      setup({
+        armies: {
+          A: [
+            u('mage', 'fire', 'Aldric'),
+            u('cleric', 'water', 'Berold'),
+            u('cleric', 'wind', 'Cedric'),
+            u('cleric', 'earth', 'Doran'),
+            u('cleric', 'fire', 'Edmund'),
+          ],
+          B: [
+            u('knight', 'earth', 'Falk'),
+            u('knight', 'fire', 'Gorm'),
+            u('knight', 'water', 'Hask'),
+            u('knight', 'wind', 'Ivo'),
+            u('knight', 'earth', 'Jarek'),
+          ],
+        },
+        placements: {
+          A: [
+            { row: 'front', col: 'center' },
+            { row: 'back', col: 'left' },
+            { row: 'back', col: 'center' },
+            { row: 'back', col: 'right' },
+            { row: 'mid', col: 'left' },
+          ],
+          B: [
+            { row: 'front', col: 'center' }, // reachable — A:0's facing column
+            { row: 'back', col: 'center' }, // NOT reachable by melee, but IS by ranged/global — the discriminator
+            { row: 'front', col: 'left' },
+            { row: 'front', col: 'right' },
+            { row: 'mid', col: 'center' },
+          ],
+        },
+      }),
+    );
+    const staffHits = byType(log, 'UnitAttacked').filter((e) => e.source === 'A:0');
+    expect(staffHits.length).toBeGreaterThan(0);
+    for (const hit of staffHits) {
+      expect(hit.kind).toBe('staff');
+      // Melee targeting (FR7 reach + FR8 blockade) never picks the sole
+      // back-row knight (B:1) — only the nearest-row reachable knights.
+      expect(hit.targets.map((t) => t.unit)).not.toContain('B:1');
+    }
   });
 });

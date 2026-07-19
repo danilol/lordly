@@ -243,3 +243,80 @@ describe('outcome invariant holds across ARBITRARY setups (matchSetupArb) — th
     expect(sawDodge, 'no dodge observed across the whole matchSetupArb property run').toBe(true);
   });
 });
+
+/**
+ * Story 4.7 — the Guard shield (`guard.test.ts` covers it in full) is a
+ * post-pipeline damage reduction that runs strictly AFTER `rollHit`'s A3/A4
+ * draws (and touches no stream itself — `applyGuard` takes no `Stream`
+ * argument at all). This pins that the frozen draw table is UNMOVED even
+ * when a hit lands on a Guard-shielded cell: a manual replay of "E1 once,
+ * then A3+A4 per physical single-target `UnitAttacked`, in log order" must
+ * predict EVERY outcome exactly — if Guard secretly consumed a draw, the
+ * replay would desync starting at the very next hit and the predictions
+ * below would stop matching.
+ */
+describe('a guarded hit consumes ZERO extra `battle` draws (ADR 0003, story 4.7)', () => {
+  it('manually replaying E1 + 2 draws/hit predicts every outcome in a battle where a Half Guard fires', () => {
+    // A:0 = Knight mid-center (guard-half); B fields five clerics whose staff
+    // fallback (physical, ranged) pokes A:0 — some hits land guarded, some
+    // don't, but EVERY UnitAttacked here is a physical single-target hit
+    // (no blast, no confusion) — the simplest possible draw-count probe.
+    const s: MatchSetup = {
+      seed: 2,
+      balanceVersion: BALANCE.version,
+      mode: 'single',
+      tactics: { A: 'autonomous', B: 'leader' },
+      leaders: { A: 0, B: 0 },
+      armies: {
+        A: [
+          u('knight', 'fire', 'Bram'),
+          u('archer', 'water', 'Vess'),
+          u('knight', 'wind', 'Cedric'),
+          u('knight', 'earth', 'Doran'),
+          u('mercenary', 'fire', 'Edmund'),
+        ],
+        B: [u('cleric', 'earth', 'Falk'), u('cleric', 'fire', 'Gorm'), u('cleric', 'water', 'Hask'), u('cleric', 'wind', 'Ivo'), u('cleric', 'earth', 'Jarek')],
+      },
+      placements: {
+        A: [
+          { row: 'mid', col: 'center' },
+          { row: 'front', col: 'center' },
+          { row: 'front', col: 'left' },
+          { row: 'front', col: 'right' },
+          { row: 'mid', col: 'left' },
+        ],
+        B: [
+          { row: 'back', col: 'center' },
+          { row: 'back', col: 'left' },
+          { row: 'back', col: 'right' },
+          { row: 'mid', col: 'left' },
+          { row: 'mid', col: 'right' },
+        ],
+      },
+    };
+    const log = resolveBattle(s);
+    const roster = new Map<string, Unit['class']>();
+    const started = log.events[0];
+    if (started?.type === 'BattleStarted') for (const un of started.units) roster.set(un.id, un.class);
+
+    const attacks = log.events.filter((e): e is UnitAttacked => e.type === 'UnitAttacked');
+    expect(attacks.length).toBeGreaterThan(0);
+    expect(attacks.some((a) => a.redirectedFrom !== undefined)).toBe(true); // at least one guarded hit to make the pin meaningful
+
+    const stream = createStreams(s.seed).battle;
+    nextInt(stream, 0, 1); // E1 — the engagement tie flip, always first
+    for (const atk of attacks) {
+      expect(atk.kind).not.toBe('blast'); // sanity: this fixture is all-physical, single-target
+      const target = atk.targets[0];
+      if (!target) continue;
+      const attackerClass = roster.get(atk.source) as Unit['class'];
+      const defenderClass = roster.get(target.unit) as Unit['class'];
+      const draw1 = nextInt(stream, 0, 99); // A3 dodge (defender)
+      const draw2 = nextInt(stream, 0, 99); // A4 crit (attacker)
+      const dodged = draw1 < threshold(defenderClass);
+      const crit = draw2 < threshold(attackerClass);
+      const expectedOutcome = dodged ? 'dodged' : crit ? 'crit' : 'hit';
+      expect(target.outcome, `${atk.source}>${target.unit}`).toBe(expectedOutcome);
+    }
+  });
+});

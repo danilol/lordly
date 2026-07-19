@@ -99,6 +99,71 @@ describe('FR16 confusion misfires (seeded, probed pins)', () => {
     }
   });
 
+  it('a confused FRONT-row Wizard misfires as a single-target STAFF on an ally, NOT a self-blast (story 4.7 review — row-consistent)', () => {
+    // A front-row mage's normal action is a physical single-target staff (story
+    // 4.7), so its misfire must be a single-target staff on a random ally — not
+    // the mid/back mage's self-blast. Getting the enemy witch to confuse a FRONT
+    // mage needs the rearmost rows cleared first (she snipes rearmost-unafflicted):
+    // A's two back archers kill B's two back clerics over the opening engagements,
+    // after which the witch's cast reaches B's now-rearmost front row (the mage).
+    const log = resolveBattle({
+      // Built inline (not the single-mode `setup` helper): the front mage only
+      // becomes rearmost — and thus confusable — once B's back clerics die, which
+      // takes several WIPEOUT engagements.
+      seed: 1, // probed: on this seed the confused front mage B:0 misfires as a staff onto an ally
+      balanceVersion: BALANCE.version,
+      mode: 'wipeout',
+      tactics: { A: 'autonomous', B: 'autonomous' },
+      leaders: { A: 0, B: 0 },
+      armies: {
+        A: [
+          witchA,
+          { class: 'archer', element: 'fire', name: 'Lyra' },
+          { class: 'archer', element: 'water', name: 'Vess' },
+          { class: 'knight', element: 'earth', name: 'Thor' },
+          { class: 'knight', element: 'fire', name: 'Bram' },
+        ],
+        B: [
+          { class: 'mage', element: 'earth', name: 'Vexalia' }, // B:0 front-center → 'staff' move
+          { class: 'knight', element: 'fire', name: 'Hargen' },
+          { class: 'knight', element: 'water', name: 'Ulf' },
+          { class: 'cleric', element: 'wind', name: 'Miriel' }, // back — the archers snipe it
+          { class: 'cleric', element: 'earth', name: 'Sela' }, // back — the archers snipe it
+        ],
+      },
+      placements: {
+        A: [
+          { row: 'back', col: 'center' },
+          { row: 'back', col: 'left' },
+          { row: 'back', col: 'right' },
+          { row: 'front', col: 'left' },
+          { row: 'front', col: 'right' },
+        ],
+        B: [
+          { row: 'front', col: 'center' },
+          { row: 'front', col: 'left' },
+          { row: 'front', col: 'right' },
+          { row: 'back', col: 'center' },
+          { row: 'back', col: 'left' },
+        ],
+      },
+    });
+    const pairs = misfirePairs(log);
+    const staffMisfire = pairs.find(([m, e]) => m.type === 'ActionMisfired' && m.unit === 'B:0' && e.type === 'UnitAttacked' && e.kind === 'staff');
+    expect(staffMisfire, 'a confused front mage should produce a single-target staff misfire').toBeDefined();
+    if (staffMisfire && staffMisfire[1].type === 'UnitAttacked') {
+      const attack = staffMisfire[1];
+      expect(attack.source).toBe('B:0');
+      expect(attack.targets).toHaveLength(1); // single-target staff, NOT a multi-target self-blast
+      const target = attack.targets[0];
+      expect(target?.unit.startsWith('B')).toBe(true); // friendly fire
+      expect(target?.unit).not.toBe('B:0'); // misfire ally picks exclude self
+    }
+    // And it never self-blasts: no multi-target UnitAttacked from the front mage.
+    const selfBlast = log.events.find((e) => e.type === 'UnitAttacked' && e.source === 'B:0' && e.targets.length > 1);
+    expect(selfBlast, 'a front mage never self-blasts — its move is a staff').toBeUndefined();
+  });
+
   it('a confused MELEE unit strikes a random living ALLY (never itself)', () => {
     const log = resolveBattle(
       setup(

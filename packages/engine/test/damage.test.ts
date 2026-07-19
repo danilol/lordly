@@ -38,6 +38,22 @@ describe('physicalDamage (FR14/FR15, balance v1)', () => {
   });
 });
 
+describe('story 4.7 — the Wizard/Sorceress FRONT-row staff is PHYSICAL (STR-based), not the magic blast', () => {
+  // Wizard(mage)/Sorceress STR is 6 — far below any class's floor(VIT/2) — so
+  // the staff clamps to minDamage against almost every defender; only the
+  // lowest-VIT casters (8) leave a small positive base before RPS.
+  it('clamps to minDamage against high/mid-VIT defenders regardless of role relation: mage/sorceress staff → knight = 1 (6 − 14 = −8, ×3/2 advantage still clamps)', () => {
+    expect(physicalDamage('mage', 'knight')).toBe(1);
+    expect(physicalDamage('sorceress', 'knight')).toBe(1);
+  });
+
+  it('a real positive base survives against the lowest-VIT casters: mage staff → mage/sorceress = 2 (6 − floor(8/2) = 2, neutral — no artillery-vs-artillery relation)', () => {
+    expect(physicalDamage('mage', 'mage')).toBe(2);
+    expect(physicalDamage('mage', 'sorceress')).toBe(2);
+    expect(physicalDamage('sorceress', 'mage')).toBe(2);
+  });
+});
+
 describe('the hunt is ONE-WAY (FR14 amendment): hunted casters take no penalty attacking the archer', () => {
   it('cleric staff → archer = 2 (8 − 6, NEUTRAL — a symmetric ×3/4 penalty would floor it to 1)', () => {
     expect(physicalDamage('cleric', 'archer')).toBe(2);

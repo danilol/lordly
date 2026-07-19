@@ -6,7 +6,7 @@ import { createStreams, nextInt } from './rng';
 import type { Stream } from './rng';
 import { selectBlastRow, selectMeleeTarget, selectRangedTarget } from './targeting';
 import { ALL_COLS, ALL_ROWS, LOG_VERSION } from './types';
-import type { AttackTarget, BattleEvent, BattleLog, MatchSetup, MoveKind, Side, SpellKind, UnitClass, UnitId, UnitSnapshot } from './types';
+import type { AttackTarget, BattleEvent, BattleLog, MatchSetup, MoveKind, Side, SpellKind, UnitAttacked, UnitClass, UnitId, UnitSnapshot } from './types';
 import { validateMatchSetup } from './validate';
 
 /**
@@ -30,6 +30,15 @@ interface UnitState {
   /** Immutable copy of `snapshot.maxHp` so judging (FR18) reads this state directly. */
   maxHp: number;
   actionsLeft: number;
+  /**
+   * A live one-shot Guard charge (FR33, story 4.7, dossier §4), or `undefined`
+   * when not guarding. Set when the unit's (class, row) move is `guard-full`/
+   * `guard-half`; consumed by the next landed physical single-target hit on
+   * this cell or the ally in front of it, or expired unconsumed at the
+   * engagement's natural end (mirrors poison's persistence seam, but Guard
+   * itself never persists PAST that seam — always re-armed by acting again).
+   */
+  guard: 'full' | 'half' | undefined;
   /** Active Witch spells on this unit (FR16); same spell never stacks. */
   statuses: Set<SpellKind>;
   /** The spell this unit casts if it is a Witch (keyed to her element — FR16). */
@@ -175,6 +184,18 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
           }
         }
       }
+      // FR33 (story 4.7, dossier §4): a Guard charge unconsumed by a landed
+      // hit expires at the engagement's NATURAL end — explicit, log-driven,
+      // no shell lifecycle rule (the story-2.2 StatusCleared lesson, applied
+      // from birth). Runs for every engagement (including the battle's last),
+      // guarded by the same `wiped === undefined` a mid-pass wipe already
+      // short-circuits (mirrors poison's skip-on-wipe).
+      for (const unit of units) {
+        if (unit.alive && unit.guard !== undefined) {
+          events.push({ type: 'GuardEnded', unit: unit.id });
+          unit.guard = undefined;
+        }
+      }
       wiped = wipedSide(units);
     }
 
@@ -241,40 +262,54 @@ function act(unit: UnitState, units: UnitState[], battle: Stream, setup: MatchSe
   const physical = leaderFallen.A || leaderFallen.B ? leaderPenaltyPhysical(unit.side, enemySide, leaderFallen) : physicalDamage;
 
   switch (unit.class) {
-    // Vanguard + Skirmisher all melee the nearest reachable target (story 4.3
-    // "start generic" — Berserker/Phalanx are Vanguard, Ninja/Valkyrie are
-    // Skirmisher; their unique moves/Guard arrive in 4.7). Role only shifts the
-    // RPS multiplier, applied inside damagePipeline.
+    // Vanguard + Skirmisher act by their (class, row) MOVE (story 4.7, dossier
+    // §4 — the table is DATA, not code): a Guard row raises a shield instead
+    // of attacking; every other row melees the nearest reachable target with
+    // its row's move kind. Role only shifts the RPS multiplier, applied inside
+    // damagePipeline.
     case 'knight':
     case 'mercenary':
     case 'berserker':
     case 'phalanx':
     case 'ninja':
     case 'valkyrie': {
+      const move = BALANCE.classes[unit.class].moves[unit.snapshot.placement.row];
+      if (move === 'guard-full' || move === 'guard-half') return raiseGuard(unit, move === 'guard-full' ? 'full' : 'half');
       const idx = selectMeleeTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
       if (idx === undefined) return skip(unit);
       const target = enemies[idx] as UnitState;
-      return strike(unit, [target], physical, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
+      return strike(unit, [target], physical, move, units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
     }
     case 'archer': {
+      // Archer's move is row-uniform ('arrow' in every slot) — looked up from
+      // the table anyway so a future per-row archer tweak is data-only.
+      const move = BALANCE.classes[unit.class].moves[unit.snapshot.placement.row] as MoveKind;
       const idx = selectRangedTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
       if (idx === undefined) return skip(unit);
       const target = enemies[idx] as UnitState;
-      return strike(unit, [target], physical, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
+      return strike(unit, [target], physical, move, units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
     }
-    // Artillery row-blast (Sorceress = Wizard's Artillery twin, story 4.3).
-    // Tactic interaction (D-2c): under `leader` the blast targets the enemy
-    // leader's ROW (AoE treats the leader as the focal point); under every
-    // other tactic — and when the leader is not alive — it keeps its own rule
-    // (row with most living, tie rearmost).
+    // Artillery: a Wizard/Sorceress FRONT row is a physical, MELEE-targeted
+    // staff attack (dossier §4 — distinct from the Cleric's global staff
+    // fallback); mid/back keep the row-blast. Tactic interaction (D-2c): under
+    // `leader` the blast targets the enemy leader's ROW (AoE treats the leader
+    // as the focal point); under every other tactic — and when the leader is
+    // not alive — it keeps its own rule (row with most living, tie rearmost).
     case 'mage':
     case 'sorceress': {
+      const move = BALANCE.classes[unit.class].moves[unit.snapshot.placement.row];
+      if (move === 'staff') {
+        const idx = selectMeleeTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
+        if (idx === undefined) return skip(unit);
+        const target = enemies[idx] as UnitState;
+        return strike(unit, [target], physical, 'staff', units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
+      }
       const leaderRow = tactic === 'leader' ? enemies.find((e) => e.id === enemyLeaderId && e.alive)?.rowIndex : undefined;
       const row = leaderRow ?? selectBlastRow(enemies);
       if (row === undefined) return skip(unit);
       const targets = enemies.filter((e) => e.alive && e.rowIndex === row);
-      // Blast is MAGIC — no leader-fall penalty (dossier §4: physical only).
-      return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode), setup.leaders, leaderFallen);
+      // Blast is MAGIC — no leader-fall penalty, no Guard (dossier §4: both physical only).
+      return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode), 'blast', units, setup.leaders, leaderFallen);
     }
     case 'cleric': {
       // Heals ignore tactics entirely (dossier §4). The staff fallback is a
@@ -289,10 +324,11 @@ function act(unit: UnitState, units: UnitState[], battle: Stream, setup: MatchSe
       // Nobody damaged: the weak STR staff attack with magic targeting (FR11/FR9).
       // The staff is PHYSICAL (STR-based) — it carries the sober-package penalty
       // AND the crit/dodge draws (ADR 0003: "staff bonk" is a physical hit).
+      const move = BALANCE.classes[unit.class].moves[unit.snapshot.placement.row] as MoveKind; // row-uniform 'staff'
       const idx = selectRangedTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
       if (idx === undefined) return skip(unit);
       const target = enemies[idx] as UnitState;
-      return strike(unit, [target], physical, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
+      return strike(unit, [target], physical, move, units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
     }
     case 'witch': {
       // Prefer-unafflicted (FR12) filters the legal list BEFORE the tactic sort
@@ -353,17 +389,29 @@ function misfire(unit: UnitState, units: UnitState[], battle: Stream, setup: Mat
       // physical strike on the ally — ADR 0003's frozen order (a misfired
       // physical attack onto an ally is an A3/A4 draw site).
       const target = allies[nextInt(battle, 0, allies.length - 1)] as UnitState;
-      return strike(unit, [target], physical, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
+      return strike(unit, [target], physical, attackMoveOf(unit), units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
     }
     case 'mage':
     case 'sorceress': {
+      // A FRONT-row Wizard/Sorceress's normal action is a physical single-target
+      // staff (story 4.7), so its misfire is row-consistent: a physical strike on
+      // a random ally, exactly like the melee misfire above — an A2 (redirect
+      // target) + A3/A4 (dodge/crit) draw site (ADR 0003 already classes a
+      // misfired physical single-target attack this way; NO frozen-table change).
+      // Mid/back rows keep the magic self-blast (review decision, story 4.7).
+      const move = BALANCE.classes[unit.class].moves[unit.snapshot.placement.row];
+      if (move === 'staff') {
+        if (allies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
+        const target = allies[nextInt(battle, 0, allies.length - 1)] as UnitState;
+        return strike(unit, [target], physical, 'staff', units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
+      }
       // Blasts its OWN fullest row (recorded decision: the mage itself counts
-      // and can be struck by its own blast). Magic — no leader-fall penalty.
+      // and can be struck by its own blast). Magic — no leader-fall penalty, no draws.
       const own = units.filter((u) => u.side === unit.side);
       const row = selectBlastRow(own);
       if (row === undefined) return [{ type: 'ActionFizzled', unit: unit.id }];
       const targets = own.filter((u) => u.alive && u.rowIndex === row);
-      return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode), setup.leaders, leaderFallen);
+      return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode), 'blast', units, setup.leaders, leaderFallen);
     }
     case 'cleric': {
       if (enemies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
@@ -388,26 +436,56 @@ function skip(unit: UnitState): BattleEvent[] {
 }
 
 /**
- * The move kind each class's attack carries in wave 1 (FR32, story 4.2) —
- * semantically true today because moves are class-uniform; story 4.7's
- * row-varied move table replaces this lookup with per-row derivation.
- * The Witch never strikes (she casts/fizzles), so her entry is unreachable —
- * kept so the map stays total over `UnitClass`.
+ * Raises a unit's one-shot Guard charge (FR33, story 4.7, dossier §4): the
+ * action is spent with no attack, no `UnitAttacked`. Re-raising (a 2-action
+ * Phalanx front's 2nd action, or a later pass after the charge was already
+ * spent) sets a FRESH charge and emits `GuardRaised` again — legal and
+ * expected (the charge is one-shot, not "already guarding, skip").
  */
-const CLASS_MOVE_KIND: Record<UnitClass, MoveKind> = {
-  knight: 'slash',
-  mercenary: 'slash',
-  archer: 'arrow',
-  mage: 'blast',
-  cleric: 'staff',
-  witch: 'staff',
-  // Story 4.3 newcomers: the melee Vanguard/Skirmisher pair slash; the Artillery Sorceress blasts.
-  berserker: 'slash',
-  phalanx: 'slash',
-  ninja: 'slash',
-  valkyrie: 'slash',
-  sorceress: 'blast',
-};
+function raiseGuard(unit: UnitState, tier: 'full' | 'half'): BattleEvent[] {
+  unit.guard = tier;
+  return [{ type: 'GuardRaised', unit: unit.id }];
+}
+
+/**
+ * The physical attack kind a confused unit's misfire swings with (FR16/FR32).
+ * Normally the acting unit's own row move; a unit whose row RAISES Guard
+ * (Knight-mid, Phalanx-front/mid) has no attack shape to misfire with — the
+ * confusion misfire branch keeps its established "always a melee-style
+ * strike" behavior (story 4.7 doesn't special-case a guarding confusion), so
+ * it falls back to the class's own BACK-row move, which the frozen table
+ * always keeps as a real attack (Knight back = slash, Phalanx back = bash).
+ */
+function attackMoveOf(unit: UnitState): MoveKind {
+  const moves = BALANCE.classes[unit.class].moves;
+  const move = moves[unit.snapshot.placement.row];
+  return move === 'guard-full' || move === 'guard-half' ? (moves.back as MoveKind) : move;
+}
+
+/**
+ * The FR33 Full/Half Guard shield (story 4.7, dossier §4 — REVISED by Danilo
+ * 2026-07-19, supersedes the dossier's original redirect design): checked for
+ * every LANDED physical single-target hit, as the OUTERMOST post-pipeline
+ * step. A cell is shielded when the target itself holds a live Guard charge,
+ * OR a living ally directly IN FRONT of it (row − 1, same column, same side)
+ * does. NOT a redirect: `target` stays the target and takes the
+ * reduced/zero number; the guard takes nothing. Full negates (`0`, exempt
+ * from the minDamage floor, like a dodge); Half halves, re-clamped to
+ * `minDamage`. Consumes the charge (`GuardEnded`) — a dodge never reaches
+ * here (the caller only calls this on a landed hit).
+ */
+function applyGuard(damage: number, target: UnitState, units: readonly UnitState[]): { damage: number; guardedBy?: UnitId; ended?: BattleEvent } {
+  const guardian =
+    target.guard !== undefined
+      ? target
+      : units.find((u) => u.side === target.side && u.alive && u.guard !== undefined && u.rowIndex === target.rowIndex - 1 && u.colIndex === target.colIndex);
+  if (guardian === undefined) return { damage };
+  const tier = guardian.guard as 'full' | 'half';
+  const reduced =
+    tier === 'full' ? 0 : Math.max(BALANCE.formulas.minDamage, Math.floor((damage * BALANCE.formulas.guardHalf.num) / BALANCE.formulas.guardHalf.den));
+  guardian.guard = undefined;
+  return { damage: reduced, guardedBy: guardian.id, ended: { type: 'GuardEnded', unit: guardian.id } };
+}
 
 /**
  * The frozen percent range for the crit/dodge draws (ADR 0003 §Chances,
@@ -447,17 +525,30 @@ export function rollHit(attacker: UnitClass, defender: UnitClass, battle: Stream
  * Damage runs the FIXED pipeline with the source's Weaken status; each kill
  * appends a `UnitDied` after the single `UnitAttacked`, in target order.
  *
+ * `kind` (story 4.7) is the move's physical shape, resolved by the CALLER from
+ * the (class, row) table — `strike` never re-derives it (AD-2 applies inside
+ * the engine too: one lookup site).
+ *
  * `roll` (story 4.6) is present ONLY for a physical single-target hit — the
  * pre-drawn ADR 0003 dodge/crit result. A dodge reports `damage: 0`,
- * `outcome: 'dodged'`, no HP change, no death; a crit passes the ×3/2 flag to
- * the (physical) `formula` and reports `outcome: 'crit'`. With no `roll`
- * (blast/magic) every target resolves `outcome: 'hit'` — magic never crits or
- * is dodged (ADR 0003).
+ * `outcome: 'dodged'`, no HP change, no death, no Guard consumption; a crit
+ * passes the ×3/2 flag to the (physical) `formula` and reports `outcome:
+ * 'crit'`. With no `roll` (blast/magic) every target resolves `outcome: 'hit'`
+ * — magic never crits, is dodged, or is Guarded (ADR 0003, dossier §4).
+ *
+ * Guard (FR33, story 4.7): `roll !== undefined` is EXACTLY the physical
+ * single-target eligibility Guard needs too, so a landed hit in that set is
+ * checked against `applyGuard` — the OUTERMOST post-pipeline step, after
+ * `formula` (which already ran RPS/crit/Weaken/leader-fall/re-clamp) returns.
+ * NOT a redirect: `target` stays `targets[].unit`; `redirectedFrom` only
+ * attributes the block to the guarding unit for the shell.
  */
 function strike(
   source: UnitState,
   targets: UnitState[],
   formula: (a: UnitClass, d: UnitClass, weakened?: boolean, crit?: boolean) => number,
+  kind: MoveKind,
+  units: readonly UnitState[],
   leaders: MatchSetup['leaders'],
   leaderFallen: Record<Side, boolean>,
   roll?: { dodged: boolean; crit: boolean },
@@ -465,14 +556,25 @@ function strike(
   const weakened = source.statuses.has('weaken');
   const hits: AttackTarget[] = [];
   const deaths: BattleEvent[] = [];
+  const guardEvents: BattleEvent[] = [];
+  let redirectedFrom: UnitId | undefined;
   for (const target of targets) {
     if (roll?.dodged) {
-      // A dodge negates the hit entirely: no damage, no HP change, no death.
+      // A dodge negates the hit entirely: no damage, no HP change, no death,
+      // no Guard consumption (only a LANDED hit spends a charge).
       hits.push({ unit: target.id, damage: 0, hpAfter: target.hp, outcome: 'dodged' });
       continue;
     }
     const crit = roll?.crit ?? false;
-    const damage = formula(source.class, target.class, weakened, crit);
+    let damage = formula(source.class, target.class, weakened, crit);
+    if (roll !== undefined) {
+      const guarded = applyGuard(damage, target, units);
+      damage = guarded.damage;
+      if (guarded.guardedBy !== undefined) {
+        redirectedFrom = guarded.guardedBy; // single-target only — at most one guarded target per strike
+        if (guarded.ended !== undefined) guardEvents.push(guarded.ended);
+      }
+    }
     target.hp = Math.max(0, target.hp - damage);
     hits.push({ unit: target.id, damage, hpAfter: target.hp, outcome: crit ? 'crit' : 'hit' });
     if (target.hp === 0 && target.alive) {
@@ -490,7 +592,9 @@ function strike(
       }
     }
   }
-  return [{ type: 'UnitAttacked', source: source.id, kind: CLASS_MOVE_KIND[source.class], targets: hits }, ...deaths];
+  const attacked: UnitAttacked = { type: 'UnitAttacked', source: source.id, kind, targets: hits };
+  if (redirectedFrom !== undefined) attacked.redirectedFrom = redirectedFrom;
+  return [attacked, ...guardEvents, ...deaths];
 }
 
 /**
@@ -649,6 +753,7 @@ function buildUnits(setup: MatchSetup): UnitState[] {
         hp: stats.hp,
         maxHp: stats.hp,
         actionsLeft: stats.actions[placement.row],
+        guard: undefined,
         statuses: new Set(),
         witchSpell: BALANCE.elementSpells[unit.element],
         snapshot: {

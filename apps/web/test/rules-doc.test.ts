@@ -93,6 +93,48 @@ describe('docs/rules.md drift guard (story 2.4, AC2/AC6 — numbers are law)', (
   });
 });
 
+describe('docs/rules.md drift guard — per-row moves and Guard (story 4.7, FR32/FR33)', () => {
+  it('names exactly the classes/rows the frozen move table (BALANCE.classes[*].moves) actually varies', () => {
+    // Knight: mid row Guards (half); front/back stay slash — pinned by the
+    // "Mid row Guards instead of attacking" behavior string (drift-checked
+    // against classRulesCard above) PLUS the data fact itself here.
+    expect(BALANCE.classes.knight.moves.mid).toBe('guard-half');
+    expect(BALANCE.classes.knight.moves.front).toBe('slash');
+    expect(BALANCE.classes.knight.moves.back).toBe('slash');
+    expect(raw).toContain('Knight in the mid row');
+
+    // Phalanx: front+mid Guard (full); back bashes.
+    expect(BALANCE.classes.phalanx.moves.front).toBe('guard-full');
+    expect(BALANCE.classes.phalanx.moves.mid).toBe('guard-full');
+    expect(BALANCE.classes.phalanx.moves.back).toBe('bash');
+    expect(raw).toContain('a Phalanx in the front or mid row');
+
+    // Wizard(mage)/Sorceress: front is a physical melee-targeted staff jab, not the blast.
+    for (const cls of ['mage', 'sorceress'] as const) {
+      expect(BALANCE.classes[cls].moves.front, cls).toBe('staff');
+      expect(BALANCE.classes[cls].moves.mid, cls).toBe('blast');
+      expect(BALANCE.classes[cls].moves.back, cls).toBe('blast');
+    }
+    expect(raw).toContain('front row swings a weak, melee-targeted staff jab');
+
+    // Every OTHER class stays uniform across all three rows — the doc never
+    // claims a row-dependent move for them.
+    for (const cls of ALL_CLASSES) {
+      if (['knight', 'phalanx', 'mage', 'sorceress'].includes(cls)) continue;
+      const { front, mid, back } = BALANCE.classes[cls].moves;
+      expect(front, cls).toBe(mid);
+      expect(mid, cls).toBe(back);
+    }
+  });
+
+  it('states the Full/Half Guard shield with the exact Half ratio (BALANCE.formulas.guardHalf)', () => {
+    expect(raw).toContain('negates it completely'); // Full — no ratio needed, damage is exactly 0
+    const half = BALANCE.formulas.guardHalf.num / BALANCE.formulas.guardHalf.den;
+    expect(half, 'guardHalf must be exactly 1/2 for "halves" to read true').toBe(0.5);
+    expect(raw).toContain("Knight's halves it");
+  });
+});
+
 describe('docs/rules.md drift guard — the review additions (every STATED number is law)', () => {
   it('the speed-order sentence lists classes exactly as balance AGI sorts them', () => {
     const order = [...ALL_CLASSES]

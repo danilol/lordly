@@ -62,6 +62,34 @@ describe('narration builder — the Log panel text (AC7, AD-2; names from story 
     expect(lines).toEqual(['Kain (KNI) struck at Lyra (ARC) — dodged!']);
   });
 
+  it('narrates a Full Guard block distinctly — zero damage, names the guardian (story 4.7)', () => {
+    const { lines } = run([
+      started,
+      {
+        type: 'UnitAttacked',
+        source: 'A:0',
+        kind: 'arrow',
+        redirectedFrom: 'B:2',
+        targets: [{ unit: 'B:1', damage: 0, hpAfter: 78, outcome: 'hit' }],
+      },
+    ]);
+    expect(lines).toEqual(["Kain (KNI) struck Lyra (ARC) — Sela (CLE)'s guard holds, fully blocked!"]);
+  });
+
+  it('narrates a Half Guard block distinctly — the reduced damage AND before→after HP, names the guardian (story 4.7)', () => {
+    const { lines } = run([
+      started,
+      {
+        type: 'UnitAttacked',
+        source: 'A:0',
+        kind: 'arrow',
+        redirectedFrom: 'B:2',
+        targets: [{ unit: 'B:1', damage: 6, hpAfter: 72, outcome: 'hit' }],
+      },
+    ]);
+    expect(lines).toEqual(["Kain (KNI) struck Lyra (ARC) — Sela (CLE)'s guard halves it to 6 — 78→72 HP"]);
+  });
+
   it('falls back to the pre-era "Class id" form for a NAMELESS roster (old snapshots render code-only)', () => {
     const nameless: BattleEvent = {
       type: 'BattleStarted',
@@ -132,7 +160,7 @@ describe('narration builder — the Log panel text (AC7, AD-2; names from story 
     ]);
   });
 
-  it('narrates the v4 members (story 4.2): StatusCleared now, Guard/LeaderFell arms ready for 4.5/4.7', () => {
+  it('narrates the v4 members (story 4.2): StatusCleared/Guard/LeaderFell all land now (4.5 shipped LeaderFell, 4.7 ships Guard)', () => {
     const { lines } = run([
       started,
       { type: 'StatusCleared', unit: 'B:1', spell: 'sleep' },

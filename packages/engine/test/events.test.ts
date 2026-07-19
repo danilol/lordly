@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/balance';
 import { resolveBattle } from '../src/resolve';
 import { LOG_VERSION } from '../src/types';
-import type { BattleEvent, BattleLog, MatchSetup, UnitClass, UnitId } from '../src/types';
+import type { BattleEvent, BattleLog, MatchSetup, MoveKind, Row, UnitClass, UnitId } from '../src/types';
 
 describe('BattleLog event envelope (AD-12)', () => {
   it('LOG_VERSION is 4 (the squad-era union extension — story 4.2, AD-15)', () => {
@@ -123,30 +123,27 @@ function wipeoutSetup(seed: number): MatchSetup {
 describe('the 4.2 emissions (AC4 — kind/outcome, actionsRemaining, StatusCleared)', () => {
   const log = resolveBattle(wipeoutSetup(1234));
   const roster = new Map<UnitId, UnitClass>();
+  const rowOf = new Map<UnitId, Row>();
   const started = log.events[0];
-  if (started?.type === 'BattleStarted') for (const u of started.units) roster.set(u.id, u.class);
+  if (started?.type === 'BattleStarted') {
+    for (const u of started.units) {
+      roster.set(u.id, u.class);
+      rowOf.set(u.id, u.placement.row);
+    }
+  }
 
-  const EXPECTED_KIND: Record<UnitClass, string> = {
-    knight: 'slash',
-    mercenary: 'slash',
-    archer: 'arrow',
-    mage: 'blast',
-    cleric: 'staff',
-    witch: 'staff', // unreachable in 4.2 (witches cast, never strike) — the map stays total
-    berserker: 'slash',
-    phalanx: 'slash',
-    ninja: 'slash',
-    valkyrie: 'slash',
-    sorceress: 'blast',
-  };
-
-  it('every UnitAttacked carries the class-derived kind; outcomes are the emitted set (4.6 crit/dodge landed, never the reserved "missed")', () => {
+  it('every UnitAttacked carries the per-(class,row) move kind (story 4.7); outcomes are the emitted set (4.6 crit/dodge landed, never the reserved "missed")', () => {
     const attacks = log.events.filter((e) => e.type === 'UnitAttacked');
     expect(attacks.length).toBeGreaterThan(0);
     for (const e of attacks) {
       if (e.type !== 'UnitAttacked') continue;
-      expect(e.kind).toBe(EXPECTED_KIND[roster.get(e.source) as UnitClass]);
-      expect(e.redirectedFrom).toBeUndefined(); // Guard interception is 4.7's
+      const cls = roster.get(e.source) as UnitClass;
+      const row = rowOf.get(e.source) as Row;
+      expect(e.kind).toBe(BALANCE.classes[cls].moves[row] as MoveKind);
+      // Story 4.7: `redirectedFrom` is now set when a Guard shield reduced
+      // this landed hit — its value must name a REAL unit (the guardian), not
+      // just be undefined (the old 4.2-era assertion, superseded).
+      if (e.redirectedFrom !== undefined) expect(roster.has(e.redirectedFrom)).toBe(true);
       for (const t of e.targets) {
         // Story 4.6: physical hits now resolve hit/crit/dodged; magic (blast)
         // stays 'hit'. 'missed' is reserved and never emitted in wave 1.

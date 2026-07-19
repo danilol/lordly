@@ -165,9 +165,18 @@ export const LOG_VERSION = 4;
 /**
  * The physical shape of an attack (FR32, story 4.2): the renderer's flavor
  * reads THIS, never the class — story 4.7's row-varied moves make class
- * inference wrong. 'bash' joins with the Phalanx (4.3/4.7).
+ * inference wrong. 'bash' joins with the Phalanx (4.7).
  */
-export type MoveKind = 'slash' | 'arrow' | 'blast' | 'staff';
+export type MoveKind = 'slash' | 'arrow' | 'blast' | 'staff' | 'bash';
+
+/**
+ * A class's per-row move (FR32/FR33, story 4.7, dossier §4 — DATA, not code):
+ * either an attack (`MoveKind`, carried on the `UnitAttacked` it produces) or
+ * a Guard stance (`'guard-full'` | `'guard-half'`) — a non-attack behavior
+ * that raises a shield instead, so it deliberately is NOT a `MoveKind` and
+ * never rides `UnitAttacked.kind`.
+ */
+export type RowMove = MoveKind | 'guard-full' | 'guard-half';
 
 /**
  * One unit's full initial render state, carried by `BattleStarted` so the
@@ -251,9 +260,11 @@ export interface UnitAttacked {
   /** The move's physical shape (FR32, story 4.2) — render flavor reads this, never the class. */
   kind: MoveKind;
   /**
-   * Present when a Guard intercepted this attack (FR33, emitted from story
-   * 4.7): the ORIGINAL target the bodyguard stepped in front of. The scene
-   * animates the step-in; narration names it.
+   * Present when a Guard shield reduced this landed hit (FR33, emitted from
+   * story 4.7): the id of the unit whose Guard charge absorbed it — NOT a
+   * retarget (Danilo 2026-07-19 revision, supersedes the dossier's original
+   * redirect design). The attacked unit stays `targets[].unit`; this field
+   * only attributes the block so the shell can flash the guarding unit.
    */
   redirectedFrom?: UnitId;
   targets: AttackTarget[];
