@@ -80,6 +80,12 @@ describe('docs/rules.md drift guard (story 2.4, AC2/AC6 — numbers are law)', (
     expect(raw).toContain(`take ×${taken}`);
   });
 
+  it('states the crit multiplier and the DEX crit/dodge divisor from balance data (story 4.6)', () => {
+    const crit = BALANCE.formulas.critMultiplier.num / BALANCE.formulas.critMultiplier.den;
+    expect(raw).toContain(`×${crit}`); // ×1.5 crit
+    expect(raw).toContain(`DEX ÷ ${BALANCE.formulas.dexChanceDivisor}`); // the crit/dodge chance rule
+  });
+
   it('names every witch spell with its element pairing', () => {
     for (const [element, spell] of Object.entries(BALANCE.elementSpells)) {
       expect(raw.toLowerCase()).toContain(`${element} → ${spell}`.toLowerCase());

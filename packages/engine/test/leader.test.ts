@@ -56,7 +56,7 @@ const KNIGHT_WALL_VS_MAGE_BATTERY = {
   },
 } satisfies Pick<MatchSetup, 'armies' | 'placements'>;
 
-/** golden.test.ts's POISON_DUEL — B:3 (a front knight) dies to a compounding poison tick in wipeout mode (seed 5). */
+/** golden.test.ts's POISON_DUEL — B:3 dies to a compounding poison tick in wipeout mode (seed 2, re-probed for story 4.6's crit/dodge draws). */
 const POISON_DUEL = {
   armies: {
     A: [u('archer', 'fire', 'Lyra'), u('archer', 'water', 'Vess'), u('witch', 'earth', 'Morwen'), u('knight', 'fire', 'Kain'), u('knight', 'water', 'Aldric')],
@@ -101,7 +101,7 @@ describe('LeaderFell emission (FR35, story 4.5)', () => {
     // In the POISON_DUEL (wipeout), B:3 falls to a compounding poison tick at an
     // engagement end. Designate B:3 as B's leader and the tick death carries the
     // sober-package beat exactly like a combat death does.
-    const log = resolveBattle(setup(POISON_DUEL, { seed: 5, mode: 'wipeout', leaders: { A: 0, B: 3 } }));
+    const log = resolveBattle(setup(POISON_DUEL, { seed: 2, mode: 'wipeout', leaders: { A: 0, B: 3 } }));
     expect(log.events.filter((e) => e.type === 'LeaderFell')).toEqual([{ type: 'LeaderFell', side: 'B', unit: 'B:3' }]);
     const idx = log.events.findIndex((e) => e.type === 'LeaderFell');
     expect(log.events[idx - 1]).toEqual({ type: 'UnitDied', unit: 'B:3' });

@@ -80,7 +80,7 @@ describe('FR16 confusion misfires (seeded, probed pins)', () => {
             { row: 'mid', col: 'center' },
           ],
         },
-        1, // probed (re-probed for 4.2's 5-unit armies): mage self-blast AND cleric enemy-heal both misfire on this seed
+        3, // probed (re-probed for 4.6's crit/dodge draws): mage self-blast AND cleric enemy-heal both misfire on this seed
       ),
     );
     const pairs = misfirePairs(log);
@@ -163,7 +163,7 @@ describe('FR16 confusion misfires (seeded, probed pins)', () => {
             { row: 'mid', col: 'center' },
           ],
         },
-        1, // probed (re-probed for 4.2's 5-unit armies): confused B witch sleeps her OWN ally AND a later misfire fizzles
+        20, // probed (re-probed for 4.6's crit/dodge draws): confused B witch sleeps her OWN ally AND a later misfire fizzles
       ),
     );
     const pairs = misfirePairs(log);

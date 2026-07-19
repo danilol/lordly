@@ -108,6 +108,22 @@ export interface BalanceData {
      * (the demoralised twin of `leaderFallDealt`, keyed to the DEFENDER's side).
      */
     leaderFallTaken: Ratio;
+    /**
+     * FR36 crit (story 4.6, ADR 0003 §Chances): a critical physical hit
+     * multiplies damage by ×3/2, applied in the FR15 fixed order immediately
+     * AFTER RPS and BEFORE status modifiers (Weaken). PHYSICAL single-target
+     * only — magic neither crits nor is dodged (OB64 rule). Sweep-policed
+     * tuning value; the draw ORDER/COUNT (ADR 0003) is the frozen rule.
+     */
+    critMultiplier: Ratio;
+    /**
+     * FR36 crit/dodge chance divisor (story 4.6, ADR 0003 §Chances):
+     * dodge% = floor(defender DEX / this); crit% = floor(attacker DEX / this),
+     * both drawn against the frozen 0–99 percent range. Sweep-policed tuning
+     * lever — raise/lower to re-price high-DEX comps (ninja/archer) if the
+     * both-mode band moves.
+     */
+    dexChanceDivisor: number;
   };
 }
 
@@ -118,7 +134,7 @@ export interface BalanceData {
  * forgotten (AD-8).
  */
 export const BALANCE: BalanceData = {
-  version: 6,
+  version: 7,
   slotBudget: 5,
   engagementCap: 10,
   classes: {
@@ -167,6 +183,13 @@ export const BALANCE: BalanceData = {
     confusionMisfire: { num: 1, den: 2 },
     leaderFallDealt: { num: 3, den: 4 },
     leaderFallTaken: { num: 5, den: 4 },
+    // Story 4.6 (ADR 0003 §Chances) — crit/dodge tuning data (sweep-policed; the
+    // draw ORDER/COUNT is the frozen rule, these magnitudes are balance data).
+    // dodge% = floor(defender DEX / dexChanceDivisor); crit% = floor(attacker
+    // DEX / dexChanceDivisor); both drawn against the frozen 0–99 percent range
+    // (DEX_CHANCE_DEN in resolve.ts). Crit multiplies post-RPS damage by ×3/2.
+    critMultiplier: { num: 3, den: 2 },
+    dexChanceDivisor: 3,
   },
 };
 

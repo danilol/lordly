@@ -683,9 +683,9 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "source": "B:3",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 128,
-          "outcome": "hit",
+          "damage": 0,
+          "hpAfter": 140,
+          "outcome": "dodged",
           "unit": "A:4",
         },
       ],
@@ -697,7 +697,7 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "targets": [
         {
           "damage": 12,
-          "hpAfter": 116,
+          "hpAfter": 128,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -723,7 +723,7 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "targets": [
         {
           "damage": 16,
-          "hpAfter": 100,
+          "hpAfter": 112,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -748,9 +748,9 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "source": "B:2",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 124,
-          "outcome": "hit",
+          "damage": 24,
+          "hpAfter": 116,
+          "outcome": "crit",
           "unit": "A:3",
         },
       ],
@@ -825,7 +825,7 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "targets": [
         {
           "damage": 9,
-          "hpAfter": 91,
+          "hpAfter": 103,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -851,7 +851,7 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "targets": [
         {
           "damage": 12,
-          "hpAfter": 79,
+          "hpAfter": 91,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -877,7 +877,7 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
       "targets": [
         {
           "damage": 12,
-          "hpAfter": 112,
+          "hpAfter": 104,
           "outcome": "hit",
           "unit": "A:3",
         },
@@ -908,8 +908,8 @@ exports[`golden battles (story 1.6 — full roster era) > golden #5: the poison 
         "A:0": 90,
         "A:1": 75,
         "A:2": 70,
-        "A:3": 112,
-        "A:4": 79,
+        "A:3": 104,
+        "A:4": 91,
         "B:0": 0,
         "B:1": 140,
         "B:2": 104,
@@ -1492,9 +1492,9 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "source": "B:0",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 68,
-          "outcome": "hit",
+          "damage": 18,
+          "hpAfter": 62,
+          "outcome": "crit",
           "unit": "A:2",
         },
       ],
@@ -1583,7 +1583,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "hp": {
         "A:0": 68,
         "A:1": 92,
-        "A:2": 68,
+        "A:2": 62,
         "A:3": 140,
         "A:4": 140,
         "B:0": 0,
@@ -1629,7 +1629,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "targets": [
         {
           "damage": 9,
-          "hpAfter": 59,
+          "hpAfter": 53,
           "outcome": "hit",
           "unit": "A:2",
         },
@@ -1778,7 +1778,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "hp": {
         "A:0": 59,
         "A:1": 83,
-        "A:2": 59,
+        "A:2": 53,
         "A:3": 140,
         "A:4": 140,
         "B:0": 0,
@@ -1811,7 +1811,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "targets": [
         {
           "damage": 9,
-          "hpAfter": 50,
+          "hpAfter": 44,
           "outcome": "hit",
           "unit": "A:2",
         },
@@ -1896,7 +1896,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
       "hp": {
         "A:0": 50,
         "A:1": 83,
-        "A:2": 50,
+        "A:2": 44,
         "A:3": 140,
         "A:4": 140,
         "B:0": 0,
@@ -1909,7 +1909,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #6: the mul
     },
     {
       "hpPct": {
-        "A": 66,
+        "A": 65,
         "B": 0,
       },
       "type": "BattleEnded",
@@ -2611,9 +2611,9 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "source": "A:3",
       "targets": [
         {
-          "damage": 24,
-          "hpAfter": 18,
-          "outcome": "hit",
+          "damage": 0,
+          "hpAfter": 42,
+          "outcome": "dodged",
           "unit": "B:0",
         },
       ],
@@ -2650,7 +2650,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
     },
     {
       "amount": 30,
-      "hpAfter": 48,
+      "hpAfter": 72,
       "source": "B:3",
       "target": "B:0",
       "type": "UnitHealed",
@@ -2663,8 +2663,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "type": "UnitHealed",
     },
     {
-      "amount": 30,
-      "hpAfter": 78,
+      "amount": 18,
+      "hpAfter": 90,
       "source": "B:2",
       "target": "B:0",
       "type": "UnitHealed",
@@ -2675,7 +2675,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "targets": [
         {
           "damage": 24,
-          "hpAfter": 54,
+          "hpAfter": 66,
           "outcome": "hit",
           "unit": "B:0",
         },
@@ -2688,7 +2688,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "targets": [
         {
           "damage": 24,
-          "hpAfter": 30,
+          "hpAfter": 42,
           "outcome": "hit",
           "unit": "B:0",
         },
@@ -2716,7 +2716,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
         "A:2": 140,
         "A:3": 135,
         "A:4": 138,
-        "B:0": 30,
+        "B:0": 42,
         "B:1": 90,
         "B:2": 90,
         "B:3": 48,
@@ -2742,7 +2742,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
     },
     {
       "amount": 30,
-      "hpAfter": 60,
+      "hpAfter": 72,
       "source": "B:0",
       "target": "B:0",
       "type": "UnitHealed",
@@ -2755,7 +2755,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "type": "UnitHealed",
     },
     {
-      "amount": 30,
+      "amount": 18,
       "hpAfter": 90,
       "source": "B:3",
       "target": "B:0",
@@ -3316,9 +3316,9 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "source": "A:0",
       "targets": [
         {
-          "damage": 24,
-          "hpAfter": 54,
-          "outcome": "hit",
+          "damage": 0,
+          "hpAfter": 78,
+          "outcome": "dodged",
           "unit": "B:0",
         },
       ],
@@ -3330,7 +3330,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "targets": [
         {
           "damage": 24,
-          "hpAfter": 30,
+          "hpAfter": 54,
           "outcome": "hit",
           "unit": "B:0",
         },
@@ -3358,7 +3358,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
         "A:2": 140,
         "A:3": 132,
         "A:4": 138,
-        "B:0": 30,
+        "B:0": 54,
         "B:1": 90,
         "B:2": 90,
         "B:3": 48,
@@ -3384,30 +3384,30 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
     },
     {
       "amount": 30,
-      "hpAfter": 60,
-      "source": "B:0",
-      "target": "B:0",
-      "type": "UnitHealed",
-    },
-    {
-      "amount": 30,
       "hpAfter": 78,
-      "source": "B:1",
+      "source": "B:0",
       "target": "B:3",
       "type": "UnitHealed",
     },
     {
       "amount": 30,
-      "hpAfter": 90,
-      "source": "B:3",
+      "hpAfter": 84,
+      "source": "B:1",
       "target": "B:0",
       "type": "UnitHealed",
     },
     {
       "amount": 12,
       "hpAfter": 90,
-      "source": "B:4",
+      "source": "B:3",
       "target": "B:3",
+      "type": "UnitHealed",
+    },
+    {
+      "amount": 6,
+      "hpAfter": 90,
+      "source": "B:4",
+      "target": "B:0",
       "type": "UnitHealed",
     },
     {
@@ -3543,9 +3543,9 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "source": "A:1",
       "targets": [
         {
-          "damage": 24,
-          "hpAfter": 30,
-          "outcome": "hit",
+          "damage": 36,
+          "hpAfter": 18,
+          "outcome": "crit",
           "unit": "B:0",
         },
       ],
@@ -3572,7 +3572,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
         "A:2": 140,
         "A:3": 131,
         "A:4": 138,
-        "B:0": 30,
+        "B:0": 18,
         "B:1": 90,
         "B:2": 90,
         "B:3": 48,
@@ -3598,7 +3598,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
     },
     {
       "amount": 30,
-      "hpAfter": 60,
+      "hpAfter": 48,
       "source": "B:0",
       "target": "B:0",
       "type": "UnitHealed",
@@ -3607,35 +3607,29 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "amount": 30,
       "hpAfter": 78,
       "source": "B:1",
-      "target": "B:3",
+      "target": "B:0",
       "type": "UnitHealed",
     },
     {
       "amount": 30,
-      "hpAfter": 90,
+      "hpAfter": 78,
       "source": "B:3",
-      "target": "B:0",
+      "target": "B:3",
       "type": "UnitHealed",
     },
     {
       "amount": 12,
       "hpAfter": 90,
       "source": "B:4",
-      "target": "B:3",
+      "target": "B:0",
       "type": "UnitHealed",
     },
     {
-      "kind": "staff",
+      "amount": 12,
+      "hpAfter": 90,
       "source": "B:2",
-      "targets": [
-        {
-          "damage": 1,
-          "hpAfter": 130,
-          "outcome": "hit",
-          "unit": "A:3",
-        },
-      ],
-      "type": "UnitAttacked",
+      "target": "B:3",
+      "type": "UnitHealed",
     },
     {
       "kind": "slash",
@@ -3744,9 +3738,9 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "source": "A:0",
       "targets": [
         {
-          "damage": 24,
-          "hpAfter": 54,
-          "outcome": "hit",
+          "damage": 36,
+          "hpAfter": 42,
+          "outcome": "crit",
           "unit": "B:0",
         },
       ],
@@ -3758,7 +3752,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "targets": [
         {
           "damage": 24,
-          "hpAfter": 30,
+          "hpAfter": 18,
           "outcome": "hit",
           "unit": "B:0",
         },
@@ -3784,9 +3778,9 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
         "A:0": 140,
         "A:1": 140,
         "A:2": 140,
-        "A:3": 130,
+        "A:3": 131,
         "A:4": 138,
-        "B:0": 30,
+        "B:0": 18,
         "B:1": 90,
         "B:2": 90,
         "B:3": 48,
@@ -3812,7 +3806,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
     },
     {
       "amount": 30,
-      "hpAfter": 60,
+      "hpAfter": 48,
       "source": "B:0",
       "target": "B:0",
       "type": "UnitHealed",
@@ -3821,35 +3815,29 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "amount": 30,
       "hpAfter": 78,
       "source": "B:1",
-      "target": "B:3",
+      "target": "B:0",
       "type": "UnitHealed",
     },
     {
       "amount": 30,
-      "hpAfter": 90,
+      "hpAfter": 78,
       "source": "B:3",
-      "target": "B:0",
+      "target": "B:3",
       "type": "UnitHealed",
     },
     {
       "amount": 12,
       "hpAfter": 90,
       "source": "B:4",
-      "target": "B:3",
+      "target": "B:0",
       "type": "UnitHealed",
     },
     {
-      "kind": "staff",
+      "amount": 12,
+      "hpAfter": 90,
       "source": "B:2",
-      "targets": [
-        {
-          "damage": 1,
-          "hpAfter": 129,
-          "outcome": "hit",
-          "unit": "A:3",
-        },
-      ],
-      "type": "UnitAttacked",
+      "target": "B:3",
+      "type": "UnitHealed",
     },
     {
       "kind": "slash",
@@ -3895,9 +3883,9 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "source": "A:3",
       "targets": [
         {
-          "damage": 24,
-          "hpAfter": 18,
-          "outcome": "hit",
+          "damage": 0,
+          "hpAfter": 42,
+          "outcome": "dodged",
           "unit": "B:0",
         },
       ],
@@ -3934,7 +3922,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
     },
     {
       "amount": 30,
-      "hpAfter": 48,
+      "hpAfter": 72,
       "source": "B:3",
       "target": "B:0",
       "type": "UnitHealed",
@@ -3947,8 +3935,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "type": "UnitHealed",
     },
     {
-      "amount": 30,
-      "hpAfter": 78,
+      "amount": 18,
+      "hpAfter": 90,
       "source": "B:2",
       "target": "B:0",
       "type": "UnitHealed",
@@ -3959,7 +3947,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "targets": [
         {
           "damage": 24,
-          "hpAfter": 54,
+          "hpAfter": 66,
           "outcome": "hit",
           "unit": "B:0",
         },
@@ -3972,7 +3960,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "targets": [
         {
           "damage": 24,
-          "hpAfter": 30,
+          "hpAfter": 42,
           "outcome": "hit",
           "unit": "B:0",
         },
@@ -3998,9 +3986,9 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
         "A:0": 140,
         "A:1": 140,
         "A:2": 140,
-        "A:3": 129,
+        "A:3": 131,
         "A:4": 138,
-        "B:0": 30,
+        "B:0": 42,
         "B:1": 90,
         "B:2": 90,
         "B:3": 48,
@@ -4026,7 +4014,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
     },
     {
       "amount": 30,
-      "hpAfter": 60,
+      "hpAfter": 72,
       "source": "B:0",
       "target": "B:0",
       "type": "UnitHealed",
@@ -4039,7 +4027,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "type": "UnitHealed",
     },
     {
-      "amount": 30,
+      "amount": 18,
       "hpAfter": 90,
       "source": "B:3",
       "target": "B:0",
@@ -4058,8 +4046,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
       "targets": [
         {
           "damage": 1,
-          "hpAfter": 128,
-          "outcome": "hit",
+          "hpAfter": 130,
+          "outcome": "crit",
           "unit": "A:3",
         },
       ],
@@ -4212,7 +4200,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #7: the cap
         "A:0": 140,
         "A:1": 140,
         "A:2": 140,
-        "A:3": 128,
+        "A:3": 130,
         "A:4": 138,
         "B:0": 30,
         "B:1": 90,
@@ -4432,9 +4420,9 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "B:3",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 128,
-          "outcome": "hit",
+          "damage": 0,
+          "hpAfter": 140,
+          "outcome": "dodged",
           "unit": "A:4",
         },
       ],
@@ -4446,7 +4434,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 12,
-          "hpAfter": 116,
+          "hpAfter": 128,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4472,7 +4460,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 16,
-          "hpAfter": 100,
+          "hpAfter": 112,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4497,9 +4485,9 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "B:2",
       "targets": [
         {
-          "damage": 16,
-          "hpAfter": 124,
-          "outcome": "hit",
+          "damage": 24,
+          "hpAfter": 116,
+          "outcome": "crit",
           "unit": "A:3",
         },
       ],
@@ -4574,7 +4562,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 9,
-          "hpAfter": 91,
+          "hpAfter": 103,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4600,7 +4588,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 12,
-          "hpAfter": 79,
+          "hpAfter": 91,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4626,7 +4614,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 12,
-          "hpAfter": 112,
+          "hpAfter": 104,
           "outcome": "hit",
           "unit": "A:3",
         },
@@ -4657,8 +4645,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
         "A:0": 90,
         "A:1": 75,
         "A:2": 70,
-        "A:3": 112,
-        "A:4": 79,
+        "A:3": 104,
+        "A:4": 91,
         "B:0": 0,
         "B:1": 140,
         "B:2": 104,
@@ -4721,7 +4709,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 9,
-          "hpAfter": 70,
+          "hpAfter": 82,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4734,20 +4722,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 9,
-          "hpAfter": 61,
-          "outcome": "hit",
-          "unit": "A:4",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "B:1",
-      "targets": [
-        {
-          "damage": 12,
-          "hpAfter": 49,
+          "hpAfter": 73,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4769,12 +4744,25 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
     },
     {
       "kind": "slash",
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 61,
+          "outcome": "hit",
+          "unit": "A:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
       "source": "A:4",
       "targets": [
         {
-          "damage": 25,
-          "hpAfter": 40,
-          "outcome": "hit",
+          "damage": 0,
+          "hpAfter": 65,
+          "outcome": "dodged",
           "unit": "B:3",
         },
       ],
@@ -4786,7 +4774,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 12,
-          "hpAfter": 100,
+          "hpAfter": 92,
           "outcome": "hit",
           "unit": "A:3",
         },
@@ -4847,20 +4835,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 9,
-          "hpAfter": 40,
-          "outcome": "hit",
-          "unit": "A:4",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "B:1",
-      "targets": [
-        {
-          "damage": 12,
-          "hpAfter": 28,
+          "hpAfter": 52,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -4882,11 +4857,24 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
     },
     {
       "kind": "slash",
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 40,
+          "outcome": "hit",
+          "unit": "A:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
       "source": "A:4",
       "targets": [
         {
           "damage": 25,
-          "hpAfter": 15,
+          "hpAfter": 40,
           "outcome": "hit",
           "unit": "B:3",
         },
@@ -4899,7 +4887,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 12,
-          "hpAfter": 88,
+          "hpAfter": 80,
           "outcome": "hit",
           "unit": "A:3",
         },
@@ -4926,12 +4914,8 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
     },
     {
       "damage": 15,
-      "hpAfter": 0,
+      "hpAfter": 25,
       "type": "PoisonTicked",
-      "unit": "B:3",
-    },
-    {
-      "type": "UnitDied",
       "unit": "B:3",
     },
     {
@@ -4946,12 +4930,12 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
         "A:0": 90,
         "A:1": 60,
         "A:2": 55,
-        "A:3": 88,
-        "A:4": 28,
+        "A:3": 80,
+        "A:4": 40,
         "B:0": 0,
         "B:1": 140,
         "B:2": 49,
-        "B:3": 0,
+        "B:3": 25,
         "B:4": 12,
       },
       "type": "EngagementEnded",
@@ -4966,7 +4950,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
         "B:0": 0,
         "B:1": 2,
         "B:2": 2,
-        "B:3": 0,
+        "B:3": 2,
         "B:4": 1,
       },
       "pass": 1,
@@ -5009,9 +4993,35 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "type": "UnitAttacked",
     },
     {
+      "kind": "slash",
+      "source": "B:3",
+      "targets": [
+        {
+          "damage": 0,
+          "hpAfter": 40,
+          "outcome": "dodged",
+          "unit": "A:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
       "reason": "dead",
       "type": "ActionSkipped",
       "unit": "B:4",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 0,
+          "hpAfter": 49,
+          "outcome": "dodged",
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
     },
     {
       "kind": "slash",
@@ -5019,22 +5029,9 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 12,
-          "hpAfter": 16,
+          "hpAfter": 28,
           "outcome": "hit",
           "unit": "A:4",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "A:3",
-      "targets": [
-        {
-          "damage": 20,
-          "hpAfter": 29,
-          "outcome": "hit",
-          "unit": "B:2",
         },
       ],
       "type": "UnitAttacked",
@@ -5044,13 +5041,17 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:4",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 9,
+          "damage": 25,
+          "hpAfter": 0,
           "outcome": "hit",
-          "unit": "B:2",
+          "unit": "B:3",
         },
       ],
       "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "B:3",
     },
     {
       "kind": "slash",
@@ -5058,7 +5059,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 12,
-          "hpAfter": 76,
+          "hpAfter": 68,
           "outcome": "hit",
           "unit": "A:3",
         },
@@ -5091,7 +5092,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 8,
-          "hpAfter": 1,
+          "hpAfter": 41,
           "outcome": "hit",
           "unit": "B:2",
         },
@@ -5113,11 +5114,24 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
     },
     {
       "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 21,
+          "outcome": "hit",
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
       "source": "B:1",
       "targets": [
         {
           "damage": 12,
-          "hpAfter": 4,
+          "hpAfter": 16,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -5126,11 +5140,11 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
     },
     {
       "kind": "slash",
-      "source": "A:3",
+      "source": "A:4",
       "targets": [
         {
           "damage": 20,
-          "hpAfter": 0,
+          "hpAfter": 1,
           "outcome": "hit",
           "unit": "B:2",
         },
@@ -5138,26 +5152,17 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "type": "UnitAttacked",
     },
     {
-      "type": "UnitDied",
-      "unit": "B:2",
-    },
-    {
       "kind": "slash",
-      "source": "A:4",
+      "source": "B:2",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 104,
+          "damage": 12,
+          "hpAfter": 56,
           "outcome": "hit",
-          "unit": "B:1",
+          "unit": "A:3",
         },
       ],
       "type": "UnitAttacked",
-    },
-    {
-      "reason": "dead",
-      "type": "ActionSkipped",
-      "unit": "B:2",
     },
     {
       "damage": 15,
@@ -5173,9 +5178,19 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
     },
     {
       "damage": 15,
-      "hpAfter": 89,
+      "hpAfter": 109,
       "type": "PoisonTicked",
       "unit": "B:1",
+    },
+    {
+      "damage": 15,
+      "hpAfter": 0,
+      "type": "PoisonTicked",
+      "unit": "B:2",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "B:2",
     },
     {
       "engagement": 3,
@@ -5183,10 +5198,10 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
         "A:0": 90,
         "A:1": 45,
         "A:2": 40,
-        "A:3": 76,
-        "A:4": 4,
+        "A:3": 56,
+        "A:4": 16,
         "B:0": 0,
-        "B:1": 89,
+        "B:1": 109,
         "B:2": 0,
         "B:3": 0,
         "B:4": 0,
@@ -5219,7 +5234,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 8,
-          "hpAfter": 81,
+          "hpAfter": 101,
           "outcome": "hit",
           "unit": "B:1",
         },
@@ -5232,20 +5247,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 8,
-          "hpAfter": 73,
-          "outcome": "hit",
-          "unit": "B:1",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "A:3",
-      "targets": [
-        {
-          "damage": 20,
-          "hpAfter": 53,
+          "hpAfter": 93,
           "outcome": "hit",
           "unit": "B:1",
         },
@@ -5258,7 +5260,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "targets": [
         {
           "damage": 12,
-          "hpAfter": 0,
+          "hpAfter": 4,
           "outcome": "hit",
           "unit": "A:4",
         },
@@ -5266,13 +5268,30 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "type": "UnitAttacked",
     },
     {
-      "type": "UnitDied",
-      "unit": "A:4",
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 73,
+          "outcome": "hit",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
     },
     {
-      "reason": "dead",
-      "type": "ActionSkipped",
-      "unit": "A:4",
+      "kind": "slash",
+      "source": "A:4",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 53,
+          "outcome": "hit",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
     },
     {
       "actionsRemaining": {
@@ -5280,7 +5299,7 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
         "A:1": 1,
         "A:2": 1,
         "A:3": 1,
-        "A:4": 0,
+        "A:4": 1,
         "B:0": 0,
         "B:1": 1,
         "B:2": 0,
@@ -5312,22 +5331,9 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "A:1",
       "targets": [
         {
-          "damage": 8,
-          "hpAfter": 37,
-          "outcome": "hit",
-          "unit": "B:1",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
-      "source": "A:3",
-      "targets": [
-        {
-          "damage": 20,
-          "hpAfter": 17,
-          "outcome": "hit",
+          "damage": 12,
+          "hpAfter": 33,
+          "outcome": "crit",
           "unit": "B:1",
         },
       ],
@@ -5338,17 +5344,39 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "source": "B:1",
       "targets": [
         {
-          "damage": 27,
-          "hpAfter": 18,
+          "damage": 12,
+          "hpAfter": 0,
           "outcome": "hit",
-          "unit": "A:1",
+          "unit": "A:4",
         },
       ],
       "type": "UnitAttacked",
     },
     {
+      "type": "UnitDied",
+      "unit": "A:4",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 13,
+          "outcome": "hit",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "reason": "dead",
+      "type": "ActionSkipped",
+      "unit": "A:4",
+    },
+    {
       "damage": 15,
-      "hpAfter": 3,
+      "hpAfter": 30,
       "type": "PoisonTicked",
       "unit": "A:1",
     },
@@ -5360,20 +5388,24 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
     },
     {
       "damage": 15,
-      "hpAfter": 2,
+      "hpAfter": 0,
       "type": "PoisonTicked",
+      "unit": "B:1",
+    },
+    {
+      "type": "UnitDied",
       "unit": "B:1",
     },
     {
       "engagement": 4,
       "hp": {
         "A:0": 90,
-        "A:1": 3,
+        "A:1": 30,
         "A:2": 25,
-        "A:3": 76,
+        "A:3": 56,
         "A:4": 0,
         "B:0": 0,
-        "B:1": 2,
+        "B:1": 0,
         "B:2": 0,
         "B:3": 0,
         "B:4": 0,
@@ -5381,31 +5413,1055 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "type": "EngagementEnded",
     },
     {
+      "hpPct": {
+        "A": 36,
+        "B": 0,
+      },
+      "type": "BattleEnded",
+      "winner": "A",
+    },
+  ],
+  "logVersion": 4,
+}
+`;
+
+exports[`golden battles (story 4.6 — crits & dodge) > golden #9: one battle exercising every draw-consuming path — confusion (A1/A2), dodge (A3), crit (A4) 1`] = `
+{
+  "events": [
+    {
+      "type": "BattleStarted",
+      "units": [
+        {
+          "class": "witch",
+          "element": "wind",
+          "hp": 85,
+          "id": "A:0",
+          "maxHp": 85,
+          "name": "Sylwen",
+          "placement": {
+            "col": "center",
+            "row": "back",
+          },
+          "side": "A",
+        },
+        {
+          "class": "ninja",
+          "element": "fire",
+          "hp": 85,
+          "id": "A:1",
+          "maxHp": 85,
+          "name": "Kage",
+          "placement": {
+            "col": "left",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "ninja",
+          "element": "water",
+          "hp": 85,
+          "id": "A:2",
+          "maxHp": 85,
+          "name": "Rin",
+          "placement": {
+            "col": "center",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "knight",
+          "element": "earth",
+          "hp": 140,
+          "id": "A:3",
+          "maxHp": 140,
+          "name": "Doran",
+          "placement": {
+            "col": "right",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "archer",
+          "element": "fire",
+          "hp": 90,
+          "id": "A:4",
+          "maxHp": 90,
+          "name": "Lyra",
+          "placement": {
+            "col": "left",
+            "row": "mid",
+          },
+          "side": "A",
+        },
+        {
+          "class": "ninja",
+          "element": "fire",
+          "hp": 85,
+          "id": "B:0",
+          "maxHp": 85,
+          "name": "Taki",
+          "placement": {
+            "col": "left",
+            "row": "front",
+          },
+          "side": "B",
+        },
+        {
+          "class": "ninja",
+          "element": "water",
+          "hp": 85,
+          "id": "B:1",
+          "maxHp": 85,
+          "name": "Yuki",
+          "placement": {
+            "col": "center",
+            "row": "front",
+          },
+          "side": "B",
+        },
+        {
+          "class": "knight",
+          "element": "wind",
+          "hp": 140,
+          "id": "B:2",
+          "maxHp": 140,
+          "name": "Cedric",
+          "placement": {
+            "col": "right",
+            "row": "front",
+          },
+          "side": "B",
+        },
+        {
+          "class": "mercenary",
+          "element": "earth",
+          "hp": 110,
+          "id": "B:3",
+          "maxHp": 110,
+          "name": "Gorm",
+          "placement": {
+            "col": "left",
+            "row": "mid",
+          },
+          "side": "B",
+        },
+        {
+          "class": "archer",
+          "element": "water",
+          "hp": 90,
+          "id": "B:4",
+          "maxHp": 90,
+          "name": "Vess",
+          "placement": {
+            "col": "right",
+            "row": "mid",
+          },
+          "side": "B",
+        },
+      ],
+    },
+    {
       "actionsRemaining": {
         "A:0": 2,
         "A:1": 2,
         "A:2": 2,
         "A:3": 2,
-        "A:4": 0,
+        "A:4": 2,
+        "B:0": 2,
+        "B:1": 2,
+        "B:2": 2,
+        "B:3": 1,
+        "B:4": 2,
+      },
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "kind": "slash",
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 128,
+          "outcome": "crit",
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 0,
+          "hpAfter": 140,
+          "outcome": "dodged",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 0,
+          "hpAfter": 85,
+          "outcome": "dodged",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 17,
+          "hpAfter": 68,
+          "outcome": "hit",
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "spell": "confusion",
+      "target": "B:4",
+      "type": "StatusApplied",
+    },
+    {
+      "kind": "arrow",
+      "source": "A:4",
+      "targets": [
+        {
+          "damage": 18,
+          "hpAfter": 72,
+          "outcome": "hit",
+          "unit": "B:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "arrow",
+      "source": "B:4",
+      "targets": [
+        {
+          "damage": 28,
+          "hpAfter": 57,
+          "outcome": "hit",
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:3",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 128,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 25,
+          "hpAfter": 60,
+          "outcome": "hit",
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 25,
+          "hpAfter": 60,
+          "outcome": "hit",
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "actionsRemaining": {
+        "A:0": 1,
+        "A:1": 1,
+        "A:2": 1,
+        "A:3": 1,
+        "A:4": 1,
+        "B:0": 1,
+        "B:1": 1,
+        "B:2": 1,
+        "B:3": 0,
+        "B:4": 1,
+      },
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "kind": "slash",
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 8,
+          "hpAfter": 120,
+          "outcome": "hit",
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 8,
+          "hpAfter": 120,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 17,
+          "hpAfter": 68,
+          "outcome": "hit",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 17,
+          "hpAfter": 51,
+          "outcome": "hit",
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "spell": "confusion",
+      "target": "B:3",
+      "type": "StatusApplied",
+    },
+    {
+      "kind": "arrow",
+      "source": "A:4",
+      "targets": [
+        {
+          "damage": 18,
+          "hpAfter": 54,
+          "outcome": "hit",
+          "unit": "B:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "arrow",
+      "source": "B:4",
+      "targets": [
+        {
+          "damage": 42,
+          "hpAfter": 15,
+          "outcome": "crit",
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 25,
+          "hpAfter": 35,
+          "outcome": "hit",
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 25,
+          "hpAfter": 35,
+          "outcome": "hit",
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "engagement": 1,
+      "hp": {
+        "A:0": 15,
+        "A:1": 35,
+        "A:2": 51,
+        "A:3": 120,
+        "A:4": 90,
+        "B:0": 35,
+        "B:1": 68,
+        "B:2": 120,
+        "B:3": 110,
+        "B:4": 54,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "spell": "confusion",
+      "type": "StatusCleared",
+      "unit": "B:3",
+    },
+    {
+      "spell": "confusion",
+      "type": "StatusCleared",
+      "unit": "B:4",
+    },
+    {
+      "actionsRemaining": {
+        "A:0": 2,
+        "A:1": 2,
+        "A:2": 2,
+        "A:3": 2,
+        "A:4": 2,
+        "B:0": 2,
+        "B:1": 2,
+        "B:2": 2,
+        "B:3": 1,
+        "B:4": 2,
+      },
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "kind": "slash",
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 8,
+          "hpAfter": 112,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 8,
+          "hpAfter": 112,
+          "outcome": "hit",
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 0,
+          "hpAfter": 51,
+          "outcome": "dodged",
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 17,
+          "hpAfter": 51,
+          "outcome": "hit",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "spell": "confusion",
+      "target": "B:4",
+      "type": "StatusApplied",
+    },
+    {
+      "kind": "arrow",
+      "source": "A:4",
+      "targets": [
+        {
+          "damage": 18,
+          "hpAfter": 36,
+          "outcome": "hit",
+          "unit": "B:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "ActionMisfired",
+      "unit": "B:4",
+    },
+    {
+      "kind": "arrow",
+      "source": "B:4",
+      "targets": [
+        {
+          "damage": 7,
+          "hpAfter": 105,
+          "outcome": "hit",
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:3",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 100,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 25,
+          "hpAfter": 10,
+          "outcome": "hit",
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 0,
+          "hpAfter": 35,
+          "outcome": "dodged",
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "actionsRemaining": {
+        "A:0": 1,
+        "A:1": 1,
+        "A:2": 1,
+        "A:3": 1,
+        "A:4": 1,
+        "B:0": 1,
+        "B:1": 1,
+        "B:2": 1,
+        "B:3": 0,
+        "B:4": 1,
+      },
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "kind": "slash",
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 8,
+          "hpAfter": 92,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:1",
+      "targets": [
+        {
+          "damage": 8,
+          "hpAfter": 97,
+          "outcome": "hit",
+          "unit": "B:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 17,
+          "hpAfter": 34,
+          "outcome": "hit",
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 17,
+          "hpAfter": 34,
+          "outcome": "hit",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "source": "A:0",
+      "spell": "confusion",
+      "target": "B:3",
+      "type": "StatusApplied",
+    },
+    {
+      "kind": "arrow",
+      "source": "A:4",
+      "targets": [
+        {
+          "damage": 18,
+          "hpAfter": 18,
+          "outcome": "hit",
+          "unit": "B:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "arrow",
+      "source": "B:4",
+      "targets": [
+        {
+          "damage": 28,
+          "hpAfter": 0,
+          "outcome": "hit",
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "A:0",
+    },
+    {
+      "side": "A",
+      "type": "LeaderFell",
+      "unit": "A:0",
+    },
+    {
+      "kind": "slash",
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 31,
+          "hpAfter": 0,
+          "outcome": "hit",
+          "unit": "A:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "A:1",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 18,
+          "hpAfter": 17,
+          "outcome": "hit",
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "engagement": 2,
+      "hp": {
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 34,
+        "A:3": 92,
+        "A:4": 90,
+        "B:0": 17,
+        "B:1": 34,
+        "B:2": 97,
+        "B:3": 110,
+        "B:4": 18,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "spell": "confusion",
+      "type": "StatusCleared",
+      "unit": "B:3",
+    },
+    {
+      "spell": "confusion",
+      "type": "StatusCleared",
+      "unit": "B:4",
+    },
+    {
+      "actionsRemaining": {
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 2,
+        "A:3": 2,
+        "A:4": 2,
+        "B:0": 2,
+        "B:1": 2,
+        "B:2": 2,
+        "B:3": 1,
+        "B:4": 2,
+      },
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "kind": "slash",
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 10,
+          "hpAfter": 82,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 0,
+          "hpAfter": 34,
+          "outcome": "dodged",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 21,
+          "hpAfter": 13,
+          "outcome": "hit",
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "arrow",
+      "source": "A:4",
+      "targets": [
+        {
+          "damage": 13,
+          "hpAfter": 5,
+          "outcome": "hit",
+          "unit": "B:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "arrow",
+      "source": "B:4",
+      "targets": [
+        {
+          "damage": 22,
+          "hpAfter": 68,
+          "outcome": "hit",
+          "unit": "A:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:3",
+      "targets": [
+        {
+          "damage": 15,
+          "hpAfter": 67,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 18,
+          "hpAfter": 0,
+          "outcome": "hit",
+          "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "B:0",
+    },
+    {
+      "side": "B",
+      "type": "LeaderFell",
+      "unit": "B:0",
+    },
+    {
+      "kind": "slash",
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 22,
+          "hpAfter": 0,
+          "outcome": "hit",
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "A:2",
+    },
+    {
+      "actionsRemaining": {
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 0,
+        "A:3": 1,
+        "A:4": 1,
+        "B:0": 0,
+        "B:1": 1,
+        "B:2": 1,
+        "B:3": 0,
+        "B:4": 1,
+      },
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "kind": "slash",
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 7,
+          "hpAfter": 60,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "arrow",
+      "source": "A:4",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 0,
+          "outcome": "hit",
+          "unit": "B:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "B:4",
+    },
+    {
+      "reason": "dead",
+      "type": "ActionSkipped",
+      "unit": "B:4",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 22,
+          "hpAfter": 12,
+          "outcome": "hit",
+          "unit": "B:1",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 33,
+          "hpAfter": 35,
+          "outcome": "hit",
+          "unit": "A:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "engagement": 3,
+      "hp": {
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 0,
+        "A:3": 60,
+        "A:4": 35,
+        "B:0": 0,
+        "B:1": 12,
+        "B:2": 97,
+        "B:3": 110,
+        "B:4": 0,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "actionsRemaining": {
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 0,
+        "A:3": 2,
+        "A:4": 2,
         "B:0": 0,
         "B:1": 2,
-        "B:2": 0,
-        "B:3": 0,
+        "B:2": 2,
+        "B:3": 1,
         "B:4": 0,
       },
       "pass": 1,
       "type": "PassStarted",
     },
     {
-      "type": "ActionFizzled",
-      "unit": "A:2",
+      "kind": "slash",
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 7,
+          "hpAfter": 53,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
     },
     {
       "kind": "arrow",
-      "source": "A:0",
+      "source": "A:4",
       "targets": [
         {
-          "damage": 8,
+          "damage": 12,
+          "hpAfter": 98,
+          "outcome": "hit",
+          "unit": "B:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:3",
+      "targets": [
+        {
+          "damage": 11,
+          "hpAfter": 42,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 33,
+          "hpAfter": 2,
+          "outcome": "hit",
+          "unit": "A:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 22,
           "hpAfter": 0,
           "outcome": "hit",
           "unit": "B:1",
@@ -5418,28 +6474,249 @@ exports[`golden battles (story 1.10 — until-wipeout mode) > golden #8: persist
       "unit": "B:1",
     },
     {
-      "engagement": 5,
+      "actionsRemaining": {
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 0,
+        "A:3": 1,
+        "A:4": 1,
+        "B:0": 0,
+        "B:1": 0,
+        "B:2": 1,
+        "B:3": 0,
+        "B:4": 0,
+      },
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "kind": "arrow",
+      "source": "A:4",
+      "targets": [
+        {
+          "damage": 12,
+          "hpAfter": 86,
+          "outcome": "hit",
+          "unit": "B:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 33,
+          "hpAfter": 0,
+          "outcome": "hit",
+          "unit": "A:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "A:4",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 18,
+          "hpAfter": 68,
+          "outcome": "hit",
+          "unit": "B:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "engagement": 4,
       "hp": {
-        "A:0": 90,
-        "A:1": 3,
-        "A:2": 25,
-        "A:3": 76,
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 0,
+        "A:3": 42,
         "A:4": 0,
         "B:0": 0,
         "B:1": 0,
-        "B:2": 0,
+        "B:2": 97,
+        "B:3": 68,
+        "B:4": 0,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "actionsRemaining": {
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 0,
+        "A:3": 2,
+        "A:4": 0,
+        "B:0": 0,
+        "B:1": 0,
+        "B:2": 2,
+        "B:3": 1,
+        "B:4": 0,
+      },
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "kind": "slash",
+      "source": "B:3",
+      "targets": [
+        {
+          "damage": 11,
+          "hpAfter": 31,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 15,
+          "hpAfter": 16,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 0,
+          "hpAfter": 68,
+          "outcome": "dodged",
+          "unit": "B:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "actionsRemaining": {
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 0,
+        "A:3": 1,
+        "A:4": 0,
+        "B:0": 0,
+        "B:1": 0,
+        "B:2": 1,
         "B:3": 0,
+        "B:4": 0,
+      },
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "kind": "slash",
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 15,
+          "hpAfter": 1,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 18,
+          "hpAfter": 50,
+          "outcome": "hit",
+          "unit": "B:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "engagement": 5,
+      "hp": {
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 0,
+        "A:3": 1,
+        "A:4": 0,
+        "B:0": 0,
+        "B:1": 0,
+        "B:2": 97,
+        "B:3": 50,
+        "B:4": 0,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "actionsRemaining": {
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 0,
+        "A:3": 2,
+        "A:4": 0,
+        "B:0": 0,
+        "B:1": 0,
+        "B:2": 2,
+        "B:3": 1,
+        "B:4": 0,
+      },
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "kind": "slash",
+      "source": "B:3",
+      "targets": [
+        {
+          "damage": 11,
+          "hpAfter": 0,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "UnitDied",
+      "unit": "A:3",
+    },
+    {
+      "engagement": 6,
+      "hp": {
+        "A:0": 0,
+        "A:1": 0,
+        "A:2": 0,
+        "A:3": 0,
+        "A:4": 0,
+        "B:0": 0,
+        "B:1": 0,
+        "B:2": 97,
+        "B:3": 50,
         "B:4": 0,
       },
       "type": "EngagementEnded",
     },
     {
       "hpPct": {
-        "A": 35,
-        "B": 0,
+        "A": 0,
+        "B": 28,
       },
       "type": "BattleEnded",
-      "winner": "A",
+      "winner": "B",
     },
   ],
   "logVersion": 4,
@@ -6387,19 +7664,6 @@ exports[`golden battles > golden #3: an exact-tie draw — mirrored knight walls
     },
     {
       "kind": "slash",
-      "source": "B:0",
-      "targets": [
-        {
-          "damage": 16,
-          "hpAfter": 124,
-          "outcome": "hit",
-          "unit": "A:2",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
       "source": "A:0",
       "targets": [
         {
@@ -6413,13 +7677,13 @@ exports[`golden battles > golden #3: an exact-tie draw — mirrored knight walls
     },
     {
       "kind": "slash",
-      "source": "B:1",
+      "source": "B:0",
       "targets": [
         {
           "damage": 16,
           "hpAfter": 124,
           "outcome": "hit",
-          "unit": "A:1",
+          "unit": "A:2",
         },
       ],
       "type": "UnitAttacked",
@@ -6439,13 +7703,13 @@ exports[`golden battles > golden #3: an exact-tie draw — mirrored knight walls
     },
     {
       "kind": "slash",
-      "source": "B:2",
+      "source": "B:1",
       "targets": [
         {
           "damage": 16,
           "hpAfter": 124,
           "outcome": "hit",
-          "unit": "A:0",
+          "unit": "A:1",
         },
       ],
       "type": "UnitAttacked",
@@ -6465,13 +7729,13 @@ exports[`golden battles > golden #3: an exact-tie draw — mirrored knight walls
     },
     {
       "kind": "slash",
-      "source": "B:3",
+      "source": "B:2",
       "targets": [
         {
           "damage": 16,
-          "hpAfter": 108,
+          "hpAfter": 124,
           "outcome": "hit",
-          "unit": "A:2",
+          "unit": "A:0",
         },
       ],
       "type": "UnitAttacked",
@@ -6491,13 +7755,13 @@ exports[`golden battles > golden #3: an exact-tie draw — mirrored knight walls
     },
     {
       "kind": "slash",
-      "source": "B:4",
+      "source": "B:3",
       "targets": [
         {
           "damage": 16,
           "hpAfter": 108,
           "outcome": "hit",
-          "unit": "A:0",
+          "unit": "A:2",
         },
       ],
       "type": "UnitAttacked",
@@ -6511,6 +7775,19 @@ exports[`golden battles > golden #3: an exact-tie draw — mirrored knight walls
           "hpAfter": 108,
           "outcome": "hit",
           "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:4",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 108,
+          "outcome": "hit",
+          "unit": "A:0",
         },
       ],
       "type": "UnitAttacked",
@@ -6533,19 +7810,6 @@ exports[`golden battles > golden #3: an exact-tie draw — mirrored knight walls
     },
     {
       "kind": "slash",
-      "source": "B:0",
-      "targets": [
-        {
-          "damage": 16,
-          "hpAfter": 92,
-          "outcome": "hit",
-          "unit": "A:2",
-        },
-      ],
-      "type": "UnitAttacked",
-    },
-    {
-      "kind": "slash",
       "source": "A:0",
       "targets": [
         {
@@ -6559,13 +7823,13 @@ exports[`golden battles > golden #3: an exact-tie draw — mirrored knight walls
     },
     {
       "kind": "slash",
-      "source": "B:1",
+      "source": "B:0",
       "targets": [
         {
           "damage": 16,
-          "hpAfter": 108,
+          "hpAfter": 92,
           "outcome": "hit",
-          "unit": "A:1",
+          "unit": "A:2",
         },
       ],
       "type": "UnitAttacked",
@@ -6585,13 +7849,13 @@ exports[`golden battles > golden #3: an exact-tie draw — mirrored knight walls
     },
     {
       "kind": "slash",
-      "source": "B:2",
+      "source": "B:1",
       "targets": [
         {
           "damage": 16,
-          "hpAfter": 92,
+          "hpAfter": 108,
           "outcome": "hit",
-          "unit": "A:0",
+          "unit": "A:1",
         },
       ],
       "type": "UnitAttacked",
@@ -6605,6 +7869,19 @@ exports[`golden battles > golden #3: an exact-tie draw — mirrored knight walls
           "hpAfter": 92,
           "outcome": "hit",
           "unit": "B:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 16,
+          "hpAfter": 92,
+          "outcome": "hit",
+          "unit": "A:0",
         },
       ],
       "type": "UnitAttacked",

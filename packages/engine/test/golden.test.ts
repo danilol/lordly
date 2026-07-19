@@ -179,7 +179,11 @@ describe('golden battles', () => {
           },
           placements: { A: [...WALL], B: [...WALL] },
         },
-        0xfeed,
+        // Story 4.6: seed chosen so the all-knight mirror draws ZERO crits and
+        // ZERO dodges (knights DEX 16 → 5% each). A fired crit/dodge is a
+        // per-attack draw and NOT mirror-symmetric, so it would break the exact
+        // tie; with none firing the mirror stays perfectly symmetric → draw.
+        0xfef4,
       ),
     );
     const verdict = log.events[log.events.length - 1];
@@ -292,16 +296,16 @@ describe('golden battles (story 1.10 — until-wipeout mode)', () => {
         'wipeout',
       ),
     );
-    // wipeout.test.ts's `knightsVsMercs` fixture verbatim — its comment
-    // hand-derives the full grind (flank mercs die eng 2, center eng 3, mids
-    // eng 4). B:0 (front-left flank) is B's default leader: its fall in eng 2
+    // wipeout.test.ts's `knightsVsMercs` fixture verbatim — the mercs are ground
+    // out over four engagements. B:0 (front-left) is B's default leader: its fall
     // arms B's sober package (story 4.5, FR35), so B's mercs then deal ×3/4
-    // physical and A outlasts them with MORE hp than pre-4.5 (was 448/700 →
-    // 64%): A now holds 463/700 → 66% vs 0%, four engagements.
+    // physical. Story 4.6 (ADR 0003): both sides now draw dodge/crit per physical
+    // swing; on seed 0xdead one knight crit lands and no swing dodges, so A holds
+    // 461/700 → 65% vs 0% (was 66% at 4.5), still four engagements.
     expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(4);
     expect(log.events.filter((e) => e.type === 'LeaderFell')).toEqual([{ type: 'LeaderFell', side: 'B', unit: 'B:0' }]);
     const verdict = log.events[log.events.length - 1];
-    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 66, B: 0 } });
+    expect(verdict).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 65, B: 0 } });
     expect(log).toMatchSnapshot();
   });
 
@@ -320,20 +324,76 @@ describe('golden battles (story 1.10 — until-wipeout mode)', () => {
 
   it('golden #8: persisting poison — the earth-witch duel across engagements (FR19 Witch synergy)', () => {
     const log = resolveBattle(setup(POISON_DUEL, 5, 'wipeout'));
-    // Trace-verified for the 5-slot fixture under the story-4.5 pipeline: golden
-    // #5's comp in wipeout is the poison showcase — dots re-tick at every
-    // natural engagement end (14 ticks in all) and compound into a FATAL tick
-    // (a PoisonTicked hpAfter 0). FR9 global range lets A's two archers snipe
-    // across the whole grid; B:0 (B's witch) is B's default leader, so her early
-    // fall arms B's sober package (story 4.5, FR35) — B's melee then deals ×3/4
-    // and takes ×5/4 physical, so B collapses ONE engagement sooner than pre-4.5
-    // (wipe at engagement 5, was 6) and A ends much higher (35% vs the pre-4.5
-    // 16%). Poison still survives every StatusCleared seam across all engagements.
-    expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(5);
-    expect(log.events.filter((e) => e.type === 'PoisonTicked').length).toBe(14);
+    // golden #5's comp in wipeout is the poison showcase — dots re-tick at every
+    // natural engagement end and compound into a FATAL tick (a PoisonTicked
+    // hpAfter 0). FR9 global range lets A's two archers snipe across the whole
+    // grid; B:0 (B's witch) is B's default leader, so her early fall arms B's
+    // sober package (story 4.5, FR35) — B's melee then deals ×3/4 and takes ×5/4
+    // physical. Story 4.6 (ADR 0003): the archers/knights now draw dodge/crit
+    // per physical shot (2 crits, 4 dodges on this seed), which shifts the grind
+    // — B collapses at engagement 4 (was 5 at 4.5, 6 pre-4.5), 15 ticks land, one
+    // A knight (A:4) is lost, and A ends 36% vs 0%. Poison still survives every
+    // StatusCleared seam across all engagements.
+    expect(log.events.filter((e) => e.type === 'EngagementEnded').length).toBe(4);
+    expect(log.events.filter((e) => e.type === 'PoisonTicked').length).toBe(15);
     expect(log.events.some((e) => e.type === 'PoisonTicked' && e.hpAfter === 0)).toBe(true);
     expect(log.events.filter((e) => e.type === 'LeaderFell')).toEqual([{ type: 'LeaderFell', side: 'B', unit: 'B:0' }]);
-    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 35, B: 0 } });
+    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 36, B: 0 } });
+    expect(log).toMatchSnapshot();
+  });
+});
+
+describe('golden battles (story 4.6 — crits & dodge)', () => {
+  it('golden #9: one battle exercising every draw-consuming path — confusion (A1/A2), dodge (A3), crit (A4)', () => {
+    // ADR 0003's verification contract: a single seed-identity golden that
+    // traverses confused-misfire AND dodge AND crit, so any reorder or
+    // miscount of the frozen battle-stream draws shows up as a snapshot diff.
+    // A wind Witch confuses B's front; the ninjas (DEX 30 — 10% each) supply
+    // the crits and dodges. Seed 1 fires all three (verified).
+    const log = resolveBattle(
+      setup(
+        {
+          armies: {
+            A: [
+              u('witch', 'wind', 'Sylwen'),
+              u('ninja', 'fire', 'Kage'),
+              u('ninja', 'water', 'Rin'),
+              u('knight', 'earth', 'Doran'),
+              u('archer', 'fire', 'Lyra'),
+            ],
+            B: [
+              u('ninja', 'fire', 'Taki'),
+              u('ninja', 'water', 'Yuki'),
+              u('knight', 'wind', 'Cedric'),
+              u('mercenary', 'earth', 'Gorm'),
+              u('archer', 'water', 'Vess'),
+            ],
+          },
+          placements: {
+            A: [
+              { row: 'back', col: 'center' },
+              { row: 'front', col: 'left' },
+              { row: 'front', col: 'center' },
+              { row: 'front', col: 'right' },
+              { row: 'mid', col: 'left' },
+            ],
+            B: [...WALL],
+          },
+        },
+        1,
+        'wipeout',
+      ),
+    );
+    // All three draw-consuming paths are present in this one battle.
+    expect(log.events.some((e) => e.type === 'ActionMisfired')).toBe(true); // A1/A2 (confusion)
+    const outcomes = log.events.flatMap((e) => (e.type === 'UnitAttacked' ? e.targets.map((t) => t.outcome) : []));
+    expect(outcomes).toContain('crit'); // A4
+    expect(outcomes).toContain('dodged'); // A3
+    // A dodge always deals 0; a crit/hit never does.
+    for (const e of log.events) {
+      if (e.type !== 'UnitAttacked') continue;
+      for (const t of e.targets) if (t.outcome === 'dodged') expect(t.damage).toBe(0);
+    }
     expect(log).toMatchSnapshot();
   });
 });

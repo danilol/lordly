@@ -61,7 +61,12 @@ export function narrateEvent(state: NarrationState, event: BattleEvent): { lines
       const lines = event.targets.map((t) => {
         const before = hp.get(t.unit) ?? t.hpAfter + t.damage;
         hp.set(t.unit, t.hpAfter);
-        return `${unitName(state, event.source)} struck ${unitName(state, t.unit)} for ${t.damage} — ${before}→${t.hpAfter} HP`;
+        const src = unitName(state, event.source);
+        const tgt = unitName(state, t.unit);
+        // Story 4.6: each outcome narrates distinctly (a dodge shows no damage).
+        if (t.outcome === 'dodged') return `${src} struck at ${tgt} — dodged!`;
+        if (t.outcome === 'crit') return `${src} CRIT ${tgt} for ${t.damage} — ${before}→${t.hpAfter} HP`;
+        return `${src} struck ${tgt} for ${t.damage} — ${before}→${t.hpAfter} HP`;
       });
       return { lines, state: { classes: state.classes, names: state.names, hp } };
     }

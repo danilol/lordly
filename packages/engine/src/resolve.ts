@@ -97,11 +97,15 @@ export function resolveBattle(setup: MatchSetup): BattleLog {
     }
 
     // STREAM-ORDERING INVARIANT (FR20 replay stability): battle-stream draws
-    // happen in EXACTLY this order — ① the engagement tie flip (always the
-    // first draw of EVERY engagement — FR13: one flip per engagement), then
-    // ② per confused action in timeline order: one misfire draw, then
-    // (only when the misfire needs a uniform pick) one target draw. Nothing
-    // else draws. Reordering ANY of these changes every existing seed's battle.
+    // happen in EXACTLY the order frozen by ADR 0003 (docs/adr/0003-battle-
+    // stream-draw-order.md) — ① (E1) the engagement tie flip (always the first
+    // draw of EVERY engagement — FR13: one flip per engagement), then per
+    // action, in timeline order: (A1) a confusion misfire check for a confused
+    // actor, (A2) a misfire redirect target pick when the misfire needs one,
+    // then (A3) a dodge draw + (A4) a crit draw for any PHYSICAL SINGLE-TARGET
+    // hit (both always drawn — story 4.6, `rollHit`). Nothing else draws.
+    // Reordering or re-counting ANY of these changes every existing seed's
+    // battle — the table is frozen forever once 4.6 shipped.
     const tieWinner: Side = nextInt(streams.battle, 0, 1) === 0 ? 'A' : 'B';
     const order = timelineComparator(tieWinner);
 
@@ -210,7 +214,7 @@ function takeTurn(unit: UnitState, units: UnitState[], battle: Stream, setup: Ma
       return [{ type: 'ActionMisfired', unit: unit.id }, ...misfire(unit, units, battle, setup, leaderFallen)];
     }
   }
-  return act(unit, units, setup, leaderFallen);
+  return act(unit, units, battle, setup, leaderFallen);
 }
 
 /**
@@ -219,7 +223,7 @@ function takeTurn(unit: UnitState, units: UnitState[], battle: Stream, setup: Ma
  * is reach-filtered with Last Stand (FR7); ranged/magic is global (FR9). The
  * `leader` tactic reads the enemy leader's unit id (`${enemySide}:${index}`).
  */
-function act(unit: UnitState, units: UnitState[], setup: MatchSetup, leaderFallen: Record<Side, boolean>): BattleEvent[] {
+function act(unit: UnitState, units: UnitState[], battle: Stream, setup: MatchSetup, leaderFallen: Record<Side, boolean>): BattleEvent[] {
   const enemies = units.filter((u) => u.side !== unit.side);
   const mode = setup.mode;
   // FR35 tactic reversion (story 4.5): once THIS unit's side has lost its
@@ -249,12 +253,14 @@ function act(unit: UnitState, units: UnitState[], setup: MatchSetup, leaderFalle
     case 'valkyrie': {
       const idx = selectMeleeTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
       if (idx === undefined) return skip(unit);
-      return strike(unit, [enemies[idx] as UnitState], physical, setup.leaders, leaderFallen);
+      const target = enemies[idx] as UnitState;
+      return strike(unit, [target], physical, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
     }
     case 'archer': {
       const idx = selectRangedTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
       if (idx === undefined) return skip(unit);
-      return strike(unit, [enemies[idx] as UnitState], physical, setup.leaders, leaderFallen);
+      const target = enemies[idx] as UnitState;
+      return strike(unit, [target], physical, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
     }
     // Artillery row-blast (Sorceress = Wizard's Artillery twin, story 4.3).
     // Tactic interaction (D-2c): under `leader` the blast targets the enemy
@@ -281,10 +287,12 @@ function act(unit: UnitState, units: UnitState[], setup: MatchSetup, leaderFalle
         return [{ type: 'UnitHealed', source: unit.id, target: patient.id, amount, hpAfter: patient.hp }];
       }
       // Nobody damaged: the weak STR staff attack with magic targeting (FR11/FR9).
-      // The staff is PHYSICAL (STR-based) — it carries the sober-package penalty.
+      // The staff is PHYSICAL (STR-based) — it carries the sober-package penalty
+      // AND the crit/dodge draws (ADR 0003: "staff bonk" is a physical hit).
       const idx = selectRangedTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
       if (idx === undefined) return skip(unit);
-      return strike(unit, [enemies[idx] as UnitState], physical, setup.leaders, leaderFallen);
+      const target = enemies[idx] as UnitState;
+      return strike(unit, [target], physical, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
     }
     case 'witch': {
       // Prefer-unafflicted (FR12) filters the legal list BEFORE the tactic sort
@@ -341,8 +349,11 @@ function misfire(unit: UnitState, units: UnitState[], battle: Stream, setup: Mat
     case 'ninja':
     case 'valkyrie': {
       if (allies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
+      // A2 (misfire redirect target) draws first, THEN A3/A4 for the resulting
+      // physical strike on the ally — ADR 0003's frozen order (a misfired
+      // physical attack onto an ally is an A3/A4 draw site).
       const target = allies[nextInt(battle, 0, allies.length - 1)] as UnitState;
-      return strike(unit, [target], physical, setup.leaders, leaderFallen);
+      return strike(unit, [target], physical, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
     }
     case 'mage':
     case 'sorceress': {
@@ -399,27 +410,71 @@ const CLASS_MOVE_KIND: Record<UnitClass, MoveKind> = {
 };
 
 /**
+ * The frozen percent range for the crit/dodge draws (ADR 0003 §Chances,
+ * story 4.6): each draw spans [0, DEX_CHANCE_DEN − 1] and the outcome fires
+ * when the draw is below `floor(DEX / dexChanceDivisor)`. This is the draw
+ * RANGE — a frozen rule (changing it re-scales every stored seed's rolls), so
+ * it lives here as a constant, NOT in the sweep-policed balance data. The
+ * divisor and crit multiplier ARE balance data (`BALANCE.formulas`).
+ */
+const DEX_CHANCE_DEN = 100;
+
+/**
+ * ADR 0003's per-physical-single-target draws A3 (dodge) + A4 (crit), in that
+ * exact frozen order (story 4.6). ALWAYS both draws — the crit roll is taken
+ * even when the hit is dodged (its result discarded), so a physical
+ * single-target hit consumes EXACTLY 2 `battle` draws whatever the outcome
+ * (the auditable fixed-count property). Dodge is keyed to the DEFENDER's DEX,
+ * crit to the ATTACKER's DEX (`floor(DEX / dexChanceDivisor)` percent).
+ *
+ * Called ONLY for physical single-target hits (melee/arrow/staff, and a
+ * misfired physical strike on an ally); magic (blast/heal/status), Guard,
+ * leader-fall, Golem, and tactics selection take zero draws (ADR 0003).
+ * Exported for direct stream-consumption tests (the draw-count/order pin).
+ */
+export function rollHit(attacker: UnitClass, defender: UnitClass, battle: Stream): { dodged: boolean; crit: boolean } {
+  const divisor = BALANCE.formulas.dexChanceDivisor;
+  // A3 — dodge (defender DEX), drawn first.
+  const dodged = nextInt(battle, 0, DEX_CHANCE_DEN - 1) < Math.floor(BALANCE.classes[defender].dex / divisor);
+  // A4 — crit (attacker DEX), ALWAYS drawn (result discarded on a dodge).
+  const crit = nextInt(battle, 0, DEX_CHANCE_DEN - 1) < Math.floor(BALANCE.classes[attacker].dex / divisor);
+  return { dodged, crit };
+}
+
+/**
  * Applies one attack from `source` to `targets` (one entry for melee/ranged/
  * staff; the whole struck row for a blast — AD-12 one event per action).
  * Damage runs the FIXED pipeline with the source's Weaken status; each kill
  * appends a `UnitDied` after the single `UnitAttacked`, in target order.
- * Every target resolves `outcome: 'hit'` unconditionally in 4.2 — ADR 0003's
- * dodge/crit draws are story 4.6's and MUST NOT land early (frozen table).
+ *
+ * `roll` (story 4.6) is present ONLY for a physical single-target hit — the
+ * pre-drawn ADR 0003 dodge/crit result. A dodge reports `damage: 0`,
+ * `outcome: 'dodged'`, no HP change, no death; a crit passes the ×3/2 flag to
+ * the (physical) `formula` and reports `outcome: 'crit'`. With no `roll`
+ * (blast/magic) every target resolves `outcome: 'hit'` — magic never crits or
+ * is dodged (ADR 0003).
  */
 function strike(
   source: UnitState,
   targets: UnitState[],
-  formula: (a: UnitClass, d: UnitClass, weakened?: boolean) => number,
+  formula: (a: UnitClass, d: UnitClass, weakened?: boolean, crit?: boolean) => number,
   leaders: MatchSetup['leaders'],
   leaderFallen: Record<Side, boolean>,
+  roll?: { dodged: boolean; crit: boolean },
 ): BattleEvent[] {
   const weakened = source.statuses.has('weaken');
   const hits: AttackTarget[] = [];
   const deaths: BattleEvent[] = [];
   for (const target of targets) {
-    const damage = formula(source.class, target.class, weakened);
+    if (roll?.dodged) {
+      // A dodge negates the hit entirely: no damage, no HP change, no death.
+      hits.push({ unit: target.id, damage: 0, hpAfter: target.hp, outcome: 'dodged' });
+      continue;
+    }
+    const crit = roll?.crit ?? false;
+    const damage = formula(source.class, target.class, weakened, crit);
     target.hp = Math.max(0, target.hp - damage);
-    hits.push({ unit: target.id, damage, hpAfter: target.hp, outcome: 'hit' });
+    hits.push({ unit: target.id, damage, hpAfter: target.hp, outcome: crit ? 'crit' : 'hit' });
     if (target.hp === 0 && target.alive) {
       target.alive = false;
       deaths.push({ type: 'UnitDied', unit: target.id });
@@ -461,15 +516,22 @@ function isLeaderFall(unit: UnitState, setup: Pick<MatchSetup, 'leaders'>, leade
  *
  * Exported for direct table-driven tests (the `physicalDamage`/`blastDamage`
  * convention) — the re-clamp trap is pinned there, not only through a battle.
+ *
+ * Story 4.6: the `crit` flag threads through to `physicalDamage` (so the ×3/2
+ * lands inside the pipeline, after RPS/before Weaken); the leader-fall ratios
+ * then compose OUTSIDE the pipeline (the established sober-package position)
+ * and re-clamp last. The composed physical order is thus base → RPS → crit →
+ * Weaken → clamp → leader-fall dealt/taken → re-clamp — deterministic, pinned
+ * by goldens.
  */
 export function leaderPenaltyPhysical(
   attackerSide: Side,
   defenderSide: Side,
   leaderFallen: Record<Side, boolean>,
-): (a: UnitClass, d: UnitClass, weakened?: boolean) => number {
+): (a: UnitClass, d: UnitClass, weakened?: boolean, crit?: boolean) => number {
   const { leaderFallDealt, leaderFallTaken, minDamage } = BALANCE.formulas;
-  return (a, d, weakened) => {
-    let dmg = physicalDamage(a, d, weakened);
+  return (a, d, weakened, crit) => {
+    let dmg = physicalDamage(a, d, weakened, crit);
     if (leaderFallen[attackerSide]) dmg = Math.floor((dmg * leaderFallDealt.num) / leaderFallDealt.den);
     if (leaderFallen[defenderSide]) dmg = Math.floor((dmg * leaderFallTaken.num) / leaderFallTaken.den);
     return Math.max(minDamage, dmg);
@@ -498,8 +560,8 @@ function lowestHpFraction(allies: readonly UnitState[]): UnitState | undefined {
  * min-damage clamp LAST. Class-agnostic pure arithmetic (exported for
  * direct table-driven tests).
  */
-export function physicalDamage(attacker: UnitClass, defender: UnitClass, weakened = false): number {
-  return damagePipeline(BALANCE.classes[attacker].str, attacker, defender, weakened, 'vit');
+export function physicalDamage(attacker: UnitClass, defender: UnitClass, weakened = false, crit = false): number {
+  return damagePipeline(BALANCE.classes[attacker].str, attacker, defender, weakened, 'vit', undefined, crit ? BALANCE.formulas.critMultiplier : undefined);
 }
 
 /**
@@ -535,19 +597,36 @@ export function healAmount(healer: UnitClass): number {
 
 /**
  * Shared FIXED-order damage pipeline (FR15/FR16/FR20):
- * base → preRps attenuation (blast only, FR10) → RPS → weaken → min clamp.
+ * base → preRps attenuation (blast only, FR10) → RPS → crit (FR36, story 4.6)
+ * → weaken → min clamp.
  *
  * The ×1.5 advantage / ×0.75 disadvantage now derive from the role-relation
  * table via `rpsRatio` (story 4.3, AD-4): symmetric edges penalise the reverse,
  * one-way hunts do not — the exact FR14-amendment asymmetry the old
  * `rpsBeats`/`rpsHunts` pair encoded, from a single source.
+ *
+ * `crit` (ADR 0003 §Chances): a ×3/2 multiplier slotted immediately AFTER RPS
+ * and BEFORE Weaken (the sole in-pipeline status modifier). It MUST live here,
+ * not as an outer wrapper on the result — applied after Weaken/clamp the
+ * flooring order changes (`floor(floor(x·3/2)/2) ≠ floor(floor(x/2)·3/2)`),
+ * breaking the frozen FR15 order. Only the physical single-target path passes
+ * it; magic/blast never crit.
  */
-function damagePipeline(power: number, attacker: UnitClass, defender: UnitClass, weakened: boolean, mitigation: 'vit' | 'men', preRps?: Ratio): number {
+function damagePipeline(
+  power: number,
+  attacker: UnitClass,
+  defender: UnitClass,
+  weakened: boolean,
+  mitigation: 'vit' | 'men',
+  preRps?: Ratio,
+  crit?: Ratio,
+): number {
   const { formulas, classes } = BALANCE;
   const base = power - Math.floor(classes[defender][mitigation] / 2);
   let modified = preRps === undefined ? base : Math.floor((base * preRps.num) / preRps.den);
   const rps = rpsRatio(attacker, defender);
   if (rps !== undefined) modified = Math.floor((modified * rps.num) / rps.den);
+  if (crit !== undefined) modified = Math.floor((modified * crit.num) / crit.den);
   if (weakened) modified = Math.floor(modified / 2);
   return Math.max(formulas.minDamage, modified);
 }

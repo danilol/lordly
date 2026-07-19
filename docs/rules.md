@@ -51,6 +51,15 @@ The two boards face each other, front rows nearest. Your left column faces the e
 - **Heal (Cleric).** Restores the **living ally with the lowest HP share** (herself included). If nobody is hurt, she pokes with her staff instead — feebly.
 - **Curse (Witch).** Applies her prepared spell to the rearmost enemy, preferring one not yet afflicted. She deals no damage; she doesn't need to.
 
+## Crits and Dodges
+
+A unit's **DEX** governs the drama of a physical blow. Every melee strike, arrow, and cleric staff-poke rolls two chances:
+
+- **Crit.** The attacker may land a critical hit for **×1.5** damage — the chance is the attacker's **DEX ÷ 3** (as a percent), applied after the role matchup.
+- **Dodge.** The defender may slip the blow entirely and take **no damage** — the chance is the defender's **DEX ÷ 3** (as a percent).
+
+Higher-DEX units — the Ninja above all — both crit more and dodge more. **Magic and healing never crit and can never be dodged** (a Wizard's blast, a Witch's curse, and a Cleric's heal always land as cast). Like everything else, both rolls come from the battle's seed, so the same battle always replays the same crits and dodges.
+
 ## Your Army's Tactic
 
 Before battle you set one **tactic** for your whole army — how every unit chooses whom to hit. It is a second plan layered over your picks and placement, set at placement and hidden until the reveal (the enemy commits one too, unseen). It never changes *where* a unit can reach, only *which* legal target it prefers.
