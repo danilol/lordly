@@ -1,5 +1,5 @@
 import { ALL_COLS, ALL_ROWS } from '@lordly/engine';
-import type { BattleEvent, MoveKind, Placement, Side, UnitId } from '@lordly/engine';
+import type { BattleEvent, MoveKind, Placement, Side, SpellKind, UnitId } from '@lordly/engine';
 import { BASE_WIDTH, ISO_BOARD } from '../config/constants';
 
 /**
@@ -96,13 +96,15 @@ export function boardTiles(side: Side, orientation: BoardOrientation = DEFAULT_O
  */
 export type TraceKind = MoveKind | 'heal' | 'spell';
 
-/** Which unit an action travels FROM and which unit(s) it travels TO — a beat's from→to reading. */
-export interface EventTrace {
-  fromId: UnitId;
-  /** One entry for a single-target move; the whole struck row for a blast fan-out. */
-  toIds: UnitId[];
-  kind: TraceKind;
-}
+/**
+ * Which unit an action travels FROM and which unit(s) it travels TO — a beat's
+ * from→to reading. `toIds` has one entry for a single-target move; the whole
+ * struck row for a blast fan-out. A discriminated union so a `spell` trace
+ * carries its `SpellKind` — the scene styles the travel from the trace ALONE,
+ * never re-reading the raw event (review: the second `event.type` switch was
+ * a drift seam).
+ */
+export type EventTrace = { fromId: UnitId; toIds: UnitId[]; kind: MoveKind | 'heal' } | { fromId: UnitId; toIds: UnitId[]; kind: 'spell'; spell: SpellKind };
 
 /**
  * The from→to reading of a battle event (story 4.10, FR39d, AD-2): derived
@@ -124,7 +126,7 @@ export function eventTrace(event: BattleEvent): EventTrace | null {
     case 'UnitHealed':
       return { fromId: event.source, toIds: [event.target], kind: 'heal' };
     case 'StatusApplied':
-      return { fromId: event.source, toIds: [event.target], kind: 'spell' };
+      return { fromId: event.source, toIds: [event.target], kind: 'spell', spell: event.spell };
     default:
       return null;
   }

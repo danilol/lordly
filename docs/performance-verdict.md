@@ -194,13 +194,15 @@ So the heavier all-Mage case already dominates the "busiest monster battle" the 
 
 Conclusion from code+object analysis: no pooling fix is warranted pre-measurement (same doctrine as 3.4 — measure, don't guess-fix). If the on-device capture shows the extra sliver regressing the floor, the fix is to pool/reuse the trace rectangle (the same fix already noted for the popup/wash churn).
 
-### On-device fps capture — PENDING Task 7 device pass
+### On-device fps capture — PO-DEFERRED to post-deploy (deferred-work.md)
 
-Per this doc's doctrine (empirical over reasoned), the authoritative NFR1 check is an on-device `?perf=1` capture on the deployed build, following the exact post-review procedure (`three-mages`-wipeout Replay at 1× and ×2, per-scenario resets, single-read traces). That capture is Danilo's device gate (story 4.10 Task 7) and runs on the deployed build; this table is filled from that pass:
+Per this doc's doctrine (empirical over reasoned), the authoritative NFR1 check is an on-device `?perf=1` capture, following the exact post-review procedure (`three-mages`-wipeout Replay at 1× and ×2, per-scenario resets, single-read traces). Story 4.10 was accepted and shipped by Danilo (2026-07-20) **without** that capture — a recorded PO deferral (`deferred-work.md`), not a completed gate: the story's device pass (Task 7) covered the animation *feel*, not the frame floor. The capture runs at the next device session against the deployed build (strict comparability with the deployed-URL baselines above; a local `vite preview` capture was technically possible pre-merge but would not compare 1:1) and fills this table:
 
-| Scenario (procedure order)             | Min fps | Character of the trace |
-| -------------------------------------- | ------- | ---------------------- |
-| Battle 1× (three-mages-wipeout Replay) | _pending device pass_ | — |
-| Battle ×2                              | _pending device pass_ | — |
+| Scenario (procedure order)             | Min fps               | Character of the trace |
+| -------------------------------------- | --------------------- | ---------------------- |
+| Battle 1× (three-mages-wipeout Replay) | _pending deferred capture_ | —                 |
+| Battle ×2                              | _pending deferred capture_ | —                 |
+
+Post-review note (2026-07-20): the review round added arrival-delayed impact effects (popups/washes now land when the trace does, via a scene-clock `delayedCall`) — zero additional GameObjects, so the ≤1-object/beat accounting above is unchanged.
 
 Device-class caveat unchanged: the capture device is a Pixel 9 Pro XL, an accepted deviation from AC1's Pixel 6a-class floor (documented in the 2026-07-16 review note above).

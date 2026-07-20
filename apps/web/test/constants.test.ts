@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { SpellKind } from '@lordly/engine';
 import {
   backingScaleFor,
   BASE_HEIGHT,
@@ -10,9 +11,12 @@ import {
   DEFAULT_SPEED_ID,
   DPR_BACKING_CAP,
   GAME_NAME,
+  HEAL_TRACE_COLOR,
   HOME_PLAY_LABEL,
   MONSTER_LOOM_SCALE,
   PALETTE,
+  STATUS_COLORS,
+  statusTraceColor,
   turnBoundaryLine,
   unitCodeStyle,
   unitDisplaySize,
@@ -131,5 +135,26 @@ describe('monster loom sizing (story 4.9, D-3c — one cell, oversized sprite)',
       expect(unitDisplaySize('golem', base)).toBeGreaterThan(base);
     }
     expect(MONSTER_LOOM_SCALE).toBeGreaterThan(1);
+  });
+});
+
+describe('travel-trace colors (story 4.10 review) — the format statusTraceColor depends on', () => {
+  it('every STATUS_COLORS token is strict #rrggbb — statusTraceColor parses it blind', () => {
+    // statusTraceColor does `parseInt(hex.slice(1), 16)` with no guard: a
+    // future named color / #rgb / rgb() token would silently become NaN
+    // (Phaser renders that as black). This pin makes the format a test
+    // failure instead of a wrong-colored spell trace.
+    for (const [spell, hex] of Object.entries(STATUS_COLORS)) {
+      expect(hex, spell).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(statusTraceColor(spell as SpellKind)).toBe(parseInt(hex.slice(1), 16));
+      expect(Number.isNaN(statusTraceColor(spell as SpellKind))).toBe(false);
+    }
+  });
+
+  it('HEAL_TRACE_COLOR is a valid numeric color and not a side hue (side identity never rides a heal trace)', () => {
+    expect(HEAL_TRACE_COLOR).toBeGreaterThanOrEqual(0x000000);
+    expect(HEAL_TRACE_COLOR).toBeLessThanOrEqual(0xffffff);
+    expect(HEAL_TRACE_COLOR).not.toBe(PALETTE.playerLine);
+    expect(HEAL_TRACE_COLOR).not.toBe(PALETTE.enemyLine);
   });
 });

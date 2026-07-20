@@ -60,7 +60,13 @@ export interface TweenRecipe {
 export const UNIT_TWEENS: Record<UnitRepresentation, TweenRecipe> = {
   /** Gentle breathing bob — available for story 2.2; Draft/Placement/Reveal currently render the STATIC idle frame (AC5), no scene plays this tween yet. */
   idle: { props: { y: -2 }, duration: 700, yoyo: true, repeat: -1 },
-  /** Short lunge toward the target (2.2 mirrors the x-delta for side B). */
+  /**
+   * The attack representation (FR31). Story 4.10's Battle melee step
+   * SUPERSEDES this recipe's `props`/`duration` (it computes a real
+   * step-to-target from the attacker→target vector, paced by
+   * `MELEE_STEP_MS` ÷ the FR23 speed factor) and consumes only `repeat`;
+   * the recipe stays as the documented one-shot yoyo shape of the move.
+   */
   attack: { props: { x: 10 }, duration: 140, yoyo: true, repeat: 0 },
   /** Flinch flash — alpha dip, twice. */
   hurt: { props: { alpha: 0.3 }, duration: 90, yoyo: true, repeat: 1 },

@@ -23,6 +23,8 @@ import {
   POISON_TEXT,
   STATUS_COLORS,
   STATUS_GLYPHS,
+  HEAL_TRACE_COLOR,
+  statusTraceColor,
   ISO_TILES,
   unitCodeStyle,
 } from '../config/constants';
@@ -31,6 +33,7 @@ import { addElementBadge, addHomeBack, addUnitSprite, applyHiDpiCamera, crispTex
 import { drawIsoBoard } from '../config/board';
 import { attachPerfSampler } from '../config/perf';
 import { beatDurationMs, buildBeatSchedule, eventTrace, unitTileCenter } from '../flow/battleView';
+import type { TraceKind } from '../flow/battleView';
 import { createStorage } from '../flow/storage';
 import type { Beat } from '../flow/battleView';
 import { createNarrationState, narrateEvent } from '../flow/narration';
@@ -73,6 +76,15 @@ const MELEE_STEP_FRACTION = 0.6;
 /** Reduced-motion melee step — a shorter jab, same beat (UX-DR6). */
 const MELEE_STEP_FRACTION_REDUCED = 0.25;
 /**
+ * Absolute cap on the melee step travel (px). The fraction was tuned for
+ * ~70px clash-gap steps — but a `staff` bonk is resolved by RANGED targeting
+ * (Cleric's nobody-damaged fallback, resolve.ts) and a misfire strikes a
+ * random ally, so the attacker→target vector can span most of the board
+ * (~290px); 60% of that is a full-board dash, not a step (review 2026-07-20).
+ * The cap leaves every normal clash step untouched.
+ */
+const MELEE_STEP_MAX_PX = 90;
+/**
  * Melee step ONE-WAY duration at 1× (ms) — divided by the speed factor at play
  * time so the motion slows down with the longer beat instead of darting
  * (device feedback 2026-07-20: the fixed 140ms leg read too fast at 1× once
@@ -86,11 +98,20 @@ const MELEE_STEP_FALLBACK_PX = 20;
 const TRACE_MS = 180;
 const TRACE_MS_REDUCED = 80;
 /**
- * The heal trace color — a restorative green, deliberately NOT a side hue
- * (blue=you/red=enemy owns tiles and HP, never a travel line; UX side rule +
- * open Q4). Element/neutral-tinted like the status traces.
+ * How each trace kind travels — EXHAUSTIVE over `TraceKind` (review
+ * 2026-07-20): a future `MoveKind` is a compile error HERE, forcing a
+ * conscious step-vs-projectile choice instead of silently falling into
+ * either branch (the old stringly `kind === 'slash' || …` check).
  */
-const HEAL_TRACE_COLOR = 0x8fe0a0;
+const TRACE_TRAVEL: Record<TraceKind, 'step' | 'projectile'> = {
+  slash: 'step',
+  bash: 'step',
+  staff: 'step',
+  arrow: 'projectile',
+  blast: 'projectile',
+  heal: 'projectile',
+  spell: 'projectile',
+};
 /** How far a combat number floats up (px; damped under reduced motion). */
 const FLOAT_PX = 22;
 /** Crit combat numbers render larger than the 14px base (story 4.6) — still well above the ≥14px floor (UX-DR3). */
@@ -342,50 +363,65 @@ export class BattleScene extends Scene {
         this.passLabel.setText(battleTurnLabel(event.pass));
         return true;
       case 'UnitAttacked': {
-        this.traceMove(event); // from→to travel (melee step / projectile trace); origin-less events never reach here
+        // from→to travel first (melee step / projectile trace); the IMPACT
+        // effects below land when the travel does — immediately for a step
+        // (the attacker itself is the motion), after the crossing time for a
+        // projectile (review decision 2026-07-20: cause THEN effect — the
+        // number must not pop before the arrow lands).
+        const travelMs = this.traceMove(event);
         const color = this.actorColor(event.source);
-        const guarded = event.redirectedFrom !== undefined;
-        for (const t of event.targets) {
-          this.setHp(t.unit, t.hpAfter);
-          if (t.outcome === 'dodged') {
-            // A dodge is a whiff (story 4.6): no damage number, no hurt-flash,
-            // HP unchanged — a clear "DODGE" caption over a dash so the miss
-            // reads unambiguously even at full battle speed. NOT emphatic (review):
-            // a whiff should read as understated — the caption + muted color +
-            // dash already distinguish it from a hit without the crit's punch.
-            this.popup(t.unit, this.linked(linkedToMisfire, '—'), PALETTE.mutedText, false, 'DODGE');
-            continue;
+        const guardian = event.redirectedFrom;
+        this.afterTravel(travelMs, () => {
+          for (const t of event.targets) {
+            this.setHp(t.unit, t.hpAfter);
+            if (t.outcome === 'dodged') {
+              // A dodge is a whiff (story 4.6): no damage number, no hurt-flash,
+              // HP unchanged — a clear "DODGE" caption over a dash so the miss
+              // reads unambiguously even at full battle speed. NOT emphatic (review):
+              // a whiff should read as understated — the caption + muted color +
+              // dash already distinguish it from a hit without the crit's punch.
+              this.popup(t.unit, this.linked(linkedToMisfire, '—'), PALETTE.mutedText, false, 'DODGE');
+              continue;
+            }
+            if (guardian !== undefined) {
+              // Story 4.7 (FR33): a Guard shield reduced this LANDED hit. The
+              // shield ring pulses on the GUARDIAN — the unit whose charge was
+              // spent (review decision 2026-07-20, per AC2 + the types.ts
+              // contract; supersedes 4.7's target-side ring) — while the
+              // reduced/0 number + GUARDED caption stay on the struck target
+              // (it isn't a whiff). NOT emphatic — a held guard is a calm,
+              // sturdy beat, not a punch like a crit.
+              this.guardFlash(guardian);
+              // A Full Guard negates to 0 — show a plain "0", never "-0" (review).
+              const blockedText = t.damage === 0 ? '0' : `-${t.damage}`;
+              this.popup(t.unit, this.linked(linkedToMisfire, blockedText), GUARD_MARKER_COLOR, false, GUARD_BLOCKED_CAPTION);
+              continue;
+            }
+            this.hurtFlash(t.unit);
+            const crit = t.outcome === 'crit';
+            // A crit gets a small "CRITICAL" caption stacked over the boosted number.
+            this.popup(t.unit, this.linked(linkedToMisfire, `-${t.damage}`), color, crit, crit ? 'CRITICAL' : undefined);
           }
-          if (guarded) {
-            // Story 4.7 (FR33): a Guard shield reduced this LANDED hit — a
-            // block reads distinctly from a plain hit (a shield flash, not the
-            // hurt flinch) and from a dodge (the reduced/0 number still shows,
-            // it isn't a whiff). NOT emphatic — a held guard is a calm, sturdy
-            // beat, not a punch like a crit.
-            this.guardFlash(t.unit);
-            // A Full Guard negates to 0 — show a plain "0", never "-0" (review).
-            const blockedText = t.damage === 0 ? '0' : `-${t.damage}`;
-            this.popup(t.unit, this.linked(linkedToMisfire, blockedText), GUARD_MARKER_COLOR, false, GUARD_BLOCKED_CAPTION);
-            continue;
-          }
-          this.hurtFlash(t.unit);
-          const crit = t.outcome === 'crit';
-          // A crit gets a small "CRITICAL" caption stacked over the boosted number.
-          this.popup(t.unit, this.linked(linkedToMisfire, `-${t.damage}`), color, crit, crit ? 'CRITICAL' : undefined);
-        }
+        });
         return true;
       }
-      case 'UnitHealed':
-        this.traceMove(event); // healer → ally across the gap; the glow stays the arrival effect
-        this.setHp(event.target, event.hpAfter);
-        this.healGlow(event.target);
-        this.popup(event.target, this.linked(linkedToMisfire, `+${event.amount}`), this.actorColor(event.source));
+      case 'UnitHealed': {
+        const travelMs = this.traceMove(event); // healer → ally across the gap
+        this.afterTravel(travelMs, () => {
+          this.setHp(event.target, event.hpAfter);
+          this.healGlow(event.target); // the arrival glow — now genuinely on arrival
+          this.popup(event.target, this.linked(linkedToMisfire, `+${event.amount}`), this.actorColor(event.source));
+        });
         return true;
-      case 'StatusApplied':
-        this.traceMove(event); // caster → target across the gap; the persistent icon + popup are the arrival
-        this.applyStatusIcon(event.target, event.spell);
-        this.popup(event.target, this.linked(linkedToMisfire, event.spell), STATUS_COLORS[event.spell]);
+      }
+      case 'StatusApplied': {
+        const travelMs = this.traceMove(event); // caster → target across the gap
+        this.afterTravel(travelMs, () => {
+          this.applyStatusIcon(event.target, event.spell);
+          this.popup(event.target, this.linked(linkedToMisfire, event.spell), STATUS_COLORS[event.spell]);
+        });
         return true;
+      }
       case 'ActionMisfired':
         this.pendingMisfirePair = true;
         this.confusionWiggle(event.unit);
@@ -467,11 +503,12 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Kills any in-flight recipe tween on the sprite and restores its rest pose
-   * (position 0/−14 in the container, full alpha, no rotation). Under
-   * fast-forward, recipe tweens (hurt 360ms, lunge 280ms) outlive the 150ms
-   * beat; a second tween on the same property captured mid-dip values as its
-   * yoyo base and left sprites stuck translucent or off their tile (review).
+   * Kills any in-flight tween on the sprite and restores its rest pose
+   * (position 0/−14 in the container, full alpha, no rotation). Motion tweens
+   * can outlive a beat (the hurt flash is 360ms, a melee step's round trip up
+   * to 480ms vs the 300ms 2× beat); a second tween on the same property
+   * captured mid-dip values as its yoyo base and left sprites stuck
+   * translucent or off their tile (review, epic 2 — the guard this keeps).
    */
   private resetSprite(v: UnitView) {
     this.tweens.killTweensOf(v.sprite);
@@ -487,41 +524,82 @@ export class BattleScene extends Scene {
    * wrong): melee-style moves (slash/bash/staff) STEP into the clash gap toward
    * the target and back; arrow/blast/heal/spell send a projectile that crosses
    * the diagonal to the target (a blast additionally washes every struck tile in
-   * the row on arrival). All procedural — zero art.
+   * the row on arrival). Returns the travel time in ms — the caller holds the
+   * beat's impact effects (`afterTravel`) until the projectile lands; 0 means
+   * the impact reads immediately (a step, or no travel). All procedural — zero art.
    */
-  private traceMove(event: BattleEvent) {
+  private traceMove(event: BattleEvent): number {
     const trace = eventTrace(event);
-    if (!trace) return; // origin-less (poison, deaths, guard markers, …) — honest on-unit rendering, no travel (AC2)
+    if (!trace) return 0; // origin-less (poison, deaths, guard markers, …) — honest on-unit rendering, no travel (AC2)
     const attacker = this.views.get(trace.fromId);
-    if (!attacker || attacker.dead) return;
+    if (!attacker || attacker.dead) return 0;
     const targets = trace.toIds.map((id) => this.views.get(id)).filter((v): v is UnitView => v !== undefined);
-    const primary = targets[0];
-    const melee = trace.kind === 'slash' || trace.kind === 'bash' || trace.kind === 'staff';
-    if (melee || !primary) {
-      this.meleeStep(attacker, primary);
-      return;
+
+    if (TRACE_TRAVEL[trace.kind] === 'step') {
+      this.meleeStep(attacker, targets[0]);
+      return 0; // the attacker IS the motion — impact reads at the strike, no arrival delay
     }
-    // Effects are side-colored by the ACTOR (same rule as the combat numbers);
-    // heal/spell traces stay off the side hues (they name no side — UX rule).
+
+    // A projectile aims at the first target that isn't the actor itself — a
+    // self-heal / misfired self-blast has no gap to cross, so no sliver is
+    // fabricated for it (review: a zero-length trace hovered on the unit).
+    const to = targets.find((t) => t !== attacker);
+    // Colors: ATTACK slivers follow the actor-color combat-number rule (arrow
+    // keeps its 4.7 gold); heal/spell traces stay off the side hues — the one
+    // rule lives at the constants (config/constants.ts, review).
     const actorFill = attacker.side === 'A' ? PALETTE.playerLine : PALETTE.enemyLine;
     let color: number;
-    switch (event.type) {
-      case 'UnitAttacked':
-        color = trace.kind === 'arrow' ? ISO_TILES.frontStroke : actorFill;
+    switch (trace.kind) {
+      case 'arrow':
+        color = ISO_TILES.frontStroke;
         break;
-      case 'UnitHealed':
+      case 'blast':
+        color = actorFill;
+        break;
+      case 'heal':
         color = HEAL_TRACE_COLOR;
         break;
-      case 'StatusApplied':
-        color = parseInt(STATUS_COLORS[event.spell].slice(1), 16); // status hex string → Phaser numeric color
+      case 'spell':
+        color = statusTraceColor(trace.spell);
         break;
-      default:
-        return; // eventTrace already returned null for any other type
+      case 'slash':
+      case 'bash':
+      case 'staff':
+        return 0; // unreachable — TRACE_TRAVEL routed these to meleeStep above; listed so this switch stays EXHAUSTIVE (a new TraceKind is a compile error, not a silent default)
     }
-    // One trace across the gap toward the row (open Q1/Q2 default: a single
-    // actor→row sliver, not one per struck unit), then the per-tile blast wash.
-    this.traceProjectile(attacker, primary, color);
-    if (trace.kind === 'blast') for (const struck of targets) this.blastWash(struck, actorFill);
+    // One sliver across the gap toward the row (open Q1/Q2 default: a single
+    // actor→row trace, not one per struck unit); the per-tile blast wash
+    // blooms ON ARRIVAL (review decision 2026-07-20 — previously it fired at
+    // launch while the docs claimed arrival).
+    const washRow = () => {
+      if (trace.kind === 'blast') for (const struck of targets) this.blastWash(struck, actorFill);
+    };
+    if (!to) {
+      // No cross-gap target (self-target, or every target view gone): no
+      // travel, effects land immediately. An ATTACK with a vanished target
+      // keeps the old aggression nudge; a heal/spell just stays still —
+      // stepping a healer at the enemy board would fabricate an attack read (review).
+      if (trace.kind === 'arrow' || trace.kind === 'blast') this.meleeStep(attacker);
+      washRow();
+      return 0;
+    }
+    this.traceProjectile(attacker, to, color, washRow);
+    return this.reduceMotion ? TRACE_MS_REDUCED : TRACE_MS;
+  }
+
+  /**
+   * Runs a beat's impact effects when its travel lands: immediately for a 0ms
+   * travel (a melee step, an on-unit beat), else after the projectile's
+   * crossing time (review decision 2026-07-20: cause THEN effect). The
+   * scene-scoped clock drops the pending call on scene shutdown, so a Skip
+   * mid-flight leaks nothing.
+   */
+  private afterTravel(ms: number, effects: () => void) {
+    if (ms <= 0) {
+      effects();
+      return;
+    }
+    this.time.delayedCall(ms, effects);
   }
 
   /**
@@ -535,10 +613,16 @@ export class BattleScene extends Scene {
     this.resetSprite(attacker); // start from a clean rest pose (0,−14); yoyo returns here
     let toX: number;
     let toY: number;
-    if (target) {
+    if (target && target !== attacker) {
+      const dx = target.x - attacker.x; // sprite local rest x is 0
+      const dy = target.y - attacker.y; // sprite local rest y is −14
+      const dist = Math.hypot(dx, dy) || 1;
       const frac = this.reduceMotion ? MELEE_STEP_FRACTION_REDUCED : MELEE_STEP_FRACTION;
-      toX = (target.x - attacker.x) * frac; // sprite local rest x is 0
-      toY = -14 + (target.y - attacker.y) * frac; // sprite local rest y is −14
+      // Capped: a ranged-targeted staff bonk / misfire can span most of the
+      // board — a fraction of THAT is a dash, not a step (review; see MELEE_STEP_MAX_PX).
+      const travel = Math.min(dist * frac, MELEE_STEP_MAX_PX);
+      toX = (dx / dist) * travel;
+      toY = -14 + (dy / dist) * travel;
     } else {
       const dir = attacker.side === 'A' ? -1 : 1; // A's foe is upper-left, B's is lower-right
       const step = (this.reduceMotion ? 6 : MELEE_STEP_FALLBACK_PX) / Math.SQRT2;
@@ -562,10 +646,11 @@ export class BattleScene extends Scene {
    * The ONE origin→target trace (story 4.10, AC1): a small mark crosses the
    * clash gap from `from` to `to`, then destroys itself — shared by
    * arrow/blast/heal/spell so the from→to reading can't drift between kinds
-   * (this generalizes story 4.7's arrow sliver). Reduced motion damps the
-   * crossing DURATION, never the beat (UX-DR6).
+   * (this generalizes story 4.7's arrow sliver). `onArrive` fires when the
+   * mark lands (the blast wash's cue). Reduced motion damps the crossing
+   * DURATION, never the beat (UX-DR6).
    */
-  private traceProjectile(from: UnitView, to: UnitView, color: number) {
+  private traceProjectile(from: UnitView, to: UnitView, color: number, onArrive?: () => void) {
     const mark = this.add
       .rectangle(from.x, from.y - 12, 10, 2, color)
       .setDepth(900)
@@ -575,7 +660,10 @@ export class BattleScene extends Scene {
       x: to.x,
       y: to.y - 12,
       duration: this.reduceMotion ? TRACE_MS_REDUCED : TRACE_MS,
-      onComplete: () => mark.destroy(),
+      onComplete: () => {
+        mark.destroy();
+        onArrive?.();
+      },
     });
   }
 

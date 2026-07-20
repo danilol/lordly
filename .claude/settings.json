@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(export PATH=*)",
+      "Bash(npx vitest run *)",
+      "Bash(pnpm -r typecheck *)",
+      "Bash(pnpm lint *)",
+      "Bash(pnpm test *)",
+      "Bash(python3 _bmad/scripts/resolve_customization.py *)",
+      "Bash(python3 /Users/danilo/projects/js/lordly/_bmad/scripts/resolve_customization.py *)",
+      "Bash(pnpm vitest run *)",
+      "Bash(pnpm --filter web build)",
+      "Bash(pnpm coverage *)",
+      "Bash(gh run watch *)",
+      "Bash(pnpm --filter web typecheck)",
+      "Bash(pnpm -w lint *)",
+      "Bash(pnpm --filter @lordly/engine sim *)",
+      "Bash(pnpm --filter @lordly/engine typecheck)",
+      "Bash(pnpm typecheck *)",
+      "Bash(npx prettier --check *)",
+      "Bash(pnpm --filter web dev)",
+      "Bash(pnpm -w typecheck *)",
+      "Bash(npx tsc --noEmit*)",
+      "Bash(gh secret list)"
+    ]
+  }
+}

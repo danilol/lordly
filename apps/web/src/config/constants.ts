@@ -384,6 +384,21 @@ export const STATUS_COLORS: Record<SpellKind, string> = {
 /** PoisonTicked carries no actor in its payload (types.ts), so poison numbers use this distinct neutral instead of a guessed side color. */
 export const POISON_TEXT = '#9b6bae';
 
+// Origin→target travel-trace colors (story 4.10). The rule, stated once
+// (review: an earlier scene-side comment contradicted itself): ATTACK effects
+// are side-colored by the ACTOR — the same DESIGN rule as combat numbers
+// ("blue when you deal, red for the enemy"); the arrow keeps its 4.7 gold
+// sliver. HEAL and SPELL traces are the exception: they carry no aggression
+// read, so they use element/status-neutral hues, never a side color.
+/** The heal trace — a restorative green, deliberately NOT a side hue. */
+export const HEAL_TRACE_COLOR = 0x8fe0a0;
+/**
+ * A spell trace in its status hue — `STATUS_COLORS` as a Phaser numeric color.
+ * Assumes the strict `#rrggbb` format, which constants.test.ts pins (review:
+ * a future named/`#rgb` token would otherwise silently parse to NaN → black).
+ */
+export const statusTraceColor = (spell: SpellKind): number => parseInt(STATUS_COLORS[spell].slice(1), 16);
+
 // FR3 element badge colors (cosmetic; the witch's spell keys off element — FR16).
 // Keyed by the engine's `Element` union (AD-4) so a new element is a compile
 // error here, never a runtime `undefined` fill. Hex values are the UX-

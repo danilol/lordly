@@ -231,9 +231,26 @@ describe('eventTrace — the pure from→to seam (story 4.10, AC1/AC2)', () => {
     expect(eventTrace(heal)).toEqual({ fromId: 'A:0', toIds: ['A:1'], kind: 'heal' });
   });
 
-  it('reads a spell as caster → target', () => {
+  it('reads a spell as caster → target, carrying the SpellKind (the scene styles the trace from this alone)', () => {
     const spell: BattleEvent = { type: 'StatusApplied', source: 'B:0', target: 'A:1', spell: 'sleep' };
-    expect(eventTrace(spell)).toEqual({ fromId: 'B:0', toIds: ['A:1'], kind: 'spell' });
+    expect(eventTrace(spell)).toEqual({ fromId: 'B:0', toIds: ['A:1'], kind: 'spell', spell: 'sleep' });
+  });
+
+  it('carries every melee-style MoveKind through unchanged — bash and staff, not just slash (review: these were untested)', () => {
+    for (const kind of ['bash', 'staff'] as const) {
+      const hit: BattleEvent = {
+        type: 'UnitAttacked',
+        source: 'A:0',
+        kind,
+        targets: [{ unit: 'B:1', damage: 7, hpAfter: 3, outcome: 'hit' }],
+      };
+      expect(eventTrace(hit)).toEqual({ fromId: 'A:0', toIds: ['B:1'], kind });
+    }
+  });
+
+  it('reads a self-heal honestly — source === target is a valid trace (the scene skips the zero-length travel)', () => {
+    const selfHeal: BattleEvent = { type: 'UnitHealed', source: 'A:0', target: 'A:0', amount: 10, hpAfter: 60 };
+    expect(eventTrace(selfHeal)).toEqual({ fromId: 'A:0', toIds: ['A:0'], kind: 'heal' });
   });
 
   it('returns null for every origin-less event — no source to trace from (AC2 honest rendering)', () => {
