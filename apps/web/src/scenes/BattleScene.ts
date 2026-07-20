@@ -115,6 +115,8 @@ const TRACE_TRAVEL: Record<TraceKind, 'step' | 'projectile'> = {
 };
 /** How far a combat number floats up (px; damped under reduced motion). */
 const FLOAT_PX = 22;
+/** Top-edge floor for the FR39b move-plate (story 4.11 review) — keeps a back-row/loomed-monster plate below the top HUD band (passLabel y=22, enemyLabel y=56), mirroring the existing horizontal canvas clamp. */
+const PLATE_MIN_Y = 44;
 /** Crit combat numbers render larger than the 14px base (story 4.6) — still well above the ≥14px floor (UX-DR3). */
 const CRIT_FONT_PX = 20;
 /** The small "CRITICAL"/"DODGE" caption stacked over the number (story 4.6) — above the MIN_FONT_PX floor, readable at full speed. */
@@ -374,7 +376,7 @@ export class BattleScene extends Scene {
     this.activePlate?.destroy();
     this.activePlate = undefined;
     const plate = movePlate(event, { actionsRemaining: this.passActions, roster: this.roster });
-    if (plate) this.showMovePlate(plate);
+    if (plate) this.showMovePlate(plate, linkedToMisfire);
 
     switch (event.type) {
       case 'BattleStarted':
@@ -935,15 +937,23 @@ export class BattleScene extends Scene {
    * chrome, the boards stay clean. The plate is the CAUSE side of a beat, so
    * it appears at beat start (never behind `afterTravel`'s arrival delay).
    * Reduced motion: the plate is information, not flourish — it appears and
-   * disappears with no drift, nothing to damp (UX-DR6).
+   * disappears with no drift, nothing to damp (UX-DR6). On a confusion misfire
+   * the effect beat's plate is prefixed "↳" (`linkedToMisfire`) to tie it back
+   * to the "confused!" marker one beat earlier — mirroring the damage popup's
+   * existing `linked()` treatment (review decision 2026-07-20).
    */
-  private showMovePlate(p: MovePlateData) {
+  private showMovePlate(p: MovePlateData, linkedToMisfire: boolean) {
     const v = this.views.get(p.unitId);
     if (!v) return;
     const pips = '●'.repeat(Math.min(p.remaining, p.max)) + '○'.repeat(Math.max(0, p.max - p.remaining));
     // Build texts first to size the frame; the bg is added to the container
     // FIRST so it renders behind them. 11px bold name ≥ the MIN_FONT_PX floor.
-    const label = crispText(this, 0, 0, p.label, { fontFamily: 'Arial', fontSize: '11px', fontStyle: 'bold', color: PALETTE.buttonText }).setOrigin(0, 0.5);
+    const label = crispText(this, 0, 0, this.linked(linkedToMisfire, p.label), {
+      fontFamily: 'Arial',
+      fontSize: '11px',
+      fontStyle: 'bold',
+      color: PALETTE.buttonText,
+    }).setOrigin(0, 0.5);
     const pipText = crispText(this, 0, 0, pips, { fontFamily: 'Arial', fontSize: '11px', color: PALETTE.title }).setOrigin(0, 0.5);
     const padX = 6;
     const gap = 5;
@@ -952,9 +962,11 @@ export class BattleScene extends Scene {
     label.setX(-w / 2 + padX);
     pipText.setX(-w / 2 + padX + label.width + gap);
     // Above the unit's whole chrome stack (popups float from y−34; status icons
-    // sit at −34; the sprite top scales with the 4.9 monster loom) and clamped
-    // inside the canvas for edge columns.
-    const plateY = v.y - 38 - unitDisplaySize(v.cls, 32) / 2;
+    // sit at −34; the sprite top scales with the 4.9 monster loom), clamped
+    // inside the canvas for edge columns (x) AND below the top HUD band (y —
+    // review: X was clamped but Y was not; a back-row loomed monster could ride
+    // up toward passLabel@22/enemyLabel@56. PLATE_MIN_Y keeps it in the gap).
+    const plateY = Math.max(PLATE_MIN_Y, v.y - 38 - unitDisplaySize(v.cls, 32) / 2);
     const cx = Math.min(Math.max(v.x, w / 2 + 4), BASE_WIDTH - w / 2 - 4);
     // Depth 1200: above the combat popups (1000), below the log panel (1500)
     // and the leader banner (1600) — review-pinned bound from story creation.

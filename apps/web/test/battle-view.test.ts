@@ -386,4 +386,23 @@ describe('movePlate — the FR39b ledger seam (story 4.11, D-3a: the ledger IS t
     // Missing snapshot entry reads as 0 → remaining stays 0 (a dead unit reads 0 in the payload).
     expect(movePlate(strike('A:0', 'slash'), c)?.remaining).toBe(0);
   });
+
+  it('gives the misfire pair exactly one plate on EVERY effect branch — heal / spell / fizzle, not just the physical strike (review 2026-07-20)', () => {
+    // resolve.ts's misfire() can resolve to a UnitHealed (confused cleric → enemy),
+    // a StatusApplied (confused witch → ally), or an ActionFizzled (no target) —
+    // each is the SINGLE plating event after the null-plate marker. The scene
+    // prefixes "↳" on these (linkedToMisfire); the DATA a plate carries is the
+    // move itself, proven here for the non-physical branches too.
+    const cleric = ctx([snap('A:0', 'cleric', 'water', 'mid')], { 'A:0': 1 });
+    expect(movePlate({ type: 'ActionMisfired', unit: 'A:0' }, cleric)).toBeNull();
+    expect(movePlate({ type: 'UnitHealed', source: 'A:0', target: 'B:0', amount: 8, hpAfter: 30 }, cleric)?.label).toBe('Heal');
+
+    const witch = ctx([snap('A:1', 'witch', 'wind', 'back')], { 'A:1': 2 });
+    expect(movePlate({ type: 'ActionMisfired', unit: 'A:1' }, witch)).toBeNull();
+    expect(movePlate({ type: 'StatusApplied', source: 'A:1', target: 'A:0', spell: 'sleep' }, witch)?.label).toBe('Sleep');
+
+    const stuck = ctx([snap('B:0', 'mercenary', 'fire', 'back')], { 'B:0': 1 }); // back row = 1 action
+    expect(movePlate({ type: 'ActionMisfired', unit: 'B:0' }, stuck)).toBeNull();
+    expect(movePlate({ type: 'ActionFizzled', unit: 'B:0' }, stuck)).toEqual({ unitId: 'B:0', label: 'Fizzle', remaining: 0, max: 1 });
+  });
 });
