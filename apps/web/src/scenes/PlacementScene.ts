@@ -122,10 +122,9 @@ export class PlacementScene extends Scene {
    * left→right, then mid, then back (Danilo: "top row first, first
    * available slot"), via the engine's `legalAnchors` (AD-14, story 4.8 —
    * the SAME predicate `validateMatchSetup` enforces, so this can never
-   * suggest a cell the engine would reject). Device-reported bug: the old
-   * version only checked stored ANCHOR cells, so it happily offered a
-   * monster's derived rear cell as "free" too. Returns `null` when no legal
-   * cell remains. Drives double-tap auto-placement.
+   * suggest a cell the engine would reject, including a cell a monster
+   * reserves by its king-move adjacency). Returns `null` when no legal cell
+   * remains. Drives double-tap auto-placement.
    */
   private firstFreeCell(cls: UnitClass): Placement | null {
     const state = this.flow.getState();

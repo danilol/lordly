@@ -30,9 +30,13 @@ export const UNIT_FRAMES: Record<UnitClass, number> = {
   ninja: 1,
   valkyrie: 1,
   sorceress: 3,
-  // STORY 4.8 — INTERIM sprite (flagged for story 4.9's device pass): the
-  // Golem borrows the Knight frame (the closest existing "armored wall" read)
-  // until a dedicated ≥48px two-cell CC0 body is sourced (dossier D-3c).
+  // STORY 4.9 — INTERIM tile, real art pending Danilo's device pass: the Golem
+  // still borrows the Knight frame (closest "armored wall" read) until a
+  // dedicated CC0 golem tile is composited into the sheet. Story 4.9 already
+  // renders it LOOMED (unitDisplaySize / MONSTER_LOOM_SCALE) — one tile, drawn
+  // large so it overhangs the ring it reserves (single-cell, NOT a two-cell
+  // body). Swapping the real tile is: add the frame, bump this index, drop the
+  // attribution INTERIM note (dossier D-3c).
   golem: 0,
 };
 

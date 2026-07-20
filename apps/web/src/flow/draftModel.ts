@@ -14,6 +14,8 @@ export interface RulesCard {
   beats: UnitClass[];
   /** Classes that deal ×1.5 to this one (FR14, role-derived). May be several; empty outside the relations. */
   beatenBy: UnitClass[];
+  /** Slot cost (FR1/FR38): 1 for a small, 2 for a monster. From SLOT_COST — the card shows it so a monster's 2-slot price is visible, not just silently enforced (story 4.9). */
+  slotCost: number;
   /** Per-row action counts (FR15), read from BALANCE. */
   actions: ClassStats['actions'];
   /** Per-row MOVE — what the class actually DOES from each row (FR32/FR33, story 4.7), read from BALANCE. Uniform for most classes; Knight/Phalanx/Wizard/Sorceress vary. */
@@ -43,8 +45,9 @@ const CLASS_TEXT: Record<UnitClass, { role: string; behavior: string }> = {
   ninja: { role: 'Skirmisher', behavior: 'Melee: nearest reachable enemy row; very fast, no class advantage' },
   valkyrie: { role: 'Skirmisher', behavior: 'Melee: nearest reachable enemy row; no class advantage' },
   sorceress: { role: 'Row artillery', behavior: 'Front: a weak staff jab. Mid/back: blasts the fullest enemy row' },
-  // Story 4.8 — the wave's only monster (2 slots, two-cell body).
-  golem: { role: 'Brute wall', behavior: 'Melee: a two-cell body — blocks both its rows, struck at its front, sniped at its rear' },
+  // Story 4.8 — the wave's only monster (single cell, costs 2 slots). Device
+  // revision: NOT a two-cell body — one tile, so large no unit may stand beside it.
+  golem: { role: 'Brute wall', behavior: 'Melee brute: huge HP, hits hard, weak to magic; so large no unit may stand beside it' },
 };
 
 /**
@@ -101,6 +104,7 @@ export function classRulesCard(cls: UnitClass): RulesCard {
     name: CLASS_DISPLAY_NAME[cls], // D-1d: `mage` displays as "Wizard"; engine key unchanged
     role: CLASS_TEXT[cls].role,
     behavior: CLASS_TEXT[cls].behavior,
+    slotCost: SLOT_COST[stats.sizeClass],
     beats: ALL_CLASSES.filter((other) => dealsAdvantage(cls, other)),
     beatenBy: ALL_CLASSES.filter((other) => dealsAdvantage(other, cls)),
     actions: stats.actions,

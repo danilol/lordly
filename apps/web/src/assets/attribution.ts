@@ -59,9 +59,11 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
       ninja: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
       valkyrie: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
       sorceress: 'dc-mon/wizard.png (INTERIM: shares the Wizard tile)',
-      // Story 4.8 — the Golem (2-slot monster): INTERIM, shares the Knight
-      // tile (sprites.ts UNIT_FRAMES) until a dedicated ≥48px two-cell CC0
-      // body is sourced for story 4.9 (dossier D-3c).
+      // Story 4.9 — the Golem (single-cell 2-slot monster): still INTERIM,
+      // shares the Knight tile (sprites.ts UNIT_FRAMES). It renders LOOMED (one
+      // tile drawn large, not a two-cell body); a dedicated CC0 golem tile
+      // swaps in at Danilo's device pass — update this source path + drop the
+      // INTERIM note then (dossier D-3c).
       golem: 'dc-mon/vault_guard.png (INTERIM: shares the Knight tile)',
     },
   },

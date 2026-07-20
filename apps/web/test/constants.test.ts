@@ -11,9 +11,11 @@ import {
   DPR_BACKING_CAP,
   GAME_NAME,
   HOME_PLAY_LABEL,
+  MONSTER_LOOM_SCALE,
   PALETTE,
   turnBoundaryLine,
   unitCodeStyle,
+  unitDisplaySize,
 } from '../src/config/constants';
 
 describe('web smoke test', () => {
@@ -105,5 +107,29 @@ describe('unitCodeStyle (FR39f, story 4.0) — the label-contrast token treatmen
     // The code fill must not be the same hex as the bright front tile it stands on.
     expect(you.color?.toLowerCase()).not.toBe('#4a8fe0');
     expect(enemy.color?.toLowerCase()).not.toBe('#c8483a');
+  });
+});
+
+describe('monster loom sizing (story 4.9, D-3c — one cell, oversized sprite)', () => {
+  it('renders a small unit at exactly its scene base size', () => {
+    expect(unitDisplaySize('knight', 32)).toBe(32);
+    expect(unitDisplaySize('archer', 28)).toBe(28);
+    expect(unitDisplaySize('witch', 26)).toBe(26);
+  });
+
+  it('looms a monster larger than a small drawn at the same base size', () => {
+    expect(unitDisplaySize('golem', 32)).toBe(Math.round(32 * MONSTER_LOOM_SCALE));
+    expect(unitDisplaySize('golem', 32)).toBeGreaterThan(unitDisplaySize('knight', 32));
+  });
+
+  it("takes the boards' 32px small to the dossier's >=48px monster floor (D-3c)", () => {
+    expect(unitDisplaySize('golem', 32)).toBeGreaterThanOrEqual(48);
+  });
+
+  it('scales proportionally so tight scenes stay bounded (never below the small base)', () => {
+    for (const base of [26, 28, 32, 48]) {
+      expect(unitDisplaySize('golem', base)).toBeGreaterThan(base);
+    }
+    expect(MONSTER_LOOM_SCALE).toBeGreaterThan(1);
   });
 });

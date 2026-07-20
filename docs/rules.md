@@ -21,7 +21,7 @@ Draft to fill your five slots (duplicates allowed). Each unit also rolls one of 
 | Ninja | Skirmisher | 85 | 2/1/1 | Melee: nearest reachable enemy row; very fast, no class advantage |
 | Valkyrie | Skirmisher | 105 | 2/1/1 | Melee: nearest reachable enemy row; no class advantage |
 | Sorceress | Row artillery | 78 | 1/1/2 | Front: a weak staff jab. Mid/back: blasts the fullest enemy row |
-| Golem | Brute wall | 300 | 2/1/1 | Melee: a two-cell body — blocks both its rows, struck at its front, sniped at its rear |
+| Golem | Brute wall | 300 | 2/1/1 | Melee brute: huge HP, hits hard, weak to magic; so large no unit may stand beside it |
 
 ### Roles and matchups
 

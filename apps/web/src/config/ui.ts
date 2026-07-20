@@ -1,6 +1,16 @@
 import { GameObjects, Scene, Types } from 'phaser';
 import type { Element, UnitClass } from '@lordly/engine';
-import { backingScaleFor, BASE_HEIGHT, BASE_WIDTH, ELEMENT_BADGE_RADIUS, ELEMENT_COLORS, HOME_BACK_LABEL, PALETTE, TEXT_RESOLUTION } from './constants';
+import {
+  backingScaleFor,
+  BASE_HEIGHT,
+  BASE_WIDTH,
+  ELEMENT_BADGE_RADIUS,
+  ELEMENT_COLORS,
+  HOME_BACK_LABEL,
+  PALETTE,
+  TEXT_RESOLUTION,
+  unitDisplaySize,
+} from './constants';
 import { UNITS_SHEET_KEY, UNIT_FRAMES } from './sprites';
 
 /**
@@ -117,13 +127,17 @@ export function addElementBadge(scene: Scene, x: number, y: number, element: Ele
 
 /**
  * A unit's class sprite off the shared spritesheet (story 2.1, AD-11: sprites
- * are shell-side lookups keyed by engine class). Callers pass a display size
- * that is an INTEGER multiple of UNIT_FRAME_SIZE (32/64/…) — pixel art blurs
- * at fractional scales.
+ * are shell-side lookups keyed by engine class). Callers pass the size a SMALL
+ * unit draws at in this scene; a monster is loomed up automatically via
+ * `unitDisplaySize` (story 4.9) — one cell, oversized sprite, overhanging its
+ * reserved ring — so no scene special-cases the Golem. The small base should
+ * stay an integer multiple of UNIT_FRAME_SIZE where possible; pixel art blurs
+ * at fractional scales (the monster's loomed size is a device-tuning trade-off).
  */
 export function addUnitSprite(scene: Scene, x: number, y: number, cls: UnitClass, displaySize: number): GameObjects.Sprite {
+  const size = unitDisplaySize(cls, displaySize);
   const sprite = scene.add.sprite(x, y, UNITS_SHEET_KEY, UNIT_FRAMES[cls]);
-  sprite.setDisplaySize(displaySize, displaySize);
+  sprite.setDisplaySize(size, size);
   return sprite;
 }
 

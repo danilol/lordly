@@ -1,3 +1,4 @@
+import { BALANCE } from '@lordly/engine';
 import type { Element, SpellKind, Tactic, UnitClass } from '@lordly/engine';
 
 export const GAME_NAME = 'Lord Battle Tactics';
@@ -7,6 +8,27 @@ export const HOME_PLAY_LABEL = 'Play vs AI';
 // FR30 portrait baseline: ~360×640 CSS px, scaled up by Phaser.Scale.FIT.
 export const BASE_WIDTH = 360;
 export const BASE_HEIGHT = 640;
+
+// Monster "loom" (story 4.9, dossier D-3c). A monster occupies ONE grid cell
+// but renders LARGER than a small so it reads as imposing and visibly overhangs
+// the ring of neighbour cells it reserves at placement — the single-cell,
+// oversized-sprite look Danilo confirmed against the OB64 reference (there is
+// NO two-tile sprite; "spans both cells" was always the adjacency rule, not the
+// art). 1.5× takes the boards' 32px small to the dossier's ≥48px floor. A
+// device-tuning constant (the exact loom is judged on Danilo's phone, Task 6).
+export const MONSTER_LOOM_SCALE = 1.5;
+
+/**
+ * A unit's on-screen display size for a scene whose SMALL units draw at
+ * `baseSize`. A small renders at `baseSize`; a monster (`sizeClass: 'monster'`)
+ * looms at `MONSTER_LOOM_SCALE×`, rounded. This is the ONE place the size rule
+ * lives, so no scene hand-branches on class or sizeClass (story 4.9) — every
+ * `addUnitSprite` call runs through it and looms a monster proportionally to
+ * whatever base that scene already uses for its smalls.
+ */
+export function unitDisplaySize(cls: UnitClass, baseSize: number): number {
+  return BALANCE.classes[cls].sizeClass === 'monster' ? Math.round(baseSize * MONSTER_LOOM_SCALE) : baseSize;
+}
 
 // Shared UI palette — the single source for colors used across scenes and
 // the Phaser game config. Hex strings for text/config, numbers for shapes.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_CLASSES, ALL_ROWS, BALANCE } from '@lordly/engine';
+import { ALL_CLASSES, ALL_ROWS, BALANCE, SLOT_COST } from '@lordly/engine';
 import { canAddUnit, canContinue, classRulesCard, moveLabel, movesVaryByRow } from '../src/flow/draftModel';
 import { CLASS_DISPLAY_NAME } from '../src/config/constants';
 import type { DraftedUnit } from '../src/flow/MatchState';
@@ -55,6 +55,14 @@ describe('rules cards derive from BALANCE data, never hardcoded (FR2 + data-must
       const { actions } = BALANCE.classes[cls];
       expect(classRulesCard(cls).actions).toEqual(actions);
     }
+  });
+
+  it('reports each class’s slot cost from SLOT_COST — 1 for a small, 2 for the monster (story 4.9, FR1/FR38)', () => {
+    for (const cls of ALL_CLASSES) {
+      expect(classRulesCard(cls).slotCost).toBe(SLOT_COST[BALANCE.classes[cls].sizeClass]);
+    }
+    expect(classRulesCard('knight').slotCost).toBe(1);
+    expect(classRulesCard('golem').slotCost).toBe(2);
   });
 
   it('derives matchups from the role relations (arrays — story 4.3, may be several)', () => {

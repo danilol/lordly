@@ -208,7 +208,7 @@ export class DraftScene extends Scene {
     const tx = DETAIL.x + 92;
     this.dynamic.push(crispText(this, tx, DETAIL.y + 12, card.name.toUpperCase(), { fontFamily: 'Arial Black', fontSize: '18px', color: PALETTE.title }));
     this.dynamic.push(
-      crispText(this, tx, DETAIL.y + 38, `${card.role}  ·  act ${a.front}/${a.mid}/${a.back}`, {
+      crispText(this, tx, DETAIL.y + 38, `${card.role}  ·  ${card.slotCost} slot${card.slotCost > 1 ? 's' : ''}  ·  act ${a.front}/${a.mid}/${a.back}`, {
         fontFamily: 'Arial',
         fontSize: '11px',
         color: PALETTE.bodyText,
