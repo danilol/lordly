@@ -1,5 +1,5 @@
 import { ALL_COLS, ALL_ROWS } from '@lordly/engine';
-import type { BattleEvent, Placement, Side } from '@lordly/engine';
+import type { BattleEvent, MoveKind, Placement, Side, UnitId } from '@lordly/engine';
 import { BASE_WIDTH, ISO_BOARD } from '../config/constants';
 
 /**
@@ -86,6 +86,48 @@ export function boardTiles(side: Side, orientation: BoardOrientation = DEFAULT_O
       return { x, y, front: row === 'front', checker: (r + c) % 2 === 0 };
     }),
   );
+}
+
+/**
+ * The visual family of an origin→target trace (story 4.10). For an attack it
+ * is the engine's own `MoveKind` — branch the flavor on THIS, never on the
+ * attacker's class (story 4.7's per-row moves make class inference wrong). A
+ * heal and a spell get their own discriminants (the events carry no `MoveKind`).
+ */
+export type TraceKind = MoveKind | 'heal' | 'spell';
+
+/** Which unit an action travels FROM and which unit(s) it travels TO — a beat's from→to reading. */
+export interface EventTrace {
+  fromId: UnitId;
+  /** One entry for a single-target move; the whole struck row for a blast fan-out. */
+  toIds: UnitId[];
+  kind: TraceKind;
+}
+
+/**
+ * The from→to reading of a battle event (story 4.10, FR39d, AD-2): derived
+ * PURELY from the event payload — the scene animates the trace, it computes no
+ * origin (this is the one honest, testable seam behind the Battle scene's
+ * travel animations). Returns an origin + target(s) for the three events that
+ * carry a `source` (`UnitAttacked`, `UnitHealed`, `StatusApplied`), and `null`
+ * for every origin-less event — `PoisonTicked` (victim only), `UnitDied`, the
+ * Guard markers, `StatusCleared`, the skip/fizzle/misfire markers, `LeaderFell`,
+ * and the framing events. Those MUST render on-unit (AC2): there is no origin to
+ * trace, and fabricating one would be a lie about what the engine reported. The
+ * `default` return keeps that honest by construction — a future event shape
+ * gets no fabricated travel until it is explicitly given a source→target here.
+ */
+export function eventTrace(event: BattleEvent): EventTrace | null {
+  switch (event.type) {
+    case 'UnitAttacked':
+      return { fromId: event.source, toIds: event.targets.map((t) => t.unit), kind: event.kind };
+    case 'UnitHealed':
+      return { fromId: event.source, toIds: [event.target], kind: 'heal' };
+    case 'StatusApplied':
+      return { fromId: event.source, toIds: [event.target], kind: 'spell' };
+    default:
+      return null;
+  }
 }
 
 /** One playback beat: its source event plus when it fires and for how long. */

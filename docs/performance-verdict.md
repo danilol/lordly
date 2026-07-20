@@ -172,3 +172,35 @@ Story 4.0 shipped deferred-work.md's **candidate (a)**: the canvas backing store
 | Placement (drag)                       | **59.17** | vsync-locked ≈60 — cleaner than the baseline's own Placement pass (which bottomed at 30.03)                        |
 
 All three traces also show 117–122fps fast-frame bursts — the same 120Hz-display artifact the baseline recorded, not a regression signal. **Zero frames below the 30fps floor anywhere.** Method note: the raw traces were analyzed by distinct-value scan (the streams are vsync-quantized to a small value set, so every outlier is enumerable); mins are exact values from the traces, medians are the dominant quantized band (≈59.9–60.2). Verdict: the DPR-3 backing store's ~9× fill cost is not measurable against the floor on this device — **the text-ceiling fix stands at zero NFR1 cost**; the fallback branch is not needed. Danilo's visual verdict, same day: "the font problem is solved for me, it's way better to read."
+
+## Addendum — story 4.10 from→to attack motion (2026-07-20)
+
+Story 4.10 adds travel to the beats that were rendered in-place: melee now steps toward its target and back (was a fixed 12px nudge), and blast/heal/spell each send one origin→target sliver across the clash gap (arrow already did). This addendum decides the busiest-battle stress case for the squad/monster era (AC4) and accounts for the added per-beat draw.
+
+### Busiest-battle stress case: `three-mages` vs `three-mages` wipeout STAYS the benchmark
+
+AC4 asked whether a monster comp becomes the new stress case. It does not:
+
+- **`three-mages` (current baseline)** is an all-Mage back-row comp: every blast hits every enemy in the target row — **3 simultaneous struck targets per beat** (3 blast-wash circles + up to 3 popups), compounding across up to 5 wipeout engagements. This is the heaviest *simultaneous* per-beat GameObject churn the roster can produce (unchanged from the 3.4 analysis above).
+- **`twin-golems` (monster comp)** is only 3 units/side, and a Golem's move is a single-target **melee** (`slash`) — one struck target per beat, no fan-out. Its 1.5× sprite (story 4.9) is a larger *draw* but not more *objects*. Fewer units and no blast fan-out make it strictly lighter per beat than the all-Mage comp.
+
+So the heavier all-Mage case already dominates the "busiest monster battle" the AC names — no re-baseline of the stress comp is warranted. (The monster comp is still worth a look on device for the melee-step feel at 1.5× — folded into the Task 7 device pass.)
+
+### Per-beat object accounting: the from→to motion adds ≤1 GameObject per beat
+
+- **Melee step** — a larger tween on the **same existing sprite** (the attacker's billboard). **Zero new GameObjects**; identical object count to the old in-place nudge, just a longer travel distance within the same `UNIT_TWEENS.attack` timing.
+- **Projectile traces (arrow/blast/heal/spell)** — **one** 10×2 rectangle sliver per traveling beat (`traceProjectile`), tweened across the gap and destroyed on arrival (~180ms, well inside the beat; ~80ms under reduced motion). The blast **wash count is unchanged** — still one circle per struck tile, as before; the trace is a single sliver aimed at the row (open-Q2 default), not one per target.
+- The sequential beat scheduler animates **one beat at a time**, so the worst added per-frame draw is a single small rectangle riding alongside the pre-existing washes/popups of the heaviest blast beat. This is a marginal delta on the churn the 3.4/4.0 on-device captures already cleared at zero floor breaches, and every new object is destroyed on tween-complete (the same healthy sawtooth the heap check recorded — no new unpooled long-lived objects).
+
+Conclusion from code+object analysis: no pooling fix is warranted pre-measurement (same doctrine as 3.4 — measure, don't guess-fix). If the on-device capture shows the extra sliver regressing the floor, the fix is to pool/reuse the trace rectangle (the same fix already noted for the popup/wash churn).
+
+### On-device fps capture — PENDING Task 7 device pass
+
+Per this doc's doctrine (empirical over reasoned), the authoritative NFR1 check is an on-device `?perf=1` capture on the deployed build, following the exact post-review procedure (`three-mages`-wipeout Replay at 1× and ×2, per-scenario resets, single-read traces). That capture is Danilo's device gate (story 4.10 Task 7) and runs on the deployed build; this table is filled from that pass:
+
+| Scenario (procedure order)             | Min fps | Character of the trace |
+| -------------------------------------- | ------- | ---------------------- |
+| Battle 1× (three-mages-wipeout Replay) | _pending device pass_ | — |
+| Battle ×2                              | _pending device pass_ | — |
+
+Device-class caveat unchanged: the capture device is a Pixel 9 Pro XL, an accepted deviation from AC1's Pixel 6a-class floor (documented in the 2026-07-16 review note above).

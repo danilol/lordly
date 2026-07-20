@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_COLS, ALL_ROWS, ALL_SIDES } from '@lordly/engine';
 import type { BattleEvent, Placement, Side } from '@lordly/engine';
 import { BASE_WIDTH, BATTLE_BEAT_MS, ISO_BOARD } from '../src/config/constants';
-import { ALL_ORIENTATIONS, DEFAULT_ORIENTATION, beatDurationMs, boardTiles, buildBeatSchedule, unitTileCenter } from '../src/flow/battleView';
+import { ALL_ORIENTATIONS, DEFAULT_ORIENTATION, beatDurationMs, boardTiles, buildBeatSchedule, eventTrace, unitTileCenter } from '../src/flow/battleView';
 import type { BoardOrientation } from '../src/flow/battleView';
 
 /** Every owner-local cell, for exhaustive transform checks. */
@@ -184,5 +184,74 @@ describe('beatDurationMs — the FR23 speed math (story 2.3 review: keep it pure
     expect(beatDurationMs(BATTLE_BEAT_MS, 0)).toBe(BATTLE_BEAT_MS);
     expect(beatDurationMs(BATTLE_BEAT_MS, -3)).toBe(BATTLE_BEAT_MS);
     expect(beatDurationMs(1, 1000)).toBe(1);
+  });
+});
+
+describe('eventTrace — the pure from→to seam (story 4.10, AC1/AC2)', () => {
+  // The three events that carry a `source` read as a travel; every other event
+  // is origin-less and MUST return null (AC2 — no fabricated travel).
+  it('reads an attack as source → the whole struck target set, carrying the MoveKind (never the class)', () => {
+    const attack: BattleEvent = {
+      type: 'UnitAttacked',
+      source: 'A:0',
+      kind: 'arrow',
+      targets: [{ unit: 'B:1', damage: 12, hpAfter: 8, outcome: 'hit' }],
+    };
+    expect(eventTrace(attack)).toEqual({ fromId: 'A:0', toIds: ['B:1'], kind: 'arrow' });
+  });
+
+  it('fans a blast out to every struck unit as multiple toIds', () => {
+    const blast: BattleEvent = {
+      type: 'UnitAttacked',
+      source: 'B:0',
+      kind: 'blast',
+      targets: [
+        { unit: 'A:0', damage: 10, hpAfter: 0, outcome: 'hit' },
+        { unit: 'A:1', damage: 10, hpAfter: 5, outcome: 'crit' },
+        { unit: 'A:2', damage: 0, hpAfter: 20, outcome: 'dodged' },
+      ],
+    };
+    expect(eventTrace(blast)).toEqual({ fromId: 'B:0', toIds: ['A:0', 'A:1', 'A:2'], kind: 'blast' });
+  });
+
+  it('keeps the trace on the ORIGINAL target for a guarded hit — redirectedFrom (the guardian) does not retarget it (story 4.7)', () => {
+    const guarded: BattleEvent = {
+      type: 'UnitAttacked',
+      source: 'A:0',
+      kind: 'slash',
+      redirectedFrom: 'B:2', // the guarding unit — attribution only, NOT a retarget
+      targets: [{ unit: 'B:1', damage: 0, hpAfter: 40, outcome: 'hit' }],
+    };
+    // fromId stays the attacker, toIds stays the attacked unit — never the guardian.
+    expect(eventTrace(guarded)).toEqual({ fromId: 'A:0', toIds: ['B:1'], kind: 'slash' });
+  });
+
+  it('reads a heal as healer → ally', () => {
+    const heal: BattleEvent = { type: 'UnitHealed', source: 'A:0', target: 'A:1', amount: 15, hpAfter: 55 };
+    expect(eventTrace(heal)).toEqual({ fromId: 'A:0', toIds: ['A:1'], kind: 'heal' });
+  });
+
+  it('reads a spell as caster → target', () => {
+    const spell: BattleEvent = { type: 'StatusApplied', source: 'B:0', target: 'A:1', spell: 'sleep' };
+    expect(eventTrace(spell)).toEqual({ fromId: 'B:0', toIds: ['A:1'], kind: 'spell' });
+  });
+
+  it('returns null for every origin-less event — no source to trace from (AC2 honest rendering)', () => {
+    const originless: BattleEvent[] = [
+      { type: 'PoisonTicked', unit: 'A:1', damage: 5, hpAfter: 20 }, // victim only, no source (the crux of AC2)
+      { type: 'UnitDied', unit: 'A:1' },
+      { type: 'GuardRaised', unit: 'A:0' },
+      { type: 'GuardEnded', unit: 'A:0' },
+      { type: 'StatusCleared', unit: 'A:1', spell: 'poison' },
+      { type: 'ActionSkipped', unit: 'A:1', reason: 'asleep' },
+      { type: 'ActionFizzled', unit: 'A:0' },
+      { type: 'ActionMisfired', unit: 'A:0' }, // the marker is on-unit; the redirected effect that FOLLOWS traces on its own
+      { type: 'LeaderFell', side: 'A', unit: 'A:0' },
+      { type: 'BattleStarted', units: [] },
+      { type: 'PassStarted', pass: 1, actionsRemaining: {} },
+      { type: 'EngagementEnded', engagement: 1, hp: {} },
+      { type: 'BattleEnded', winner: 'A', hpPct: { A: 100, B: 0 } },
+    ];
+    for (const event of originless) expect(eventTrace(event), event.type).toBeNull();
   });
 });

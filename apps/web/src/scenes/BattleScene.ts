@@ -1,5 +1,5 @@
 import { GameObjects, Scene, Time } from 'phaser';
-import type { BattleEvent, BattleStarted, MoveKind, Side, SpellKind, UnitClass, UnitId, UnitSnapshot } from '@lordly/engine';
+import type { BattleEvent, BattleStarted, Side, SpellKind, UnitClass, UnitId, UnitSnapshot } from '@lordly/engine';
 import {
   BASE_HEIGHT,
   BASE_WIDTH,
@@ -30,7 +30,7 @@ import type { BattleSpeedId } from '../config/constants';
 import { addElementBadge, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText, prefersReducedMotion } from '../config/ui';
 import { drawIsoBoard } from '../config/board';
 import { attachPerfSampler } from '../config/perf';
-import { beatDurationMs, buildBeatSchedule, unitTileCenter } from '../flow/battleView';
+import { beatDurationMs, buildBeatSchedule, eventTrace, unitTileCenter } from '../flow/battleView';
 import { createStorage } from '../flow/storage';
 import type { Beat } from '../flow/battleView';
 import { createNarrationState, narrateEvent } from '../flow/narration';
@@ -60,8 +60,37 @@ interface UnitView {
 
 const BAR_W = 36;
 const BAR_H = 8;
-/** How far a melee lunge travels toward the target (px; damped under reduced motion). */
-const LUNGE_PX = 12;
+/**
+ * How far a melee attacker steps IN toward its target and back, as a fraction
+ * of the attacker→target vector (story 4.10 — replaces the old 12px in-place
+ * nudge). ~60% reads as "stepped into the clash" without occluding or
+ * overshooting the target; damped under reduced motion. A device-tuning
+ * constant in the same spirit as the tween durations (open Q1 — confirm feel
+ * on device). Heeds story 4.9: a monster attacker renders 1.5× larger, so the
+ * step is a fraction of the true gap, keeping the big sprite planted.
+ */
+const MELEE_STEP_FRACTION = 0.6;
+/** Reduced-motion melee step — a shorter jab, same beat (UX-DR6). */
+const MELEE_STEP_FRACTION_REDUCED = 0.25;
+/**
+ * Melee step ONE-WAY duration at 1× (ms) — divided by the speed factor at play
+ * time so the motion slows down with the longer beat instead of darting
+ * (device feedback 2026-07-20: the fixed 140ms leg read too fast at 1× once
+ * the travel grew from 12px to a real step). Round trip fits every beat:
+ * 2×240 = 480ms ≤ 600ms at 1×; 2×120 = 240ms ≤ 300ms at 2×.
+ */
+const MELEE_STEP_MS = 240;
+/** Fallback melee step (px along the clash diagonal) when the target view is gone (dead/unknown) — a nudge toward the enemy board, no vector to scale. */
+const MELEE_STEP_FALLBACK_PX = 20;
+/** Origin→target projectile crossing time (ms); damped under reduced motion. The arrow's existing pacing, now shared by every trace. */
+const TRACE_MS = 180;
+const TRACE_MS_REDUCED = 80;
+/**
+ * The heal trace color — a restorative green, deliberately NOT a side hue
+ * (blue=you/red=enemy owns tiles and HP, never a travel line; UX side rule +
+ * open Q4). Element/neutral-tinted like the status traces.
+ */
+const HEAL_TRACE_COLOR = 0x8fe0a0;
 /** How far a combat number floats up (px; damped under reduced motion). */
 const FLOAT_PX = 22;
 /** Crit combat numbers render larger than the 14px base (story 4.6) — still well above the ≥14px floor (UX-DR3). */
@@ -313,11 +342,7 @@ export class BattleScene extends Scene {
         this.passLabel.setText(battleTurnLabel(event.pass));
         return true;
       case 'UnitAttacked': {
-        this.attackFlavor(
-          event.source,
-          event.kind,
-          event.targets.map((t) => t.unit),
-        );
+        this.traceMove(event); // from→to travel (melee step / projectile trace); origin-less events never reach here
         const color = this.actorColor(event.source);
         const guarded = event.redirectedFrom !== undefined;
         for (const t of event.targets) {
@@ -351,11 +376,13 @@ export class BattleScene extends Scene {
         return true;
       }
       case 'UnitHealed':
+        this.traceMove(event); // healer → ally across the gap; the glow stays the arrival effect
         this.setHp(event.target, event.hpAfter);
         this.healGlow(event.target);
         this.popup(event.target, this.linked(linkedToMisfire, `+${event.amount}`), this.actorColor(event.source));
         return true;
       case 'StatusApplied':
+        this.traceMove(event); // caster → target across the gap; the persistent icon + popup are the arrival
         this.applyStatusIcon(event.target, event.spell);
         this.popup(event.target, this.linked(linkedToMisfire, event.spell), STATUS_COLORS[event.spell]);
         return true;
@@ -452,63 +479,110 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * The move-flavored attack beat (FR32, story 4.7 — reads `event.kind` from
-   * the payload, NEVER re-derives it from the attacker's class: AD-2 applies
-   * inside the shell too. Per-row moves mean a front Wizard staffs while its
-   * back row blasts — the SAME class, different flavor by row): melee-style
-   * moves (slash/bash/staff) step into the clash gap and strike; the arrow
-   * crosses the diagonal; the blast washes EVERY struck tile in the row. All
-   * procedural — zero art.
+   * The from→to reading of one beat (story 4.10, FR39d — finishes story 4.7's
+   * move flavor). Every travel is derived PURELY from the payload via the tested
+   * `eventTrace` seam (AD-2 applies inside the shell too — the scene computes no
+   * origin, and an origin-less event gets no fabricated travel). Branches on the
+   * move `kind`, NEVER the attacker's class (per-row moves make class inference
+   * wrong): melee-style moves (slash/bash/staff) STEP into the clash gap toward
+   * the target and back; arrow/blast/heal/spell send a projectile that crosses
+   * the diagonal to the target (a blast additionally washes every struck tile in
+   * the row on arrival). All procedural — zero art.
    */
-  private attackFlavor(source: UnitId, moveKind: MoveKind, targetIds: UnitId[]) {
-    const attacker = this.views.get(source);
+  private traceMove(event: BattleEvent) {
+    const trace = eventTrace(event);
+    if (!trace) return; // origin-less (poison, deaths, guard markers, …) — honest on-unit rendering, no travel (AC2)
+    const attacker = this.views.get(trace.fromId);
     if (!attacker || attacker.dead) return;
-    const target = targetIds[0] !== undefined ? this.views.get(targetIds[0]) : undefined;
-    const kind: 'arrow' | 'blast' | 'melee' = moveKind === 'arrow' ? 'arrow' : moveKind === 'blast' ? 'blast' : 'melee';
-    // Effects are side-colored by the ACTOR (same rule as the combat numbers).
+    const targets = trace.toIds.map((id) => this.views.get(id)).filter((v): v is UnitView => v !== undefined);
+    const primary = targets[0];
+    const melee = trace.kind === 'slash' || trace.kind === 'bash' || trace.kind === 'staff';
+    if (melee || !primary) {
+      this.meleeStep(attacker, primary);
+      return;
+    }
+    // Effects are side-colored by the ACTOR (same rule as the combat numbers);
+    // heal/spell traces stay off the side hues (they name no side — UX rule).
     const actorFill = attacker.side === 'A' ? PALETTE.playerLine : PALETTE.enemyLine;
-
-    if (kind === 'melee' || !target) {
-      // Lunge toward the target (or straight at the enemy board when unknown), then back — UNIT_TWEENS.attack pacing.
-      this.resetSprite(attacker);
-      const dx = target ? target.x - attacker.x : attacker.side === 'A' ? -1 : 1;
-      const dy = target ? target.y - attacker.y : attacker.side === 'A' ? -1 : 1;
-      const len = Math.hypot(dx, dy) || 1;
-      const mag = this.reduceMotion ? 4 : LUNGE_PX;
-      this.tweens.add({
-        targets: attacker.sprite,
-        x: attacker.sprite.x + (dx / len) * mag,
-        y: attacker.sprite.y + (dy / len) * mag,
-        duration: UNIT_TWEENS.attack.duration,
-        yoyo: true,
-        repeat: UNIT_TWEENS.attack.repeat,
-      });
-      return;
+    let color: number;
+    switch (event.type) {
+      case 'UnitAttacked':
+        color = trace.kind === 'arrow' ? ISO_TILES.frontStroke : actorFill;
+        break;
+      case 'UnitHealed':
+        color = HEAL_TRACE_COLOR;
+        break;
+      case 'StatusApplied':
+        color = parseInt(STATUS_COLORS[event.spell].slice(1), 16); // status hex string → Phaser numeric color
+        break;
+      default:
+        return; // eventTrace already returned null for any other type
     }
+    // One trace across the gap toward the row (open Q1/Q2 default: a single
+    // actor→row sliver, not one per struck unit), then the per-tile blast wash.
+    this.traceProjectile(attacker, primary, color);
+    if (trace.kind === 'blast') for (const struck of targets) this.blastWash(struck, actorFill);
+  }
 
-    if (kind === 'arrow') {
-      // A gold sliver flies attacker → target across the clash gap.
-      const arrow = this.add
-        .rectangle(attacker.x, attacker.y - 12, 10, 2, ISO_TILES.frontStroke)
-        .setDepth(900)
-        .setRotation(Math.atan2(target.y - attacker.y, target.x - attacker.x));
-      this.tweens.add({
-        targets: arrow,
-        x: target.x,
-        y: target.y - 12,
-        duration: this.reduceMotion ? 80 : 180,
-        onComplete: () => arrow.destroy(),
-      });
-      return;
+  /**
+   * A melee attacker steps IN toward its target and back (story 4.10 — replaces
+   * the old in-place nudge). The step is a fraction of the true attacker→target
+   * gap, so a 1.5× monster sprite (story 4.9) still lands planted, not floaty;
+   * with no target view (dead/unknown) it nudges a fixed distance toward the
+   * enemy board along the clash diagonal. Damped under reduced motion (UX-DR6).
+   */
+  private meleeStep(attacker: UnitView, target?: UnitView) {
+    this.resetSprite(attacker); // start from a clean rest pose (0,−14); yoyo returns here
+    let toX: number;
+    let toY: number;
+    if (target) {
+      const frac = this.reduceMotion ? MELEE_STEP_FRACTION_REDUCED : MELEE_STEP_FRACTION;
+      toX = (target.x - attacker.x) * frac; // sprite local rest x is 0
+      toY = -14 + (target.y - attacker.y) * frac; // sprite local rest y is −14
+    } else {
+      const dir = attacker.side === 'A' ? -1 : 1; // A's foe is upper-left, B's is lower-right
+      const step = (this.reduceMotion ? 6 : MELEE_STEP_FALLBACK_PX) / Math.SQRT2;
+      toX = dir * step;
+      toY = -14 + dir * step;
     }
+    this.tweens.add({
+      targets: attacker.sprite,
+      x: toX,
+      y: toY,
+      // Scales with the FR23 speed toggle (unlike the old fixed-140ms nudge):
+      // a slow, weighty step at 1×, a snappy one at 2× — the round trip always
+      // fits inside the beat, so the sprite is back at rest before the next event.
+      duration: Math.round(MELEE_STEP_MS / Math.max(1, this.speedFactor)),
+      yoyo: true,
+      repeat: UNIT_TWEENS.attack.repeat,
+    });
+  }
 
-    // Blast: a translucent actor-colored wash over EVERY struck tile (AC3: "washes the struck row").
-    for (const id of targetIds) {
-      const struck = this.views.get(id);
-      if (!struck) continue;
-      const wash = this.add.circle(struck.x, struck.y - 8, 30, actorFill, 0.35).setDepth(890);
-      this.tweens.add({ targets: wash, alpha: 0, scale: this.reduceMotion ? 1 : 1.5, duration: 300, onComplete: () => wash.destroy() });
-    }
+  /**
+   * The ONE origin→target trace (story 4.10, AC1): a small mark crosses the
+   * clash gap from `from` to `to`, then destroys itself — shared by
+   * arrow/blast/heal/spell so the from→to reading can't drift between kinds
+   * (this generalizes story 4.7's arrow sliver). Reduced motion damps the
+   * crossing DURATION, never the beat (UX-DR6).
+   */
+  private traceProjectile(from: UnitView, to: UnitView, color: number) {
+    const mark = this.add
+      .rectangle(from.x, from.y - 12, 10, 2, color)
+      .setDepth(900)
+      .setRotation(Math.atan2(to.y - from.y, to.x - from.x));
+    this.tweens.add({
+      targets: mark,
+      x: to.x,
+      y: to.y - 12,
+      duration: this.reduceMotion ? TRACE_MS_REDUCED : TRACE_MS,
+      onComplete: () => mark.destroy(),
+    });
+  }
+
+  /** A translucent actor-colored wash over one struck tile — the blast's row bloom (AC1: "washes the struck row"). */
+  private blastWash(struck: UnitView, color: number) {
+    const wash = this.add.circle(struck.x, struck.y - 8, 30, color, 0.35).setDepth(890);
+    this.tweens.add({ targets: wash, alpha: 0, scale: this.reduceMotion ? 1 : 1.5, duration: 300, onComplete: () => wash.destroy() });
   }
 
   /** The struck unit's flinch — UNIT_TWEENS.hurt (alpha flash), from a clean rest pose. */
