@@ -207,8 +207,15 @@ export class DraftScene extends Scene {
     this.dynamic.push(addUnitSprite(this, DETAIL.x + 44, DETAIL.y + 52, this.selected, 48));
     const tx = DETAIL.x + 92;
     this.dynamic.push(crispText(this, tx, DETAIL.y + 12, card.name.toUpperCase(), { fontFamily: 'Arial Black', fontSize: '18px', color: PALETTE.title }));
+    // Review fix (2026-07-20): the slot cost is ONLY worth stating for a
+    // monster (SLOT_COST.small === 1 is the assumed default — restating "1
+    // slot" on all 11 small classes added nothing and pushed this line's
+    // length past its ~170px wrap budget for nearly every class, colliding
+    // with the fixed-position line 18px below). Tightened separators (single
+    // space, not double) free a little more room across the board.
+    const costSegment = card.slotCost > 1 ? `${card.slotCost} slots · ` : '';
     this.dynamic.push(
-      crispText(this, tx, DETAIL.y + 38, `${card.role}  ·  ${card.slotCost} slot${card.slotCost > 1 ? 's' : ''}  ·  act ${a.front}/${a.mid}/${a.back}`, {
+      crispText(this, tx, DETAIL.y + 38, `${card.role} · ${costSegment}act ${a.front}/${a.mid}/${a.back}`, {
         fontFamily: 'Arial',
         fontSize: '11px',
         color: PALETTE.bodyText,

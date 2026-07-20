@@ -311,8 +311,11 @@ export const BALANCE: BalanceData = {
     // magic — pure stats (low MEN), no Artillery→Brute relation (D-1e).
     // Uniform melee move across all three rows ("everyone else uniform",
     // dossier §4) — only its acting row (action count) varies; `sizeClass:
-    // 'monster'` drives its 2-slot cost (SLOT_COST) and two-cell footprint
-    // (`footprintCells`) with no further code change.
+    // 'monster'` drives its 2-slot cost (SLOT_COST) and its single-cell
+    // king-move footprint (device revision, 2026-07-20 — `footprintCells`
+    // returns one cell for every class; the monster instead RESERVES its 8
+    // king-move neighbors via `validateMatchSetup`/`canPlace`) with no
+    // further code change.
     golem: {
       hp: 300,
       str: 28,

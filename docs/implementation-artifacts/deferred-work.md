@@ -1,5 +1,9 @@
 # Deferred Work
 
+## Deferred from: code review of story 4-9-monsters-on-the-phone (2026-07-20)
+
+- The DCSS pack's PWA icon assets (`apps/web/public/icon-192.png`, `icon-512.png`, `icon-512-maskable.png`) still trace to `dc-mon/vault_guard.png` in `attribution.ts` — the same tile the Golem used to borrow before 4.9 gave it its own dedicated frame. Pre-existing, not caused by this diff (icon generation wasn't touched; the icons were always the Knight tile's provenance, independent of what the Golem points at today). A documentation-accuracy nuance only — revisit if the icons themselves are ever regenerated from different art.
+
 ## PRD follow-up (from story 4.8's dossier, D-1b, 2026-07-19) — "dragon and golem" wording is stale
 
 - `epics.md` Story 4.8's AC and PRD FR38 both still read "dragon and golem." The story-4.1 design dossier (signed off by Danilo 2026-07-17, decision D-1b) narrowed wave 1 to the **Golem only** — dragons and beasts land in a later wave together with their slayer classes. Story 4.8 shipped Golem-only per the dossier and documented the deviation in its own Dev Notes (the same pattern story 4.7 used for the stale "Shield Cover" wording). This entry is the formal pointer so a future `bmad-prd`/`correct-course` pass updates `epics.md`/PRD FR38 to say "Golem (wave 1); dragon/beasts (a later wave, with their slayer classes)."

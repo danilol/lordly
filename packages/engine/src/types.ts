@@ -15,10 +15,11 @@
 /**
  * The unit classes (FR1, FR15), shipped-six first, then the wave-1 smalls
  * (story 4.3), then the Golem (story 4.8) — the 12th and final wave-1 class,
- * the roster's only `sizeClass: 'monster'` (two-cell body, AD-14). Dragons
- * and beasts are DEFERRED to a later wave together with their slayer classes
- * (dossier D-1b) — wave 1 ships Golem only, despite the epics/PRD's stale
- * "dragon and golem" wording.
+ * the roster's only `sizeClass: 'monster'` (a single-cell unit that RESERVES
+ * its 8 king-move neighbors at placement — device revision, 2026-07-20 —
+ * never a two-cell body; AD-14). Dragons and beasts are DEFERRED to a later
+ * wave together with their slayer classes (dossier D-1b) — wave 1 ships
+ * Golem only, despite the epics/PRD's stale "dragon and golem" wording.
  */
 export const ALL_CLASSES = [
   'knight',
