@@ -9,15 +9,34 @@ const army = (n: number): DraftedUnit[] => Array.from({ length: n }, (_, i) => (
 describe('draft gating (FR1/FR30 — SLOT budget, AD-1)', () => {
   // All shipped classes are small (cost 1), so n knights fill n slots.
   it('can add while under the slot budget, not at it', () => {
-    expect(canAddUnit(army(0))).toBe(true);
-    expect(canAddUnit(army(BALANCE.slotBudget - 1))).toBe(true);
-    expect(canAddUnit(army(BALANCE.slotBudget))).toBe(false);
+    expect(canAddUnit(army(0), 'knight')).toBe(true);
+    expect(canAddUnit(army(BALANCE.slotBudget - 1), 'knight')).toBe(true);
+    expect(canAddUnit(army(BALANCE.slotBudget), 'knight')).toBe(false);
   });
 
   it('can continue only at exactly the filled slot budget', () => {
     expect(canContinue(army(BALANCE.slotBudget - 1))).toBe(false);
     expect(canContinue(army(BALANCE.slotBudget))).toBe(true);
     expect(canContinue(army(BALANCE.slotBudget + 1))).toBe(false);
+  });
+
+  // Device-reported bug: the UI let a 3rd monster through and let a monster
+  // candidate overflow the budget by its OWN 2-slot cost — both because the
+  // old signature only checked the running total, never the candidate.
+  it('rejects a monster candidate that would overflow the slot budget by its OWN 2-slot cost, even though the running total alone is still under budget', () => {
+    // 4 slots used (4 knights), 1 remains — a monster costs 2, so it must be
+    // rejected even though `slotTotal(army) < slotBudget` is still true.
+    expect(canAddUnit(army(BALANCE.slotBudget - 1), 'golem')).toBe(false);
+    expect(canAddUnit(army(BALANCE.slotBudget - 2), 'golem')).toBe(true); // exactly 2 slots remain
+  });
+
+  it('rejects a THIRD monster candidate even with slots to spare (FR1/FR38 — max 2 per army)', () => {
+    const twoMonsters: DraftedUnit[] = [
+      { class: 'golem', element: 'fire', name: 'Ogham' },
+      { class: 'golem', element: 'water', name: 'Karrick' },
+    ];
+    expect(canAddUnit(twoMonsters, 'golem')).toBe(false);
+    expect(canAddUnit(twoMonsters, 'knight')).toBe(true); // a small is unaffected by the monster cap
   });
 });
 

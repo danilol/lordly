@@ -30,6 +30,10 @@ export const UNIT_FRAMES: Record<UnitClass, number> = {
   ninja: 1,
   valkyrie: 1,
   sorceress: 3,
+  // STORY 4.8 — INTERIM sprite (flagged for story 4.9's device pass): the
+  // Golem borrows the Knight frame (the closest existing "armored wall" read)
+  // until a dedicated ≥48px two-cell CC0 body is sourced (dossier D-3c).
+  golem: 0,
 };
 
 // FR31 animation representations — tween-based (the CC0 tiles are single-frame,

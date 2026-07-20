@@ -1,9 +1,9 @@
-import { BALANCE, slotTotal } from './balance';
+import { BALANCE, MAX_MONSTERS_PER_ARMY, slotTotal } from './balance';
 import { MAX_SEED } from './rng';
 import { ALL_CLASSES, ALL_COLS, ALL_ELEMENTS, ALL_ROWS, ALL_TACTICS } from './types';
-import type { MatchSetup, Side } from './types';
+import type { MatchSetup, Placement, Side, UnitClass } from './types';
 
-/** Discriminant codes for every way a `MatchSetup` can be malformed (AC2). */
+/** Discriminant codes for every way a `MatchSetup` can be malformed (AC2, +3 for story 4.8's monster footprint rules). */
 export type MatchSetupViolation =
   | 'not-an-object'
   | 'invalid-seed'
@@ -17,7 +17,13 @@ export type MatchSetupViolation =
   | 'invalid-name'
   | 'placements-mismatch'
   | 'out-of-grid'
-  | 'overlapping-placement';
+  | 'overlapping-placement'
+  /** A side fields more than 2 monsters (FR1/FR38). */
+  | 'too-many-monsters'
+  /** ANY unit — human or monster — occupies one of the 8 KING-MOVE neighbors (orthogonal OR diagonal) of a monster's cell (FR4/FR38 — device-reported, confirmed against the source game: "you cannot position other characters next to large characters"). A monster is a single cell that reserves its whole Moore neighborhood — a Golem dead-center blocks the entire rest of the board; two Golems at front-left + front-right leave the back row open. */
+  | 'adjacent-to-monster'
+  /** A side's leader index names a monster (FR35/FR38 — only a small may be crowned). */
+  | 'monster-cannot-lead';
 
 /** True for a non-null plain object — used to reject malformed runtime input as a typed error. */
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -115,25 +121,33 @@ export function validateMatchSetup(setup: MatchSetup): void {
   // FR35 (story 4.2): each side's leader is an integer index into its army.
   for (const side of SIDES) {
     const leader = isObject(leaders) ? leaders[side] : undefined;
-    const army = (armies as Record<string, unknown>)[side] as unknown[];
+    const army = (armies as Record<string, unknown>)[side] as { class: UnitClass }[];
     if (!Number.isInteger(leader) || (leader as number) < 0 || (leader as number) >= army.length) {
       throw new InvalidMatchSetupError(
         'invalid-leader',
         `side ${side} leader must be an integer index into its ${army.length}-unit army, got ${String(leader)}`,
       );
     }
+    // A monster cannot be crowned (device-reported, story 4.8 follow-up): the
+    // leader-fall sober package (FR35) and the Attack-Leader tactic both
+    // read the leader as a single vulnerable unit — a 2-cell wall surviving
+    // as its own army's leader defeats the mechanic's intent.
+    if (BALANCE.classes[(army[leader as number] as { class: UnitClass }).class].sizeClass === 'monster') {
+      throw new InvalidMatchSetupError('monster-cannot-lead', `side ${side} leader (index ${String(leader)}) is a monster — only a small may be crowned`);
+    }
   }
 
   for (const side of SIDES) {
     const cells = (placements as Record<string, unknown>)[side];
-    const army = (armies as Record<string, unknown>)[side] as unknown[];
+    const army = (armies as Record<string, unknown>)[side] as { class: UnitClass }[];
     if (!Array.isArray(cells) || cells.length !== army.length) {
       throw new InvalidMatchSetupError(
         'placements-mismatch',
         `side ${side} placements must parallel its army (${army.length} units, got ${Array.isArray(cells) ? cells.length : typeof cells})`,
       );
     }
-    const seen = new Set<string>();
+    // Structural shape first (object, row/col are grid members) — the shared
+    // footprint predicate below assumes well-formed `Placement`s.
     cells.forEach((cell: unknown, i) => {
       if (!isObject(cell)) {
         throw new InvalidMatchSetupError('out-of-grid', `side ${side} unit ${i} placement is not an object (got ${cell === null ? 'null' : typeof cell})`);
@@ -141,11 +155,127 @@ export function validateMatchSetup(setup: MatchSetup): void {
       if (!(ALL_ROWS as readonly string[]).includes(cell.row as string) || !(ALL_COLS as readonly string[]).includes(cell.col as string)) {
         throw new InvalidMatchSetupError('out-of-grid', `side ${side} unit ${i} placed outside the grid at '${String(cell.row)}/${String(cell.col)}'`);
       }
-      const key = `${cell.row}/${cell.col}`;
-      if (seen.has(key)) {
-        throw new InvalidMatchSetupError('overlapping-placement', `side ${side} has two units on cell ${key}`);
-      }
-      seen.add(key);
     });
+    // Footprint legality (story 4.8, AD-14: monster anchors, ≤2 monsters, no
+    // shared column, no overlapping cell — small or monster) — the SAME
+    // predicate `canPlace`/`legalAnchors` call below. One implementation.
+    const units = cells.map((cell, i) => ({ class: (army[i] as { class: UnitClass }).class, placement: cell as Placement }));
+    const violation = footprintViolation(units);
+    if (violation !== undefined) {
+      throw new InvalidMatchSetupError(violation.code, footprintViolationMessage(side, units, violation));
+    }
   }
+}
+
+/** Human-readable message for a `footprintViolation` result — naming the offending side/unit/cell (spine errors convention). */
+function footprintViolationMessage(
+  side: Side,
+  units: readonly { class: UnitClass; placement: Placement }[],
+  violation: { code: MatchSetupViolation; index: number; cell?: string },
+): string {
+  const at = units[violation.index] as { class: UnitClass; placement: Placement };
+  switch (violation.code) {
+    case 'too-many-monsters':
+      return `side ${side} fields more than ${MAX_MONSTERS_PER_ARMY} monsters`;
+    case 'adjacent-to-monster':
+      return `side ${side} unit ${violation.index} (${at.class}) stands directly beside a monster — no unit may occupy any of a monster's 8 neighboring cells`;
+    default: // 'overlapping-placement' — the only other code footprintViolation returns
+      return `side ${side} unit ${violation.index} occupies cell ${violation.cell} another unit already occupies`;
+  }
+}
+
+/** The 8 KING-MOVE neighbors of `cell` — orthogonal AND diagonal — excluding `cell` itself and anything off the grid. */
+function adjacentCells(cell: Placement): Placement[] {
+  const rowIndex = ALL_ROWS.indexOf(cell.row);
+  const colIndex = ALL_COLS.indexOf(cell.col);
+  const neighbors: Placement[] = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const row = ALL_ROWS[rowIndex + dr];
+      const col = ALL_COLS[colIndex + dc];
+      if (row !== undefined && col !== undefined) neighbors.push({ row, col });
+    }
+  }
+  return neighbors;
+}
+
+/**
+ * The shared placement-legality CORE (story 4.8 device revision, 2026-07-20):
+ * checks one side's full (class, cell) list in placement order — at most 2
+ * monsters, no cell claimed twice, and (Danilo's confirmed model, replacing
+ * the earlier 2-cell footprint) NO unit of EITHER kind may occupy any of the
+ * 8 KING-MOVE neighbors — orthogonal OR diagonal — of a monster's cell. A
+ * monster is now a SINGLE-cell unit that reserves its whole Moore
+ * neighborhood: a Golem dead-center blocks the entire rest of the board; two
+ * Golems at front-left + front-right leave the whole back row open. A monster
+ * may anchor ANYWHERE (no more back-row restriction — there is no derived
+ * second cell). Returns the FIRST violation found (with the offending unit's
+ * index), or `undefined` if legal. `validateMatchSetup` throws it with a
+ * message; `canPlace`/`legalAnchors` just check for `undefined` — the SAME
+ * predicate, never re-derived (AD-14's "one legality implementation").
+ */
+function footprintViolation(
+  units: readonly { class: UnitClass; placement: Placement }[],
+): { code: MatchSetupViolation; index: number; cell?: string } | undefined {
+  const seenCells = new Set<string>();
+  const monsterBannedCells = new Set<string>(); // the 8 king-move neighbors of every ALREADY-processed monster
+  let monsterCount = 0;
+  for (let i = 0; i < units.length; i++) {
+    const u = units[i] as { class: UnitClass; placement: Placement };
+    const isMonster = BALANCE.classes[u.class].sizeClass === 'monster';
+
+    if (isMonster) {
+      monsterCount++;
+      if (monsterCount > MAX_MONSTERS_PER_ARMY) return { code: 'too-many-monsters', index: i };
+    }
+
+    const cell = u.placement;
+    const key = `${cell.row}/${cell.col}`;
+
+    // Do I sit on a cell an earlier monster already reserved?
+    if (monsterBannedCells.has(key)) return { code: 'adjacent-to-monster', index: i };
+    // If I'M a monster, does any of my 8 neighbors hit a cell someone earlier already occupies?
+    if (isMonster) {
+      for (const neighbor of adjacentCells(cell)) {
+        if (seenCells.has(`${neighbor.row}/${neighbor.col}`)) return { code: 'adjacent-to-monster', index: i };
+      }
+    }
+    // Two units on the exact same cell.
+    if (seenCells.has(key)) return { code: 'overlapping-placement', index: i, cell: key };
+    seenCells.add(key);
+
+    // Register my own ban zone (all 8 king-move neighbors) for units still to come.
+    if (isMonster) {
+      for (const neighbor of adjacentCells(cell)) monsterBannedCells.add(`${neighbor.row}/${neighbor.col}`);
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Whether `cls` may be legally added at `anchor`, given the units already
+ * placed on that side (AD-14, FR4/FR38). Shares `footprintViolation` with
+ * `validateMatchSetup` — the placement scene's live drag feedback (story 4.9)
+ * calls this and never re-implements the column/verticality rules itself.
+ */
+export function canPlace(cls: UnitClass, anchor: Placement, existing: readonly { class: UnitClass; placement: Placement }[]): boolean {
+  return footprintViolation([...existing, { class: cls, placement: anchor }]) === undefined;
+}
+
+/**
+ * Every anchor at which `cls` may legally be added, given the units already
+ * placed (AD-14). A small's legal anchors are every cell not already
+ * occupied; a monster's exclude `back` (illegal anchor), any column already
+ * holding a monster, and any anchor whose footprint would overlap.
+ */
+export function legalAnchors(cls: UnitClass, existing: readonly { class: UnitClass; placement: Placement }[]): Placement[] {
+  const anchors: Placement[] = [];
+  for (const row of ALL_ROWS) {
+    for (const col of ALL_COLS) {
+      const anchor: Placement = { row, col };
+      if (canPlace(cls, anchor, existing)) anchors.push(anchor);
+    }
+  }
+  return anchors;
 }

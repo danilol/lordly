@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_CLASSES, BALANCE } from '@lordly/engine';
+import { ALL_CLASSES, BALANCE, MAX_MONSTERS_PER_ARMY, SLOT_COST } from '@lordly/engine';
 import type { UnitClass } from '@lordly/engine';
 import { CLASS_DISPLAY_NAME } from '../src/config/constants';
 import { classRulesCard } from '../src/flow/draftModel';
@@ -152,5 +152,34 @@ describe('docs/rules.md drift guard — the review additions (every STATED numbe
   it('the class table has exactly one data row per engine class — no stale or duplicate rows', () => {
     const rows = raw.split('\n').filter((l) => l.trim().startsWith('|') && !isTableSeparator(l.trim()));
     expect(rows).toHaveLength(ALL_CLASSES.length + 1); // + the header row
+  });
+});
+
+describe('docs/rules.md drift guard — Monsters (story 4.8, FR38)', () => {
+  it('states the Golem’s slot cost and the monster-count cap from balance data', () => {
+    expect(raw).toContain(`costs **${SLOT_COST.monster} of your ${BALANCE.slotBudget} slots**`);
+    expect(raw).toContain(`at most **${MAX_MONSTERS_PER_ARMY}**`);
+    expect(BALANCE.classes.golem.sizeClass).toBe('monster');
+  });
+
+  it('states the Golem’s role exactly as BALANCE.classes.golem.role reads, with no role-relation bonus either way', () => {
+    expect(BALANCE.classes.golem.role).toBe('brute');
+    expect(raw).toContain('Brute');
+    expect(BALANCE.roleRelations.some((r) => r.attacker === 'brute' || r.defender === 'brute')).toBe(false);
+  });
+
+  // Device-reported follow-up (2026-07-19): the initial ship only forbade two
+  // monsters SHARING a column; a player found two Golems standing in
+  // neighboring columns (visibly touching) still went through. A second round
+  // confirmed against the source game found the ban is broader still — NO
+  // unit, human or monster, may stand beside one — and found a Golem could be
+  // crowned as leader. All three are now real engine rules — pin the doc's
+  // wording of each so a future rewrite can't silently drop them.
+  it('states no unit — human or monster — may stand directly beside a Golem', () => {
+    expect(raw).toContain('No unit may stand directly beside one');
+  });
+
+  it('states a Golem can never be crowned as leader', () => {
+    expect(raw.toLowerCase()).toContain('cannot be crowned');
   });
 });

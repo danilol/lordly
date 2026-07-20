@@ -1,5 +1,10 @@
 # Deferred Work
 
+## PRD follow-up (from story 4.8's dossier, D-1b, 2026-07-19) — "dragon and golem" wording is stale
+
+- `epics.md` Story 4.8's AC and PRD FR38 both still read "dragon and golem." The story-4.1 design dossier (signed off by Danilo 2026-07-17, decision D-1b) narrowed wave 1 to the **Golem only** — dragons and beasts land in a later wave together with their slayer classes. Story 4.8 shipped Golem-only per the dossier and documented the deviation in its own Dev Notes (the same pattern story 4.7 used for the stale "Shield Cover" wording). This entry is the formal pointer so a future `bmad-prd`/`correct-course` pass updates `epics.md`/PRD FR38 to say "Golem (wave 1); dragon/beasts (a later wave, with their slayer classes)."
+- **ALSO stale after story 4.8's device revision (2026-07-20): the MONSTER MODEL itself.** FR38 and dossier §2 describe a monster as a **two-cell** unit (front+mid or mid+back) with the "two-cell TARGETED/ACTS semantics" (melee-front / ranged-rear / blast-double-count / acts-from-anchor). Danilo replaced that on device with a much simpler model, approved and shipped: **a monster is a SINGLE-cell unit that costs 2 slots and reserves all 8 king-move neighbors (orthogonal + diagonal) at placement** — no unit may stand beside it. There is no second body cell and no special battle targeting (a monster is just a beefy one-cell participant). The same `bmad-prd`/`correct-course` pass should rewrite FR38 + dossier §2 to this single-cell + king-move rule. (`docs/rules.md` and the engine/tests already reflect the shipped design; only the upstream PRD/dossier/epics text is stale.)
+
 ## Deferred from: epic-4 architecture pass (2026-07-16)
 
 - **Landscape battle backgrounds (PO wish, Danilo, with OB64 reference screenshot):** replace the dark battle backdrop with OB64-style terrain — a field, mountains, rocks — under the floating formation grids. Art/UX wave item, explicitly NOT Epic 4 scope ("note for later"). Interacts with the label-contrast fix (FR39f) — whatever contrast treatment ships must survive a busy background later.

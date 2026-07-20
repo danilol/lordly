@@ -699,6 +699,7 @@ describe('FR32/FR33 per-row moves (story 4.7, dossier §4) — the frozen table 
     ninja: { front: 'slash', mid: 'slash', back: 'slash' },
     valkyrie: { front: 'slash', mid: 'slash', back: 'slash' },
     sorceress: { front: 'staff', mid: 'blast', back: 'blast' },
+    golem: { front: 'slash', mid: 'slash', back: 'slash' }, // story 4.8 — uniform melee, "everyone else" bucket
   };
 
   it('every (class, row) resolves the exact frozen move — total over ALL_CLASSES × ALL_ROWS, no gaps', () => {

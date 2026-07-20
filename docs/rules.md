@@ -21,6 +21,7 @@ Draft to fill your five slots (duplicates allowed). Each unit also rolls one of 
 | Ninja | Skirmisher | 85 | 2/1/1 | Melee: nearest reachable enemy row; very fast, no class advantage |
 | Valkyrie | Skirmisher | 105 | 2/1/1 | Melee: nearest reachable enemy row; no class advantage |
 | Sorceress | Row artillery | 78 | 1/1/2 | Front: a weak staff jab. Mid/back: blasts the fullest enemy row |
+| Golem | Brute wall | 300 | 2/1/1 | Melee: a two-cell body — blocks both its rows, struck at its front, sniped at its rear |
 
 ### Roles and matchups
 
@@ -33,7 +34,7 @@ Damage bonuses ride on a unit's **role**, not its class — so new soldiers slot
 - **Support** — Cleric
 - **Control** — Witch
 
-The triangle: **Artillery beats Vanguard**, **Vanguard beats Sniper**, **Sniper beats Artillery**. An attack with the advantage deals ×1.5 damage; against its counter, ×0.75. And the archer's specialty — **Sniper hunts Support** and **Sniper hunts Control**: arrows deal ×1.5 to Cleric and Witch, one-way, with no bonus back. Skirmishers stand outside every relation — steady, never favored, never countered.
+The triangle: **Artillery beats Vanguard**, **Vanguard beats Sniper**, **Sniper beats Artillery**. An attack with the advantage deals ×1.5 damage; against its counter, ×0.75. And the archer's specialty — **Sniper hunts Support** and **Sniper hunts Control**: arrows deal ×1.5 to Cleric and Witch, one-way, with no bonus back. Skirmishers stand outside every relation — steady, never favored, never countered. So does the Golem's role, **Brute** — no ×1.5 either way, in either direction; its weakness to magic is pure stats (a low magic resistance), not a role bonus.
 
 ### Rows matter
 
@@ -56,6 +57,12 @@ The two boards face each other, front rows nearest. Your left column faces the e
 - **Blast (Wizard, Sorceress).** Each cast strikes **every unit in one enemy row** — the row with the most living enemies (ties go rearward). In **Wipeout**, each struck unit takes only ×0.75 of the damage — over a long war, the artillery spreads thin.
 - **Heal (Cleric).** Restores the **living ally with the lowest HP share** (herself included). If nobody is hurt, she pokes with her staff instead — feebly.
 - **Curse (Witch).** Applies her prepared spell to the rearmost enemy, preferring one not yet afflicted. She deals no damage; she doesn't need to.
+
+## Monsters
+
+The Golem is the army's one **monster**: it costs **2 of your 5 slots** instead of 1, so you may field at most **2** of them. It stands on a **single tile** like any soldier, but it is so large that it **reserves every tile touching it** — the eight cells around it in all directions, orthogonal *and* diagonal. **No unit may stand directly beside one** — human or monster (the same rule the source game enforces: "you cannot position other characters next to large characters"). A Golem in the dead center of the grid blocks the entire rest of the board; a Golem in a corner blocks only the three cells beside it; two Golems can share an army as long as no cell of one touches the other (for example, front-left and front-right, leaving the whole back row open for a third soldier). A Golem **cannot be crowned as your leader** — the crown has to sit on one of your smaller soldiers.
+
+In battle the Golem fights like any other single-tile unit — it just brings a very large pool of hit points and hits hard. Its low resistance to magic is its weakness: casters wear it down far faster than blades do.
 
 ## Crits and Dodges
 
@@ -108,7 +115,7 @@ The same spell never stacks on one target.
 
 ## The Timeline
 
-Combat runs in **turns**. Each turn, every unit with actions left acts once, fastest first — the order weaves between both armies. The natural speed order: **Ninja, Witch, Archer, Valkyrie, Sorceress, Mercenary, Wizard, Berserker, Cleric, Knight, Phalanx** — disruptors and skirmishers strike first; the heavy wall hits last, but survives to do it. Sleeping and fallen units forfeit their remaining actions.
+Combat runs in **turns**. Each turn, every unit with actions left acts once, fastest first — the order weaves between both armies. The natural speed order: **Ninja, Witch, Archer, Valkyrie, Sorceress, Mercenary, Wizard, Berserker, Cleric, Knight, Phalanx, Golem** — disruptors and skirmishers strike first; the heavy wall hits last, but survives to do it. Sleeping and fallen units forfeit their remaining actions.
 
 ## Judging
 

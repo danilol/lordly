@@ -12,8 +12,28 @@
  * redeclaring the sets (AD-4).
  */
 
-/** The unit classes (FR1, FR15), shipped-six first then the wave-1 additions (story 4.3), in roster order. Golem (monster) joins in 4.8 with its two-cell semantics. */
-export const ALL_CLASSES = ['knight', 'mercenary', 'archer', 'mage', 'cleric', 'witch', 'berserker', 'phalanx', 'ninja', 'valkyrie', 'sorceress'] as const;
+/**
+ * The unit classes (FR1, FR15), shipped-six first, then the wave-1 smalls
+ * (story 4.3), then the Golem (story 4.8) — the 12th and final wave-1 class,
+ * the roster's only `sizeClass: 'monster'` (two-cell body, AD-14). Dragons
+ * and beasts are DEFERRED to a later wave together with their slayer classes
+ * (dossier D-1b) — wave 1 ships Golem only, despite the epics/PRD's stale
+ * "dragon and golem" wording.
+ */
+export const ALL_CLASSES = [
+  'knight',
+  'mercenary',
+  'archer',
+  'mage',
+  'cleric',
+  'witch',
+  'berserker',
+  'phalanx',
+  'ninja',
+  'valkyrie',
+  'sorceress',
+  'golem',
+] as const;
 
 /** One unit class. Matchups derive from the class's `role` and the role-relation table (FR14, AD-4 — story 4.3). */
 export type UnitClass = (typeof ALL_CLASSES)[number];

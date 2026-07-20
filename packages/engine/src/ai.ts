@@ -1,3 +1,4 @@
+import { BALANCE } from './balance';
 import { nextInt } from './rng';
 import type { Stream } from './rng';
 import { ALL_COLS } from './types';
@@ -25,23 +26,26 @@ export interface StrategyArchetype {
   /** Human-readable name for reports and (later) debug UI. */
   name: string;
   /**
-   * Length-5 tuples (story 4.2 — all-smalls era, 5 slots = 5 units): the
-   * tuple keeps archetype authoring compile-checked. Story 4.8's two-slot
-   * Golem comps revisit this shape together with their placements.
+   * VARIABLE-length (story 4.8): a slot-legal army is exactly 5 units in the
+   * all-smalls era, but a monster costs 2 slots — a 1-monster comp is 4
+   * units (2+1+1+1), a 2-monster comp is 3 (2+2+1). The length-5 tuple from
+   * story 4.2 no longer holds for every entry; `classes`/`placement` stay
+   * parallel by index (AD-9's contract, unchanged). Authoring safety (every
+   * entry slot-legal) is a TEST, not the type (`test/ai.test.ts`).
    */
-  classes: readonly [UnitClass, UnitClass, UnitClass, UnitClass, UnitClass];
-  placement: readonly [Placement, Placement, Placement, Placement, Placement];
+  classes: readonly UnitClass[];
+  placement: readonly Placement[];
 }
 
 /** What the AI committed (FR24): archetype identity + board + tactic. NO elements, NO names — see `chooseSetup`. */
 export interface AiChoice {
   /** The picked archetype's id; thread it back via `options.exclude` next match. */
   archetypeId: string;
-  classes: [UnitClass, UnitClass, UnitClass, UnitClass, UnitClass];
-  placement: [Placement, Placement, Placement, Placement, Placement];
+  classes: UnitClass[];
+  placement: Placement[];
   /** The AI's army-wide target-selection tactic (FR34/FR24), drawn from its own stream. */
   tactic: Tactic;
-  /** The AI's designated leader as an index into its own 5-unit army (FR35/FR24, story 4.5), drawn from its own stream — seeded variation, never always 0. */
+  /** The AI's designated leader as an index into its own army (FR35/FR24, story 4.5), drawn from its own stream — seeded variation, never always 0. A monster comp's army may be as short as 3 units (story 4.8). */
   leader: number;
 }
 
@@ -222,6 +226,44 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
       { row: 'back', col: 'left' },
     ],
   },
+  {
+    id: 'golem-wall',
+    name: 'Golem Wall',
+    // Story 4.8 — the wave's ONE-monster comp: a single-cell Golem at
+    // front-center (2 slots) is the sole front-line screen; the remaining 3
+    // units fill the BACK row — the only cells left once the Golem's
+    // king-move ban (device-reported, confirmed against the source game)
+    // reserves all 5 of its on-grid neighbors (front/left, front/right,
+    // mid/left, mid/center, mid/right). The back row is 2 rows away, so it
+    // stays entirely free. 2 (golem) + 1 + 1 + 1 = 5 slots. Re-tune note: an
+    // EARLIER cleric+knight support pair (a healer behind a 2nd melee front)
+    // dominated both modes (74–77%, sweep-caught) — the sustain-behind-a-
+    // wall shape is systematically overtuned regardless of Golem's raw
+    // stats; swapping to no-sustain ranged/control support pulled it back
+    // into band at the dossier's HP 300.
+    classes: ['golem', 'archer', 'archer', 'witch'],
+    placement: [
+      { row: 'front', col: 'center' },
+      { row: 'back', col: 'left' },
+      { row: 'back', col: 'right' },
+      { row: 'back', col: 'center' },
+    ],
+  },
+  {
+    id: 'twin-golems',
+    name: 'Twin Golems',
+    // Story 4.8 — the wave's TWO-monster comp: single-cell Golems at
+    // front-left and front-right (2 columns apart, so neither is a king-move
+    // neighbor of the other — FR38). Their combined king-move bans cover
+    // front/center, mid/left, mid/center, mid/right; the whole BACK row stays
+    // free, and the cleric takes back/center. 2 + 2 + 1 = 5 slots.
+    classes: ['golem', 'golem', 'cleric'],
+    placement: [
+      { row: 'front', col: 'left' },
+      { row: 'front', col: 'right' },
+      { row: 'back', col: 'center' },
+    ],
+  },
 ];
 
 /**
@@ -273,10 +315,19 @@ export function chooseSetup(pool: readonly StrategyArchetype[], stream: Stream, 
   const tactic = AI_TACTICS[nextInt(stream, 0, AI_TACTICS.length - 1)] as Tactic;
 
   // ④ the leader draw (FR35, story 4.5) — LAST, so archetype/board/tactic are
-  // unchanged for a given stream state. A uniform index into the 5-unit army
-  // (all-smalls era, army length === slotBudget): seeded variation, never
-  // always unit 0 (FR24). Story 4.8's two-slot Golem comps revisit the bound.
-  const leader = nextInt(stream, 0, picked.classes.length - 1);
+  // unchanged for a given stream state. A uniform index into the picked
+  // archetype's OWN army length (story 4.8: a monster comp's army may be
+  // shorter than 5 — the bound already reads `.length`, not a hardcoded 5):
+  // seeded variation, never always unit 0 (FR24). Story 4.8 follow-up: a
+  // monster can never be crowned (`validateMatchSetup` rejects it), so the
+  // draw is over the eligible SMALL indices only — exactly one draw either
+  // way (never a redraw-on-reject), so a monster-free archetype's draw is
+  // unchanged bit-for-bit from before this fix.
+  const eligibleLeaderIndices = picked.classes.reduce<number[]>((acc, cls, i) => {
+    if (BALANCE.classes[cls].sizeClass !== 'monster') acc.push(i);
+    return acc;
+  }, []);
+  const leader = eligibleLeaderIndices[nextInt(stream, 0, eligibleLeaderIndices.length - 1)] as number;
 
   return { archetypeId: picked.id, classes: [...picked.classes], placement, tactic, leader };
 }

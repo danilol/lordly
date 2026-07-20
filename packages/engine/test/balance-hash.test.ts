@@ -18,6 +18,7 @@ const EXPECTED_HASHES: Record<number, string> = {
   6: '49466cd4', // story 4.5: +leaderFallDealt (×3/4) + leaderFallTaken (×5/4) — the FR35 leader-fall sober-package physical ratios (dossier §4)
   7: 'dd4a7f6c', // story 4.6: +critMultiplier (×3/2) + dexChanceDivisor (3) — the FR36 crit/dodge tuning data (ADR 0003 §Chances)
   8: '249d336f', // story 4.7: +moves table (per-class/row RowMove) + guardHalf (×1/2) — the FR32/FR33 per-row moves + Guard shield data
+  9: '57107fa9', // story 4.8: +golem class row (Brute, 2-slot monster, HP 300/VIT 36/MEN 8) — the FR38 wave-1 monster (Golem only — dragon deferred, dossier D-1b)
 };
 
 describe('balance-hash guard (AD-8)', () => {

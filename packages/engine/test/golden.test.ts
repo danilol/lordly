@@ -474,3 +474,65 @@ describe('golden battles (story 4.7 — per-row moves and Guard)', () => {
     expect(resolved).toMatchSnapshot();
   });
 });
+
+describe('golden battles (story 4.8 — monsters in the engine)', () => {
+  it('golden #11: the Golem blocks melee at its FRONT cell (a shielded ally never reached) and acts from its front anchor', () => {
+    // A single-cell Golem at front-LEFT (device revision: a monster is one
+    // cell that reserves its 8 king-move neighbors). The knight at mid-RIGHT
+    // is the "shielded ally" this golden pins: a DIFFERENT column from the
+    // Golem, but still in the B mercenary's reach pool (front-center reaches
+    // all 3 A columns) — melee's nearest-occupied-row blockade (FR8) never
+    // reaches past the Golem's front row to it.
+    const matchSetup: MatchSetup = {
+      ...setup(
+        {
+          armies: {
+            A: [u('golem', 'earth', 'Ogham'), u('knight', 'fire', 'Kain'), u('knight', 'water', 'Roland'), u('knight', 'wind', 'Doran')],
+            B: [
+              u('archer', 'fire', 'Falk'),
+              u('archer', 'water', 'Vess'),
+              u('cleric', 'earth', 'Nessa'),
+              u('cleric', 'wind', 'Petra'),
+              u('mercenary', 'fire', 'Gorm'),
+            ],
+          },
+          placements: {
+            A: [
+              { row: 'front', col: 'left' }, // the single-cell Golem
+              { row: 'mid', col: 'right' }, // the shielded ally — a different column, same reach pool
+              { row: 'back', col: 'center' },
+              { row: 'back', col: 'right' },
+            ],
+            B: [
+              { row: 'back', col: 'left' },
+              { row: 'back', col: 'right' },
+              { row: 'back', col: 'center' },
+              { row: 'mid', col: 'center' },
+              { row: 'front', col: 'center' },
+            ],
+          },
+        },
+        1,
+      ),
+      leaders: { A: 1, B: 0 }, // A:0 is the Golem — a monster can never be crowned (device-reported follow-up)
+    };
+    const log = resolveBattle(matchSetup);
+    // B's mercenary (front-center, melee) reaches all 3 of A's columns and
+    // faces the Golem's front cell directly — the Golem blocks that column
+    // like any other front-row unit, no special-casing needed (dossier
+    // §2) — and every melee swing lands on it, NEVER on the knight
+    // shielded behind it (deeper row, different column, same reach pool).
+    const meleeHits = log.events.filter((e) => e.type === 'UnitAttacked' && e.source === 'B:4');
+    expect(meleeHits.length).toBe(2);
+    for (const hit of meleeHits) if (hit.type === 'UnitAttacked') expect(hit.targets.map((t) => t.unit)).toEqual(['A:0']);
+    // The Golem always acts from its ANCHOR row (front): 2 actions, 'slash'
+    // move-kind — not the 1-action mid count its derived rear cell would
+    // imply if acting were read from the wrong row (dossier §2, D-2f).
+    const golemActs = log.events.filter((e) => e.type === 'UnitAttacked' && e.source === 'A:0');
+    expect(golemActs.length).toBe(BALANCE.classes.golem.actions.front);
+    for (const a of golemActs) if (a.type === 'UnitAttacked') expect(a.kind).toBe(BALANCE.classes.golem.moves.front);
+    expect(log.events.some((e) => e.type === 'UnitDied')).toBe(false);
+    expect(log.events[log.events.length - 1]).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 94, B: 90 } });
+    expect(log).toMatchSnapshot();
+  });
+});

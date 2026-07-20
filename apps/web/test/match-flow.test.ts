@@ -754,3 +754,78 @@ describe('MatchFlow rematch (AD-10)', () => {
     expect(flow.getState().phase).toBe('draft');
   });
 });
+
+describe('MatchFlow — monster placement/leader rules (story 4.8 device follow-up)', () => {
+  it('placeUnit REJECTS a drop that would put two monsters in the same or an adjacent column — the board is left unchanged, not silently corrupted', () => {
+    const flow = flowWithSeed(1);
+    flow.startMatch();
+    flow.draftUnit('golem');
+    flow.draftUnit('golem');
+    flow.draftUnit('knight');
+    flow.placeUnit(0, { row: 'front', col: 'left' });
+    flow.placeUnit(1, { row: 'front', col: 'center' }); // adjacent to 'left' — rejected
+    expect(flow.getState().playerPlacements[1]).toBeNull(); // still in the tray
+    flow.placeUnit(1, { row: 'front', col: 'right' }); // the only non-adjacent column — accepted
+    expect(flow.getState().playerPlacements[1]).toEqual({ row: 'front', col: 'right' });
+  });
+
+  it("placeUnit REJECTS dropping a small directly onto a monster's DERIVED rear cell, even though the board never stores that cell for the monster", () => {
+    const flow = flowWithSeed(1);
+    flow.startMatch();
+    flow.draftUnit('golem');
+    flow.draftUnit('knight');
+    flow.placeUnit(0, { row: 'front', col: 'center' }); // reserves front/center AND mid/center
+    flow.placeUnit(1, { row: 'mid', col: 'center' }); // the golem's own derived rear cell
+    expect(flow.getState().playerPlacements[1]).toBeNull(); // rejected, still in the tray
+  });
+
+  it('placeUnit dropping a monster on the BACK row DISPLAYS it there (mid+back footprint) instead of rejecting it, or silently moving it to mid (device-reported, corrected)', () => {
+    const flow = flowWithSeed(1);
+    flow.startMatch();
+    flow.draftUnit('golem');
+    flow.placeUnit(0, { row: 'back', col: 'center' });
+    expect(flow.getState().playerPlacements[0]).toEqual({ row: 'back', col: 'center' }); // shown exactly where dropped
+  });
+
+  it('a monster placed on the back row commits AT the back row — it is a single cell, no anchor normalization (device revision)', () => {
+    const flow = flowWithSeed(1);
+    flow.startMatch();
+    flow.draftUnit('golem');
+    flow.draftUnit('knight');
+    flow.draftUnit('archer');
+    flow.draftUnit('cleric');
+    flow.placeUnit(0, { row: 'back', col: 'left' }); // golem back/left blocks mid/left, mid/center, back/center
+    flow.placeUnit(1, { row: 'front', col: 'center' });
+    flow.placeUnit(2, { row: 'front', col: 'right' });
+    flow.placeUnit(3, { row: 'mid', col: 'right' });
+    flow.setLeader(1);
+    const setup = flow.commit();
+    expect(setup.placements.A[0]).toEqual({ row: 'back', col: 'left' }); // exactly where placed
+    expect(() => validateMatchSetup(setup)).not.toThrow();
+  });
+
+  it('setLeader throws for a monster — only a small may be crowned (validateMatchSetup would reject it at commit anyway)', () => {
+    const flow = flowWithSeed(1);
+    flow.startMatch();
+    flow.draftUnit('golem');
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    expect(() => flow.setLeader(0)).toThrow(/monster/i);
+    expect(flow.getState().playerLeader).toBeNull(); // rejected — no crown assigned
+  });
+
+  it('a full monster army commits and validates cleanly once the leader is a small (end-to-end, no console-only failure)', () => {
+    const flow = flowWithSeed(1);
+    flow.startMatch();
+    flow.draftUnit('golem');
+    flow.draftUnit('knight');
+    flow.draftUnit('archer');
+    flow.draftUnit('cleric');
+    flow.placeUnit(0, { row: 'front', col: 'left' }); // NOT center: round 6, a center anchor leaves only 2 free cells, too few for the other 3 units
+    flow.placeUnit(1, { row: 'front', col: 'right' });
+    flow.placeUnit(2, { row: 'mid', col: 'right' });
+    flow.placeUnit(3, { row: 'back', col: 'center' });
+    flow.setLeader(1); // a small — legal
+    expect(() => flow.commit()).not.toThrow();
+    expect(() => validateMatchSetup(flow.getState().committedSetup!)).not.toThrow();
+  });
+});

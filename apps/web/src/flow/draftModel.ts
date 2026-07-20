@@ -1,4 +1,4 @@
-import { ALL_CLASSES, ALL_ROWS, BALANCE, dealsAdvantage, slotTotal } from '@lordly/engine';
+import { ALL_CLASSES, ALL_ROWS, BALANCE, dealsAdvantage, MAX_MONSTERS_PER_ARMY, SLOT_COST, slotTotal } from '@lordly/engine';
 import type { ClassStats, UnitClass } from '@lordly/engine';
 import { CLASS_DISPLAY_NAME } from '../config/constants';
 import type { DraftedUnit } from './MatchState';
@@ -43,6 +43,8 @@ const CLASS_TEXT: Record<UnitClass, { role: string; behavior: string }> = {
   ninja: { role: 'Skirmisher', behavior: 'Melee: nearest reachable enemy row; very fast, no class advantage' },
   valkyrie: { role: 'Skirmisher', behavior: 'Melee: nearest reachable enemy row; no class advantage' },
   sorceress: { role: 'Row artillery', behavior: 'Front: a weak staff jab. Mid/back: blasts the fullest enemy row' },
+  // Story 4.8 — the wave's only monster (2 slots, two-cell body).
+  golem: { role: 'Brute wall', behavior: 'Melee: a two-cell body — blocks both its rows, struck at its front, sniped at its rear' },
 };
 
 /**
@@ -64,9 +66,22 @@ export function moveLabel(move: ClassStats['moves']['front']): string {
   return move.charAt(0).toUpperCase() + move.slice(1);
 }
 
-/** Whether another unit may still be drafted (FR1/FR30 — SLOT budget, never a unit count: AD-1). */
-export function canAddUnit(army: readonly DraftedUnit[]): boolean {
-  return slotTotal(army) < BALANCE.slotBudget;
+/**
+ * Whether `cls` may still be drafted onto this army (device-reported bug:
+ * the UI let a 3rd monster through because it only checked the RUNNING slot
+ * total, never what THIS candidate would cost, nor a monster-count cap).
+ * Slot budget is SLOTS, never a unit count (FR1/FR30, AD-1); the monster cap
+ * mirrors `validateMatchSetup`'s `too-many-monsters` rule (FR38) via the
+ * SAME `MAX_MONSTERS_PER_ARMY` constant, so the two can never drift apart.
+ */
+export function canAddUnit(army: readonly DraftedUnit[], cls: UnitClass): boolean {
+  const cost = SLOT_COST[BALANCE.classes[cls].sizeClass];
+  if (slotTotal(army) + cost > BALANCE.slotBudget) return false;
+  if (BALANCE.classes[cls].sizeClass === 'monster') {
+    const monsterCount = army.filter((u) => BALANCE.classes[u.class].sizeClass === 'monster').length;
+    if (monsterCount >= MAX_MONSTERS_PER_ARMY) return false;
+  }
+  return true;
 }
 
 /** Whether the draft is complete and the player may continue to placement (slot budget exactly filled — AD-1). */

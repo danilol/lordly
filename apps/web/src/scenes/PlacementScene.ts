@@ -1,6 +1,6 @@
 import { GameObjects, Input, Scene, Time } from 'phaser';
-import { ALL_COLS, ALL_ROWS, ALL_TACTICS, BALANCE } from '@lordly/engine';
-import type { Placement, Tactic } from '@lordly/engine';
+import { ALL_COLS, ALL_ROWS, ALL_TACTICS, BALANCE, legalAnchors } from '@lordly/engine';
+import type { Placement, Tactic, UnitClass } from '@lordly/engine';
 import {
   BASE_WIDTH,
   ENEMY_ARMY_LABEL,
@@ -17,7 +17,7 @@ import {
 } from '../config/constants';
 import { applyHiDpiCamera, addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
-import { placedCount } from '../flow/placement';
+import { bannedCells, placedCount, sameCell, toAnchor } from '../flow/placement';
 import type { MatchFlow } from '../flow/MatchFlow';
 
 const CELL = 84;
@@ -60,6 +60,8 @@ export class PlacementScene extends Scene {
    * Reset every create() (singleton scenes).
    */
   private pendingCrownTimers = new Map<number, Time.TimerEvent>();
+  /** Transient rejection/error toast (device-reported: illegal moves and a failed commit used to fail silently to the console). Reset every create() (singleton scenes). */
+  private toast?: GameObjects.Text;
 
   constructor() {
     super('Placement');
@@ -104,6 +106,7 @@ export class PlacementScene extends Scene {
     for (const t of this.pendingCrownTimers.values()) t.remove(); // review fix: no stale crown-toggle fires into a fresh match
     this.pendingCrownTimers.clear();
     this.pickerOpen = false;
+    this.toast = undefined;
     // A draggable object starts a drag on the SLIGHTEST move by default (threshold
     // 0), which swallowed the tap events double-tap-to-place needs. Require
     // TAP_DISTANCE_PX of movement before a drag begins, so a still tap stays a
@@ -115,23 +118,39 @@ export class PlacementScene extends Scene {
   }
 
   /**
-   * The first empty grid cell in reading order — front row left→right, then
-   * mid, then back (Danilo: "top row first, first available slot"). Returns
-   * `null` when the board is full. Drives double-tap auto-placement.
+   * The first LEGAL grid cell for `cls` in reading order — front row
+   * left→right, then mid, then back (Danilo: "top row first, first
+   * available slot"), via the engine's `legalAnchors` (AD-14, story 4.8 —
+   * the SAME predicate `validateMatchSetup` enforces, so this can never
+   * suggest a cell the engine would reject). Device-reported bug: the old
+   * version only checked stored ANCHOR cells, so it happily offered a
+   * monster's derived rear cell as "free" too. Returns `null` when no legal
+   * cell remains. Drives double-tap auto-placement.
    */
-  private firstFreeCell(): Placement | null {
-    const taken = new Set(
-      this.flow
-        .getState()
-        .playerPlacements.filter((p): p is Placement => p !== null)
-        .map((p) => `${p.row}/${p.col}`),
-    );
-    for (const row of ALL_ROWS) {
-      for (const col of ALL_COLS) {
-        if (!taken.has(`${row}/${col}`)) return { row, col };
-      }
-    }
-    return null;
+  private firstFreeCell(cls: UnitClass): Placement | null {
+    const state = this.flow.getState();
+    const existing = state.playerArmy.reduce<{ class: UnitClass; placement: Placement }[]>((acc, unit, i) => {
+      const cell = state.playerPlacements[i];
+      if (cell) acc.push({ class: unit.class, placement: toAnchor(unit.class, cell) }); // DISPLAY cell → engine ANCHOR (device-reported)
+      return acc;
+    }, []);
+    return legalAnchors(cls, existing)[0] ?? null;
+  }
+
+  /** A transient on-screen message (device-reported: illegal moves and a failed commit used to fail silently to the console, with no player-facing feedback at all). */
+  private flashMessage(text: string) {
+    this.toast?.destroy();
+    const msg = crispText(this, BASE_WIDTH / 2, 132, text, {
+      fontFamily: 'Arial',
+      fontSize: `${MIN_FONT_PX}px`,
+      color: PALETTE.title,
+      align: 'center',
+      wordWrap: { width: BASE_WIDTH - 24 },
+    })
+      .setOrigin(0.5)
+      .setDepth(200);
+    this.toast = msg;
+    this.tweens.add({ targets: msg, alpha: 0, delay: 1400, duration: 500, onComplete: () => msg.destroy() });
   }
 
   /** The static 3×3 grid: a labeled backdrop cell + a drop zone per square (built once). */
@@ -162,7 +181,10 @@ export class PlacementScene extends Scene {
     this.input.on('drop', (_pointer: Input.Pointer, obj: GameObjects.Container, zone: GameObjects.Zone) => {
       const unitIndex = obj.getData('unitIndex') as number;
       const cell = zone.getData('cell') as Placement;
-      this.flow.placeUnit(unitIndex, cell); // pure model swaps/moves; never illegal
+      this.flow.placeUnit(unitIndex, cell); // footprint-legal by construction (AD-14) — an illegal drop is silently rejected, not accepted
+      if (!sameCell(this.flow.getState().playerPlacements[unitIndex] ?? null, cell)) {
+        this.flashMessage("Can't place there — check monster spacing or its footprint");
+      }
       this.redraw();
     });
     // No valid drop target → the unit snaps back to its model position (AC3: no drop is ever lost).
@@ -247,10 +269,12 @@ export class PlacementScene extends Scene {
             this.flow.unplaceUnit(i); // placed → back to the tray
             this.redraw();
           } else {
-            const cell = this.firstFreeCell();
+            const cell = this.firstFreeCell(unit.class);
             if (cell) {
-              this.flow.placeUnit(i, cell); // in tray → first free cell
+              this.flow.placeUnit(i, cell); // in tray → first LEGAL cell for this class
               this.redraw();
+            } else {
+              this.flashMessage('No legal cell left for this unit');
             }
           }
           return;
@@ -268,13 +292,39 @@ export class PlacementScene extends Scene {
           i,
           this.time.delayedCall(DOUBLE_TAP_MS, () => {
             this.pendingCrownTimers.delete(i);
-            this.flow.setLeader(i);
+            try {
+              this.flow.setLeader(i);
+            } catch {
+              this.flashMessage('A monster cannot be crowned leader');
+              return;
+            }
             this.redraw();
           }),
         );
       });
       this.dynamic.push(c);
     });
+
+    // (Story 4.8 device revision, 2026-07-20: a monster is now a SINGLE-cell
+    // unit — no more "GOL body" second cell to render. It just reserves its 8
+    // king-move neighbors, shown as "blocked" cells below.)
+
+    // Every EMPTY cell that's actually illegal — banned by adjacency to a
+    // monster, not occupied by one (device-reported: these read as ordinary
+    // open cells with no visible reason a drop there fails; e.g. two Golems
+    // flanking the center column both ban mid/center AND back/center, and
+    // neither showed anything). Distinct RED tint from the blue "body"
+    // marker above — this cell isn't part of any one monster's body, it's
+    // just too close to reach.
+    const classes = state.playerArmy.map((u) => u.class);
+    for (const cellKey of bannedCells(state.playerPlacements, classes)) {
+      const [row, col] = cellKey.split('/') as [Placement['row'], Placement['col']];
+      const { x, y } = this.cellCenter({ row, col });
+      this.dynamic.push(
+        this.add.rectangle(x, y, CELL, CELL, PALETTE.enemyLine, 0.12).setStrokeStyle(2, PALETTE.enemyLine),
+        crispText(this, x, y, 'blocked', { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color: PALETTE.enemyText }).setOrigin(0.5),
+      );
+    }
 
     // Tray labels for empty slots (so the tray reads as "drag from here").
     state.playerArmy.forEach((_unit, i) => {
@@ -307,7 +357,18 @@ export class PlacementScene extends Scene {
     this.dynamic.push(btn, label);
     if (ready) {
       btn.setInteractive({ useHandCursor: true }).on('pointerup', () => {
-        this.flow.commit(); // assembles + AI commit + validate (AD-13); throws only on an assembly bug
+        // Assembles + AI commit + validate (AD-13). Placement's own model
+        // already rejects an illegal drop as it happens, so this should
+        // never throw in normal play — but device-reported: it used to fail
+        // ONLY to the console with no on-screen feedback and a stuck Ready
+        // button, so this stays defended regardless (spine errors convention:
+        // never a silent failure the player can't see or act on).
+        try {
+          this.flow.commit();
+        } catch (e) {
+          this.flashMessage(e instanceof Error ? e.message : 'Could not start the match — check your placement');
+          return;
+        }
         this.scene.start('Reveal', { flow: this.flow });
       });
     }

@@ -270,6 +270,7 @@ describe('FR18 deaths, wipe, and judging', () => {
         }
       }
     },
+    15000, // story 4.8: coverage instrumentation + a heavier monster-aware matchSetupArb can push 100 runs past vitest's 5000ms default under load
   );
 
   it('judging: higher HP-percentage side wins (exact comparison, not floored)', () => {

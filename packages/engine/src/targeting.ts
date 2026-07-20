@@ -15,7 +15,7 @@
  * all resolve through the Autonomous priority rank.
  */
 
-import type { Tactic, UnitId } from './types';
+import type { Placement, Tactic, UnitClass, UnitId } from './types';
 
 /**
  * A targeting candidate: enemy owner-local position (AD-11), liveness, current
@@ -29,6 +29,19 @@ export interface TargetCandidate {
   alive: boolean;
   hp: number;
   id: UnitId;
+}
+
+/**
+ * The cells a unit's body occupies (story 4.8 device revision, 2026-07-20):
+ * EVERY unit — small or monster — occupies exactly ONE cell, its placement.
+ * A monster is a single-cell unit that costs 2 slots and, at PLACEMENT time,
+ * reserves all 8 king-move neighbors (validated in `validate.ts`) — it does
+ * NOT physically occupy a second cell (the earlier 2-cell "footprint"/"GOL
+ * body" model, dossier §2, was replaced at Danilo's direction). `cls` is now
+ * unused but kept for call-site stability.
+ */
+export function footprintCells(_cls: UnitClass, anchor: Placement): Placement[] {
+  return [{ ...anchor }];
 }
 
 /** Melee is reach-filtered (FR7, with Last Stand); ranged/magic is global (FR9). */
@@ -151,7 +164,8 @@ export function meleeCmp(attackerColIndex: number): RankCmp {
 /**
  * The Autonomous priority comparator for a ranged/magic attacker: REARMOST row →
  * the same FR8 column chain. Arrows arc over the front to snipe the back line;
- * the column chain still reads from the attacker's facing lane.
+ * the column chain still reads from the attacker's facing lane. Every unit
+ * (small or monster) occupies one cell, so its row is simply `rowIndex`.
  */
 export function rangedCmp(attackerColIndex: number): RankCmp {
   const facing = 2 - attackerColIndex;
@@ -185,7 +199,9 @@ export function selectRangedTarget(attackerColIndex: number, candidates: readonl
  * FR10 blast row selection: the row containing the MOST living candidates,
  * ties broken toward the REARMOST row; reach is ignored entirely. Returns the
  * winning rowIndex, or `undefined` when no candidate lives. Reused with
- * own-side candidates for a confused Mage's "own fullest row" (FR16).
+ * own-side candidates for a confused Mage's "own fullest row" (FR16). Every
+ * unit (small or monster) occupies exactly one cell, so it counts once, at
+ * its `rowIndex`.
  *
  * The tactic interaction (D-2c) lives in resolve.ts: under `leader` the blast
  * targets the leader's ROW (AoE treats the leader as focal point); under every
@@ -194,7 +210,8 @@ export function selectRangedTarget(attackerColIndex: number, candidates: readonl
 export function selectBlastRow(candidates: readonly TargetCandidate[]): number | undefined {
   const counts = [0, 0, 0];
   for (const c of candidates) {
-    if (c.alive) counts[c.rowIndex] = (counts[c.rowIndex] ?? 0) + 1;
+    if (!c.alive) continue;
+    counts[c.rowIndex] = (counts[c.rowIndex] ?? 0) + 1;
   }
   let best: number | undefined;
   for (let row = 0; row < 3; row++) {

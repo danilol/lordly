@@ -26,11 +26,15 @@ describe('balance data (FR14, FR15, FR16, AD-4)', () => {
     }
   });
 
-  it('slot schema (AD-1, story 4.2): budget 5, all six shipped classes small, costs derived from sizeClass', () => {
+  it('slot schema (AD-1, story 4.2/4.8): budget 5, every small class costs 1, the Golem (the wave-1 monster) costs 2', () => {
     expect(BALANCE.slotBudget).toBe(5);
     expect(SLOT_COST).toEqual({ small: 1, monster: 2 });
     for (const cls of ALL_CLASSES) {
-      expect(BALANCE.classes[cls].sizeClass, `${cls} ships small`).toBe('small');
+      if (cls === 'golem') {
+        expect(BALANCE.classes[cls].sizeClass, `${cls} ships monster`).toBe('monster');
+      } else {
+        expect(BALANCE.classes[cls].sizeClass, `${cls} ships small`).toBe('small');
+      }
     }
   });
 

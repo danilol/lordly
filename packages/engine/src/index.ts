@@ -36,12 +36,14 @@ export type {
 export { blastDamage, healAmount, magicDamage, physicalDamage, resolveBattle } from './resolve';
 export { chooseSetup, STRATEGY_POOL } from './ai';
 export type { AiChoice, ChooseSetupOptions, StrategyArchetype } from './ai';
-export { InvalidMatchSetupError, validateMatchSetup } from './validate';
+export { canPlace, InvalidMatchSetupError, legalAnchors, validateMatchSetup } from './validate';
 export type { MatchSetupViolation } from './validate';
-export { BALANCE, dealsAdvantage, rpsRatio, SLOT_COST, slotTotal } from './balance';
+export { BALANCE, dealsAdvantage, MAX_MONSTERS_PER_ARMY, rpsRatio, SLOT_COST, slotTotal } from './balance';
 export type { BalanceData, ClassStats, Ratio, RoleRelation, SizeClass } from './balance';
 export { contentHash } from './hash';
-export { CLASS_SEX, FEMALE_NAMES, MALE_NAMES, NAME_TABLES, rollName } from './names';
+export { CLASS_SEX, CONSTRUCT_NAMES, FEMALE_NAMES, MALE_NAMES, NAME_TABLES, rollName } from './names';
 export type { NameSex } from './names';
 export { createStreams, nextInt, rollElement, STREAM_LABELS } from './rng';
 export type { Stream, StreamLabel, Streams } from './rng';
+export { footprintCells } from './targeting';
+export type { TargetCandidate } from './targeting';

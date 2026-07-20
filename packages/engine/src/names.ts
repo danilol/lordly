@@ -12,14 +12,14 @@ import type { UnitClass } from './types';
  * OB64-adjacent in register and unique within each list.
  */
 
-/** A name table's sex key (D-1f gender split). A construct list joins for the Golem in 4.8. */
-export type NameSex = 'm' | 'f';
+/** A name table's key. 'c' (construct) joins 'm'/'f' in story 4.8 for the Golem — it has no sex (dossier §1 row: '—'). */
+export type NameSex = 'm' | 'f' | 'c';
 
 /**
  * Which table each class draws from (dossier D-1f):
  * male — Knight/Mercenary/Wizard; female — Archer/Cleric/Witch.
- * Story 4.3's new classes and 4.8's Golem extend this map (Golem via a third
- * construct-designation list, so the value type is the table key, not a flag).
+ * Story 4.3's new classes extend this map; story 4.8's Golem draws from the
+ * separate construct-designation list (dossier §7) via the `'c'` key.
  */
 export const CLASS_SEX: Record<UnitClass, NameSex> = {
   knight: 'm',
@@ -34,6 +34,8 @@ export const CLASS_SEX: Record<UnitClass, NameSex> = {
   ninja: 'm',
   valkyrie: 'f',
   sorceress: 'f',
+  // Story 4.8: the Golem has no sex — a construct-designation list (dossier §7).
+  golem: 'c',
 };
 
 /** ~48 male names, OB64-adjacent fantasy register. Plain data — edits are free (see module doc). */
@@ -140,8 +142,24 @@ export const FEMALE_NAMES: readonly string[] = [
   'Zephyrine',
 ];
 
-/** The tables keyed by sex — `rollName` indexes through this; 4.8 adds a construct list. */
-export const NAME_TABLES: Record<NameSex, readonly string[]> = { m: MALE_NAMES, f: FEMALE_NAMES };
+/** ~12 rune-flavored construct designations for the Golem (dossier §7) — plain data, edits are free. */
+export const CONSTRUCT_NAMES: readonly string[] = [
+  'Bram',
+  'Ogham',
+  'Karrick',
+  'Thunion',
+  'Vundor',
+  'Grondle',
+  'Ossek',
+  'Marrow',
+  'Talrune',
+  'Enkil',
+  'Duskan',
+  'Foragrim',
+];
+
+/** The tables keyed by name-table key — `rollName` indexes through this. */
+export const NAME_TABLES: Record<NameSex, readonly string[]> = { m: MALE_NAMES, f: FEMALE_NAMES, c: CONSTRUCT_NAMES };
 
 /**
  * Rolls one soldier name (FR37, dossier §7): EXACTLY ONE `nextInt` draw for

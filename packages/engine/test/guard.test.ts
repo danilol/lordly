@@ -166,7 +166,14 @@ describe('Guard shield replay invariant holds across ARBITRARY battles (matchSet
   let sawHalf = false;
   let sawAllyBehind = false;
 
-  test.prop([matchSetupArb])(
+  test.prop(
+    [matchSetupArb],
+    // Default 100 runs made the "ally directly behind" sub-case (needs two
+    // specific smalls stacked in one column, one Guard-capable) flaky after
+    // story 4.8's arbitrary started spending some armies' slots on monsters
+    // instead of smalls — 500 runs brings its observation odds back up.
+    { numRuns: 500 },
+  )(
     'every redirectedFrom names a unit whose Guard charge was LIVE at that moment, tier-consistent damage, never on magic/dodge',
     (s) => {
       const log = resolveBattle(s);
@@ -215,6 +222,7 @@ describe('Guard shield replay invariant holds across ARBITRARY battles (matchSet
         }
       }
     },
+    20000, // 500 runs (up from the default 100, see above) needs more than vitest's 5000ms default
   );
 
   it('the generated cases above actually exercised BOTH Guard tiers and the ally-behind case (branch reachability)', () => {

@@ -7262,6 +7262,361 @@ exports[`golden battles (story 4.7 — per-row moves and Guard) > golden #10: a 
 }
 `;
 
+exports[`golden battles (story 4.8 — monsters in the engine) > golden #11: the Golem blocks melee at its FRONT cell (a shielded ally never reached) and acts from its front anchor 1`] = `
+{
+  "events": [
+    {
+      "type": "BattleStarted",
+      "units": [
+        {
+          "class": "golem",
+          "element": "earth",
+          "hp": 300,
+          "id": "A:0",
+          "maxHp": 300,
+          "name": "Ogham",
+          "placement": {
+            "col": "left",
+            "row": "front",
+          },
+          "side": "A",
+        },
+        {
+          "class": "knight",
+          "element": "fire",
+          "hp": 140,
+          "id": "A:1",
+          "maxHp": 140,
+          "name": "Kain",
+          "placement": {
+            "col": "right",
+            "row": "mid",
+          },
+          "side": "A",
+        },
+        {
+          "class": "knight",
+          "element": "water",
+          "hp": 140,
+          "id": "A:2",
+          "maxHp": 140,
+          "name": "Roland",
+          "placement": {
+            "col": "center",
+            "row": "back",
+          },
+          "side": "A",
+        },
+        {
+          "class": "knight",
+          "element": "wind",
+          "hp": 140,
+          "id": "A:3",
+          "maxHp": 140,
+          "name": "Doran",
+          "placement": {
+            "col": "right",
+            "row": "back",
+          },
+          "side": "A",
+        },
+        {
+          "class": "archer",
+          "element": "fire",
+          "hp": 90,
+          "id": "B:0",
+          "maxHp": 90,
+          "name": "Falk",
+          "placement": {
+            "col": "left",
+            "row": "back",
+          },
+          "side": "B",
+        },
+        {
+          "class": "archer",
+          "element": "water",
+          "hp": 90,
+          "id": "B:1",
+          "maxHp": 90,
+          "name": "Vess",
+          "placement": {
+            "col": "right",
+            "row": "back",
+          },
+          "side": "B",
+        },
+        {
+          "class": "cleric",
+          "element": "earth",
+          "hp": 90,
+          "id": "B:2",
+          "maxHp": 90,
+          "name": "Nessa",
+          "placement": {
+            "col": "center",
+            "row": "back",
+          },
+          "side": "B",
+        },
+        {
+          "class": "cleric",
+          "element": "wind",
+          "hp": 90,
+          "id": "B:3",
+          "maxHp": 90,
+          "name": "Petra",
+          "placement": {
+            "col": "center",
+            "row": "mid",
+          },
+          "side": "B",
+        },
+        {
+          "class": "mercenary",
+          "element": "fire",
+          "hp": 110,
+          "id": "B:4",
+          "maxHp": 110,
+          "name": "Gorm",
+          "placement": {
+            "col": "center",
+            "row": "front",
+          },
+          "side": "B",
+        },
+      ],
+    },
+    {
+      "actionsRemaining": {
+        "A:0": 2,
+        "A:1": 1,
+        "A:2": 1,
+        "A:3": 1,
+        "B:0": 2,
+        "B:1": 2,
+        "B:2": 2,
+        "B:3": 1,
+        "B:4": 2,
+      },
+      "pass": 1,
+      "type": "PassStarted",
+    },
+    {
+      "kind": "arrow",
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 10,
+          "hpAfter": 130,
+          "outcome": "crit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "arrow",
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 0,
+          "hpAfter": 140,
+          "outcome": "dodged",
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:4",
+      "targets": [
+        {
+          "damage": 8,
+          "hpAfter": 292,
+          "outcome": "hit",
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "staff",
+      "source": "B:3",
+      "targets": [
+        {
+          "damage": 1,
+          "hpAfter": 139,
+          "outcome": "hit",
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "staff",
+      "source": "B:2",
+      "targets": [
+        {
+          "damage": 1,
+          "hpAfter": 138,
+          "outcome": "hit",
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "GuardRaised",
+      "unit": "A:1",
+    },
+    {
+      "kind": "slash",
+      "source": "A:2",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 90,
+          "outcome": "hit",
+          "unit": "B:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:3",
+      "targets": [
+        {
+          "damage": 20,
+          "hpAfter": 70,
+          "outcome": "hit",
+          "unit": "B:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 18,
+          "hpAfter": 52,
+          "outcome": "hit",
+          "unit": "B:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "actionsRemaining": {
+        "A:0": 1,
+        "A:1": 0,
+        "A:2": 0,
+        "A:3": 0,
+        "B:0": 1,
+        "B:1": 1,
+        "B:2": 1,
+        "B:3": 0,
+        "B:4": 1,
+      },
+      "pass": 2,
+      "type": "PassStarted",
+    },
+    {
+      "kind": "arrow",
+      "redirectedFrom": "A:1",
+      "source": "B:0",
+      "targets": [
+        {
+          "damage": 3,
+          "hpAfter": 127,
+          "outcome": "hit",
+          "unit": "A:3",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "type": "GuardEnded",
+      "unit": "A:1",
+    },
+    {
+      "kind": "arrow",
+      "source": "B:1",
+      "targets": [
+        {
+          "damage": 7,
+          "hpAfter": 131,
+          "outcome": "hit",
+          "unit": "A:2",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "kind": "slash",
+      "source": "B:4",
+      "targets": [
+        {
+          "damage": 8,
+          "hpAfter": 284,
+          "outcome": "hit",
+          "unit": "A:0",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "amount": 30,
+      "hpAfter": 82,
+      "source": "B:2",
+      "target": "B:4",
+      "type": "UnitHealed",
+    },
+    {
+      "kind": "slash",
+      "source": "A:0",
+      "targets": [
+        {
+          "damage": 18,
+          "hpAfter": 64,
+          "outcome": "hit",
+          "unit": "B:4",
+        },
+      ],
+      "type": "UnitAttacked",
+    },
+    {
+      "engagement": 1,
+      "hp": {
+        "A:0": 284,
+        "A:1": 140,
+        "A:2": 131,
+        "A:3": 127,
+        "B:0": 90,
+        "B:1": 90,
+        "B:2": 90,
+        "B:3": 90,
+        "B:4": 64,
+      },
+      "type": "EngagementEnded",
+    },
+    {
+      "hpPct": {
+        "A": 94,
+        "B": 90,
+      },
+      "type": "BattleEnded",
+      "winner": "A",
+    },
+  ],
+  "logVersion": 4,
+}
+`;
+
 exports[`golden battles > golden #1: knights grind through a healing cleric column (staff clamp + heal visible) 1`] = `
 {
   "events": [

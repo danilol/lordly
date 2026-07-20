@@ -141,7 +141,7 @@ export class DraftScene extends Scene {
 
   /** Drafts `cls` if a slot budget remains (shared by the Add-to-army button and double-tap). */
   private addToArmy(cls: UnitClass) {
-    if (!canAddUnit(this.flow.getState().playerArmy)) return;
+    if (!canAddUnit(this.flow.getState().playerArmy, cls)) return;
     const hadCrown = this.flow.getState().playerLeader !== null;
     this.flow.draftUnit(cls); // AD-9: any army mutation clears the leader crown
     if (hadCrown) this.flashCrownCleared();
@@ -198,7 +198,7 @@ export class DraftScene extends Scene {
     //    top-right; the text column wraps to its LEFT so they never collide.
     const card = classRulesCard(this.selected);
     const a = card.actions;
-    const canAdd = canAddUnit(this.flow.getState().playerArmy);
+    const canAdd = canAddUnit(this.flow.getState().playerArmy, this.selected);
     const addW = 66;
     const addH = 46;
     const addCx = DETAIL.x + DETAIL.w - 8 - addW / 2; // right edge padded 8 from the panel

@@ -59,6 +59,10 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
       ninja: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
       valkyrie: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
       sorceress: 'dc-mon/wizard.png (INTERIM: shares the Wizard tile)',
+      // Story 4.8 — the Golem (2-slot monster): INTERIM, shares the Knight
+      // tile (sprites.ts UNIT_FRAMES) until a dedicated ≥48px two-cell CC0
+      // body is sourced for story 4.9 (dossier D-3c).
+      golem: 'dc-mon/vault_guard.png (INTERIM: shares the Knight tile)',
     },
   },
 ];

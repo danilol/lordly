@@ -94,6 +94,7 @@ export const CLASS_ABBREVIATIONS: Record<UnitClass, string> = {
   ninja: 'NIN',
   valkyrie: 'VAL',
   sorceress: 'SOR',
+  golem: 'GOL', // story 4.8
 };
 
 /**
@@ -114,6 +115,7 @@ export const CLASS_DISPLAY_NAME: Record<UnitClass, string> = {
   ninja: 'Ninja',
   valkyrie: 'Valkyrie',
   sorceress: 'Sorceress',
+  golem: 'Golem', // story 4.8
 };
 export const CARD_CLASS_FONT_PX = 13;
 

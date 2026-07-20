@@ -150,7 +150,7 @@ export interface BalanceData {
  * forgotten (AD-8).
  */
 export const BALANCE: BalanceData = {
-  version: 8,
+  version: 9,
   slotBudget: 5,
   engagementCap: 10,
   classes: {
@@ -305,6 +305,27 @@ export const BALANCE: BalanceData = {
       sizeClass: 'small',
       role: 'artillery',
     },
+    // Story 4.8 (dossier §1/§2, D-1b) — the wave's ONLY monster (the dragon is
+    // deferred to a later wave with its slayer classes; "dragon and golem" in
+    // the epics/PRD is STALE). A physical WALL (VIT 36, HP 300) that MELTS to
+    // magic — pure stats (low MEN), no Artillery→Brute relation (D-1e).
+    // Uniform melee move across all three rows ("everyone else uniform",
+    // dossier §4) — only its acting row (action count) varies; `sizeClass:
+    // 'monster'` drives its 2-slot cost (SLOT_COST) and two-cell footprint
+    // (`footprintCells`) with no further code change.
+    golem: {
+      hp: 300,
+      str: 28,
+      vit: 36,
+      int: 4,
+      men: 8,
+      agi: 4,
+      dex: 10,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'slash' },
+      sizeClass: 'monster',
+      role: 'brute',
+    },
   },
   // FR14 role relations (story 4.3) — the shipped-six triangle + hunts, verbatim:
   // Artillery→Vanguard→Sniper→Artillery (symmetric RPS); Sniper hunts Support &
@@ -346,6 +367,14 @@ export const BALANCE: BalanceData = {
  * through this table with no further code change.
  */
 export const SLOT_COST: Record<SizeClass, number> = { small: 1, monster: 2 };
+
+/**
+ * The most monster-sized units one army may ever field (FR1/FR38, story
+ * 4.8) — the ONE source `validate.ts`'s `footprintViolation` and the Draft
+ * shell's slot-gating both read, so the cap can never drift between the
+ * engine's enforcement and the UI's preview of it.
+ */
+export const MAX_MONSTERS_PER_ARMY = 2;
 
 /**
  * Total slots an army occupies (AD-1, story 4.2): THE legality arithmetic.

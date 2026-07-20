@@ -25,17 +25,40 @@ describe('STRATEGY_POOL curation (FR25)', () => {
 
   it('every archetype is a legal board: slot-budget composition, distinct in-grid cells (AD-1)', () => {
     for (const a of STRATEGY_POOL) {
-      // Legality is SLOTS (story 4.2): the composition fills the budget exactly.
+      // Legality is SLOTS (story 4.2): the composition fills the budget exactly
+      // — story 4.8: a monster comp's army is SHORTER than 5 units (2 slots
+      // each), so this is the only length invariant that still holds.
       expect(slotTotal(a.classes.map((cls) => ({ class: cls }))), a.id).toBe(BALANCE.slotBudget);
       expect(a.placement, a.id).toHaveLength(a.classes.length);
       for (const cls of a.classes) expect(ALL_CLASSES, `${a.id}: ${cls}`).toContain(cls);
-      const cells = new Set<string>();
       for (const p of a.placement) {
         expect(ALL_ROWS, `${a.id}: ${p.row}`).toContain(p.row);
         expect(ALL_COLS, `${a.id}: ${p.col}`).toContain(p.col);
-        cells.add(`${p.row}/${p.col}`);
       }
-      expect(cells.size, `${a.id} overlapping cells`).toBe(a.classes.length);
+    }
+  });
+
+  it('every archetype survives validateMatchSetup mirrored against itself — footprint-legal, incl. monster anchors/columns (AD-14, story 4.8)', () => {
+    // A loose anchor-uniqueness check (as the test above ran pre-4.8) misses a
+    // monster's SECOND cell entirely — dogfood the real validator instead, so
+    // "legal" here means what the engine actually enforces, not a hand-rolled
+    // approximation of it.
+    for (const a of STRATEGY_POOL) {
+      const streams = createStreams(1);
+      const army: Unit[] = a.classes.map((cls) => ({ class: cls, element: rollElement(streams['elements/A']), name: rollName(streams['names/A'], cls, []) }));
+      // A monster can never be crowned (device-reported follow-up) — every
+      // archetype fields at least one small, so this is always found.
+      const smallLeader = a.classes.findIndex((cls) => BALANCE.classes[cls].sizeClass !== 'monster');
+      const setup: MatchSetup = {
+        seed: 1,
+        balanceVersion: BALANCE.version,
+        mode: 'single',
+        tactics: { A: 'autonomous', B: 'autonomous' },
+        leaders: { A: smallLeader, B: smallLeader },
+        armies: { A: army, B: army.map((u) => ({ ...u })) },
+        placements: { A: [...a.placement], B: [...a.placement] },
+      };
+      expect(() => validateMatchSetup(setup), a.id).not.toThrow();
     }
   });
 
@@ -153,7 +176,7 @@ describe('chooseSetup (FR24/FR25, AD-6, AD-10)', () => {
         balanceVersion: BALANCE.version,
         mode: 'single',
         tactics: { A: 'autonomous', B: 'autonomous' },
-        leaders: { A: 0, B: 0 },
+        leaders: { A: a.leader, B: b.leader },
         armies: {
           A: buildArmy(a.classes, streams['elements/A'], streams['names/A']),
           B: buildArmy(b.classes, streams['elements/B'], streams['names/B']),
@@ -169,39 +192,42 @@ describe('chooseSetup (FR24/FR25, AD-6, AD-10)', () => {
   );
 
   // DETERMINISM ANCHORS (rng-lessons convention): expectations hand-derived
-  // from the PROBED raw draws (seed 1 ai/A → pick 6, flip 0; seed 2 ai/A →
-  // pick 1, flip 1; probed 2026-07-13) mapped onto the pool literal by hand
-  // — NOT pasted from a test run. A silent change to stream derivation, pool
-  // order, or draw order trips these loudly.
-  it('anchor: seed 1 on ai/A picks farshot (index 6) with placements VERBATIM (flip 0)', () => {
-    // The raw draws (seed 1 ai/A → pick 6, flip 0) are unchanged by 4.2/4.7 —
-    // only the pool literals changed; expectations re-mapped by hand onto the
-    // re-authored 5-slot farshot. Story 4.7 re-tune: the first archer moved
-    // mid-left → front-left (a pool re-tune after Guard/Wizard-front-staff
-    // shifted the wipeout band — see ai.ts's farshot comment).
+  // from the PROBED raw draws, mapped onto the pool literal by hand — NOT
+  // pasted from a test run. A silent change to stream derivation, pool order,
+  // or draw order trips these loudly.
+  //
+  // Story 4.8 re-tune: `nextInt`'s draw for a given stream state depends on
+  // the RANGE passed in (`eligible.length - 1`), so growing the pool from 10
+  // to 12 (the two new monster archetypes, golem-wall/twin-golems, appended
+  // at the END) shifts which INDEX these two seeds land on — even though the
+  // archetype pick and the mirror-flip are two SEPARATE draws, and the flip
+  // draw's own range (`0, 1`) never changed. Re-probed 2026-07-19: seed 1 →
+  // three-mages (flip 0); seed 2 → gale (flip 1, same flip value as before).
+  it('anchor: seed 1 on ai/A picks three-mages, unmirrored (flip 0)', () => {
     const choice = chooseSetup(STRATEGY_POOL, aiStream(1));
-    expect(choice.archetypeId).toBe('farshot');
-    expect(choice.classes).toEqual(['archer', 'mage', 'cleric', 'archer', 'witch']);
+    expect(choice.archetypeId).toBe('three-mages');
+    expect(choice.classes).toEqual(['mage', 'mage', 'mage', 'knight', 'knight']);
+    // Literal placement verbatim (flip 0 — no mirroring).
     expect(choice.placement).toEqual([
-      { row: 'front', col: 'left' },
-      { row: 'back', col: 'right' },
-      { row: 'back', col: 'center' },
+      { row: 'mid', col: 'left' },
+      { row: 'mid', col: 'center' },
       { row: 'mid', col: 'right' },
       { row: 'back', col: 'left' },
+      { row: 'back', col: 'center' },
     ]);
   });
 
-  it('anchor: seed 2 on ai/A picks longbows MIRRORED left↔right (flip 1)', () => {
+  it('anchor: seed 2 on ai/A picks gale MIRRORED left↔right (flip 1)', () => {
     const choice = chooseSetup(STRATEGY_POOL, aiStream(2));
-    expect(choice.archetypeId).toBe('longbows');
-    // Literal [back/left, back/right, back/center, front/center, mid/center]
+    expect(choice.archetypeId).toBe('gale');
+    // Literal [mid/center, front/left, back/center, front/right, back/left]
     // hand-mirrored: rows untouched, left→right, right→left, center stays.
     expect(choice.placement).toEqual([
-      { row: 'back', col: 'right' },
-      { row: 'back', col: 'left' },
-      { row: 'back', col: 'center' },
-      { row: 'front', col: 'center' },
       { row: 'mid', col: 'center' },
+      { row: 'front', col: 'right' },
+      { row: 'back', col: 'center' },
+      { row: 'front', col: 'left' },
+      { row: 'back', col: 'right' },
     ]);
   });
 

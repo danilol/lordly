@@ -23,6 +23,7 @@ interface UnitState {
   side: Side;
   class: UnitClass;
   agi: number;
+  /** The unit's row (it occupies one cell) — melee reach/blockade, ranged rearmost-eligibility, the blast row count, and ACTING (FR13, move, action count) all read this. */
   rowIndex: number;
   colIndex: number;
   alive: boolean;
@@ -272,7 +273,8 @@ function act(unit: UnitState, units: UnitState[], battle: Stream, setup: MatchSe
     case 'berserker':
     case 'phalanx':
     case 'ninja':
-    case 'valkyrie': {
+    case 'valkyrie':
+    case 'golem': {
       const move = BALANCE.classes[unit.class].moves[unit.snapshot.placement.row];
       if (move === 'guard-full' || move === 'guard-half') return raiseGuard(unit, move === 'guard-full' ? 'full' : 'half');
       const idx = selectMeleeTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
@@ -383,7 +385,8 @@ function misfire(unit: UnitState, units: UnitState[], battle: Stream, setup: Mat
     case 'berserker':
     case 'phalanx':
     case 'ninja':
-    case 'valkyrie': {
+    case 'valkyrie':
+    case 'golem': {
       if (allies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
       // A2 (misfire redirect target) draws first, THEN A3/A4 for the resulting
       // physical strike on the ally — ADR 0003's frozen order (a misfired

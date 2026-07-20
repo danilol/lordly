@@ -1,6 +1,6 @@
 import { BALANCE, chooseSetup, createStreams, resolveBattle, rollElement, rollName, slotTotal, STRATEGY_POOL, validateMatchSetup } from '@lordly/engine';
 import type { BattleEnded, BattleLog, Element, MatchSetup, Mode, Placement, Tactic, Unit, UnitClass } from '@lordly/engine';
-import { placeUnit, unplaceUnit } from './placement';
+import { placeUnit, toAnchor, unplaceUnit } from './placement';
 import type { DraftedUnit, MatchState } from './MatchState';
 import { createStorage } from './storage';
 import type { WebStorage } from './storage';
@@ -175,13 +175,21 @@ export class MatchFlow {
     if (this.state.playerTactic === 'leader') this.state.playerTactic = 'autonomous';
   }
 
-  /** Places (or moves/swaps) the unit at `unitIndex` onto `target` via the pure placement model (FR4). */
+  /**
+   * Places (or moves/swaps) the unit at `unitIndex` onto `target` via the
+   * pure placement model (FR4) — footprint-legal by construction (AD-14,
+   * story 4.8): an illegal drop (onto a monster's reserved cell, a monster
+   * too close to another, a monster anchored `back`) is silently REJECTED
+   * (the board is unchanged) rather than accepted and left to fail later at
+   * `commit()` (device-reported bug).
+   */
   placeUnit(unitIndex: number, target: Placement): void {
     if (this.state.phase === 'committed') throw new Error('cannot place: match already committed');
     if (!Number.isInteger(unitIndex) || unitIndex < 0 || unitIndex >= this.state.playerArmy.length) {
       throw new Error(`placeUnit: index ${unitIndex} out of range`);
     }
-    this.state.playerPlacements = placeUnit(this.state.playerPlacements, unitIndex, target);
+    const classes = this.state.playerArmy.map((u) => u.class);
+    this.state.playerPlacements = placeUnit(this.state.playerPlacements, classes, unitIndex, target);
     this.state.phase = 'placement';
   }
 
@@ -233,6 +241,13 @@ export class MatchFlow {
     if (this.state.playerPlacements[index] === null) {
       throw new Error(`setLeader: unit ${index} is not placed`);
     }
+    // A monster can never be crowned (device-reported, story 4.8 follow-up) —
+    // `validateMatchSetup` rejects it at commit time (FR35/FR38), so the
+    // crown gesture rejects it right here instead of letting a doomed pick
+    // reach commit.
+    if (BALANCE.classes[(this.state.playerArmy[index] as DraftedUnit).class].sizeClass === 'monster') {
+      throw new Error(`setLeader: unit ${index} is a monster and cannot be crowned`);
+    }
     if (this.state.playerLeader === index) {
       this.clearLeaderDesignation(); // toggle-off: the same crown-clear invariant as draft/remove
     } else {
@@ -263,9 +278,14 @@ export class MatchFlow {
     const streams = createStreams(this.state.seed);
     const ai = chooseSetup(STRATEGY_POOL, streams['ai/B'], { exclude: this.state.lastAiArchetypeId });
 
+    // `playerPlacements` stores each unit's DISPLAY cell (device-reported —
+    // a monster dropped on the back row must visually STAY there); the
+    // engine only ever accepts the real ANCHOR (front-most cell, AD-14), so
+    // every cell is normalized via `toAnchor` right here at the shell/engine
+    // boundary — nowhere else needs to know the two can differ.
     const placementsA = this.state.playerPlacements.map((p, i) => {
       if (p === null) throw new Error(`cannot commit: unit ${i} is not placed`);
-      return p;
+      return toAnchor((this.state.playerArmy[i] as DraftedUnit).class, p);
     });
 
     // A crown is REQUIRED by commit time (story 4.5) — the Ready gate makes this
