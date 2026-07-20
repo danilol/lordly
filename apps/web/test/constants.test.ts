@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ALL_ELEMENTS } from '@lordly/engine';
 import type { SpellKind } from '@lordly/engine';
 import {
   backingScaleFor,
@@ -7,6 +8,7 @@ import {
   BATTLE_SPEEDS,
   battleSpeed,
   battleTurnLabel,
+  BLAST_ELEMENT_WORD,
   CODE_STROKE_COLOR,
   DEFAULT_SPEED_ID,
   DPR_BACKING_CAP,
@@ -14,7 +16,10 @@ import {
   HEAL_TRACE_COLOR,
   HOME_PLAY_LABEL,
   MONSTER_LOOM_SCALE,
+  MOVE_PLATE_NAMES,
+  moveDisplayName,
   PALETTE,
+  SPELL_DISPLAY_NAME,
   STATUS_COLORS,
   statusTraceColor,
   turnBoundaryLine,
@@ -156,5 +161,28 @@ describe('travel-trace colors (story 4.10 review) — the format statusTraceColo
     expect(HEAL_TRACE_COLOR).toBeLessThanOrEqual(0xffffff);
     expect(HEAL_TRACE_COLOR).not.toBe(PALETTE.playerLine);
     expect(HEAL_TRACE_COLOR).not.toBe(PALETTE.enemyLine);
+  });
+});
+
+describe('move-plate display vocabulary (story 4.11, FR39b/D-3a) — union-keyed drift guards', () => {
+  it('names every non-blast move in the OB64 plate register', () => {
+    expect(MOVE_PLATE_NAMES).toEqual({ slash: 'Sword Slash', arrow: 'Arrow', staff: 'Staff', bash: 'Bash' });
+  });
+
+  it('flavors the blast by element — the EXPERIENCE "Ice Blast" mapping (open Q2 default)', () => {
+    for (const element of ALL_ELEMENTS) {
+      expect(moveDisplayName('blast', element)).toBe(`${BLAST_ELEMENT_WORD[element]} Blast`);
+    }
+    expect(moveDisplayName('blast', 'water')).toBe('Ice Blast');
+    expect(moveDisplayName('blast', 'earth')).toBe('Stone Blast');
+  });
+
+  it('passes non-blast kinds straight through regardless of element', () => {
+    expect(moveDisplayName('slash', 'fire')).toBe('Sword Slash');
+    expect(moveDisplayName('arrow', 'water')).toBe('Arrow');
+  });
+
+  it('surfaces the FR16 spell names, Title-Cased, one per SpellKind', () => {
+    expect(SPELL_DISPLAY_NAME).toEqual({ sleep: 'Sleep', poison: 'Poison', weaken: 'Weaken', confusion: 'Confusion' });
   });
 });

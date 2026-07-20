@@ -17,7 +17,7 @@ import {
 } from '../config/constants';
 import { applyHiDpiCamera, addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
-import { bannedCells, placedCount, sameCell, toAnchor } from '../flow/placement';
+import { bannedCells, placedCount, rowActionCounts, sameCell, toAnchor } from '../flow/placement';
 import type { MatchFlow } from '../flow/MatchFlow';
 
 const CELL = 84;
@@ -62,6 +62,8 @@ export class PlacementScene extends Scene {
   private pendingCrownTimers = new Map<number, Time.TimerEvent>();
   /** Transient rejection/error toast (device-reported: illegal moves and a failed commit used to fail silently to the console). Reset every create() (singleton scenes). */
   private toast?: GameObjects.Text;
+  /** FR39c per-row action-count badges — live only while a unit is dragged. Reset every create() (singleton scenes). */
+  private rowBadges: GameObjects.Text[] = [];
 
   constructor() {
     super('Placement');
@@ -107,6 +109,7 @@ export class PlacementScene extends Scene {
     this.pendingCrownTimers.clear();
     this.pickerOpen = false;
     this.toast = undefined;
+    this.rowBadges = []; // the objects died with the previous scene shutdown; the ARRAY must not carry stale refs
     // A draggable object starts a drag on the SLIGHTEST move by default (threshold
     // 0), which swallowed the tap events double-tap-to-place needs. Require
     // TAP_DISTANCE_PX of movement before a drag begins, so a still tap stays a
@@ -169,15 +172,27 @@ export class PlacementScene extends Scene {
     // A real drag starting means this pointer gesture is NOT a tap — clear the
     // double-tap tracking so a stale pre-drag tap can never combine with a
     // post-drag tap into an unintended double-tap (review fix).
-    this.input.on('dragstart', () => {
+    this.input.on('dragstart', (_pointer: Input.Pointer, obj: GameObjects.Container) => {
       this.lastTapIndex = -1;
       this.lastTapAt = 0;
+      // FR39c (story 4.11): while THIS unit is in the air, each grid row shows
+      // its action count for that row — positioning is an informed choice.
+      // Drag-only trigger (recorded choice): tap means crown, and the
+      // double-tap auto-place lands before a read would matter.
+      const unitIndex = obj.getData('unitIndex') as number;
+      const cls = this.flow.getState().playerArmy[unitIndex]?.class;
+      if (cls !== undefined) this.showRowCounts(cls);
     });
     this.input.on('drag', (_pointer: Input.Pointer, obj: GameObjects.Container, dragX: number, dragY: number) => {
       obj.x = dragX;
       obj.y = dragY;
     });
     this.input.on('drop', (_pointer: Input.Pointer, obj: GameObjects.Container, zone: GameObjects.Zone) => {
+      // The FR39c row counts leave with the drag — cleared HERE, not only in
+      // dragend: `redraw()` below destroys the dragged container, so Phaser
+      // never fires dragend for it (device-reported 2026-07-20: the badges
+      // lingered after every successful placement).
+      this.clearRowCounts();
       const unitIndex = obj.getData('unitIndex') as number;
       const cell = zone.getData('cell') as Placement;
       this.flow.placeUnit(unitIndex, cell); // footprint-legal by construction (AD-14) — an illegal drop is silently rejected, not accepted
@@ -187,9 +202,34 @@ export class PlacementScene extends Scene {
       this.redraw();
     });
     // No valid drop target → the unit snaps back to its model position (AC3: no drop is ever lost).
+    // The badges clear here too — this is the only end-of-drag signal for a MISSED drop.
     this.input.on('dragend', (_pointer: Input.Pointer, _obj: GameObjects.Container, dropped: boolean) => {
+      this.clearRowCounts();
       if (!dropped) this.redraw();
     });
+  }
+
+  /** FR39c (story 4.11): a "2×" badge at the left edge of each grid row — the dragged unit's per-row action count (the `rowActionCounts` pure seam). */
+  private showRowCounts(cls: UnitClass) {
+    this.clearRowCounts();
+    const counts = rowActionCounts(cls);
+    ALL_ROWS.forEach((row, r) => {
+      const y = GRID_TOP + r * (CELL + GAP) + CELL / 2;
+      this.rowBadges.push(
+        // Muted, informational tone — not gold (UX-DR2 reserves gold for attention); 12px ≥ the MIN_FONT_PX floor.
+        crispText(this, this.gridLeft - 8, y, `${counts[row]}×`, {
+          fontFamily: 'Arial',
+          fontSize: '12px',
+          fontStyle: 'bold',
+          color: PALETTE.mutedText,
+        }).setOrigin(1, 0.5),
+      );
+    });
+  }
+
+  private clearRowCounts() {
+    for (const badge of this.rowBadges) badge.destroy();
+    this.rowBadges = [];
   }
 
   /** Owner-local cell → screen center. */

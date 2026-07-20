@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { BALANCE } from '@lordly/engine';
 import type { Placement, UnitClass } from '@lordly/engine';
-import { bannedCells, occupiedCells, placeUnit, placedCount, sameCell, unplaceUnit } from '../src/flow/placement';
+import { bannedCells, occupiedCells, placeUnit, placedCount, rowActionCounts, sameCell, unplaceUnit } from '../src/flow/placement';
 
 const FRONT_C: Placement = { row: 'front', col: 'center' };
 const FRONT_L: Placement = { row: 'front', col: 'left' };
@@ -175,5 +176,19 @@ describe('bannedCells — every EMPTY cell a monster reserves via its 8 king-mov
     // mid/left blocks front/left, front/center, mid/center, back/left, back/center;
     // mid/right blocks front/center, front/right, mid/center, back/center, back/right.
     expect(banned).toEqual(new Set(['front/left', 'front/center', 'front/right', 'mid/center', 'back/left', 'back/center', 'back/right']));
+  });
+});
+
+describe('rowActionCounts — the FR39c informed-placement seam (story 4.11)', () => {
+  it('mirrors BALANCE.classes[cls].actions for EVERY class — the drift pin (AD-4: one source)', () => {
+    for (const cls of Object.keys(BALANCE.classes) as UnitClass[]) {
+      expect(rowActionCounts(cls), cls).toEqual(BALANCE.classes[cls].actions);
+    }
+  });
+
+  it('reads the spine examples: a Mage is 1× front / 2× back — positioning is an informed choice', () => {
+    expect(rowActionCounts('mage')).toEqual({ front: 1, mid: 1, back: 2 });
+    expect(rowActionCounts('knight').front).toBe(2);
+    expect(rowActionCounts('knight').back).toBe(1);
   });
 });

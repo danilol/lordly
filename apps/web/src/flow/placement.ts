@@ -141,3 +141,14 @@ export function unplaceUnit(board: readonly (Placement | null)[], unitIndex: num
   next[unitIndex] = null;
   return next;
 }
+
+/**
+ * Per-row action counts for a class (FR39c, story 4.11) — the informed-placement
+ * read: "Mage: back row 2×, front row 1×". A straight projection of
+ * `BALANCE.classes[cls].actions` (AD-2's static-facts channel, AD-4 one
+ * source) — the seam exists so the Placement scene renders a tested fact
+ * instead of reaching into balance data itself.
+ */
+export function rowActionCounts(cls: UnitClass): { front: number; mid: number; back: number } {
+  return { ...BALANCE.classes[cls].actions };
+}

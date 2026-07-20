@@ -1,5 +1,5 @@
 import { BALANCE } from '@lordly/engine';
-import type { Element, SpellKind, Tactic, UnitClass } from '@lordly/engine';
+import type { Element, MoveKind, SpellKind, Tactic, UnitClass } from '@lordly/engine';
 
 export const GAME_NAME = 'Lord Battle Tactics';
 
@@ -398,6 +398,40 @@ export const HEAL_TRACE_COLOR = 0x8fe0a0;
  * a future named/`#rgb` token would otherwise silently parse to NaN → black).
  */
 export const statusTraceColor = (spell: SpellKind): number => parseInt(STATUS_COLORS[spell].slice(1), 16);
+
+// The move-plate display vocabulary (FR39b, story 4.11, dossier D-3a — the
+// OB64 "Thunder Arrow" register). Keyed by the engine unions (AD-4): a new
+// MoveKind/SpellKind is a compile error here, never a blank plate. These are
+// the PLATE names; the Draft card keeps `draftModel.moveLabel`'s terser row
+// wording ("Slash") — two surfaces, two registers, both single-sourced.
+/** Plate names for every non-blast move — blast composes from the actor's element below. */
+export const MOVE_PLATE_NAMES: Record<Exclude<MoveKind, 'blast'>, string> = {
+  slash: 'Sword Slash',
+  arrow: 'Arrow',
+  staff: 'Staff',
+  bash: 'Bash',
+};
+/** The blast's element flavor word (open Q2 default — EXPERIENCE.md names "Ice Blast" for water). */
+export const BLAST_ELEMENT_WORD: Record<Element, string> = {
+  fire: 'Fire',
+  water: 'Ice',
+  wind: 'Wind',
+  earth: 'Stone',
+};
+/** The plate name for a move: element-flavored for a blast ("Ice Blast"), the fixed vocabulary otherwise. */
+export const moveDisplayName = (kind: MoveKind, element: Element): string =>
+  kind === 'blast' ? `${BLAST_ELEMENT_WORD[element]} Blast` : MOVE_PLATE_NAMES[kind];
+/** The FR16 spell names, surfacing on the plate at last (dossier: a 2026-07-13 PO wish ships as a side effect). */
+export const SPELL_DISPLAY_NAME: Record<SpellKind, string> = {
+  sleep: 'Sleep',
+  poison: 'Poison',
+  weaken: 'Weaken',
+  confusion: 'Confusion',
+};
+/** The heal's plate name (`UnitHealed` carries no MoveKind — the heal is its own vocabulary). */
+export const HEAL_PLATE_LABEL = 'Heal';
+/** The fizzle plate (a fizzled action is SPENT — FR16's no-valid-effect case earns a plate, unlike a skip). */
+export const FIZZLE_PLATE_LABEL = 'Fizzle';
 
 // FR3 element badge colors (cosmetic; the witch's spell keys off element — FR16).
 // Keyed by the engine's `Element` union (AD-4) so a new element is a compile

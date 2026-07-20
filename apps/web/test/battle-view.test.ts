@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_COLS, ALL_ROWS, ALL_SIDES } from '@lordly/engine';
-import type { BattleEvent, Placement, Side } from '@lordly/engine';
+import { ALL_COLS, ALL_ROWS, ALL_SIDES, BALANCE } from '@lordly/engine';
+import type { BattleEvent, Element, MoveKind, Placement, Side, UnitClass, UnitId, UnitSnapshot } from '@lordly/engine';
 import { BASE_WIDTH, BATTLE_BEAT_MS, ISO_BOARD } from '../src/config/constants';
-import { ALL_ORIENTATIONS, DEFAULT_ORIENTATION, beatDurationMs, boardTiles, buildBeatSchedule, eventTrace, unitTileCenter } from '../src/flow/battleView';
-import type { BoardOrientation } from '../src/flow/battleView';
+import {
+  ALL_ORIENTATIONS,
+  DEFAULT_ORIENTATION,
+  beatDurationMs,
+  boardTiles,
+  buildBeatSchedule,
+  eventTrace,
+  movePlate,
+  unitTileCenter,
+} from '../src/flow/battleView';
+import type { BoardOrientation, MovePlateContext } from '../src/flow/battleView';
 
 /** Every owner-local cell, for exhaustive transform checks. */
 const ALL_CELLS: Placement[] = ALL_ROWS.flatMap((row) => ALL_COLS.map((col) => ({ row, col })));
@@ -270,5 +279,111 @@ describe('eventTrace — the pure from→to seam (story 4.10, AC1/AC2)', () => {
       { type: 'BattleEnded', winner: 'A', hpPct: { A: 100, B: 0 } },
     ];
     for (const event of originless) expect(eventTrace(event), event.type).toBeNull();
+  });
+});
+
+describe('movePlate — the FR39b ledger seam (story 4.11, D-3a: the ledger IS the move-name plate)', () => {
+  /** A minimal roster snapshot for the plate's static-facts channel (class → element/row). */
+  const snap = (id: UnitId, cls: UnitClass, element: Element, row: Placement['row']): UnitSnapshot => ({
+    id,
+    side: id.startsWith('A') ? 'A' : 'B',
+    class: cls,
+    element,
+    name: 'Test',
+    placement: { row, col: 'center' },
+    hp: 100,
+    maxHp: 100,
+  });
+  const ctx = (roster: UnitSnapshot[], actionsRemaining: Record<UnitId, number>): MovePlateContext => ({
+    actionsRemaining,
+    roster: new Map(roster.map((u) => [u.id, u])),
+  });
+  const strike = (source: UnitId, kind: MoveKind): BattleEvent => ({
+    type: 'UnitAttacked',
+    source,
+    kind,
+    targets: [{ unit: 'B:0', damage: 5, hpAfter: 10, outcome: 'hit' }],
+  });
+
+  it('names a slash with its display name and shifts the pips: snapshot 2 → 1 remaining AFTER this act, max from BALANCE', () => {
+    // Knight front row: actions {front: 2} — the dossier D-3a example. Rendering
+    // remaining = snapshot (unshifted, ●●) is the exact bug the story pins against.
+    const c = ctx([snap('A:0', 'knight', 'fire', 'front')], { 'A:0': 2 });
+    expect(movePlate(strike('A:0', 'slash'), c)).toEqual({ unitId: 'A:0', label: 'Sword Slash', remaining: 1, max: 2 });
+  });
+
+  it('depletes across passes — the budget is per ENGAGEMENT, refreshed snapshots only shrink (pass 2: snapshot 1 → 0 left)', () => {
+    const c = ctx([snap('A:0', 'knight', 'fire', 'front')], { 'A:0': 1 });
+    expect(movePlate(strike('A:0', 'slash'), c)).toEqual({ unitId: 'A:0', label: 'Sword Slash', remaining: 0, max: 2 });
+  });
+
+  it("flavors a blast by the actor's roster element (EXPERIENCE names 'Ice Blast' — the static-facts channel)", () => {
+    const water = ctx([snap('B:1', 'mage', 'water', 'back')], { 'B:1': 2 });
+    expect(movePlate(strike('B:1', 'blast'), water)?.label).toBe('Ice Blast');
+    const fire = ctx([snap('B:1', 'mage', 'fire', 'back')], { 'B:1': 2 });
+    expect(movePlate(strike('B:1', 'blast'), fire)?.label).toBe('Fire Blast');
+    const wind = ctx([snap('B:1', 'mage', 'wind', 'back')], { 'B:1': 2 });
+    expect(movePlate(strike('B:1', 'blast'), wind)?.label).toBe('Wind Blast');
+    const earth = ctx([snap('B:1', 'mage', 'earth', 'back')], { 'B:1': 2 });
+    expect(movePlate(strike('B:1', 'blast'), earth)?.label).toBe('Stone Blast');
+  });
+
+  it('names a heal and a spell (the FR16 spell names finally surface)', () => {
+    const healer = ctx([snap('A:1', 'cleric', 'water', 'mid')], { 'A:1': 1 });
+    const heal: BattleEvent = { type: 'UnitHealed', source: 'A:1', target: 'A:0', amount: 10, hpAfter: 60 };
+    expect(movePlate(heal, healer)).toEqual({ unitId: 'A:1', label: 'Heal', remaining: 0, max: BALANCE.classes.cleric.actions.mid });
+
+    const witch = ctx([snap('B:2', 'witch', 'wind', 'back')], { 'B:2': 2 });
+    const spell: BattleEvent = { type: 'StatusApplied', source: 'B:2', target: 'A:0', spell: 'confusion' };
+    expect(movePlate(spell, witch)).toEqual({ unitId: 'B:2', label: 'Confusion', remaining: 1, max: BALANCE.classes.witch.actions.back });
+  });
+
+  it('names a Guard raise by its tier from the BALANCE move table (Q4 default)', () => {
+    const knight = ctx([snap('A:0', 'knight', 'fire', 'mid')], { 'A:0': 1 });
+    expect(movePlate({ type: 'GuardRaised', unit: 'A:0' }, knight)?.label).toBe('Guard (half)');
+    const phalanx = ctx([snap('A:1', 'phalanx', 'earth', 'front')], { 'A:1': 2 });
+    expect(movePlate({ type: 'GuardRaised', unit: 'A:1' }, phalanx)?.label).toBe('Guard (full)');
+  });
+
+  it('shows a Fizzle plate — a fizzled action is a SPENT action', () => {
+    const c = ctx([snap('A:0', 'witch', 'wind', 'back')], { 'A:0': 2 });
+    expect(movePlate({ type: 'ActionFizzled', unit: 'A:0' }, c)).toEqual({ unitId: 'A:0', label: 'Fizzle', remaining: 1, max: 2 });
+  });
+
+  it('the misfire pair yields EXACTLY ONE plate — none on the marker, a normal one on the paired effect', () => {
+    // The marker beat keeps its wiggle + "confused!" popup; the plate rides the
+    // effect event, which carries the actual misfired move's kind (AD-2 —
+    // payload-derived, no shell-side re-derivation of the move table). One
+    // action, one plate, single decrement by construction.
+    const c = ctx([snap('A:0', 'mercenary', 'fire', 'front')], { 'A:0': 1 });
+    expect(movePlate({ type: 'ActionMisfired', unit: 'A:0' }, c)).toBeNull();
+    // The paired effect (a strike on an ally) plates normally:
+    expect(movePlate(strike('A:0', 'slash'), c)).toEqual({ unitId: 'A:0', label: 'Sword Slash', remaining: 0, max: 2 });
+  });
+
+  it('shows NO plate for skipped turns (Q3 default — the Zzz/waits popup already reads) or any no-actor event', () => {
+    const c = ctx([snap('A:0', 'knight', 'fire', 'front')], { 'A:0': 2 });
+    const noPlate: BattleEvent[] = [
+      { type: 'ActionSkipped', unit: 'A:0', reason: 'asleep' },
+      { type: 'ActionSkipped', unit: 'A:0', reason: 'idle' },
+      { type: 'ActionSkipped', unit: 'A:0', reason: 'dead' },
+      { type: 'PoisonTicked', unit: 'A:0', damage: 5, hpAfter: 20 },
+      { type: 'UnitDied', unit: 'A:0' },
+      { type: 'GuardEnded', unit: 'A:0' },
+      { type: 'StatusCleared', unit: 'A:0', spell: 'poison' },
+      { type: 'LeaderFell', side: 'A', unit: 'A:0' },
+      { type: 'BattleStarted', units: [] },
+      { type: 'PassStarted', pass: 1, actionsRemaining: {} },
+      { type: 'EngagementEnded', engagement: 1, hp: {} },
+      { type: 'BattleEnded', winner: 'A', hpPct: { A: 100, B: 0 } },
+    ];
+    for (const event of noPlate) expect(movePlate(event, c), event.type).toBeNull();
+  });
+
+  it('is defensive: an actor missing from the roster → null; a 0 snapshot clamps to 0 remaining, never negative', () => {
+    const c = ctx([snap('A:0', 'knight', 'fire', 'front')], {});
+    expect(movePlate(strike('B:9', 'slash'), c)).toBeNull(); // B:9 is not in the roster
+    // Missing snapshot entry reads as 0 → remaining stays 0 (a dead unit reads 0 in the payload).
+    expect(movePlate(strike('A:0', 'slash'), c)?.remaining).toBe(0);
   });
 });

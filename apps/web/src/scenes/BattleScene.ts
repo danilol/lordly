@@ -27,13 +27,14 @@ import {
   statusTraceColor,
   ISO_TILES,
   unitCodeStyle,
+  unitDisplaySize,
 } from '../config/constants';
 import type { BattleSpeedId } from '../config/constants';
 import { addElementBadge, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText, prefersReducedMotion } from '../config/ui';
 import { drawIsoBoard } from '../config/board';
 import { attachPerfSampler } from '../config/perf';
-import { beatDurationMs, buildBeatSchedule, eventTrace, unitTileCenter } from '../flow/battleView';
-import type { TraceKind } from '../flow/battleView';
+import { beatDurationMs, buildBeatSchedule, eventTrace, movePlate, unitTileCenter } from '../flow/battleView';
+import type { MovePlateData, TraceKind } from '../flow/battleView';
 import { createStorage } from '../flow/storage';
 import type { Beat } from '../flow/battleView';
 import { createNarrationState, narrateEvent } from '../flow/narration';
@@ -162,6 +163,12 @@ export class BattleScene extends Scene {
   private logPanel!: GameObjects.Container;
   private logText!: GameObjects.Text;
   private reduceMotion = false;
+  // FR39b move-plate state (story 4.11): the CURRENT pass's actionsRemaining
+  // snapshot + the BattleStarted roster (the plate's static-facts channel),
+  // plus the live plate so each beat can retire the previous one.
+  private passActions: Record<UnitId, number> = {};
+  private roster = new Map<UnitId, UnitSnapshot>();
+  private activePlate?: GameObjects.Container;
 
   constructor() {
     super('Battle');
@@ -194,6 +201,9 @@ export class BattleScene extends Scene {
     this.narration = createNarrationState();
     this.logLines = [];
     this.logOpen = false;
+    this.passActions = {}; // singleton-scene rule: a stale snapshot must not leak between battles
+    this.roster.clear();
+    this.activePlate = undefined;
     this.reduceMotion = prefersReducedMotion();
     this.speedFactor = battleSpeed(this.storage.loadSettings().battleSpeed).factor;
 
@@ -227,7 +237,10 @@ export class BattleScene extends Scene {
     // the engine's `${side}:${index}` convention from the committed setup.
     const committed = this.flow.getState().committedSetup;
     const leaderIds = new Set<UnitId>(committed ? [`A:${committed.leaders.A}`, `B:${committed.leaders.B}`] : []);
-    for (const unit of roster) this.buildUnit(unit, leaderIds.has(unit.id));
+    for (const unit of roster) {
+      this.buildUnit(unit, leaderIds.has(unit.id));
+      this.roster.set(unit.id, unit); // the move-plate's static-facts lookup (class/element/row — story 4.11)
+    }
 
     this.buildControlBar();
     this.beats = buildBeatSchedule(log.events, BATTLE_BEAT_MS);
@@ -355,11 +368,22 @@ export class BattleScene extends Scene {
     const linkedToMisfire = this.pendingMisfirePair;
     this.pendingMisfirePair = false;
 
+    // FR39b (story 4.11): the previous beat's move-plate retires, and this
+    // beat gets one if it's an acting beat (the pure `movePlate` seam decides —
+    // the misfire pair yields exactly one plate, on the effect event).
+    this.activePlate?.destroy();
+    this.activePlate = undefined;
+    const plate = movePlate(event, { actionsRemaining: this.passActions, roster: this.roster });
+    if (plate) this.showMovePlate(plate);
+
     switch (event.type) {
       case 'BattleStarted':
         return false; // roster already drawn in create()
       case 'PassStarted':
         // FR39a: the HUD says "Turn" — the engine event stays PassStarted.
+        // The FR39b ledger snapshot refreshes here too (story 4.11): the pips'
+        // per-pass anchor — the BUDGET itself is per engagement and only shrinks.
+        this.passActions = event.actionsRemaining;
         this.passLabel.setText(battleTurnLabel(event.pass));
         return true;
       case 'UnitAttacked': {
@@ -900,6 +924,41 @@ export class BattleScene extends Scene {
         if (this.activeLeaderBanner?.[0] === strip) this.activeLeaderBanner = undefined;
       },
     });
+  }
+
+  /**
+   * The FR39b move-name plate (`{components.move-plate}`, story 4.11, dossier
+   * D-3a — the OB64 animation-off reference): a small gold-framed strip over
+   * the ACTING unit naming its move with its action pips (● remaining after
+   * this act / ○ spent). One transient element answers who/what/how-many-left;
+   * it lives exactly one beat (retired at the next `render`) — zero standing
+   * chrome, the boards stay clean. The plate is the CAUSE side of a beat, so
+   * it appears at beat start (never behind `afterTravel`'s arrival delay).
+   * Reduced motion: the plate is information, not flourish — it appears and
+   * disappears with no drift, nothing to damp (UX-DR6).
+   */
+  private showMovePlate(p: MovePlateData) {
+    const v = this.views.get(p.unitId);
+    if (!v) return;
+    const pips = '●'.repeat(Math.min(p.remaining, p.max)) + '○'.repeat(Math.max(0, p.max - p.remaining));
+    // Build texts first to size the frame; the bg is added to the container
+    // FIRST so it renders behind them. 11px bold name ≥ the MIN_FONT_PX floor.
+    const label = crispText(this, 0, 0, p.label, { fontFamily: 'Arial', fontSize: '11px', fontStyle: 'bold', color: PALETTE.buttonText }).setOrigin(0, 0.5);
+    const pipText = crispText(this, 0, 0, pips, { fontFamily: 'Arial', fontSize: '11px', color: PALETTE.title }).setOrigin(0, 0.5);
+    const padX = 6;
+    const gap = 5;
+    const w = padX + label.width + gap + pipText.width + padX;
+    const bg = this.add.rectangle(0, 0, w, 18, PALETTE.cardFill, 0.92).setStrokeStyle(1, ISO_TILES.frontStroke);
+    label.setX(-w / 2 + padX);
+    pipText.setX(-w / 2 + padX + label.width + gap);
+    // Above the unit's whole chrome stack (popups float from y−34; status icons
+    // sit at −34; the sprite top scales with the 4.9 monster loom) and clamped
+    // inside the canvas for edge columns.
+    const plateY = v.y - 38 - unitDisplaySize(v.cls, 32) / 2;
+    const cx = Math.min(Math.max(v.x, w / 2 + 4), BASE_WIDTH - w / 2 - 4);
+    // Depth 1200: above the combat popups (1000), below the log panel (1500)
+    // and the leader banner (1600) — review-pinned bound from story creation.
+    this.activePlate = this.add.container(cx, plateY, [bg, label, pipText]).setDepth(1200);
   }
 
   // ---- Control bar (FR23, story 2.3) + Log panel: controls playback only, never rules. ----

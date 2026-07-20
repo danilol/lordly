@@ -1,6 +1,6 @@
-import { ALL_COLS, ALL_ROWS } from '@lordly/engine';
-import type { BattleEvent, MoveKind, Placement, Side, SpellKind, UnitId } from '@lordly/engine';
-import { BASE_WIDTH, ISO_BOARD } from '../config/constants';
+import { ALL_COLS, ALL_ROWS, BALANCE } from '@lordly/engine';
+import type { BattleEvent, MoveKind, Placement, Side, SpellKind, UnitId, UnitSnapshot } from '@lordly/engine';
+import { BASE_WIDTH, FIZZLE_PLATE_LABEL, HEAL_PLATE_LABEL, ISO_BOARD, moveDisplayName, SPELL_DISPLAY_NAME } from '../config/constants';
 
 /**
  * Pure, Phaser-free, DOM-free presentation helpers for the Reveal/Battle
@@ -130,6 +130,93 @@ export function eventTrace(event: BattleEvent): EventTrace | null {
     default:
       return null;
   }
+}
+
+/** What the FR39b move-plate needs beyond the event: the pass snapshot + the roster's static facts. */
+export interface MovePlateContext {
+  /** The CURRENT pass's `PassStarted.actionsRemaining` snapshot (dead units read 0). */
+  actionsRemaining: Record<UnitId, number>;
+  /** The `BattleStarted` roster by id — class/element/row are AD-2's static-facts channel. */
+  roster: ReadonlyMap<UnitId, UnitSnapshot>;
+}
+
+/** One rendered plate: who acted, what the move is called, and the ●○ pip math. */
+export interface MovePlateData {
+  unitId: UnitId;
+  label: string;
+  /** Actions left AFTER this act — snapshot − 1, clamped ≥ 0 (the ● count). */
+  remaining: number;
+  /** The engagement budget for this unit's row (● + ○ total), from BALANCE. */
+  max: number;
+}
+
+/**
+ * The FR39b action ledger's pure seam (story 4.11, dossier D-3a: the ledger IS
+ * the move-name plate). Maps one `BattleEvent` to the transient plate shown
+ * over the ACTING unit — or `null` for beats that consume no action or have no
+ * actor (framing, deaths, poison, marker-only beats). Everything derives from
+ * the payload + AD-2's static facts; the scene computes no combat state:
+ *
+ * - `UnitAttacked` → the move's display name (element-flavored blast) + pips.
+ * - `UnitHealed` / `StatusApplied` → "Heal" / the FR16 spell name + pips.
+ * - `GuardRaised` → the Guard tier from the BALANCE move table (static fact).
+ * - `ActionFizzled` → "Fizzle" (a fizzled action is SPENT).
+ * - `ActionMisfired` → `null`. THE PAIR'S ONE PLATE RIDES THE EFFECT: the
+ *   marker is a narrative preamble (wiggle + "confused!" popup already own that
+ *   beat); the redirected effect that follows is a normal acting event from the
+ *   SAME confused unit carrying the actual move's `kind`/`spell` — so the plate
+ *   it produces names the misfired move with zero shell-side re-derivation of
+ *   the move table (the story's double-plate hazard is eliminated structurally:
+ *   one action, one plate, single decrement by construction).
+ * - `ActionSkipped` → `null` (open Q3 default: the Zzz/waits popup already
+ *   reads; a skip plate would add chrome to a non-act).
+ *
+ * Pips: `remaining` = snapshot − 1 (each unit acts at most once per pass —
+ * FR13); `max` = `BALANCE.classes[cls].actions[row]` — the budget is per
+ * ENGAGEMENT, so the pips visibly deplete across passes and refill only at the
+ * engagement seam.
+ */
+export function movePlate(event: BattleEvent, ctx: MovePlateContext): MovePlateData | null {
+  let unitId: UnitId;
+  let label: string;
+  switch (event.type) {
+    case 'UnitAttacked': {
+      const actor = ctx.roster.get(event.source);
+      if (!actor) return null;
+      unitId = event.source;
+      label = moveDisplayName(event.kind, actor.element);
+      break;
+    }
+    case 'UnitHealed':
+      unitId = event.source;
+      label = HEAL_PLATE_LABEL;
+      break;
+    case 'StatusApplied':
+      unitId = event.source;
+      label = SPELL_DISPLAY_NAME[event.spell];
+      break;
+    case 'GuardRaised': {
+      const actor = ctx.roster.get(event.unit);
+      if (!actor) return null;
+      const move = BALANCE.classes[actor.class].moves[actor.placement.row];
+      unitId = event.unit;
+      // The tier is a static fact (Q4 default); the plain fallback is defensive —
+      // GuardRaised only ever comes from a guard row.
+      label = move === 'guard-full' ? 'Guard (full)' : move === 'guard-half' ? 'Guard (half)' : 'Guard';
+      break;
+    }
+    case 'ActionFizzled':
+      unitId = event.unit;
+      label = FIZZLE_PLATE_LABEL;
+      break;
+    default:
+      return null; // no actor / no consumed action — no plate (AC2's honesty rule, applied to the ledger)
+  }
+  const actor = ctx.roster.get(unitId);
+  if (!actor) return null;
+  const max = BALANCE.classes[actor.class].actions[actor.placement.row];
+  const remaining = Math.max(0, (ctx.actionsRemaining[unitId] ?? 0) - 1);
+  return { unitId, label, remaining, max };
 }
 
 /** One playback beat: its source event plus when it fires and for how long. */
