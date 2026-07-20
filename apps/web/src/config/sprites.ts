@@ -2,10 +2,11 @@ import type { UnitClass } from '@lordly/engine';
 
 // Unit spritesheet lookup (story 2.1, FR31/AD-11): sprites are a SHELL-SIDE
 // lookup keyed off the engine class — the engine never knows art exists.
-// The sheet is a single 192×32 texture of six 32×32 frames composed from the
-// CC0 Dungeon Crawl Stone Soup tiles (provenance: src/assets/attribution.ts),
-// in ALL_CLASSES order. Keyed by the engine union (AD-4): a new class is a
-// compile error here, never a missing sprite at runtime.
+// The sheet is a single 224×32 texture of seven 32×32 frames: frames 0–5 are
+// the CC0 Dungeon Crawl Stone Soup tiles, frame 6 is the Golem (Danilo's
+// original art, story 4.9). Provenance for every frame: src/assets/
+// attribution.ts. Keyed by the engine union (AD-4): a new class is a compile
+// error here, never a missing sprite at runtime.
 export const UNITS_SHEET_KEY = 'units';
 
 /** Native frame size. 32px meets story 2.2's ≥32px-on-360px floor at ×1 — always draw at integer multiples to keep pixel art crisp. */
@@ -30,14 +31,13 @@ export const UNIT_FRAMES: Record<UnitClass, number> = {
   ninja: 1,
   valkyrie: 1,
   sorceress: 3,
-  // STORY 4.9 — INTERIM tile, real art pending Danilo's device pass: the Golem
-  // still borrows the Knight frame (closest "armored wall" read) until a
-  // dedicated CC0 golem tile is composited into the sheet. Story 4.9 already
-  // renders it LOOMED (unitDisplaySize / MONSTER_LOOM_SCALE) — one tile, drawn
-  // large so it overhangs the ring it reserves (single-cell, NOT a two-cell
-  // body). Swapping the real tile is: add the frame, bump this index, drop the
-  // attribution INTERIM note (dossier D-3c).
-  golem: 0,
+  // STORY 4.9 — the Golem's own dedicated tile (frame 6): a stone-and-moss
+  // construct, Danilo's original art (provenance: src/assets/attribution.ts),
+  // keyed + downscaled into the 7th sheet frame. Side-neutral (stone/green — no
+  // clash with blue=you/red=enemy) and rendered LOOMED (unitDisplaySize /
+  // MONSTER_LOOM_SCALE) so it overhangs the ring it reserves — one cell, one
+  // oversized sprite, never a two-cell body (dossier D-3c).
+  golem: 6,
 };
 
 // FR31 animation representations — tween-based (the CC0 tiles are single-frame,

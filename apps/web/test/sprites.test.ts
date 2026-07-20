@@ -10,16 +10,18 @@ describe('unit sprite lookup (story 2.1, AC1/AC5)', () => {
     }
   });
 
-  it('the shipped six have unique in-sheet frames; every class points at a real frame (AC1)', () => {
-    // The units sheet is still SIX CC0 DCSS tiles. Story 4.3 ships 5 new classes
-    // on INTERIM sprites (they reuse an existing frame — see sprites.ts) until
-    // dedicated CC0 tiles are sourced + composited (Danilo's device veto). The
-    // shipped six stay visually distinct; every class maps to a valid frame so
-    // there is never a missing sprite at runtime.
-    const SHEET_FRAMES = 6;
-    const shipped: UnitClass[] = ['knight', 'mercenary', 'archer', 'mage', 'cleric', 'witch'];
-    const shippedFrames = shipped.map((cls) => UNIT_FRAMES[cls]);
-    expect(new Set(shippedFrames).size).toBe(shipped.length); // the six are distinct (story 2.1 AC1)
+  it('the shipped six + the Golem have unique in-sheet frames; every class points at a real frame (AC1)', () => {
+    // The units sheet is SEVEN 32×32 frames: frames 0–5 are the CC0 DCSS tiles,
+    // frame 6 is the Golem (Danilo's original art, story 4.9). The 5 wave-1
+    // newcomers (Berserker/Phalanx/Ninja/Valkyrie/Sorceress) still ride INTERIM
+    // sprites — they reuse an existing frame (see sprites.ts) until dedicated
+    // tiles are sourced. Every class maps to a valid frame so there is never a
+    // missing sprite at runtime.
+    const SHEET_FRAMES = 7;
+    const dedicated: UnitClass[] = ['knight', 'mercenary', 'archer', 'mage', 'cleric', 'witch', 'golem'];
+    const dedicatedFrames = dedicated.map((cls) => UNIT_FRAMES[cls]);
+    expect(new Set(dedicatedFrames).size).toBe(dedicated.length); // all seven distinct (the Golem no longer shares the Knight tile — story 4.9)
+    expect(UNIT_FRAMES.golem).not.toBe(UNIT_FRAMES.knight); // the Golem has its OWN frame now (was an interim Knight share)
     for (const cls of ALL_CLASSES) {
       const f = UNIT_FRAMES[cls];
       expect(Number.isInteger(f), `frame for ${cls}`).toBe(true);

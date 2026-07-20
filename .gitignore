@@ -12,3 +12,6 @@ coverage/
 # copyrighted, and this repo is public. Design docs + original mockups commit; refs don't.
 docs/planning-artifacts/ux-designs/*/imports/
 .DS_Store
+
+# High-res art masters (source for downscaled sprite tiles; not shipped)
+/art-src/

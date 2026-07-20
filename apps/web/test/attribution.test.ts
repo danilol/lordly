@@ -61,4 +61,12 @@ describe('art attribution manifest (story 2.1, AC2 / FR31)', () => {
       expect(supplier?.classSources[cls]).toBeTruthy();
     }
   });
+
+  it('the Golem now traces to a DEDICATED tile — no INTERIM/shared-tile marker (story 4.9)', () => {
+    const supplier = ART_ATTRIBUTIONS.find((pack) => 'golem' in pack.classSources);
+    expect(supplier, 'Golem supplier pack').toBeDefined();
+    // It got its own real art this story — the interim "shares the Knight tile"
+    // note must be gone (the exact thing 4.9 set out to close).
+    expect(supplier?.classSources.golem).not.toMatch(/INTERIM/i);
+  });
 });

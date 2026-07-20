@@ -59,12 +59,25 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
       ninja: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
       valkyrie: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
       sorceress: 'dc-mon/wizard.png (INTERIM: shares the Wizard tile)',
-      // Story 4.9 — the Golem (single-cell 2-slot monster): still INTERIM,
-      // shares the Knight tile (sprites.ts UNIT_FRAMES). It renders LOOMED (one
-      // tile drawn large, not a two-cell body); a dedicated CC0 golem tile
-      // swaps in at Danilo's device pass — update this source path + drop the
-      // INTERIM note then (dossier D-3c).
-      golem: 'dc-mon/vault_guard.png (INTERIM: shares the Knight tile)',
+      // NOTE: the Golem is NOT from this pack — it has its own entry below
+      // (Danilo's original art, sheet frame 6).
+    },
+  },
+  {
+    // Story 4.9 — the Golem's dedicated tile (units.png frame 6). Danilo's own
+    // original pixel art, keyed + downscaled into the shared sheet. Its own
+    // manifest entry because it is NOT from the DCSS pack above; the shared
+    // `units.png` therefore appears in both entries' `assets` (one file,
+    // frames from two sources).
+    pack: 'Lordly original sprites',
+    author: 'Danilo Lima',
+    url: 'https://github.com/danilol/lordly',
+    license: 'CC-BY-4.0',
+    licenseName: 'Creative Commons Attribution 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+    assets: ['apps/web/src/assets/units.png'],
+    classSources: {
+      golem: 'original — stone-and-moss golem (sheet frame 6)',
     },
   },
 ];
