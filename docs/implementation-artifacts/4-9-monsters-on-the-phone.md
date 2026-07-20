@@ -4,7 +4,7 @@ baseline_commit: db249d8
 
 # Story 4.9: Monsters on the phone
 
-Status: in-progress
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -51,9 +51,9 @@ Reconciled from epics.md Story 4.9 (the four Given/When/Then blocks) to the ship
   - [x] `credits.test.ts` — covered without a new file: the Golem is in its pack's `classSources`, so `formatCredits` auto-lists it in the "Supplies" line (asserted transitively by attribution's "every class traces to a source" + the no-INTERIM test).
   - [x] Draft slot-cost display test → `draft-model.test.ts`: "reports each class's slot cost from SLOT_COST — 1 small / 2 monster." Plus the loom-sizing suite in `constants.test.ts` (`unitDisplaySize`: small = base, golem ≥48 at base 32, > small at same base).
   - [x] No golden-pixel layout tests — kept the house pattern; the DATA/manifest + sizing rule are unit-tested, the visual is Task 6.
-- [ ] **Task 6 — Device session + NFR1 (AC: 2, 3, 4)** *(Danilo's acceptance gate)*
-  - [ ] Play the full loop (Draft → Placement → Reveal → Battle → Result → History) with monsters on BOTH sides on Danilo's Android phone.
-  - [ ] Confirm the loom reads right, placement feedback + "no drop lost" behave, Battle animations (idle/attack/hurt/death, corpse-leaves-lane) work at the larger size, and the frame rate holds the NFR1 floor (`?perf=1` against `docs/performance-verdict.md`).
+- [x] **Task 6 — Device session + NFR1 (AC: 2, 3, 4)** *(Danilo's acceptance gate)* — **ACCEPTED on device 2026-07-20** ("im happy on the device").
+  - [x] Played the full loop with monsters on both sides on Danilo's Android phone.
+  - [x] Loom reads right, placement feedback + "no drop lost" behave, Battle animations work at the larger size, frame rate holds — Danilo confirmed on device.
 
 ## Dev Notes
 
@@ -175,5 +175,6 @@ Claude Opus 4.8 (1M context) — dev-story workflow.
 ### Change Log
 
 - 2026-07-20 — Story created (baseline `db249d8`). Written against the SHIPPED single-cell / Golem-only model, reconciling the stale epics.md AC (dragon + two-cell) explicitly. Scope: on-device Golem rendering + art (dedicated CC0 tile, size-aware "loom", Draft slot-cost display, stale two-cell copy cleanup, attribution/Credits, device pass). Engine/legality/sweep already done in 4.8 — untouched here. Three binding-UX conflicts flagged for reconciliation (spans-both-cells token, 2-of-5 slot-cost display, illegal-drop feedback). No `balanceVersion`/`logVersion` change. 4 non-blocking open questions for Danilo.
+- 2026-07-20 — **device ACCEPTED (Task 6), story → review.** Danilo played the full loop with monsters on both sides on his Android phone and confirmed ("im happy on the device"): the loom reads right, placement feedback / "no drop lost" behave, Battle animations work at the larger size, frame rate holds. All tasks complete; status flipped in-progress → review. Ready for `bmad-code-review`.
 - 2026-07-20 — dev-story cont.: **Task 1 done** — Danilo supplied his own golem art (`newgolem.png`); processed with `sharp` (key out white bg → transparent, crop, downscale 1254→32) and composited into `units.png` as frame 6 (192→224px, +1.8KB). `UNIT_FRAMES.golem` 0→6; its own CC-BY-4.0 attribution entry (author Danilo Lima); the 3 parked manifest/frame tests now active. Gate GREEN: **540 tests**, typecheck/lint/prettier clean, web build exit 0. Also amended the DESIGN/EXPERIENCE golem-body token to the single-cell loom (Danilo approved the render vs the OB64 image); cleaned the loose art files from the repo root (4 rejects removed, the 1254px master preserved at gitignored `art-src/golem-master.png`); license kept CC-BY-4.0 (Danilo's call). Only remaining item is Task 6 (Android device pass). Story stays in-progress (code + docs complete, on-device acceptance pending).
 - 2026-07-20 — dev-story (partial): Tasks 2–4 done, gate GREEN (539 tests, typecheck/lint/prettier clean, web build OK). **Loom rendering** via one `MONSTER_LOOM_SCALE=1.5` + `unitDisplaySize` in `constants.ts`, baked into the shared `addUnitSprite` picker so every scene looms the Golem 1.5× (48px on the 32px boards, D-3c) with no per-scene branching. **Draft slot-cost** shown on the DETAIL panel via a data-derived `RulesCard.slotCost`. **Stale two-cell copy** fully cleaned (`CLASS_TEXT.golem` + `docs/rules.md` row + `sprites.ts`/`attribution.ts`/`PlacementScene` comments). Loom visual = Option A (single oversized sprite on one tile, overhanging), confirmed by Danilo against the OB64 reference image — "two cells" was always the adjacency rule, never a two-tile sprite. Golem still renders on the INTERIM Knight frame (looms as a big knight) per Danilo's "code now, art + device later" call. **Story stays in-progress:** Task 1 (real CC0 tile swap + its 3 manifest/frame tests) and Task 6 (device pass, NFR1) are Danilo's half; the DESIGN/EXPERIENCE golem-body token amendment is also still TODO. Engine untouched — no sweep/hash re-run.
