@@ -209,15 +209,39 @@ export class MatchFlow {
   }
 
   /**
-   * Sets the player's army-wide tactic (FR34, story 4.4) — the Placement
+   * Sets the player's army-wide tactic (FR34, story 4.4/4.13) — the tactic
    * picker's write path (AD-13: scenes never mutate state directly). Unlike the
    * leader designation, a tactic is army-independent, so it survives draft/remove
-   * and is never cleared. `'leader'` is a valid engine tactic but the picker
-   * keeps it disabled until story 4.5 ships leader designation.
+   * and is never cleared.
+   *
+   * Story 4.13 moved the picker from Placement to Reveal, so this now also runs
+   * AFTER commit: when the match is already committed, the change is folded into
+   * `committedSetup.tactics.A` and the cached battle log is dropped so `resolve()`
+   * / `Fight!` recomputes the outcome with the new stance. Only `tactics.A`
+   * changes — side B, the armies, placements, and leaders are already committed
+   * and untouched, so NOTHING is re-drawn from any RNG stream (determinism/replay
+   * intact, AD-10/FR20). A REPLAY is an immutable stored match — reject the edit
+   * (spine-errors convention). `'leader'` requires a crown (D-3b — "no crownless
+   * leader-tactic"); post-commit a crown always exists (commit requires one), so
+   * this guard is defensive only.
+   *
+   * Re-selecting the already-committed tactic is a NO-OP: it must not drop the
+   * cached log (that would force a redundant full re-resolve for a gesture that
+   * changed nothing). `playerTactic` is assigned LAST, after the fold validates,
+   * so a defensive `validateMatchSetup` throw never leaves state half-updated.
    */
   setTactic(tactic: Tactic): void {
-    if (this.state.phase === 'committed') throw new Error('cannot set tactic: match already committed');
-    this.state.playerTactic = tactic;
+    if (this.replay) throw new Error('cannot set tactic: a replayed match is immutable');
+    if (tactic === 'leader' && this.state.playerLeader === null) {
+      throw new Error("cannot set tactic 'leader': no leader is crowned");
+    }
+    if (this.state.phase === 'committed' && this.state.committedSetup && this.state.committedSetup.tactics.A !== tactic) {
+      const updated: MatchSetup = { ...this.state.committedSetup, tactics: { ...this.state.committedSetup.tactics, A: tactic } };
+      validateMatchSetup(updated); // validate the fold BEFORE mutating any state — a throw leaves the flow untouched (spine convention)
+      this.state.committedSetup = updated;
+      this.log = undefined; // the pre-resolved outcome is stale — Fight! must recompute (AD-2/AD-13)
+    }
+    this.state.playerTactic = tactic; // set LAST — after validation — so a throw above never leaves a split state
   }
 
   /**
@@ -334,13 +358,20 @@ export class MatchFlow {
   }
 
   /**
-   * Resolves the committed battle into an immutable `BattleLog` (AD-1/AD-2)
-   * EXACTLY ONCE (AD-13): `MatchFlow` is the sole caller of `resolveBattle`,
-   * and the Reveal/Battle scenes replay the returned log read-only — they
-   * never touch the engine. Idempotent like `commit()`: a second call returns
-   * the SAME frozen log, never re-resolving (which would waste work and, in
-   * `replay` mode later, could re-enter history — the exact double-resolution
-   * trap AD-13 prevents). Cleared by `startMatch()` so a rematch resolves fresh.
+   * Resolves the committed battle into an immutable `BattleLog` (AD-1/AD-2):
+   * `MatchFlow` is the sole caller of `resolveBattle`, and the Reveal/Battle
+   * scenes replay the returned log read-only — they never touch the engine.
+   * MEMOIZED, not once-per-match: a second call returns the SAME cached log
+   * unless the cache was invalidated. It is invalidated by `startMatch()` (a
+   * rematch resolves fresh) and — since story 4.13 — by `setTactic` when the
+   * player changes their tactic on Reveal (the committed setup changed, so the
+   * pre-computed outcome is stale and MUST be recomputed). Consequence: within
+   * one committed match `resolve()` may run more than once (Reveal draws the
+   * roster, a tactic change drops the cache, Battle re-resolves). The one hard
+   * invariant that still holds: the log always corresponds to the CURRENT
+   * `committedSetup` — never a stale one — because every setup change nulls it.
+   * `recordResult()` relies on this: it reads the log the Battle scene resolved,
+   * which is guaranteed current because Battle always resolves after Reveal.
    */
   resolve(): BattleLog {
     if (this.log) return this.log;

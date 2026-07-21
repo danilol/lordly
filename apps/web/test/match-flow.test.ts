@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE, createStreams, rollElement, rollName, validateMatchSetup } from '@lordly/engine';
+import { BALANCE, createStreams, resolveBattle, rollElement, rollName, validateMatchSetup } from '@lordly/engine';
 import type { BattleEnded } from '@lordly/engine';
 import { MatchFlow } from '../src/flow/MatchFlow';
 import type { MatchState } from '../src/flow/MatchState';
@@ -187,12 +187,84 @@ describe('MatchFlow tactics & leaders (FR34/FR35, AD-9, story 4.4/4.5)', () => {
     expect(flow.getState().playerTactic).toBe('strongest');
   });
 
-  it('setTactic throws once the match is committed (AD-13 guard)', () => {
+  it('setTactic AFTER commit folds into committedSetup.tactics.A and invalidates the cached log (story 4.13 — picker moved to Reveal)', () => {
     const flow = flowWithSeed(0x3335);
     flow.startMatch();
     draftAndPlaceAll(flow);
+    const committed = flow.commit();
+    expect(committed.tactics.A).toBe('autonomous'); // default at commit (picker no longer on Placement)
+    const logBefore = flow.resolve(); // pre-resolves and caches
+
+    flow.setTactic('strongest'); // the Reveal picker's write path, post-commit
+    expect(flow.getState().committedSetup?.tactics.A).toBe('strongest'); // folded in
+    expect(flow.getState().playerTactic).toBe('strongest');
+
+    const logAfter = flow.resolve(); // recomputes — the cache was dropped
+    expect(logAfter).not.toBe(logBefore); // a fresh log object, not the stale cached one
+    expect(flow.getState().committedSetup?.tactics.A).toBe('strongest');
+  });
+
+  it('a post-commit tactic change touches ONLY tactics.A — side B, armies, placements, and leaders are byte-unchanged (determinism/replay intact)', () => {
+    const flow = flowWithSeed(0x3336);
+    flow.startMatch();
+    draftAndPlaceAll(flow);
+    const before = flow.commit();
+    const snapshot = JSON.stringify({ B: before.tactics.B, armies: before.armies, placements: before.placements, leaders: before.leaders });
+
+    flow.setTactic('weakest');
+    const after = flow.getState().committedSetup as typeof before;
+    expect(after.tactics.A).toBe('weakest');
+    expect(JSON.stringify({ B: after.tactics.B, armies: after.armies, placements: after.placements, leaders: after.leaders })).toBe(snapshot);
+    expect(after.seed).toBe(before.seed);
+    expect(after.balanceVersion).toBe(before.balanceVersion);
+  });
+
+  it('setTactic on a REPLAY is rejected — a stored match is immutable (story 4.13)', () => {
+    const flow = flowWithSeed(0x3337);
+    flow.startMatch();
+    draftAndPlaceAll(flow);
+    const setup = flow.commit();
+    flow.startReplay(setup); // enter replay mode
+    expect(() => flow.setTactic('strongest')).toThrow(/replayed match is immutable/);
+  });
+
+  it('END-TO-END determinism: a post-commit tactic fold yields a BYTE-IDENTICAL battle to committing with that tactic from the start (the headline claim — story 4.13)', () => {
+    // Flow A commits at the default (autonomous), resolves, THEN changes the
+    // tactic on Reveal to 'strongest' and re-resolves.
+    const flowA = flowWithSeed(0x4a4a);
+    flowA.startMatch();
+    draftAndPlaceAll(flowA);
+    flowA.commit();
+    flowA.resolve(); // resolve at autonomous first (this is what RevealScene does)
+    flowA.setTactic('strongest'); // the Reveal picker — invalidates the cache
+    const logA = flowA.resolve(); // recomputed at 'strongest'
+
+    // Flow B commits with 'strongest' from the start (pre-commit path).
+    const flowB = flowWithSeed(0x4a4a);
+    flowB.startMatch();
+    draftAndPlaceAll(flowB);
+    flowB.setTactic('strongest');
+    flowB.commit();
+    const logB = flowB.resolve();
+
+    // The fold must reconstruct the EXACT same committed setup — and therefore
+    // the exact same battle. If the fold dropped or reshaped any field, the
+    // setups would differ and this would fail (which the structural tests above
+    // could miss).
+    expect(flowA.getState().committedSetup).toEqual(flowB.getState().committedSetup);
+    expect(logA).toEqual(logB);
+    // And a direct engine resolve of the folded setup matches too (belt + braces).
+    expect(resolveBattle(flowA.getState().committedSetup!)).toEqual(logB);
+  });
+
+  it("post-commit setTactic('leader') is allowed and folds in — the only LIVE path through the leader-crown guard now (story 4.13)", () => {
+    const flow = flowWithSeed(0x5e5e);
+    flow.startMatch();
+    draftAndPlaceAll(flow); // crowns unit 0, so a leader exists at commit
     flow.commit();
-    expect(() => flow.setTactic('weakest')).toThrow(/already committed/);
+    flow.setTactic('leader'); // post-commit, crown present → allowed
+    expect(flow.getState().committedSetup?.tactics.A).toBe('leader');
+    expect(flow.getState().committedSetup?.leaders.A).toBe(0);
   });
 
   it('the leader-clearing hook: draftUnit and removeUnit reset playerLeader to null (AD-9 invariant)', () => {
