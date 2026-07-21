@@ -1,4 +1,5 @@
-import { Scene } from 'phaser';
+import { GameObjects, Scene } from 'phaser';
+import { ALL_TACTICS } from '@lordly/engine';
 import type { BattleStarted, UnitSnapshot } from '@lordly/engine';
 import {
   BASE_HEIGHT,
@@ -30,6 +31,10 @@ import type { MatchFlow } from '../flow/MatchFlow';
  */
 export class RevealScene extends Scene {
   private flow!: MatchFlow;
+  /** Whether the "You — <tactic>" dropdown is expanded (story 4.13). Reset every create() (singleton scenes). */
+  private pickerOpen = false;
+  /** The tactic block's live objects (bar + options + enemy line) — cleared and rebuilt on every toggle/pick. */
+  private tacticEls: GameObjects.GameObject[] = [];
 
   constructor() {
     super('Reveal');
@@ -43,6 +48,12 @@ export class RevealScene extends Scene {
     this.cameras.main.setBackgroundColor(PALETTE.background);
     applyHiDpiCamera(this);
     addHomeBack(this);
+
+    // Singleton reset FIRST (scenes-are-singletons) — before the uncommitted
+    // early-return below, so no picker state ever leaks across plays regardless
+    // of which branch create() takes (review 2026-07-20).
+    this.pickerOpen = false;
+    this.tacticEls = [];
 
     crispText(this, BASE_WIDTH / 2, 26, REVEAL_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
 
@@ -71,30 +82,24 @@ export class RevealScene extends Scene {
     drawIsoBoard(this, 'B');
     drawIsoBoard(this, 'A');
 
-    // resolve() runs the engine EXACTLY ONCE (AD-13); the Battle scene replays
-    // the same cached log. The initial roster is the BattleStarted event.
+    // resolve() caches the log (AD-13); the Battle scene replays it. The initial
+    // roster is the BattleStarted event, which is tactic-INDEPENDENT — so a
+    // tactic pick below (which invalidates the cached log, story 4.13) never
+    // changes what we draw here; only the recomputed OUTCOME differs, and Battle
+    // re-resolves it. (A pre-existing double-resolve when the tactic changes is
+    // logged in deferred-work.md.)
     const roster = (this.flow.resolve().events[0] as BattleStarted).units;
     const committed = this.flow.getState().committedSetup;
     for (const unit of roster) this.drawUnit(unit, committed);
 
-    // FR6 disclosure (story 4.4/4.5): both army tactics revealed as labels — the
-    // FR5 fence lifts here, so the enemy's tactic (side B) is shown for the
-    // first time. Any of the four tactics can appear now (story 4.5 unlocked
-    // Attack Leader); the leader crowns themselves are on the sprites (drawUnit).
-    const setup = this.flow.getState().committedSetup;
-    if (setup) {
-      crispText(this, BASE_WIDTH / 2, 344, 'ARMY TACTICS', { fontFamily: 'Arial Black', fontSize: '12px', color: PALETTE.mutedText }).setOrigin(0.5);
-      crispText(this, BASE_WIDTH / 2, 366, `You — ${TACTIC_DISPLAY_NAME[setup.tactics.A]}`, {
-        fontFamily: 'Arial',
-        fontSize: '14px',
-        color: PALETTE.playerText,
-      }).setOrigin(0.5);
-      crispText(this, BASE_WIDTH / 2, 388, `Enemy — ${TACTIC_DISPLAY_NAME[setup.tactics.B]}`, {
-        fontFamily: 'Arial',
-        fontSize: '14px',
-        color: PALETTE.enemyText,
-      }).setOrigin(0.5);
-    }
+    // FR6 disclosure (story 4.4/4.5): both army tactics revealed — the FR5 fence
+    // lifts here, so the enemy's tactic (side B) shows for the first time. Story
+    // 4.13: the player's OWN tactic is now CHOSEN here (the picker moved from
+    // Placement to Reveal) — a conscious FR5/FR24 relaxation (you pick after the
+    // enemy is revealed; recorded in EXPERIENCE.md). The static header sits once;
+    // the picker + enemy line are (re)built by renderTactics on every toggle/pick.
+    crispText(this, BASE_WIDTH / 2, 342, 'ARMY TACTICS', { fontFamily: 'Arial Black', fontSize: '12px', color: PALETTE.mutedText }).setOrigin(0.5);
+    this.renderTactics();
 
     const btnY = BASE_HEIGHT - 44;
     const btn = this.add
@@ -103,6 +108,90 @@ export class RevealScene extends Scene {
       .setInteractive({ useHandCursor: true });
     crispText(this, btn.x, btn.y, REVEAL_FIGHT_LABEL, { fontFamily: 'Arial', fontSize: '20px', color: PALETTE.buttonText }).setOrigin(0.5);
     btn.on('pointerup', () => this.scene.start('Battle', { flow: this.flow }));
+  }
+
+  /**
+   * The army-tactics block (story 4.13): a static "ARMY TACTICS" header (drawn
+   * in `create`) over a tappable "You — <tactic>" picker and a static
+   * "Enemy — <tactic>" line. The picker moved here from Placement — you choose
+   * your stance at the face-off. Tapping the bar toggles the four-option
+   * dropdown; a pick routes through `flow.setTactic` (AD-13), which — because
+   * the match is already committed — folds the new tactic into `committedSetup`
+   * and drops the cached log, so `Fight!` recomputes the battle with it. All
+   * four tactics are enabled: a crown is always committed by Reveal, so
+   * `Attack Leader` never needs the disabled state Placement's picker had.
+   * Rebuilt whole on every toggle/pick. The "You" bar and the static "Enemy"
+   * line stay FIXED and adjacent (the FR6 "face to face" read the player reacts
+   * to), and the four options drop into the empty band BELOW both lines when
+   * open — so the enemy stance never jumps away mid-choice (review 2026-07-20).
+   *
+   * GEOMETRY COUPLING (the "army-row coupling sites" class): the option rows are
+   * laid out from `ALL_TACTICS.length` with NO clamp against `BASE_HEIGHT` / the
+   * Fight button (top ≈ y552). At the current 4 tactics the last row ends well
+   * clear (≈ y502); if `ALL_TACTICS` ever grows past ~6 the list would ride over
+   * Fight — re-lay this against the Fight button's Y (or scroll) before adding a
+   * 7th tactic. Don't assume this scene is safe just because it isn't in that
+   * change's file list.
+   */
+  private renderTactics() {
+    for (const el of this.tacticEls) el.destroy();
+    this.tacticEls = [];
+    const setup = this.flow.getState().committedSetup;
+    if (!setup) return;
+
+    const bw = 210;
+    const bh = 24;
+    const bx = (BASE_WIDTH - bw) / 2;
+    const barY = 356;
+    const bar = this.add.rectangle(bx, barY, bw, bh, PALETTE.buttonFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.buttonStroke);
+    const barLabel = crispText(this, BASE_WIDTH / 2, barY + bh / 2, `You — ${TACTIC_DISPLAY_NAME[setup.tactics.A]}  ${this.pickerOpen ? '▲' : '▼'}`, {
+      fontFamily: 'Arial',
+      fontSize: '14px',
+      color: PALETTE.playerText,
+    }).setOrigin(0.5);
+    bar.setInteractive({ useHandCursor: true }).on('pointerup', () => {
+      this.pickerOpen = !this.pickerOpen;
+      this.renderTactics();
+    });
+    this.tacticEls.push(bar, barLabel);
+
+    // The enemy line is FIXED just under the bar — it never moves when the
+    // dropdown opens (the two tactics stay paired for the FR6 read).
+    const enemyY = barY + bh + 6;
+    const enemyLabel = crispText(this, BASE_WIDTH / 2, enemyY + bh / 2, `Enemy — ${TACTIC_DISPLAY_NAME[setup.tactics.B]}`, {
+      fontFamily: 'Arial',
+      fontSize: '14px',
+      color: PALETTE.enemyText,
+    }).setOrigin(0.5);
+    this.tacticEls.push(enemyLabel);
+
+    if (this.pickerOpen) {
+      // Options drop into the empty band BELOW both fixed lines (not between
+      // them), at high depth so they sit above anything underneath.
+      const optionsTop = enemyY + bh + 8;
+      ALL_TACTICS.forEach((t, i) => {
+        const isSel = t === setup.tactics.A;
+        const oy = optionsTop + i * bh;
+        const row = this.add
+          .rectangle(bx, oy, bw, bh, isSel ? PALETTE.buttonFillEnabled : PALETTE.cardFill)
+          .setOrigin(0, 0)
+          .setStrokeStyle(1, PALETTE.buttonStroke)
+          .setDepth(100);
+        const label = crispText(this, BASE_WIDTH / 2, oy + bh / 2, TACTIC_DISPLAY_NAME[t], {
+          fontFamily: 'Arial',
+          fontSize: '12px',
+          color: isSel ? PALETTE.buttonText : PALETTE.bodyText,
+        })
+          .setOrigin(0.5)
+          .setDepth(101);
+        row.setInteractive({ useHandCursor: true }).on('pointerup', () => {
+          this.flow.setTactic(t); // AD-13; post-commit this invalidates the cached log so Fight! re-resolves (story 4.13)
+          this.pickerOpen = false;
+          this.renderTactics();
+        });
+        this.tacticEls.push(row, label);
+      });
+    }
   }
 
   /**

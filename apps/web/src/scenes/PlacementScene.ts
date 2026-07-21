@@ -1,6 +1,6 @@
 import { GameObjects, Input, Scene, Time } from 'phaser';
-import { ALL_COLS, ALL_ROWS, ALL_TACTICS, BALANCE, legalAnchors } from '@lordly/engine';
-import type { Placement, Tactic, UnitClass } from '@lordly/engine';
+import { ALL_COLS, ALL_ROWS, BALANCE, legalAnchors } from '@lordly/engine';
+import type { Placement, UnitClass } from '@lordly/engine';
 import {
   BASE_WIDTH,
   ENEMY_ARMY_LABEL,
@@ -12,7 +12,6 @@ import {
   MIN_FONT_PX,
   CARD_CLASS_FONT_PX,
   CLASS_ABBREVIATIONS,
-  TACTIC_DISPLAY_NAME,
   LEADER_CROWN_GLYPH,
 } from '../config/constants';
 import { applyHiDpiCamera, addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
@@ -50,8 +49,6 @@ export class PlacementScene extends Scene {
   /** Double-tap-to-place tracking (a second tap on the same unit auto-places it). Reset every create() (singleton scenes). */
   private lastTapIndex = -1;
   private lastTapAt = 0;
-  /** Whether the tactic dropdown is expanded. Reset every create() (singleton scenes). */
-  private pickerOpen = false;
   /**
    * Pending single-tap crown-toggle timers, keyed by unit index (review fix,
    * story 4.5): the crown-toggle is DEFERRED past `DOUBLE_TAP_MS` so a genuine
@@ -107,7 +104,6 @@ export class PlacementScene extends Scene {
     this.lastTapAt = 0;
     for (const t of this.pendingCrownTimers.values()) t.remove(); // review fix: no stale crown-toggle fires into a fresh match
     this.pendingCrownTimers.clear();
-    this.pickerOpen = false;
     this.toast = undefined;
     this.rowBadges = []; // the objects died with the previous scene shutdown; the ARRAY must not carry stale refs
     // A draggable object starts a drag on the SLIGHTEST move by default (threshold
@@ -373,7 +369,9 @@ export class PlacementScene extends Scene {
       this.dynamic.push(this.add.rectangle(x, y, 64, 64, PALETTE.gridCellFill).setStrokeStyle(1, PALETTE.gridCellStroke).setDepth(-1));
     });
 
-    this.buildTacticPicker(state.playerTactic);
+    // Story 4.13: the army-tactic picker moved to the Reveal screen — Placement
+    // now owns only the board + the leader crown. The tactic is chosen at the
+    // face-off (RevealScene), so nothing tactic-related is drawn here.
 
     const placed = placedCount(state.playerPlacements);
     // Ready gates on full placement AND a crown (story 4.5, FR35 — exactly one
@@ -411,73 +409,5 @@ export class PlacementScene extends Scene {
         this.scene.start('Reveal', { flow: this.flow });
       });
     }
-  }
-
-  /**
-   * The FR34 army-tactic picker (story 4.4): a COMPACT dropdown (Danilo's
-   * request — the button row took too much space). Collapsed, it is a single
-   * slim bar showing the current tactic; tapping expands a small option list
-   * that overlays the tray (transient, high depth). Defaults to Autonomous.
-   * `Attack Leader` is DISABLED (muted, no handler) until a crown exists (story
-   * 4.5, D-3b — "no invisible defaults"); it unlocks the moment the player
-   * crowns a leader. Hidden from the enemy until reveal (FR5). Player-only write
-   * path is `flow.setTactic` (AD-13).
-   *
-   * RECORDED DEVIATION (review, 2026-07-19): the bar and every option row are
-   * 24px tall — under UX-DR4's 44px tap-target floor. This is deliberate:
-   * Danilo asked twice to shrink the picker, then confirmed the final size on
-   * his own device ("it works great now"). Do NOT resize this back to 44px to
-   * "fix" the spec gap — that would reverse a tested product decision.
-   */
-  private buildTacticPicker(selected: Tactic) {
-    // Centered in the clear band between the board (ends ~y372) and the tray
-    // (starts y454), so it sits in a proper place — not floating, not over the
-    // board. The option list drops DOWN over the tray when open (transient).
-    const bw = 200;
-    const bh = 24;
-    const bx = (BASE_WIDTH - bw) / 2;
-    const by = 416;
-    const bar = this.add.rectangle(bx, by, bw, bh, PALETTE.buttonFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.buttonStroke);
-    this.dynamic.push(
-      bar,
-      crispText(this, BASE_WIDTH / 2, by + bh / 2, `Tactic: ${TACTIC_DISPLAY_NAME[selected]}  ${this.pickerOpen ? '▲' : '▼'}`, {
-        fontFamily: 'Arial',
-        fontSize: '11px',
-        color: PALETTE.bodyText,
-      }).setOrigin(0.5),
-    );
-    bar.setInteractive({ useHandCursor: true }).on('pointerup', () => {
-      this.pickerOpen = !this.pickerOpen;
-      this.redraw();
-    });
-    if (!this.pickerOpen) return;
-    // Expanded option list — drops down over the tray (high depth), closes on pick.
-    const hasLeader = this.flow.getState().playerLeader !== null;
-    ALL_TACTICS.forEach((t, i) => {
-      // Attack Leader unlocks once a crown exists (story 4.5, D-3b — "no invisible
-      // defaults"); before a crown it stays greyed. Clearing the crown resets a
-      // 'leader' selection back to autonomous in the flow, so the picker never
-      // shows a selected-but-disabled Attack Leader.
-      const disabled = t === 'leader' && !hasLeader;
-      const isSel = t === selected;
-      const oy = by + bh + i * bh;
-      const row = this.add
-        .rectangle(bx, oy, bw, bh, isSel ? PALETTE.buttonFillEnabled : PALETTE.cardFill)
-        .setOrigin(0, 0)
-        .setStrokeStyle(1, PALETTE.buttonStroke)
-        .setDepth(100);
-      const color = disabled ? PALETTE.buttonTextDisabled : isSel ? PALETTE.buttonText : PALETTE.bodyText;
-      const label = crispText(this, BASE_WIDTH / 2, oy + bh / 2, TACTIC_DISPLAY_NAME[t], { fontFamily: 'Arial', fontSize: '11px', color })
-        .setOrigin(0.5)
-        .setDepth(101);
-      this.dynamic.push(row, label);
-      if (!disabled) {
-        row.setInteractive({ useHandCursor: true }).on('pointerup', () => {
-          this.flow.setTactic(t); // AD-13: the scene never mutates state directly
-          this.pickerOpen = false;
-          this.redraw();
-        });
-      }
-    });
   }
 }
