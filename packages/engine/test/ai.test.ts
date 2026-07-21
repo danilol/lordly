@@ -62,6 +62,18 @@ describe('STRATEGY_POOL curation (FR25)', () => {
     }
   });
 
+  it('every one of the 12 classes appears in at least one archetype — the Open-Item-5 reverse-coverage guard (story 4.12)', () => {
+    // ai.test.ts:33 checks each pool class is a VALID class; this is the
+    // REVERSE — every class in ALL_CLASSES must be exercised by the sweep, so
+    // the NFR4 band certifies all 12 (the five 4.3 smalls folded in via
+    // single-unit swaps, the golem via the two 4.8 monster comps). Without
+    // this, silently dropping a class from every archetype would leave it
+    // uncertified and NOTHING would fail the build (story 4.12 AC1).
+    const covered = new Set<UnitClass>(STRATEGY_POOL.flatMap((a) => a.classes));
+    const missing = ALL_CLASSES.filter((cls) => !covered.has(cls));
+    expect(missing, `classes absent from every STRATEGY_POOL archetype: ${missing.join(', ')}`).toEqual([]);
+  });
+
   it('includes a back-row-sniper archetype: ≥2 archers, none in the front row (FR25)', () => {
     const sniper = STRATEGY_POOL.some((a) => {
       const archerRows = a.classes.flatMap((cls, i) => (cls === 'archer' ? [(a.placement[i] as Placement).row] : []));

@@ -1,6 +1,10 @@
+---
+baseline_commit: 5eaa14b787b0c246e329a511f7eec686456c65a1
+---
+
 # Story 4.12: The squad-era balance verdict
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -24,27 +28,27 @@ Reconciled from epics.md Story 4.12 (lines 915–937). NFR4, FR14/FR19/FR35/FR36
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Scaling/coverage audit (AC: 1)**
-  - [ ] Add a coverage test in `packages/engine/test/ai.test.ts` (or sim.test.ts): assert **every** `UnitClass` in `ALL_CLASSES` appears in at least one `STRATEGY_POOL` archetype's `classes` — the five 4.3 smalls (berserker, phalanx, ninja, valkyrie, sorceress) were folded in via single-unit swaps, and the golem via the two dedicated monster comps golem-wall/twin-golems (4.8) — but nothing currently *fails the build* if one is dropped. The existing test only checks each pool class is a valid class (`ai.test.ts:33`), not the reverse-coverage. This is the concrete Open-Item-5 "12 classes covered" guard.
-  - [ ] Confirm (and note in the verdict) the dimensions already covered without code change: tactics (all 4 appear — `ai.test.ts:119`) and seeded leader variation are drawn per side per run in `sweep.ts` (`chooseSetup` → `tactics`/`leaders` into `MatchSetup`), so tactic × leader are exercised across the run budget, not the pool; both monster comps (`golem-wall`, `twin-golems`) are present.
-  - [ ] Confirm the harness stays a **dev CLI**: `sim/run.ts` imports only engine internals (no app/Phaser/DOM), engine purity lint + `purity.test.ts` still pass; the sweep is invoked via `pnpm --filter @lordly/engine sim` and CI's `sim.test.ts`, nothing else.
-- [ ] **Task 2 — Convergence certification sweep, both modes (AC: 2)**
-  - [ ] Run the CLI at convergence for the record: `pnpm --filter @lordly/engine sim -- --runs=200 --seed=1 --threshold=0.65 --mode=single` and `--mode=wipeout`. Capture per-archetype + per-composition win rates for both. (Convergence ≈150–200 per the `sim.test.ts` note; the CLI caps at 500.)
-  - [ ] Verify **no archetype > 65%** in either mode. If one does → Task 4 (tuning). If none does → certified, record the numbers.
-  - [ ] **Wardens floor re-check:** confirm `wardens` is viable and in-band (the existing `sim.test.ts` pin asserts `> 0.25`; record the actual converged number vs 3.0's 33% single-mode baseline — did tactics + the melee blockade lift it?).
-  - [ ] Keep the CI band fast + deterministic (runsPerPair 15, seed 1) — do NOT raise CI's per-pair budget (the 4.4 lesson: the heavy run is a manual/verdict artifact, CI stays cheap). If CI's 15-run rates and the 200-run convergence rates disagree on band membership, the convergence run is the truth — note the discrepancy and widen only if a real crossing is found.
-- [ ] **Task 3 — 10-engagement wipeout compounding (AC: 2)**
-  - [ ] Verify FR19 compounding over the raised cap: `engagementCap = 10` (`balance.ts:155`), poison persists across engagements and ticks at every natural end, `blastAttenuation` ×0.75 applies in wipeout only. `wipeout.test.ts` already grinds to the 10-engagement cap and pins poison PERSISTENCE (though not to the 10-cap) — confirm it still holds post-monster/post-4.7-guard. **Blast-attenuation compounding across engagements is NOT covered in `wipeout.test.ts`** (no blast comp there; `blastAttenuation` is only exercised single-hit in damage/sim tests) — add an explicit cross-engagement blast-attenuation assertion. Record both in the verdict.
-- [ ] **Task 4 — Tuning (CONDITIONAL — only if Task 2/3 flags out-of-band; AC: 3)**
-  - [ ] Adjust the offending value(s) in `packages/engine/src/balance.ts` (stats, `roleRelations`, `blastAttenuation`, `guardHalf`, leader-penalty ratio, crit/dodge params — whichever the sweep implicates). Prefer the smallest lever; re-run the convergence sweep to confirm the fix and that it didn't push another archetype out.
-  - [ ] Bump `balance.ts` `version` (9→10), re-pin the balance hash (`balance-hash.test.ts` fails until re-pinned), re-record ALL goldens (`pnpm --filter @lordly/engine test -u`) and audit event-by-event, update `docs/rules.md` + Help numbers (keep `rules-doc.test.ts` green).
-  - [ ] **If NO tuning is needed:** check this task off with an explicit "none needed — the era certified in-band at `balanceVersion` 9" note; do NOT bump the version (replay-history invalidation is not free).
-- [ ] **Task 5 — The verdict document + gate (AC: 4)**
-  - [ ] Write `docs/balance-verdict.md` (NFR3 measurement-record pattern, sibling to `performance-verdict.md`): converged per-archetype win rates (both modes), run budget/methodology + seed, wardens-floor number vs the 3.0 baseline, the 10-engagement compounding confirmation, and the tuning verdict (what changed, or "none needed"). Cross-link from the epic-4 dossier if useful.
-  - [ ] Full gate: `pnpm typecheck`, `pnpm lint`, `pnpm coverage` (engine ≥90%), `pnpm --filter web build`. If Task 4 tuned, the sweep test + goldens + hash must all be green.
-- [ ] **Task 6 — On-device felt-balance sign-off + perf re-verify (AC: 5)** *(the epic's closing gate — Danilo)*
-  - [ ] Danilo plays real matches on the **deployed production URL** and accepts felt balance — squads, tactics, leaders, monsters, crits all fair and fun.
-  - [ ] Run the deferred `?perf=1` on-device capture against the deployed build (the procedure in `performance-verdict.md`; `three-mages`-wipeout Replay at 1× and ×2, per-scenario resets, single-read traces), fill the stubbed 4.10 table, and confirm the 60/30 floor holds with the post-monster asset load + the 4.10 traces + the 4.11 plate. This clears the `deferred-work.md` capture item and closes the epic.
+- [x] **Task 1 — Scaling/coverage audit (AC: 1)**
+  - [x] Add a coverage test in `packages/engine/test/ai.test.ts` (or sim.test.ts): assert **every** `UnitClass` in `ALL_CLASSES` appears in at least one `STRATEGY_POOL` archetype's `classes` — the five 4.3 smalls (berserker, phalanx, ninja, valkyrie, sorceress) were folded in via single-unit swaps, and the golem via the two dedicated monster comps golem-wall/twin-golems (4.8) — but nothing currently *fails the build* if one is dropped. The existing test only checks each pool class is a valid class (`ai.test.ts:33`), not the reverse-coverage. This is the concrete Open-Item-5 "12 classes covered" guard. **DONE: reverse-coverage test added; 12/12 covered, build-guarded.**
+  - [x] Confirm (and note in the verdict) the dimensions already covered without code change: tactics (all 4 appear — `ai.test.ts:119`) and seeded leader variation are drawn per side per run in `sweep.ts` (`chooseSetup` → `tactics`/`leaders` into `MatchSetup`), so tactic × leader are exercised across the run budget, not the pool; both monster comps (`golem-wall`, `twin-golems`) are present. **DONE: confirmed + recorded in the verdict's coverage section.**
+  - [x] Confirm the harness stays a **dev CLI**: `sim/run.ts` imports only engine internals (no app/Phaser/DOM), engine purity lint + `purity.test.ts` still pass; the sweep is invoked via `pnpm --filter @lordly/engine sim` and CI's `sim.test.ts`, nothing else. **DONE: purity suite green in the full gate; no app dependency added.**
+- [x] **Task 2 — Convergence certification sweep, both modes (AC: 2)**
+  - [x] Run the CLI at convergence for the record: `pnpm --filter @lordly/engine sim -- --runs=200 --seed=1 --threshold=0.65 --mode=single` and `--mode=wipeout`. Capture per-archetype + per-composition win rates for both. (Convergence ≈150–200 per the `sim.test.ts` note; the CLI caps at 500.) **DONE: both modes at runs=200 + a runs=500 confirmation (seeds 1/2/3) captured in the verdict.**
+  - [x] Verify **no archetype > 65%** in either mode. If one does → Task 4 (tuning). If none does → certified, record the numbers. **DONE: single all in band (top cabal 64.1%); wipeout one marginal crossing — farshot 65.3% at runs=500 — see Task 4.**
+  - [x] **Wardens floor re-check:** confirm `wardens` is viable and in-band (the existing `sim.test.ts` pin asserts `> 0.25`; record the actual converged number vs 3.0's 33% single-mode baseline — did tactics + the melee blockade lift it?). **DONE: wardens 31.7% single (≈ the 3.0 33% mark) / 43.3% wipeout — viable, not collapsed.**
+  - [x] Keep the CI band fast + deterministic (runsPerPair 15, seed 1) — do NOT raise CI's per-pair budget (the 4.4 lesson: the heavy run is a manual/verdict artifact, CI stays cheap). If CI's 15-run rates and the 200-run convergence rates disagree on band membership, the convergence run is the truth — note the discrepancy and widen only if a real crossing is found. **DONE: CI stays at 15-run; the farshot 200-vs-500 discrepancy noted in `sim.test.ts` + the verdict.**
+- [x] **Task 3 — 10-engagement wipeout compounding (AC: 2)**
+  - [x] Verify FR19 compounding over the raised cap: `engagementCap = 10` (`balance.ts:155`), poison persists across engagements and ticks at every natural end, `blastAttenuation` ×0.75 applies in wipeout only. `wipeout.test.ts` already grinds to the 10-engagement cap and pins poison PERSISTENCE (though not to the 10-cap) — confirm it still holds post-monster/post-4.7-guard. **Blast-attenuation compounding across engagements is NOT covered in `wipeout.test.ts`** (no blast comp there; `blastAttenuation` is only exercised single-hit in damage/sim tests) — add an explicit cross-engagement blast-attenuation assertion. Record both in the verdict. **DONE: poison-persistence test re-confirmed green; new test pins blast ×3/4 applying every engagement through the cap=10 (13 vs the single-mode 18).**
+- [x] **Task 4 — Tuning (CONDITIONAL — only if Task 2/3 flags out-of-band; AC: 3)**
+  - [x] Adjust the offending value(s) in `packages/engine/src/balance.ts` (stats, `roleRelations`, `blastAttenuation`, `guardHalf`, leader-penalty ratio, crit/dodge params — whichever the sweep implicates). Prefer the smallest lever; re-run the convergence sweep to confirm the fix and that it didn't push another archetype out. **N/A: no balance-data tuning applied — see below.**
+  - [x] Bump `balance.ts` `version` (9→10), re-pin the balance hash (`balance-hash.test.ts` fails until re-pinned), re-record ALL goldens (`pnpm --filter @lordly/engine test -u`) and audit event-by-event, update `docs/rules.md` + Help numbers (keep `rules-doc.test.ts` green). **N/A: no bump.**
+  - [x] **If NO tuning is needed:** check this task off with an explicit "none needed — the era certified in-band at `balanceVersion` 9" note; do NOT bump the version (replay-history invalidation is not free). **DONE: no tuning. `balanceVersion` stays 9. The one marginal crossing (farshot, wipeout, 65.3% at convergence) was ACCEPTED as a conscious recorded deviation, not tuned (Danilo, 2026-07-20) — a fun snipe-and-support comp, only 52.9% single-mode; tuning risked nudging the pack (longbows 62.1%) for a sub-1% gain. Enforced CI gate stays green at 15-run.**
+- [x] **Task 5 — The verdict document + gate (AC: 4)**
+  - [x] Write `docs/balance-verdict.md` (NFR3 measurement-record pattern, sibling to `performance-verdict.md`): converged per-archetype win rates (both modes), run budget/methodology + seed, wardens-floor number vs the 3.0 baseline, the 10-engagement compounding confirmation, and the tuning verdict (what changed, or "none needed"). Cross-link from the epic-4 dossier if useful. **DONE: `docs/balance-verdict.md` written.**
+  - [x] Full gate: `pnpm typecheck`, `pnpm lint`, `pnpm coverage` (engine ≥90%), `pnpm --filter web build`. If Task 4 tuned, the sweep test + goldens + hash must all be green. **DONE: typecheck ✓, lint ✓, coverage (568 tests, engine 99.42% lines) ✓, web build ✓.**
+- [x] **Task 6 — On-device felt-balance sign-off + perf re-verify (AC: 5)** *(the epic's closing gate — Danilo)*
+  - [x] Danilo plays real matches on the **deployed production URL** and accepts felt balance — squads, tactics, leaders, monsters, crits all fair and fun. **DONE: Danilo's sign-off, 2026-07-20 — "you have my approval."**
+  - [ ] Run the deferred `?perf=1` on-device capture against the deployed build (the procedure in `performance-verdict.md`; `three-mages`-wipeout Replay at 1× and ×2, per-scenario resets, single-read traces), fill the stubbed 4.10 table, and confirm the 60/30 floor holds with the post-monster asset load + the 4.10 traces + the 4.11 plate. This clears the `deferred-work.md` capture item and closes the epic. **DEFERRED (PO call, 2026-07-20): not run — Danilo closed 4.12 on the balance certification + felt-balance sign-off. The `?perf=1` capture stays deferred (re-logged to `deferred-work.md`); the `performance-verdict.md` 4.10 stub table remains open. NOT checked (honesty: it was not performed).**
 
 ## Dev Notes
 
@@ -98,12 +102,33 @@ Sweep/floor/coverage/compounding are engine tests (`sim.test.ts`, `wipeout.test.
 
 ### Agent Model Used
 
+Claude Opus 4.8 (1M context) — `claude-opus-4-8[1m]`.
+
 ### Debug Log References
+
+- Exploration (throwaway `_explore.test.ts`, since deleted) found a clean 10-engagement no-death stall (3 mages screened by knights vs 5 clerics, seed `0xdead`) where the wipeout blast lands 13 every engagement vs the single-mode 18 — the fixture for the new blast-attenuation pin.
+- Convergence sweeps captured via the dev CLI (`pnpm exec tsx sim/run.ts …` from `packages/engine`, since `pnpm --filter … sim -- …` double-passes the `--` separator).
 
 ### Completion Notes List
 
+- **Tasks 1–5 complete and gated; Task 6 (on-device felt-balance sign-off + `?perf=1` capture) is the epic's closing gate and is Danilo's — the story stays in-progress until that device pass.**
+- **The era certifies in-band at `balanceVersion` 9 — no tuning applied, no version bump, no golden/hash re-record, `logVersion` stays 4.** Replay history stays valid (AD-8/3.2).
+- **One recorded deviation:** `farshot` converges at 65.3% wipeout (runs=500, stable across seeds 1/2/3; reads 64.4% at runs=200). Danilo's call (2026-07-20) was to accept it as a conscious 0.3% band widening rather than re-tune the pool board. Documented in `docs/balance-verdict.md` and annotated beside the wipeout band test in `sim.test.ts`. The enforced CI gate (runsPerPair 15, seed 1) stays green in both modes.
+- **Single mode:** all 12 in band, top cabal 64.1% (identical at runs 200 and 500). **Wardens floor:** 31.7% single (≈ the 3.0 33% baseline) / 43.3% wipeout — melee viable, not collapsed.
+- **New tests:** reverse class-coverage guard (`ai.test.ts`, 12/12 build-guarded); cross-engagement blast-attenuation pin (`wipeout.test.ts`, ×3/4 applied every engagement through cap=10). Poison-persistence pin re-confirmed green post-monster/post-4.7-guard.
+- **Full gate green:** typecheck, lint, coverage (40 files, 568 tests; engine 99.42% lines ≥ the 90% gate), web build.
+
 ### File List
+
+- `packages/engine/test/ai.test.ts` — added the reverse class-coverage guard (every `ALL_CLASSES` member appears in ≥1 `STRATEGY_POOL` archetype).
+- `packages/engine/test/wipeout.test.ts` — added the `magesVsClerics` fixture + the cross-engagement blast-attenuation test (imports `blastDamage`).
+- `packages/engine/test/sim.test.ts` — annotated the wipeout band test with the runs=200-vs-500 farshot convergence discrepancy + the accepted deviation.
+- `docs/balance-verdict.md` — NEW. The standing NFR4 certification record.
+- `docs/implementation-artifacts/4-12-the-squad-era-balance-verdict.md` — story bookkeeping (frontmatter `baseline_commit`, task checkboxes, this record).
+- `docs/implementation-artifacts/sprint-status.yaml` — status → in-progress.
 
 ### Change Log
 
+- 2026-07-20 — **CLOSED (done).** Danilo's on-device felt-balance sign-off given ("you have my approval") — the epic's closing gate met. The `?perf=1` on-device capture (Task 6's second half) was NOT run and stays deferred (`deferred-work.md`; `performance-verdict.md` 4.10 stub still open) — a conscious PO call to close 4.12 on the balance certification + felt-balance rather than block on the long-deferred perf capture. All epic-4 stories now done; `epic-4-retrospective` is available (optional).
+- 2026-07-20 — Tasks 1–5 implemented. Class-coverage guard + cross-engagement blast-attenuation test added; both-mode convergence sweep captured (runs=200 + a runs=500 confirmation). Era certified in-band at `balanceVersion` 9 — no tuning. One conscious recorded deviation: farshot 65.3% wipeout at convergence (Danilo-accepted, not tuned). `docs/balance-verdict.md` written. Full gate green (568 tests, engine 99.42% lines, web build). Task 6 (on-device sign-off + `?perf=1` capture against the production URL) remains — the epic's closing gate, owned by Danilo.
 - 2026-07-20 — Story created (baseline `f07cfaf`; 4.8–4.11 deployed to production the same day). The epic-closing gate: certify the 12-class squad era against the ≤65% both-mode band at convergence, re-check the wardens wasted-swing floor, verify 10-engagement wipeout compounding, produce a standing `docs/balance-verdict.md`, and close the epic on Danilo's on-device felt-balance sign-off + the deferred `?perf=1` capture against the live build. Tuning is CONDITIONAL (bump `balanceVersion` 9→10 + re-pin hash + re-record goldens ONLY if the sweep flags out-of-band; else record "none needed", no bump). Harness already covers tactics/leaders (per-run stream draws) + both monster comps; the one real code gap is a class-coverage guard (Task 1). `logVersion` stays 4. 4 non-blocking open questions.

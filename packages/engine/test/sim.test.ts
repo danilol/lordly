@@ -248,6 +248,18 @@ describe('sim sweep (NFR4)', () => {
   // Explicit 60s timeout: this is the single heaviest sweep (cap-length wipeout
   // × runs=30) and brushes Vitest's default under a loaded CI runner — a load
   // flake, not a slow assertion (story 3.2/4.2/4.4 review lineage).
+  //
+  // Story 4.12 CONVERGENCE DISCREPANCY (recorded deviation, docs/balance-verdict.md):
+  // this CI band (runsPerPair 15, seed 1) is a fast DETERMINISTIC proxy, and it
+  // holds — but the runs=500 wipeout convergence sweep lands `farshot` at a
+  // STABLE 65.3% across seeds 1/2/3 (it reads 64.4% at runs=200; the extra
+  // tactic/leader/element combinations sampled between 200 and 500 tilt slightly
+  // in its favor). That is a real 0.3% crossing at convergence. Danilo's call
+  // (2026-07-20) was to ACCEPT it as a conscious band widening rather than
+  // re-tune farshot's board — it is a fun snipe-and-support comp, only 52%
+  // single-mode, and tuning risked nudging the pack (longbows 62%). So this
+  // 15-run assertion stays green and is the enforced gate; the verdict doc
+  // carries the honest converged number. balanceVersion stays 9.
   it(`ACCEPTANCE BAND (wipeout): no archetype exceeds ${ACCEPTANCE_BAND * 100}% aggregate win rate in wipeout mode`, () => {
     const wipeoutReport = runSweep(STRATEGY_POOL, { ...CI_CONFIG, mode: 'wipeout' });
     const table = wipeoutReport.archetypes.map((a) => `${a.id}: ${(a.winRate * 100).toFixed(1)}%`).join('\n');

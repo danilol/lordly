@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/balance';
-import { physicalDamage, resolveBattle } from '../src/resolve';
+import { blastDamage, physicalDamage, resolveBattle } from '../src/resolve';
 import type { BattleEvent, BattleLog, MatchSetup, Unit } from '../src/types';
 
 /**
@@ -185,6 +185,51 @@ function mirrorClerics(seed: number): MatchSetup {
   );
 }
 
+/** Three mid-row mages screened by a front knight pair vs a five-cleric wall
+ * (front-right + mid-right + the whole back row). The clerics out-heal the
+ * blast chip and the mages are unreachable behind their screen, so NOBODY
+ * ever dies: the battle runs the full `engagementCap` (10) and every
+ * engagement the three mages blast the fullest enemy row — B's three back-row
+ * clerics. No witch anywhere → no weaken, and blasts never crit (magic), so
+ * every blast target's damage is EXACTLY `blastDamage('mage','cleric',…)`.
+ * This is the fixture for the cross-engagement blast-attenuation pin (story
+ * 4.12): the wipeout ×3/4 attenuation must apply on engagement 1 AND still on
+ * engagement 10 — the FR10 compounding guard the sweep relies on. */
+function magesVsClerics(seed: number, mode: MatchSetup['mode'] = 'wipeout'): MatchSetup {
+  return setup(
+    {
+      armies: {
+        A: [u('mage', 'fire', 'Alaric'), u('mage', 'water', 'Bram'), u('mage', 'wind', 'Caius'), u('knight', 'earth', 'Doran'), u('knight', 'fire', 'Emrys')],
+        B: [
+          u('cleric', 'earth', 'Faye'),
+          u('cleric', 'fire', 'Gwen'),
+          u('cleric', 'water', 'Hale'),
+          u('cleric', 'wind', 'Isolde'),
+          u('cleric', 'earth', 'Jonas'),
+        ],
+      },
+      placements: {
+        A: [
+          { row: 'mid', col: 'left' },
+          { row: 'mid', col: 'center' },
+          { row: 'mid', col: 'right' },
+          { row: 'front', col: 'left' },
+          { row: 'front', col: 'right' },
+        ],
+        B: [
+          { row: 'front', col: 'right' },
+          { row: 'mid', col: 'right' },
+          { row: 'back', col: 'right' },
+          { row: 'back', col: 'left' },
+          { row: 'back', col: 'center' },
+        ],
+      },
+    },
+    seed,
+    mode,
+  );
+}
+
 /** Splits a log into per-engagement segments (each ending with its
  * EngagementEnded). The seam's StatusCleared events (story 4.2) are emitted
  * AFTER an EngagementEnded, so they open the NEXT segment. */
@@ -266,6 +311,46 @@ describe('wipeout mode (FR19)', () => {
     expect(segs.length).toBe(BALANCE.engagementCap);
     expect(log.events.some((e) => e.type === 'UnitDied')).toBe(false);
     expect(log.events[log.events.length - 1]?.type).toBe('BattleEnded');
+  });
+
+  it('the Mage row-blast is wipeout-attenuated (×3/4) and that attenuation persists to the engagementCap — FR10 compounding guard (story 4.12)', () => {
+    // The FR10 blastAttenuation is wipeout-ONLY because blasts compound across
+    // engagements (v1: three-mages 74.6% dominant). The single-hit attenuation
+    // is pinned in damage/sim tests, but nothing pinned that it KEEPS applying
+    // engagement after engagement up to the cap. This does: same comp, same
+    // seed, both modes.
+    const attenuated = blastDamage('mage', 'cleric', false, 'wipeout');
+    const unattenuated = blastDamage('mage', 'cleric', false, 'single');
+    expect(attenuated).toBeLessThan(unattenuated); // the ×3/4 really bites (13 vs 18 at balanceVersion 9)
+
+    // Every A-sourced blast target's damage, per engagement (no witch → no
+    // weaken; magic never crits → the event value is the raw blastDamage).
+    const aBlastDamagesPerSeg = (mode: MatchSetup['mode']): number[][] =>
+      segments(resolveBattle(magesVsClerics(0xdead, mode))).map((seg) =>
+        seg
+          .filter((e): e is Extract<BattleEvent, { type: 'UnitAttacked' }> => e.type === 'UnitAttacked' && e.kind === 'blast' && e.source.startsWith('A'))
+          .flatMap((e) => e.targets.map((t) => t.damage)),
+      );
+
+    // WIPEOUT: nobody dies, all 10 engagements run, and EVERY blast in EVERY
+    // engagement — engagement 1 through the cap — lands the attenuated value.
+    const wipeoutSegs = aBlastDamagesPerSeg('wipeout');
+    expect(wipeoutSegs).toHaveLength(BALANCE.engagementCap);
+    for (const [i, dmgs] of wipeoutSegs.entries()) {
+      expect(dmgs.length, `engagement ${i + 1} has A blasts`).toBeGreaterThan(0);
+      expect(
+        dmgs.every((d) => d === attenuated),
+        `engagement ${i + 1} blast damages all attenuated`,
+      ).toBe(true);
+    }
+    // The LAST engagement specifically still attenuates — the compounding cap.
+    expect(wipeoutSegs.at(-1)!.every((d) => d === attenuated)).toBe(true);
+
+    // SINGLE: the same first-engagement blasts are UN-attenuated (the mode
+    // contrast — attenuation is a wipeout rule, not a global one).
+    const singleSegs = aBlastDamagesPerSeg('single');
+    expect(singleSegs[0]!.length).toBeGreaterThan(0);
+    expect(singleSegs[0]!.every((d) => d === unattenuated)).toBe(true);
   });
 
   it('poison persists across engagements and ticks at every natural engagement end', () => {
