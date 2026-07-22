@@ -4,7 +4,7 @@ baseline_commit: 5eaa14b787b0c246e329a511f7eec686456c65a1
 
 # Story 4.13: Tactics at the face-off
 
-Status: review
+Status: done
 
 <!-- Emergent story from the 2026-07-20 device session (not in epics.md). See deferred-work.md's 2026-07-20 "tactics editable DURING battle" north-star. -->
 

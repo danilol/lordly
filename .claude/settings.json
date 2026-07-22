@@ -21,7 +21,8 @@
       "Bash(pnpm --filter web dev)",
       "Bash(pnpm -w typecheck *)",
       "Bash(npx tsc --noEmit*)",
-      "Bash(gh secret list)"
+      "Bash(gh secret list)",
+      "Bash(gh pr merge *)"
     ]
   }
 }
