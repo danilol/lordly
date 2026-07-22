@@ -1,5 +1,25 @@
 # Deferred Work
 
+## Product north-star (PO, Danilo, epic-4 retrospective 2026-07-22) — TEAM PvP BATTLES
+
+- **The idea:** each player builds **3 or more squads** under class constraints that force themed variety (e.g. one magic-leaning, one physical-leaning, one with monsters), then the players fight a **best-of-3 / best-of-5 series** and the series winner is crowned. Lives ALONGSIDE single battles, not replacing them.
+- **Why it's cheap to keep alive:** architecturally it's a *series wrapper* around the existing single-battle contract (setup + seed → log) — nothing in Epic 5 (polish) or Epic 6 (link-play) blocks it. The one thing the link-play design pass MUST honor now: the room protocol should not hard-assume "one battle per room" (a room hosting a sequence of battles with per-game squad selection is the future shape).
+- **Not scoped for any current epic** — Danilo: "keep this in mind, but we don't need to build it this epic." Surface at the link-play design pass and again at the epic after it.
+
+## Design input (PO + team, epic-4 retrospective 2026-07-22) — EXTENDING THE TACTIC ROSTER beyond OB64's four
+
+- **Status quo ships:** the OB64 four (Autonomous / Attack Leader / Attack Strongest / Attack Weakest) stay as-is for now — Danilo: "we could proceed with these 4 for now. But I think having more strategies would be fun." Attack Strongest is suspected low-value in Lordly (in OB64 it earns its keep via story/loot); leave it — monsters may redeem it ("strongest" = the 300-HP Golem wall).
+- **Brainstormed candidates (retro session, recorded for the future tactics story):**
+  1. **Hunt the Prey** — each unit prefers targets its role has ×1.5 advantage over (uses the existing `roleRelations` table; teaches the matchup system by watching).
+  2. **Silence the Support** — prioritize healers/controllers (Cleric, Witch, Sorceress) before all else; the anti-sustain counter-pick.
+  3. **Break the Wall** — prioritize monsters/Bulwarks first; situational anti-Golem play.
+  4. **Protect the Leader** — the mirror of Attack Leader: guard-capable units shield the leader's column / the army fights cautiously around the crown. The mind-game maker — with tactics now chosen AFTER seeing the enemy board (4.13; symmetric in PvP per the retro decision), this creates the predict-and-counter-pick layer of Danilo's north-star.
+  5. **All-Out Attack / Hold the Line** — army-wide stance multipliers (×5/4 dealt & taken, or ×3/4 both); mechanically the `leaderPenaltyPhysical` wrapper shape from 4.5, but a new MECHANIC (more balance work), strongest in best-of-N team battles.
+  6. **Spread Fire** — never double a target while fresh enemies remain; the anti-Cleric distribution play.
+- **Shortlist:** Hunt the Prey + Protect the Leader (one rewards roster knowledge, one creates the counter-pick meta; both gain value in PvP → natural home near the link-play era).
+- **Danilo's named BALANCE CONSTRAINT for the design pass:** information-rich tactics must not become the auto-pick. His candidate lever: **reach limits** — e.g. a tactic-directed unit may only pick targets in its own column + adjacent columns (instead of the full legal list), so smarter targeting trades off against reach. The melee blockade (front shields back) stays inviolable regardless. Any addition = `balanceVersion` tick + tactics-as-dimension sweep (machinery exists since 4.4).
+- **UX ceiling (Sally):** the tactic dropdown reads well at 4–6 options — this is a pick-1-or-2 exercise, not ship-all-six.
+
 ## Deferred from: code review of story 4-13-tactics-at-the-face-off (2026-07-20)
 
 - **`RevealScene` double-resolves the battle.** `create()` runs the full `resolveBattle` (`RevealScene.ts:81`) only to read `events[0]` — the tactic-independent `BattleStarted` roster — then any tactic pick nulls the cached log (`MatchFlow.ts` `setTactic`) so `Fight!` pays for a second full resolve in Battle. Pre-existing (Reveal always resolved for the roster), but story 4.13 makes the double-resolve the guaranteed path for every tactic-changer. Battles are pure and fast so the cost is small; the clean fix is to read the initial roster from `committedSetup` (armies + placements) without resolving, so Reveal never resolves at all. Revisit if a perf capture ever flags Reveal→Battle entry.
