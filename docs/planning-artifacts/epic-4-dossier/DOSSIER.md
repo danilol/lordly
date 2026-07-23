@@ -84,6 +84,14 @@ Two rules, one sentence each (AD-14: implemented once in the engine's targeting 
 - **TARGETED:** the Golem is a valid target wherever either of its two cells qualifies (melee nearest-row, ranged rearmost, blast row); it **blocks both rows of its column** for the melee blockade; **row-scoped effects hit it once** (PRD assumption CONFIRMED); for the blast's "row with most living enemies" count it counts in each row it occupies.
 - **ACTS:** always **from its anchor row** (the front-most cell, AD-14) — action count, move-kind, and FR13's front-before-back tie-break all read the anchor. No special cases.
 
+#### Amendment (story 4.8 device revision, 2026-07-20, Danilo; recorded 2026-07-23, story 5.0) — the monster is SINGLE-CELL
+
+Danilo settled the model against annotated OB64 screenshots, superseding this whole section's two-cell design:
+
+- A monster occupies **one cell**, costs 2 slots, and **reserves all 8 king-move neighbors** at placement (orthogonal + diagonal) — no unit, human or monster, may stand beside it. Any cell (incl. back) is a legal position.
+- **TARGETED/ACTS special cases are gone**: a monster is a beefy one-cell battle participant — normal melee/ranged/blast targeting, its own row's action count and move-kind. "Row-scoped effects hit it once" survives trivially (it stands in one row).
+- Shipped in `validate.ts` (king-move reservation) / `targeting.ts` (no footprint math); `docs/rules.md` §Monsters is the player-facing reference; AD-14 carries the matching spine amendment. PRD FR38 amended 2026-07-23 (story 5.0).
+
 ## §3 Crit & dodge + the frozen draw table (FR36, AD-10) — DECIDED 2026-07-17 → **ADR 0003**
 
 Structure (frozen forever — see `docs/adr/0003-battle-stream-draw-order.md` for the full table):
@@ -170,4 +178,4 @@ The binding designs live IN `EXPERIENCE.md` ("Epic 4 extension" section) and `DE
 - Open Item 3: fold the decided role table, class list, and mechanic answers into the PRD.
 - Open Item 4: record "promotion postponed until after link-play" (closes the item).
 - FR15: the wave-1 stat table (11 smalls + Golem; gender-split product direction).
-- **FR38/FR15 deviation (D-1b): wave 1 ships Golem as the ONLY monster** — dragon moves to a later wave together with beasts and their slayer classes. Stories 4.8/4.9 scope shrinks accordingly (one monster class, same two-cell semantics).
+- **FR38/FR15 deviation (D-1b): wave 1 ships Golem as the ONLY monster** — dragon moves to a later wave together with beasts and their slayer classes. Stories 4.8/4.9 scope shrinks accordingly (one monster class, same two-cell semantics). *Applied 2026-07-23 (story 5.0): PRD FR38 + Open Item 3 amended — Golem-only recorded, the monster model corrected to the shipped single-cell king-move rule (see §2's amendment), Wipeout-as-default recorded at FR17, the 4.13 tactic-at-Reveal relaxation recorded at FR34; the dragon lands with Epic 5's roster waves (epics.md §Epic 5).*

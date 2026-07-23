@@ -838,6 +838,8 @@ So that placement decides behavior — the deepest placement read yet.
 
 ### Story 4.8: Monsters in the engine
 
+*Shipped-reality note (2026-07-23, story 5.0): the ACs below are the pre-revision plan. As shipped (dossier D-1b + the 2026-07-20 device revision): GOLEM ONLY (dragon lands with Epic 5's roster), and the monster is SINGLE-CELL — one cell, 2 slots, all 8 king-move neighbors reserved at placement; the two-cell TARGETED/ACTS semantics were never shipped. See PRD FR38's amendment and the story record.*
+
 As the game's developer,
 I want dragons and golems fighting correctly in the pure engine,
 So that the monster era is proven deterministic before any pixel renders.

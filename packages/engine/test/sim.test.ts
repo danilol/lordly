@@ -44,10 +44,14 @@ describe('sim sweep (NFR4)', () => {
   // Determinism holds at ANY config, so this uses a TINY one (runs=3) rather
   // than re-running the heavy CI_CONFIG sweep — the story-4.4 runs=30 bump made
   // a full re-run needlessly expensive under parallel CI load.
+  // Explicit 20s timeout (story 5.0): two full-pool sweeps back-to-back brush
+  // Vitest's 5s default under v8-instrumented coverage + parallel project load
+  // (the pnpm-coverage flake, deferred-work 2026-07-20) — a load flake, not a
+  // slow assertion.
   it('is deterministic: the same config yields the bit-identical report', () => {
     const tiny = { baseSeed: 1, runsPerPair: 3, threshold: ACCEPTANCE_BAND };
     expect(runSweep(STRATEGY_POOL, tiny)).toEqual(runSweep(STRATEGY_POOL, tiny));
-  });
+  }, 20_000);
 
   it('accounts every game: pool² × runs battles; a self-pairing counts as ONE game, not two', () => {
     const n = STRATEGY_POOL.length;
@@ -231,10 +235,12 @@ describe('sim sweep (NFR4)', () => {
   });
 
   // Mode-default equivalence also holds at any config — use a TINY one.
+  // Explicit 20s timeout (story 5.0): same two-full-pool-sweeps shape as the
+  // determinism test above — the coverage load flake, not a slow assertion.
   it('omitting mode is exactly single mode (the historical sweep behavior)', () => {
     const tiny = { baseSeed: 1, runsPerPair: 3, threshold: ACCEPTANCE_BAND };
     expect(runSweep(STRATEGY_POOL, tiny)).toEqual(runSweep(STRATEGY_POOL, { ...tiny, mode: 'single' }));
-  });
+  }, 20_000);
 
   // Story 3.0: the band holds in BOTH modes (the wipeout knob deferred since
   // 1.10). Wipeout battles run up to BALANCE.engagementCap engagements — 10

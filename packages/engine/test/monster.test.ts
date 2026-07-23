@@ -131,55 +131,68 @@ describe('monster invariants hold across ARBITRARY battles (matchSetupArb)', () 
   let sawMonster = false;
   let sawTwoMonsterSide = false;
 
-  test.prop([matchSetupArb])('every UnitAttacked target list has no duplicate unit id (a monster in a blast row is hit exactly once)', (s) => {
-    for (const side of ['A', 'B'] as const) {
-      const count = s.armies[side].filter((unit) => BALANCE.classes[unit.class].sizeClass === 'monster').length;
-      if (count >= 1) sawMonster = true;
-      if (count === 2) sawTwoMonsterSide = true;
-    }
-    const log = resolveBattle(s);
-    for (const e of log.events) {
-      if (e.type !== 'UnitAttacked') continue;
-      const ids = e.targets.map((t) => t.unit);
-      expect(new Set(ids).size, JSON.stringify(e)).toBe(ids.length);
-    }
-  });
+  // Explicit 20s timeouts on both properties below (story 5.0): each resolves
+  // ~100 arbitrary full battles and brushes Vitest's 5s default under
+  // v8-instrumented coverage + parallel project load (the pnpm-coverage flake,
+  // deferred-work 2026-07-20 — this file's duplicate-target property was the
+  // recorded offender) — a load flake, not a slow assertion.
+  test.prop([matchSetupArb])(
+    'every UnitAttacked target list has no duplicate unit id (a monster in a blast row is hit exactly once)',
+    (s) => {
+      for (const side of ['A', 'B'] as const) {
+        const count = s.armies[side].filter((unit) => BALANCE.classes[unit.class].sizeClass === 'monster').length;
+        if (count >= 1) sawMonster = true;
+        if (count === 2) sawTwoMonsterSide = true;
+      }
+      const log = resolveBattle(s);
+      for (const e of log.events) {
+        if (e.type !== 'UnitAttacked') continue;
+        const ids = e.targets.map((t) => t.unit);
+        expect(new Set(ids).size, JSON.stringify(e)).toBe(ids.length);
+      }
+    },
+    20_000,
+  );
 
   it('the generated cases above actually exercised monster armies, incl. a 2-monster side (branch reachability)', () => {
     expect(sawMonster, 'no monster observed across the whole matchSetupArb property run').toBe(true);
     expect(sawTwoMonsterSide, 'no 2-monster side observed across the whole matchSetupArb property run').toBe(true);
   });
 
-  test.prop([matchSetupArb])('every unit id referenced anywhere in the log belongs to the BattleStarted roster', (s) => {
-    const log = resolveBattle(s);
-    const started = log.events[0];
-    const roster = new Set<UnitId>(started?.type === 'BattleStarted' ? started.units.map((unit) => unit.id) : []);
-    for (const e of log.events) {
-      const ids: UnitId[] = [];
-      switch (e.type) {
-        case 'UnitAttacked':
-          ids.push(e.source, ...e.targets.map((t) => t.unit));
-          if (e.redirectedFrom !== undefined) ids.push(e.redirectedFrom);
-          break;
-        case 'UnitHealed':
-        case 'StatusApplied':
-          ids.push(e.source, e.target);
-          break;
-        case 'ActionMisfired':
-        case 'ActionFizzled':
-        case 'ActionSkipped':
-        case 'PoisonTicked':
-        case 'UnitDied':
-        case 'GuardRaised':
-        case 'GuardEnded':
-        case 'StatusCleared':
-        case 'LeaderFell':
-          ids.push(e.unit);
-          break;
-        default:
-          break;
+  test.prop([matchSetupArb])(
+    'every unit id referenced anywhere in the log belongs to the BattleStarted roster',
+    (s) => {
+      const log = resolveBattle(s);
+      const started = log.events[0];
+      const roster = new Set<UnitId>(started?.type === 'BattleStarted' ? started.units.map((unit) => unit.id) : []);
+      for (const e of log.events) {
+        const ids: UnitId[] = [];
+        switch (e.type) {
+          case 'UnitAttacked':
+            ids.push(e.source, ...e.targets.map((t) => t.unit));
+            if (e.redirectedFrom !== undefined) ids.push(e.redirectedFrom);
+            break;
+          case 'UnitHealed':
+          case 'StatusApplied':
+            ids.push(e.source, e.target);
+            break;
+          case 'ActionMisfired':
+          case 'ActionFizzled':
+          case 'ActionSkipped':
+          case 'PoisonTicked':
+          case 'UnitDied':
+          case 'GuardRaised':
+          case 'GuardEnded':
+          case 'StatusCleared':
+          case 'LeaderFell':
+            ids.push(e.unit);
+            break;
+          default:
+            break;
+        }
+        for (const id of ids) expect(roster.has(id), `${e.type}: ${id}`).toBe(true);
       }
-      for (const id of ids) expect(roster.has(id), `${e.type}: ${id}`).toBe(true);
-    }
-  });
+    },
+    20_000,
+  );
 });

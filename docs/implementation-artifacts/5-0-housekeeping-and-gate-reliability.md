@@ -24,28 +24,28 @@ So that the epic builds on a trustworthy gate and honest documents.
 ## Tasks / Subtasks
 
 - [ ] Task 1: The owed `?perf=1` on-device capture (AC: 1)
-  - [ ] Verify production is current (main deployed through 4.13; check the prod URL loads the Reveal tactic picker)
-  - [ ] Prep Danilo's session: prod URL + `?perf=1`, Chrome remote debugging, confirm the sampler's armed `console.info` appears
+  - [x] Verify production is current (main deployed through 4.13; check the prod URL loads the Reveal tactic picker)
+  - [x] Prep Danilo's session: prod URL + `?perf=1`, Chrome remote debugging, confirm the sampler's armed `console.info` appears
   - [ ] Scenarios in procedure order, resetting `window.__perfSamples = []` between them: Battle 1× (the seeded three-mages-wipeout Replay), Battle ×2 (same replay)
   - [ ] Compute min / median / 1%-low / floor-breach counts with the `summarizePerfSamples` definitions; fill the stubbed table at `docs/performance-verdict.md:201-204` and write a short story-5.0 note naming this the epic-5 baseline
   - [ ] Compare against the 2026-07-16 post-review baseline (Battle 1× min 40.0 / median 59.88 / zero floor breaches); if the floor breaks, STOP and surface — that is a real finding, not a doc chore
-- [ ] Task 2: Kill the coverage flake (AC: 2, 4)
-  - [ ] Reproduce first: run `pnpm coverage` a few times and note which test times out (history says `monster.test.ts:134`'s `matchSetupArb` property — default 5s timeout, no explicit override — and occasionally the `sim.test.ts` single-mode band test at :209)
-  - [ ] Extend the explicit-timeout house pattern to the known-heavy tests that lack one (rationale comment required, mirroring `sim.test.ts:248-250` / `combat.test.ts:421-424` — "a load flake, not a slow assertion"); do NOT blanket-raise a global `testTimeout`
-  - [ ] If timeouts alone don't hold, reduce coverage-run thread contention (root `vitest.config.ts` — it currently sets NO pool options; a coverage-scoped `--max-workers` on the root `coverage` script is the least invasive lever) and/or trim the heaviest arbitrary further (4.8's `VALID_MONSTER_PLACEMENTS` memoization is the precedent)
-  - [ ] Prove it: 5 consecutive clean `pnpm coverage` runs; record run count + approach in Completion Notes; update the deferred-work.md entry to RESOLVED with a pointer here
-- [ ] Task 3: The stale-text bundle — dated amendments, never silent rewrites (AC: 3)
-  - [ ] PRD `prds/prd-lordly-2026-07-11/prd.md` FR38 (:126): amend to the shipped model — a monster occupies ONE cell, costs 2 slots, reserves all 8 king-move neighbors at placement (no unit may stand adjacent); the two-cell semantics paragraph is superseded (story 4.8 device revision, 2026-07-20); wave 1 shipped Golem-only (dossier D-1b); roster growth is now Epic 5's 5.1/5.4/5.5
-  - [ ] Same file, light dated touches: the Epic-4 intro (:16), the dragon vignette (:37), the "12 classes ... dragon and golem" note (:93), Open Item 3 (:177 — mark superseded by the shipped single-cell model). LEAVE FR35's Tamer/Master synergies and the addendum's future-wave text alone (future-wave content, not stale claims about shipped code)
-  - [ ] FR17/FR19: add a dated note that Wipeout is the shipped product-facing default on Home (Danilo, story-4.5 device session; EXPERIENCE.md already amended) — the engine-level `'single'` fallback in MatchFlow is deliberate and unchanged
-  - [ ] Add a short PRD index paragraph (Feature-6b style) for Epic 5's new player-facing surfaces: the unit-data card and the Result battle-stats summary
-  - [ ] `ARCHITECTURE-SPINE.md` AD-14 (:133): dated amendment — `footprintCells` is now identity (single cell); the deployment rule is the 8-neighbor king-move reservation in validate.ts; anchor/derived-second-cell language superseded. Match the file's existing amendment styles (inline italic dated notes, `[ADOPTED ...]` tags)
-  - [ ] `ARCHITECTURE-SPINE.md` AD-2 area: the mid-battle-tactics deferral bullet already exists (~:239-242) — VERIFY it, and add 4.13's recorded relaxation (post-commit `setTactic` folds into `committedSetup.tactics.A` + cache invalidation; pre-battle only, AD-2-compatible) if not yet noted
-  - [ ] `epic-4-dossier/DOSSIER.md` §2 (:80-85): amendment block in the established style ("#### Amendment (story 4.8 device revision, 2026-07-20, Danilo) — ...") — single-cell + king-move; TARGETED/ACTS two-cell semantics dead; update the D-1b PRD-follow-ups pointer (:168-173) to note this story applied the corrections
-  - [ ] `epics.md` story-4.8 section (:839-857): one dated note at the section top recording shipped reality (single-cell Golem-only; the AC text below is the pre-revision plan); do NOT rewrite the ACs themselves
-  - [ ] Update deferred-work.md's "PRD follow-up (from story 4.8's dossier, D-1b...)" section to RESOLVED with a pointer here
-- [ ] Task 4: Gate (AC: 4)
-  - [ ] `pnpm test` + `pnpm typecheck` + `pnpm lint` green; confirm zero engine-source diffs in the File List (Task 2 touches only test files/config); balance hash untouched (no balance.ts diff — nothing to re-pin)
+- [x] Task 2: Kill the coverage flake (AC: 2, 4)
+  - [x] Reproduce first: run `pnpm coverage` a few times and note which test times out (history says `monster.test.ts:134`'s `matchSetupArb` property — default 5s timeout, no explicit override — and occasionally the `sim.test.ts` single-mode band test at :209)
+  - [x] Extend the explicit-timeout house pattern to the known-heavy tests that lack one (rationale comment required, mirroring `sim.test.ts:248-250` / `combat.test.ts:421-424` — "a load flake, not a slow assertion"); do NOT blanket-raise a global `testTimeout`
+  - [x] If timeouts alone don't hold, reduce coverage-run thread contention (root `vitest.config.ts` — it currently sets NO pool options; a coverage-scoped `--max-workers` on the root `coverage` script is the least invasive lever) and/or trim the heaviest arbitrary further (4.8's `VALID_MONSTER_PLACEMENTS` memoization is the precedent) — NOT NEEDED: lever 1 sufficed (see Completion Notes)
+  - [x] Prove it: 5 consecutive clean `pnpm coverage` runs; record run count + approach in Completion Notes; update the deferred-work.md entry to RESOLVED with a pointer here
+- [x] Task 3: The stale-text bundle — dated amendments, never silent rewrites (AC: 3)
+  - [x] PRD `prds/prd-lordly-2026-07-11/prd.md` FR38 (:126): amend to the shipped model — a monster occupies ONE cell, costs 2 slots, reserves all 8 king-move neighbors at placement (no unit may stand adjacent); the two-cell semantics paragraph is superseded (story 4.8 device revision, 2026-07-20); wave 1 shipped Golem-only (dossier D-1b); roster growth is now Epic 5's 5.1/5.4/5.5
+  - [x] Same file, light dated touches: the Epic-4 intro (:16), the dragon vignette (:37), the "12 classes ... dragon and golem" note (:93), Open Item 3 (:177 — mark superseded by the shipped single-cell model). LEAVE FR35's Tamer/Master synergies and the addendum's future-wave text alone (future-wave content, not stale claims about shipped code)
+  - [x] FR17/FR19: add a dated note that Wipeout is the shipped product-facing default on Home (Danilo, story-4.5 device session; EXPERIENCE.md already amended) — the engine-level `'single'` fallback in MatchFlow is deliberate and unchanged
+  - [x] Add a short PRD index paragraph (Feature-6b style) for Epic 5's new player-facing surfaces: the unit-data card and the Result battle-stats summary
+  - [x] `ARCHITECTURE-SPINE.md` AD-14 (:133): dated amendment — `footprintCells` is now identity (single cell); the deployment rule is the 8-neighbor king-move reservation in validate.ts; anchor/derived-second-cell language superseded. Match the file's existing amendment styles (inline italic dated notes, `[ADOPTED ...]` tags)
+  - [x] `ARCHITECTURE-SPINE.md` AD-2 area: the mid-battle-tactics deferral bullet already exists (~:239-242) — VERIFY it, and add 4.13's recorded relaxation (post-commit `setTactic` folds into `committedSetup.tactics.A` + cache invalidation; pre-battle only, AD-2-compatible) if not yet noted
+  - [x] `epic-4-dossier/DOSSIER.md` §2 (:80-85): amendment block in the established style ("#### Amendment (story 4.8 device revision, 2026-07-20, Danilo) — ...") — single-cell + king-move; TARGETED/ACTS two-cell semantics dead; update the D-1b PRD-follow-ups pointer (:168-173) to note this story applied the corrections
+  - [x] `epics.md` story-4.8 section (:839-857): one dated note at the section top recording shipped reality (single-cell Golem-only; the AC text below is the pre-revision plan); do NOT rewrite the ACs themselves
+  - [x] Update deferred-work.md's "PRD follow-up (from story 4.8's dossier, D-1b...)" section to RESOLVED with a pointer here
+- [x] Task 4: Gate (AC: 4)
+  - [x] `pnpm test` + `pnpm typecheck` + `pnpm lint` green; confirm zero engine-source diffs in the File List (Task 2 touches only test files/config); balance hash untouched (no balance.ts diff — nothing to re-pin)
 
 ## Dev Notes
 
@@ -106,8 +106,34 @@ Three debts rolled forward with teeth: the `?perf=1` capture was deferred **thre
 
 ### Agent Model Used
 
+Claude Fable 5 (claude-fable-5)
+
 ### Debug Log References
+
+- Task 1 prep: `gh run list` — main CI green through `0e2d4f3`; prod URL returns 200.
+- Task 2 reproduction attempt: 4 idle `pnpm coverage` runs, all clean (~4s wall, 594% CPU) — the flake is load-dependent (its recorded occurrences were on loaded CI runners / busy dev sessions) and does not reproduce on an idle machine. Fix targets the recorded failure mode per the deferred-work entry's own lever list.
+- Task 2 proof: 5 consecutive clean `pnpm coverage` runs post-change (40 files / 572 tests each, exit 0).
 
 ### Completion Notes List
 
+- **Task 2 (lever 1 sufficed):** explicit timeouts extended to every heavy test lacking one — `sim.test.ts` determinism (:47) and mode-default (:234) both run two full-pool sweeps → 20s each; `monster.test.ts`'s two `matchSetupArb` properties (~100 full battles each; the duplicate-target one is the recorded offender) → 20s each; `guard.test.ts`'s 500-run property already HAD a 20s timeout (the create-story recon's grep missed the bare-number arg form — 4.8 did ship it) → bumped to 40s for proportional headroom (500 runs vs the 100-run properties' 20s). No config/pool changes, no global timeout raise, no arbitrary trimming needed. Prettier reflowed the two `monster.test.ts` `test.prop` calls to multi-line arg form during `--write`.
+- **Task 3:** all amendments applied as dated in-place notes matching each file's established style. One discovery beyond the plan: PRD FR34's "tactics are fixed at placement" deviation sentence was also stale (superseded by 4.13's Reveal picker) — amended alongside the planned items. Spine AD-2 deferral bullet existed as predicted (verify-first paid off) — extended with the 4.13 relaxation + post-link-play sequencing; the spine's dead "two-cell semantics" deferred bullet and the now-committed "landscape backgrounds" bullet were also annotated. deferred-work.md: coverage-flake entry and D-1b PRD-follow-up section marked RESOLVED; the `?perf=1` capture entry stays OPEN until Task 1's device session lands.
+- **Task 4:** gate green — typecheck clean, lint clean (after prettier), 572/572 tests, zero diffs under `packages/engine/src` / `apps/web/src`, no balance change (no hash re-pin owed).
+- **Task 1 (remaining):** prod verified current and session prepped; awaiting Danilo's on-device capture (procedure handed over in-session). Story stays in-progress until the stubbed perf table is filled and compared.
+
 ### File List
+
+- packages/engine/test/sim.test.ts (M — 2 explicit timeouts + rationale comments)
+- packages/engine/test/monster.test.ts (M — 2 explicit timeouts + shared rationale comment; prettier reflow)
+- packages/engine/test/guard.test.ts (M — 20s→40s on the 500-run property, comment extended)
+- docs/planning-artifacts/prds/prd-lordly-2026-07-11/prd.md (M — FR38 superseded note, FR17 wipeout-default note, FR34 4.13-relaxation note, intro/vignette/roster/Open-Item-3 dated touches, new Feature 6c index paragraph)
+- docs/planning-artifacts/architecture/architecture-lordly-2026-07-12/ARCHITECTURE-SPINE.md (M — AD-14 amendment + `[AMENDED]` tag; Deferred list: mid-battle bullet extended, two-cell bullet resolved, backgrounds bullet updated)
+- docs/planning-artifacts/epic-4-dossier/DOSSIER.md (M — §2 amendment block; D-1b follow-ups pointer)
+- docs/planning-artifacts/epics.md (M — story-4.8 shipped-reality note)
+- docs/implementation-artifacts/deferred-work.md (M — 2 entries RESOLVED)
+- docs/implementation-artifacts/sprint-status.yaml (M — status tracking)
+- docs/implementation-artifacts/5-0-housekeeping-and-gate-reliability.md (M — this record)
+
+## Change Log
+
+- 2026-07-23: Tasks 2/3/4 complete (coverage-flake timeouts + full stale-text bundle + gate green). Task 1 prepped (prod current); awaiting Danilo's on-device `?perf=1` capture — the last gate before review.

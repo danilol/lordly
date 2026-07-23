@@ -222,7 +222,7 @@ describe('Guard shield replay invariant holds across ARBITRARY battles (matchSet
         }
       }
     },
-    20000, // 500 runs (up from the default 100, see above) needs more than vitest's 5000ms default
+    40_000, // 500 runs (up from the default 100, see above) needs more than vitest's 5000ms default — and proportionally more headroom than the 100-run properties' 20s under v8-instrumented coverage load (story 5.0)
   );
 
   it('the generated cases above actually exercised BOTH Guard tiers and the ally-behind case (branch reachability)', () => {
