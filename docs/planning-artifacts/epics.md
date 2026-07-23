@@ -1,7 +1,11 @@
 ---
 stepsCompleted: [1, 2, 3, 4]
 epic4ExtensionRun: 2026-07-16
+epic5ExtensionRun: 2026-07-23
 inputDocuments:
+  - docs/implementation-artifacts/epic-4-retro-2026-07-22.md
+  - docs/implementation-artifacts/deferred-work.md
+  - docs/planning-artifacts/midjourney-asset-prompts-2026-07-23.md
   - docs/planning-artifacts/prds/prd-lordly-2026-07-11/prd.md
   - docs/planning-artifacts/prds/prd-lordly-2026-07-11/addendum.md
   - docs/planning-artifacts/architecture/architecture-lordly-2026-07-12/ARCHITECTURE-SPINE.md
@@ -177,8 +181,12 @@ The game becomes a real PWA: installable, fully offline for vs-AI, verified agai
 The game Danilo actually targets arrives: 5-slot armies with two-cell dragons and golems looming over the grid, a 12-class roster held together by role-based advantage relations, a tactic to call and a leader to crown and protect, crits and dodges that make DEX real, soldiers with names you start to remember — and a battle a newcomer can finally *read* (action ledger, from→to attacks, Turn wording, the contrast fix). One mega-epic by explicit PO decision: **one combined `logVersion`/`balanceVersion` bump** (AD-15 — one history invalidation, not several; the design-complete union extension ships with the first union-touching story; `StatusCleared` and the wipeout cap 5→10 ride the same bump). Stories still ship and get device-accepted incrementally.
 **FRs covered:** FR32–FR39 (new), plus the Epic 4 amendments to FR1, FR2, FR4–FR7, FR9, FR10 (Archmage gating decision), FR14, FR15, FR19, FR20, FR24, FR28; NFR4's sweep scaling pass; NFR6's widened engine contract.
 
+### Epic 5: Content-complete & the medieval look — the game PvP deserves *(committed 2026-07-23, epic-4 retro planning decision + scoping session)*
+Every class Danilo wants in the game — human and monster — lands on the existing role-relation and single-cell-monster systems, with every move defined row by row in one PO-driven design pass (the 5.1 dossier, gating all roster stories — source evidence up front per the epic-4 retro team agreement). Meanwhile the app dresses in its real identity: ONE medieval theme (PO decision 2026-07-23 — the two-theme Heritage/Night system is retired unbuilt), Midjourney-generated art throughout (backgrounds, sprites, portraits, UI chrome, logo, icons — prompt pack: `midjourney-asset-prompts-2026-07-23.md`; Danilo generates in parallel, stories float on batch arrival), the OB64 unit-data card, a Result battle-stats summary, flow corrections, and the housekeeping with deadlines (the thrice-deferred `?perf=1` capture, the coverage flake, the stale-PRD bundle). Closes with a 4.12-style pre-PvP balance verdict. **Fence: no new systems** (no new mechanics, tactics, or link-play work) — content on existing systems only; `logVersion` 4 untouched, `balanceVersion` ticks per roster/moves story.
+**FRs covered:** FR32/FR33 (full per-class/per-row move table), FR38 (roster growth incl. the deferred dragon+slayer wave if listed), FR21/FR2 (art upgrade), FR22/FR23 (Result summary), NFR1 (backgrounds + capture gates), NFR4 (sweep polices every wave); plus the stale-PRD corrections (FR38 single-cell monster, FR17 wipeout default).
+
 **Future (outside this breakdown):**
-- Link-play 1v1 via shareable URL — its engine seam (AD-1/AD-3/AD-11) is already fixed; broken down when the epic is scheduled (sequenced after Epic 4 — epic-3 retro decision).
+- Link-play 1v1 via shareable URL — its engine seam (AD-1/AD-3/AD-11) is already fixed; broken down when the epic is scheduled (now sequenced after Epic 5 — epic-4 retro + 2026-07-23 scoping). Design pass carries: symmetric see-boards-then-choose-tactics, PvP replay kept, HistoryEntry opponent field, Durable Objects/D1 persistence, room protocol open to multi-battle series (team-battles north-star).
 
 ## Epic 1: Play a complete match against the AI on your phone
 
@@ -935,3 +943,237 @@ So that no composition, tactic, or monster dominates and the game stays fun.
 **Given** the tuned build on the production URL
 **When** Danilo plays real matches on his device
 **Then** felt balance is accepted — squads, tactics, leaders, monsters, crits all feel fair and fun — and performance is re-verified against the baseline with the post-monster asset load; the on-device sign-off closes the epic.
+
+## Epic 5: Content-complete & the medieval look — the game PvP deserves
+
+Every class Danilo wants — human and monster — lands on the existing role-relation and single-cell-monster systems, every move is defined row by row in one PO-driven design pass, and the app dresses in its real medieval identity with Danilo's Midjourney-generated art. Closes with a pre-PvP balance verdict so Epic 6 (link-play) launches a finished-feeling game. Covers FR32/FR33 (full move table), FR38 (roster growth), FR21/FR2 (art), FR22/FR23 (Result summary), NFR1 (backgrounds + the owed capture), NFR4 (sweep per wave), plus the stale-PRD corrections.
+
+**Breakdown decisions (PO, 2026-07-23):** one epic, ordered stories, **fence: no new systems** — no new mechanics, tactics, or link-play work; content on existing systems only. `logVersion` 4 is untouched throughout (a new class changes no event shape — the 4.8 precedent; a new `MoveKind` union value rides `balanceVersion` only — the 4.7 `bash` precedent). **ONE theme** (PO decision — the DESIGN.md two-theme Heritage/Night system is retired unbuilt; a dated spine amendment records it). Art arrives via Danilo's parallel Midjourney pipeline (`midjourney-asset-prompts-2026-07-23.md`): stories 5.2/5.3/5.9 float on batch arrival and never block the sequence; Danilo owns art picks and the device pass (the established art-story split). Story 5.1 is the epic's gate for 5.4/5.5/5.6 — per the epic-4 retro team agreement, OB64 source evidence is a design input, collected BEFORE engine code. Story 5.0 runs first: the `?perf=1` capture must not survive a fourth deferral.
+
+### Story 5.0: Housekeeping and gate reliability
+
+As the game's developer,
+I want the rolled-forward evidence and tooling debts paid before new work begins,
+So that the epic builds on a trustworthy gate and honest documents.
+
+**Acceptance Criteria:**
+
+**Given** the thrice-deferred `?perf=1` capture (4.10 → 4.11 → 4.12)
+**When** this story's device session runs against the deployed production build
+**Then** the capture follows `docs/performance-verdict.md`'s procedure (three-mages wipeout Replay at 1× and ×2, per-scenario resets, single-read traces), covers the 4.10 traces + 4.11 move plate + post-monster asset load, fills the stubbed 4.10 table, and becomes the fresh baseline the epic's visual stories are measured against.
+
+**Given** the `pnpm coverage` instrumentation-timeout flake (recorded across 4.8/4.10/4.11)
+**When** the fix lands (explicit timeouts for the known-heavy suites, thread-contention tuning, and/or arbitrary trimming)
+**Then** repeated full `pnpm coverage` runs pass without retry, and the approach is recorded — a gate that only passes on retry is quiet erosion.
+
+**Given** the stale planning text accumulated across Epic 4
+**When** the PRD/dossier touch lands
+**Then** FR38 describes the shipped single-cell king-move monster (two-cell text gone), FR17/FR19 record Wipeout-as-default, AD-2 carries the mid-battle-tactics deferral note, dossier §2/§4 and the story-4.8 epics text are amended in place with dated notes, and a short PRD index paragraph covers Epic 5's new player-facing surfaces (unit-data card, battle-stats summary).
+
+**Given** the engine
+**When** this story ships
+**Then** nothing changed: no version bump, balance hash and goldens untouched.
+
+### Story 5.1: The roster and moves dossier
+
+As the game's product owner,
+I want every class I intend to ship — human and monster — designed on paper with its full row-by-row move table, from OB64 source evidence,
+So that the roster stories implement a settled design instead of discovering it on my phone.
+
+**Acceptance Criteria:**
+
+**Given** the epic-4 retro team agreement (source evidence before engine code)
+**When** the design sitting opens
+**Then** Danilo supplies the full class list (humans AND monsters) with OB64 reference captures/research for every mechanic in question, and the dossier records the evidence beside each decision — no rule is invented where the source can answer.
+
+**Given** the class list
+**When** the dossier lands
+**Then** every class has a stat row (HP/STR/VIT/INT/MEN/AGI/DEX), role, sex, 3-letter code, slot cost, and a complete front/mid/back move-and-count row — including a PO-reviewed revision of the shipped 12 (the owed 4.7 fine-tune, absorbed here), and the two 4.7 deferred rulings are decided: `attackMoveOf`'s behavior if a future table puts Guard in the back row, and the overlapping-guards tie-break.
+
+**Given** monsters on the list
+**When** the dossier lands
+**Then** each reuses the shipped single-cell + 8-neighbor king-move reservation model with its slot cost and loom treatment stated; if dragons are listed, their slayer classes and role-relation entries arrive in the same table (dossier D-1b's pairing honored).
+
+**Given** the versioning rules
+**When** the dossier closes
+**Then** it confirms the era needs NO `logVersion` bump (no event-shape change; any new `MoveKind` value rides `balanceVersion` per the 4.7 precedent), states the expected `balanceVersion` tick points (5.4, 5.5, conditionally 5.10), and Danilo signs off the whole dossier — zero code in this story.
+
+### Story 5.2: The medieval look
+
+As a player,
+I want the app's chrome to look like a medieval tactical RPG instead of placeholder rectangles,
+So that the game's identity reads from the first screen.
+
+**Acceptance Criteria:**
+
+**Given** Danilo's Midjourney UI batch (chrome, wordmark, app icon — prompt pack sections 4–6)
+**When** the restyle lands
+**Then** buttons (enabled/disabled), panel frames, and ground textures use the generated art across every scene, the "Lordly" wordmark replaces the Georgia stand-in on Home, and the PWA icons (192/512/maskable) derive from the new master.
+
+**Given** the PO's one-theme decision
+**When** DESIGN.md is amended
+**Then** the two-theme Heritage/Night specification is retired with a dated note, the single shipped theme's tokens are recorded, and the FR39f contrast treatment survives on the new surfaces (verified on device).
+
+**Given** NFR1 and the licensing record
+**When** this story closes
+**Then** frame rate is spot-checked against 5.0's fresh baseline, and `attribution.ts`/Credits reflect the generated assets (replaced CC entries retired).
+
+### Story 5.3: Battle backgrounds
+
+As a player,
+I want the battle fought over real terrain instead of a flat dark backdrop,
+So that every clash feels like a place in a medieval world.
+
+**Acceptance Criteria:**
+
+**Given** Danilo's Midjourney background batch (prompt pack section 3)
+**When** backgrounds land in Battle and Reveal
+**Then** the terrain renders under the floating formation grids at the 360-logical portrait canvas, at least two biomes ship with a deterministic selection rule (recorded), and reduced-motion preferences add no parallax or movement.
+
+**Given** the FR39f legibility constraint
+**When** labels, damage numbers, and the move plate render over the art
+**Then** they stay readable on device — via the art's calm upper region and, if needed, a translucent scrim behind text — with Danilo's device pass as the acceptance gate.
+
+**Given** NFR1
+**When** the busiest case replays (three-mages wipeout per the perf doc)
+**Then** the capture against 5.0's baseline shows no 30fps-floor breach, recorded as a perf-verdict addendum.
+
+### Story 5.4: Roster wave — humans
+
+As a player,
+I want the dossier's new human classes draftable, placeable, and fighting correctly,
+So that my squads draw from the roster the game was always meant to have.
+
+**Acceptance Criteria:**
+
+**Given** the 5.1 dossier
+**When** the wave lands
+**Then** every new human class exists as balance data (stats, role relations, per-row moves per the dossier — including the dossier's revision of the shipped 12), every `Record<UnitClass, …>` table is exhaustively extended (typecheck run early — the 4.8 lesson), the name tables grow so `rollName`'s exhaustion fallback stays unreachable (the 4.2 forward-note), and newcomers ship on interim sprites until 5.9.
+
+**Given** the Draft picker and comp-rendering scenes
+**When** the roster grows
+**Then** the icon grid scales to the full class count, the matchup-chip layout gains the bounds check the 4.3 review deferred, and every army-row scene is checked against BASE_WIDTH=360 (the standing coupling-site rule).
+
+**Given** AD-8 discipline and NFR4
+**When** the wave ships
+**Then** `balanceVersion` ticks with hash re-pin, goldens are re-recorded ONLY where the dossier's move-table revision changes existing battles (audited event-by-event), the AI pool gains newcomer representation (single-unit substitutions first — the 4.3 method), and the both-mode sweep converges ≤65%.
+
+### Story 5.5: Roster wave — monsters
+
+As a player,
+I want the dossier's new monsters looming on the board with their slayers ready,
+So that monster armies become a real strategic axis before PvP.
+
+**Acceptance Criteria:**
+
+**Given** the 5.1 dossier
+**When** the wave lands
+**Then** each new monster reuses the single-cell + king-move reservation model with its dossier slot cost, joins the loom rendering with a size-appropriate scale, and any dossier-paired slayer classes land in the same wave with their role-relation entries.
+
+**Given** placement and the AI
+**When** monsters grow in number
+**Then** the placement legality (bannedCells/toAnchor path) holds for every new monster with tests pinning the dossier's reservation examples, and the AI pool gains monster archetypes shaped by the 4.8 lesson (archetype SHAPE over stat tweaks).
+
+**Given** AD-8 discipline and NFR4
+**When** the wave ships
+**Then** `balanceVersion` ticks with hash re-pin, monster-free battles replay bit-identically (regression pin), and the both-mode sweep converges ≤65% with the wardens-style floors re-checked.
+
+### Story 5.6: The unit-data card
+
+As a player,
+I want to open a unit's data card while assembling my squad,
+So that I can see exactly what each class does per row before I commit — the OB64 UNIT DATA read.
+
+**Acceptance Criteria:**
+
+**Given** a unit in the Placement tray or on the board
+**When** the player uses the card gesture (decided in-story — tap is taken by the crown; the gesture audit team agreement applies)
+**Then** a modal/bottom-sheet opens showing: per-row moves WITH counts (the 4.11 `rowActionCounts`/`moveDisplayName` seams), a damage-type glyph per move row (blast/spell = magic; slash/arrow/bash/staff = physical), the stat block, HP, and element — reading live from BALANCE so the 5.4/5.5 waves appear automatically.
+
+**Given** Danilo's Midjourney portrait batch (prompt pack section 2)
+**When** portraits are available
+**Then** the card shows the class portrait; without the batch the card ships portrait-less and gains it in 5.9 — the story never blocks on art.
+
+**Given** the UX spine
+**When** the card ships
+**Then** DESIGN.md/EXPERIENCE.md gain the card's layout and gesture as a dated amendment, and Danilo's device pass accepts it; no engine change, no version bump.
+
+### Story 5.7: The battle-stats summary
+
+As a player,
+I want the Result screen to show what actually happened — damage, blocks, dodges, crits, heals, statuses,
+So that I can learn from the battle instead of just seeing who won.
+
+**Acceptance Criteria:**
+
+**Given** the battle's `BattleLog` (AD-2 — the log already carries everything)
+**When** the Result screen renders
+**Then** a summary shows per-unit and total: damage dealt/taken, blocks (`redirectedFrom`), dodges and crits (`outcome`), heals, statuses applied, and poison ticks — a pure fold over events, no engine change, no version bump.
+
+**Given** Wipeout mode
+**When** a multi-engagement battle ends
+**Then** the summary aggregates across all engagements correctly (poison persistence included), with unit identity held by id.
+
+**Given** the 360-wide canvas and 5-unit armies
+**When** the summary renders
+**Then** the layout fits without overflow in every comp shape incl. monsters (the army-row coupling rule), replay/history behavior is untouched, and Danilo's device pass accepts the read.
+
+### Story 5.8: Flow corrections and the board-code decision
+
+As a player,
+I want the rough edges smoothed — no wasted resolves, no redundant chrome, one badge language,
+So that the game feels finished, not iterated.
+
+**Acceptance Criteria:**
+
+**Given** the Reveal double-resolve (deferred at 4.13's review)
+**When** the fix lands
+**Then** Reveal reads the initial roster from `committedSetup` without resolving, Fight! performs the single resolve, and the end-to-end determinism tests stay green.
+
+**Given** the PO's board-code wish (2026-07-17) and its recorded UX-spine conflict
+**When** Sally's amendment lands
+**Then** EXPERIENCE.md/dossier §7's "board keeps codes" is superseded with a dated note, Reveal/Battle boards identify units by sprite alone, the crown/guard markers re-anchor cleanly, and `unitCodeStyle` survives for whatever text remains on tiles — verified on Danilo's device.
+
+**Given** the element-badge inconsistency (deferred since 2.1)
+**When** this story closes
+**Then** every scene uses the dot-only compact badge (FR3 — one treatment everywhere), plus any flow items from Danilo's device list at story creation; no engine change, no version bump.
+
+### Story 5.9: Full-roster art integration
+
+As a player,
+I want every class and monster wearing Danilo's generated art — sprites and portraits,
+So that the roster looks like one game by one artist.
+
+**Acceptance Criteria:**
+
+**Given** Danilo's Midjourney sprite/portrait batches (prompt pack sections 1–2, keyed and downscaled via the established sharp pipeline)
+**When** the integration lands
+**Then** the units sheet carries a dedicated frame for every class incl. the 5 wave-1 newcomers and all 5.4/5.5 additions, per-texture NEAREST holds (never global pixelArt), the sheet frame-count guard and `sprites.test.ts`'s hardcoded frame constant update together (the 4.3 defer), and the 5.6 card gains its portraits.
+
+**Given** the licensing record
+**When** replaced CC assets retire
+**Then** `attribution.ts`/Credits are overhauled (incl. resolving the PWA-icon provenance note if the icons were regenerated in 5.2), with one entry per surviving source.
+
+**Given** the established art-story split
+**When** this story runs
+**Then** Danilo owns tile/portrait picks and the device pass; the story stays in-progress until his on-device acceptance; no engine change, no version bump.
+
+### Story 5.10: The pre-PvP verdict
+
+As the game's developer,
+I want the full roster certified balanced and the era's evidence complete,
+So that link-play opens on a game we can prove is fair.
+
+**Acceptance Criteria:**
+
+**Given** the full post-5.4/5.5 roster
+**When** the certification runs
+**Then** the class-coverage guard proves every class rides the STRATEGY_POOL, the both-mode convergence sweep passes ≤65% (runs=200 with a runs=500 confirmation — the sweep-convergence rule), floors (wardens-style viability) are re-checked, and any crossing is either tuned (with `balanceVersion` bump + hash re-pin + audited golden re-records) or recorded as a conscious deviation — never silent.
+
+**Given** the epic's visual load (backgrounds, chrome, full-roster sheet)
+**When** the closing device session runs
+**Then** a `?perf=1` capture against 5.0's baseline shows no 30fps-floor breach, recorded in the perf verdict.
+
+**Given** Danilo on the deployed build
+**When** he plays real matches
+**Then** felt balance is accepted on device and `docs/balance-verdict.md` gains the epic-5 addendum — the sign-off is the "ready for link-play" certificate that closes the epic.
