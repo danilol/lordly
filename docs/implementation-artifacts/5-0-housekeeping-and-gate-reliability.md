@@ -1,5 +1,5 @@
 ---
-baseline_commit: 54c01996a4680dd06e05de4c7a1b1e8ede98d8fc
+baseline_commit: 54c019944e2a77b0f528998caa436f19d7e0526a
 ---
 
 # Story 5.0: Housekeeping and gate reliability
