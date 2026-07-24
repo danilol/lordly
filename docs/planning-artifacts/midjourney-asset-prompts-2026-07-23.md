@@ -30,9 +30,19 @@ soft muted colors, no people, no creatures, painterly style like a classic tacti
 --ar 9:16 --no text, watermark, characters
 ```
 
-Other terrains to swap in: `[rocky mountain pass]` · `[castle courtyard]` · `[ancient magical ruins]` · `[snowy field]` · `[dark forest clearing]`.
+Other terrains to swap in: `[rocky mountain pass]` · `[ancient magical ruins]` · `[snowy field]` · `[dark forest clearing]`.
 
-**Quality check:** look at the image on your phone and imagine small gold text over the middle. If the middle is too busy, ask Midjourney for a variation or add `, extra calm and empty in the middle` to the prompt.
+**The castle one needs its own prompt** (lesson from the first batch, 2026-07-24: the first try gave a beautiful bird's-eye courtyard full of towers and a pond — great art, but too busy behind small battle text; we kept it for the Home screen instead). For a castle BATTLE background, the camera must stay low and the middle must stay empty:
+
+```
+fantasy castle battleground, wide empty stone courtyard floor filling the middle of the image,
+castle walls and towers only far in the distance, seen from ground level, slightly above,
+soft muted colors, plain open ground with subtle worn stone texture, no pond, no garden, no people,
+painterly style like a classic tactical RPG,
+--ar 9:16 --no text, watermark, characters, towers in the middle
+```
+
+**Quality check (all backgrounds):** look at the image on your phone and imagine small gold text over the middle. If the middle is too busy, ask Midjourney for a variation or add `, extra calm and empty in the middle` to the prompt.
 
 ## 2. Unit sprites (the 12 classes)
 
@@ -70,6 +80,8 @@ Each swap line now includes how that class hides its face:
 Don't give them team colors on purpose (blue/red = you/enemy is done by the game, not the art).
 
 ## 3. Logo + app icon
+
+**Home screen background: already done.** Your first castle-courtyard image (the bird's-eye one with the towers and pond) is perfect for the Home screen — no gameplay text sits there, so busy-and-beautiful is exactly right. No new prompt needed.
 
 Logo (Midjourney often misspells words — retry a few times, or we use just the emblem and I add real text):
 
