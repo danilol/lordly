@@ -9,6 +9,8 @@
 3. **When you get ONE image you love, copy its Midjourney image URL.** Then add ` --sref PASTE-URL-HERE` to the end of every next prompt in the same family. This is what makes all 12 classes look like the same game. That's the only parameter you need to understand.
 4. **When a batch is ready, just tell me where the files are.** I do all the resizing, cutting, and wiring.
 
+**Folder convention (agreed 2026-07-24):** samples land in `docs/planning-artifacts/ux-designs/midjourney/`. For each class/scene I rank a **top 5** (`archer-pick-1..5.png` etc. + game-size previews in `preview-32px/`) and delete the rest (they live in the Midjourney profile). Danilo picks the winner; it is **copied** into `selected/` (e.g. `selected/archer.png`) — the top-5 candidates are always kept. `selected/` = what's done; `*-pick-*` = waiting for a choice.
+
 ## Suggested order
 
 1. One battle background (easiest win, sets the mood)
