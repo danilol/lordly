@@ -48,6 +48,8 @@ painterly style like a classic tactical RPG,
 
 **Class, not hero (lesson from the first batch, 2026-07-24):** a board sprite must read as "a knight" — anyone's knight. A visible face and hair makes it read as one specific hero instead. So for sprites: **hide the face** — helmet visor down, hood up, mask on, or face in shadow. (The charming visible-face style is NOT wasted — it's exactly what we want for the portraits in section 5.)
 
+**Refinement (second batch, 2026-07-24): hide the EYES, not the whole face.** A completely black empty face under a hood reads like a ghost — wrong for your own soldiers. A hidden-eyes-but-visible-chin character stays alive and friendly. Your bearded wizard is the perfect example: hat covers the eyes, beard and nose keep him human. If a generation looks spooky, add `, small friendly details visible below the hood, not a dark empty void` to the prompt.
+
 Do the Knight first. When one looks right, add its URL with `--sref` to all the others.
 
 ```
@@ -67,7 +69,7 @@ Each swap line now includes how that class hides its face:
 |---|---|
 | Mercenary | `chibi fantasy mercenary, male, ... , axe and light leather armor, red-brown colors, closed helmet, face not visible` |
 | Archer | `chibi fantasy archer, female, ... , bow and quiver, green hood pulled up, face in shadow` |
-| Wizard | `chibi fantasy wizard, male, ... , staff and long robe, deep blue hood pulled up, face in shadow` |
+| Wizard | `chibi fantasy bearded wizard, wise, male, ... , staff and long robe, deep blue hat covering the eyes, big grey beard and nose visible` *(the proven winner — 2026-07-24 batch)* |
 | Cleric | `chibi fantasy cleric, female, ... , holy staff, white and gold robes with a deep cowl, face in shadow` |
 | Witch | `chibi fantasy witch, female, ... , crooked staff, big pointed hat tilted down hiding the face, purple dress` |
 | Berserker | `chibi fantasy berserker, male, ... , huge two-handed axe, bare arms, fearsome war mask covering the face` |
