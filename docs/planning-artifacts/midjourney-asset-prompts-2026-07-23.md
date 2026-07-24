@@ -36,11 +36,13 @@ Other terrains to swap in: `[rocky mountain pass]` · `[castle courtyard]` · `[
 
 ## 2. Unit sprites (the 12 classes)
 
+**Class, not hero (lesson from the first batch, 2026-07-24):** a board sprite must read as "a knight" — anyone's knight. A visible face and hair makes it read as one specific hero instead. So for sprites: **hide the face** — helmet visor down, hood up, mask on, or face in shadow. (The charming visible-face style is NOT wasted — it's exactly what we want for the portraits in section 5.)
+
 Do the Knight first. When one looks right, add its URL with `--sref` to all the others.
 
 ```
 cute chibi fantasy knight, male, full body, standing pose,
-sword and shield, blue armor,
+sword and shield, blue armor, full helmet with the visor down, face not visible,
 big head, small body, thick dark outline, simple flat colors, easy to read when small,
 one character centered on a plain solid white background, no shadow,
 retro tactical RPG style like Ogre Battle 64,
@@ -49,19 +51,21 @@ retro tactical RPG style like Ogre Battle 64,
 
 For each other class, change only the **first two lines** (who they are + what they carry/wear):
 
+Each swap line now includes how that class hides its face:
+
 | Class | Swap in |
 |---|---|
-| Mercenary | `chibi fantasy mercenary, male, ... , axe and light leather armor, red-brown colors` |
-| Archer | `chibi fantasy archer, female, ... , bow and quiver, green hood` |
-| Wizard | `chibi fantasy wizard, male, ... , staff and long robe, deep blue robes` |
-| Cleric | `chibi fantasy cleric, female, ... , holy staff, white and gold robes` |
-| Witch | `chibi fantasy witch, female, ... , crooked staff and hat, purple dress` |
-| Berserker | `chibi fantasy berserker, male, ... , huge two-handed axe, bare arms, war paint` |
-| Phalanx | `chibi fantasy heavy guard, male, ... , tower shield and spear, grey heavy armor` |
-| Ninja | `chibi fantasy ninja, male, ... , twin daggers, dark clothes and mask` |
-| Valkyrie | `chibi fantasy valkyrie, female, ... , winged helmet and lance, silver and sky blue` |
-| Sorceress | `chibi fantasy sorceress, female, ... , crystal staff, violet and midnight blue` |
-| Golem | `chibi fantasy stone golem, huge and wide, ... , cracked rock body with glowing runes, moss green and grey` |
+| Mercenary | `chibi fantasy mercenary, male, ... , axe and light leather armor, red-brown colors, closed helmet, face not visible` |
+| Archer | `chibi fantasy archer, female, ... , bow and quiver, green hood pulled up, face in shadow` |
+| Wizard | `chibi fantasy wizard, male, ... , staff and long robe, deep blue hood pulled up, face in shadow` |
+| Cleric | `chibi fantasy cleric, female, ... , holy staff, white and gold robes with a deep cowl, face in shadow` |
+| Witch | `chibi fantasy witch, female, ... , crooked staff, big pointed hat tilted down hiding the face, purple dress` |
+| Berserker | `chibi fantasy berserker, male, ... , huge two-handed axe, bare arms, fearsome war mask covering the face` |
+| Phalanx | `chibi fantasy heavy guard, male, ... , tower shield and spear, grey heavy armor, full closed helmet, face not visible` |
+| Ninja | `chibi fantasy ninja, male, ... , twin daggers, dark clothes, mask and hood, only shadow where the face is` |
+| Valkyrie | `chibi fantasy valkyrie, female, ... , winged helmet with the visor down, lance, silver and sky blue, face not visible` |
+| Sorceress | `chibi fantasy sorceress, female, ... , crystal staff, violet and midnight blue, deep hood pulled up, face in shadow` |
+| Golem | `chibi fantasy stone golem, huge and wide, ... , cracked rock body with glowing runes, moss green and grey` (no face problem — it's a rock) |
 
 Don't give them team colors on purpose (blue/red = you/enemy is done by the game, not the art).
 
@@ -102,7 +106,7 @@ Subjects we need:
 
 ## 5. Portraits (later — for the unit-data card)
 
-Same idea as sprites: do one, lock with `--sref`, then the rest. Change only `[who]`:
+**This is where faces belong.** The "specific hero" look from your first knight batch (the blond boy) is exactly right here — the portrait gives the class its personality; the board sprite stays anonymous. Same idea as sprites: do one, lock with `--sref`, then the rest. Change only `[who]`:
 
 ```
 fantasy RPG character portrait, [young knight, male, determined face, blue armor],
