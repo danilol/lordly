@@ -200,9 +200,18 @@ Per this doc's doctrine (empirical over reasoned), the authoritative NFR1 check 
 
 | Scenario (procedure order)             | Min fps               | Character of the trace |
 | -------------------------------------- | --------------------- | ---------------------- |
-| Battle 1× (three-mages-wipeout Replay) | _pending deferred capture_ | —                 |
-| Battle ×2                              | _pending deferred capture_ | —                 |
+| Battle 1× (three-mages-wipeout Replay) | 23.98 | 4,205 samples (~70s); median 59.88, 1%-low 37.0; 116 frames <55fps; **4 isolated frames under the 30fps floor** (24.0/29.9/24.0/29.9, scattered mid-battle, ~one per 17s) — single-frame hitches, never a sustained dip |
+| Battle ×2                              | 8.01 (scene-entry burst) | 904 samples (~15s); median 59.88; ALL 5 sub-30 samples are the first 5 of the scenario (the History→Replay screen transition — the same scene-entry category the baseline table notes separately); worst in-battle frame 59.5 — clean |
 
 Post-review note (2026-07-20): the review round added arrival-delayed impact effects (popups/washes now land when the trace does, via a scene-clock `delayedCall`) — zero additional GameObjects, so the ≤1-object/beat accounting above is unchanged.
+
+### Capture record — story 5.0 (2026-07-24, Danilo's device, deployed production build): THE EPIC-5 BASELINE
+
+The deferred capture above ran 2026-07-24 (three deferrals after 4.10 — closed by the epic-4 retro's no-fourth-deferral action item). Procedure notes, recorded honestly:
+
+- **The between-scenario reset was missed** — the ×2 trace contained the 1× trace as an exact sample-for-sample prefix. Handled deterministically: the ×2 scenario is the 904-sample suffix (verified prefix-equality before slicing). No data was lost or double-counted.
+- **The device ran stretches at 120Hz** (adaptive refresh — the trace contains sustained ~120fps sample runs the 2026-07-16 baseline never showed). Sub-60 samples in this capture are therefore not 1:1 comparable with the baseline's: a "40fps" sample here can be one heavy frame among 8.3ms ticks. Treat cross-capture deltas with that caveat.
+- **Verdict vs the 2026-07-16 baseline** (min 40.0 / zero floor breaches): Battle 1× now shows 4 isolated sub-30 single-frame hitches and 116 sub-55 frames (baseline: 1) — the accumulated epic-4 per-beat churn (4.10 traces + arrival delays, 4.11 plates, monster assets) plus possible adaptive-refresh measurement noise. Median holds rock-solid at 59.88 in both scenarios and ×2 is clean; **Danilo watched the same battles and accepted: "it felt smooth" (option 1 — recorded deviation, not tuned)**. NFR1's floor is formally crossed 4× in 4,205 frames (0.095%); accepted with this note rather than investigated, per the PO call.
+- **Standing instruction:** this capture is the baseline the Epic 5 visual stories (5.2 chrome, 5.3 backgrounds, 5.9 full-roster sheet) measure against; story 5.10's closing capture re-checks the floor after all of them. If sub-30 singles grow beyond "isolated" (or a sustained dip appears), the pooling fix named above (trace/popup/wash reuse) is the first lever.
 
 Device-class caveat unchanged: the capture device is a Pixel 9 Pro XL, an accepted deviation from AC1's Pixel 6a-class floor (documented in the 2026-07-16 review note above).

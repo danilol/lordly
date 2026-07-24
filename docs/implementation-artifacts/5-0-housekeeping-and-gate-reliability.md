@@ -4,7 +4,7 @@ baseline_commit: 54c019944e2a77b0f528998caa436f19d7e0526a
 
 # Story 5.0: Housekeeping and gate reliability
 
-Status: ready-for-dev
+Status: review
 
 <!-- Epic 5 opener (epics.md §Epic 5). Three independent debt threads, no feature work. Runs FIRST in the epic: AC1's capture is the fresh perf baseline stories 5.2/5.3/5.10 measure against, and it MUST NOT survive a fourth deferral (epic-4 retro action item 2). -->
 
@@ -23,12 +23,12 @@ So that the epic builds on a trustworthy gate and honest documents.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: The owed `?perf=1` on-device capture (AC: 1)
+- [x] Task 1: The owed `?perf=1` on-device capture (AC: 1)
   - [x] Verify production is current (main deployed through 4.13; check the prod URL loads the Reveal tactic picker)
   - [x] Prep Danilo's session: prod URL + `?perf=1`, Chrome remote debugging, confirm the sampler's armed `console.info` appears
-  - [ ] Scenarios in procedure order, resetting `window.__perfSamples = []` between them: Battle 1× (the seeded three-mages-wipeout Replay), Battle ×2 (same replay)
-  - [ ] Compute min / median / 1%-low / floor-breach counts with the `summarizePerfSamples` definitions; fill the stubbed table at `docs/performance-verdict.md:201-204` and write a short story-5.0 note naming this the epic-5 baseline
-  - [ ] Compare against the 2026-07-16 post-review baseline (Battle 1× min 40.0 / median 59.88 / zero floor breaches); if the floor breaks, STOP and surface — that is a real finding, not a doc chore
+  - [x] Scenarios in procedure order, resetting `window.__perfSamples = []` between them: Battle 1× (the seeded three-mages-wipeout Replay), Battle ×2 (same replay) — DEVIATION: the reset was missed; the ×2 trace contained the 1× trace as an exact prefix, verified sample-for-sample and sliced deterministically (no data lost)
+  - [x] Compute min / median / 1%-low / floor-breach counts with the `summarizePerfSamples` definitions; fill the stubbed table at `docs/performance-verdict.md:201-204` and write a short story-5.0 note naming this the epic-5 baseline
+  - [x] Compare against the 2026-07-16 post-review baseline (Battle 1× min 40.0 / median 59.88 / zero floor breaches); if the floor breaks, STOP and surface — that is a real finding, not a doc chore — DONE: floor crossed 4× (isolated single-frame hitches, 0.095%), SURFACED to Danilo with the two options; his call: "felt smooth" → recorded deviation with adaptive-120Hz caveat, re-check at each visual story + 5.10
 - [x] Task 2: Kill the coverage flake (AC: 2, 4)
   - [x] Reproduce first: run `pnpm coverage` a few times and note which test times out (history says `monster.test.ts:134`'s `matchSetupArb` property — default 5s timeout, no explicit override — and occasionally the `sim.test.ts` single-mode band test at :209)
   - [x] Extend the explicit-timeout house pattern to the known-heavy tests that lack one (rationale comment required, mirroring `sim.test.ts:248-250` / `combat.test.ts:421-424` — "a load flake, not a slow assertion"); do NOT blanket-raise a global `testTimeout`
@@ -119,7 +119,7 @@ Claude Fable 5 (claude-fable-5)
 - **Task 2 (lever 1 sufficed):** explicit timeouts extended to every heavy test lacking one — `sim.test.ts` determinism (:47) and mode-default (:234) both run two full-pool sweeps → 20s each; `monster.test.ts`'s two `matchSetupArb` properties (~100 full battles each; the duplicate-target one is the recorded offender) → 20s each; `guard.test.ts`'s 500-run property already HAD a 20s timeout (the create-story recon's grep missed the bare-number arg form — 4.8 did ship it) → bumped to 40s for proportional headroom (500 runs vs the 100-run properties' 20s). No config/pool changes, no global timeout raise, no arbitrary trimming needed. Prettier reflowed the two `monster.test.ts` `test.prop` calls to multi-line arg form during `--write`.
 - **Task 3:** all amendments applied as dated in-place notes matching each file's established style. One discovery beyond the plan: PRD FR34's "tactics are fixed at placement" deviation sentence was also stale (superseded by 4.13's Reveal picker) — amended alongside the planned items. Spine AD-2 deferral bullet existed as predicted (verify-first paid off) — extended with the 4.13 relaxation + post-link-play sequencing; the spine's dead "two-cell semantics" deferred bullet and the now-committed "landscape backgrounds" bullet were also annotated. deferred-work.md: coverage-flake entry and D-1b PRD-follow-up section marked RESOLVED; the `?perf=1` capture entry stays OPEN until Task 1's device session lands.
 - **Task 4:** gate green — typecheck clean, lint clean (after prettier), 572/572 tests, zero diffs under `packages/engine/src` / `apps/web/src`, no balance change (no hash re-pin owed).
-- **Task 1 (remaining):** prod verified current and session prepped; awaiting Danilo's on-device capture (procedure handed over in-session). Story stays in-progress until the stubbed perf table is filled and compared.
+- **Task 1 (complete, 2026-07-24):** capture ran on Danilo's device against production. Battle 1×: 4,205 samples, min 23.98, median 59.88, 1%-low 37.0, 116 <55fps, **4 isolated sub-30 single-frame hitches** (scattered, ~1/17s). Battle ×2: 904 samples (prefix-sliced — the reset was missed, handled deterministically), clean after the 5-sample scene-entry burst. Two honest caveats recorded: missed reset (prefix-verified slice) and adaptive-120Hz refresh stretches (cross-capture comparability). The floor crossing was SURFACED per the AC's stop-and-surface rule; Danilo's call: "felt smooth" → accepted as a recorded deviation (not tuned/investigated), the capture is THE EPIC-5 BASELINE, re-checked at 5.2/5.3/5.9 and closed at 5.10. Trace analysis script + extracted traces in the session scratchpad (not committed — the verdict doc carries the numbers).
 
 ### File List
 
@@ -132,8 +132,10 @@ Claude Fable 5 (claude-fable-5)
 - docs/planning-artifacts/epics.md (M — story-4.8 shipped-reality note)
 - docs/implementation-artifacts/deferred-work.md (M — 2 entries RESOLVED)
 - docs/implementation-artifacts/sprint-status.yaml (M — status tracking)
+- docs/performance-verdict.md (M — 4.10 stub table filled + story-5.0 capture record, the epic-5 baseline)
 - docs/implementation-artifacts/5-0-housekeeping-and-gate-reliability.md (M — this record)
 
 ## Change Log
 
 - 2026-07-23: Tasks 2/3/4 complete (coverage-flake timeouts + full stale-text bundle + gate green). Task 1 prepped (prod current); awaiting Danilo's on-device `?perf=1` capture — the last gate before review.
+- 2026-07-24: Task 1 complete — capture run, analyzed, floor crossing surfaced, Danilo accepted ("felt smooth"), verdict doc updated as the epic-5 baseline, deferred-work entry resolved. All ACs satisfied → review.
