@@ -133,6 +133,10 @@ classic 90s tactical RPG portrait like Tactics Ogre,
 
 ---
 
+## Before choosing a winner: the glitch check
+
+AI images often carry small generation mistakes that you only see when you look closely (found on a cleric candidate, 2026-07-24: a malformed cross and a second necklace appearing from nowhere). Before picking a winner, zoom in and check: **hands** (finger count, grip), **accessories** (necklaces/belts that start or end nowhere), **weapons** (blade attached correctly), **symmetry** (two different boots/pauldrons). Small glitches hide at 32px on the board — but the same image is reused big in the unit-data card later, where they show.
+
 ## When you're stuck
 
 - **Image too detailed/noisy?** Add `, simpler, fewer details` to the prompt.
