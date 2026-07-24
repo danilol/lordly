@@ -236,6 +236,7 @@ describe('outcome invariant holds across ARBITRARY setups (matchSetupArb) — th
         }
       }
     },
+    20_000, // ~100 full battles brush Vitest's 5s default under v8-instrumented coverage load (story 5.0 review) — a load flake, not a slow assertion
   );
 
   it('the generated cases above actually exercised BOTH the crit and dodge branches (branch-reachability, not just correctness-if-reached)', () => {

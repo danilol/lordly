@@ -210,13 +210,18 @@ describe('sim sweep (NFR4)', () => {
     expect(ended).toMatchObject({ winner: 'B', hpPct: { A: 10, B: 100 } });
   });
 
+  // Explicit 20s timeout (story 5.0 review): this test only READS the
+  // describe-scope `report`, but that sweep runs at collection time where
+  // per-test timeouts don't apply — if the runner ever charges collection cost
+  // to the first tests in the file (the historical flake record named this
+  // test), the belt below is the only guard a test-level setting can offer.
   it(`ACCEPTANCE BAND: no archetype exceeds ${ACCEPTANCE_BAND * 100}% aggregate win rate (AC3)`, () => {
     const table = report.archetypes.map((a) => `${a.id}: ${(a.winRate * 100).toFixed(1)}%`).join('\n');
     for (const a of report.archetypes) {
       expect(a.winRate, `dominant archetype flagged — sweep table:\n${table}`).toBeLessThanOrEqual(ACCEPTANCE_BAND);
     }
     expect(report.flagged).toEqual([]);
-  });
+  }, 20_000);
 
   it('the melee-heavy wardens stays VIABLE and in-band (the 3.0 wasted-swing floor, revised for the melee blockade)', () => {
     // Story 3.0 flagged the melee-heavy `wardens` at a 33% single-mode floor and

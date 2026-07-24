@@ -4,7 +4,7 @@ baseline_commit: 54c019944e2a77b0f528998caa436f19d7e0526a
 
 # Story 5.0: Housekeeping and gate reliability
 
-Status: review
+Status: done
 
 <!-- Epic 5 opener (epics.md §Epic 5). Three independent debt threads, no feature work. Runs FIRST in the epic: AC1's capture is the fresh perf baseline stories 5.2/5.3/5.10 measure against, and it MUST NOT survive a fourth deferral (epic-4 retro action item 2). -->
 
@@ -16,7 +16,7 @@ So that the epic builds on a trustworthy gate and honest documents.
 
 ## Acceptance Criteria
 
-1. **The `?perf=1` capture runs and fills the stub.** The device session against the deployed production build follows `docs/performance-verdict.md`'s exact post-review procedure (three-mages-wipeout Replay at 1× and ×2, per-scenario `window.__perfSamples` copy + reset, single-read traces, `summarizePerfSamples` stats), covers the accumulated churn (4.10 traces, 4.11 move plate, post-monster asset load, 4.13 Reveal picker), fills the STUBBED table in the 4.10 addendum (`docs/performance-verdict.md:201-204`), and is recorded as the epic's fresh baseline. Pass bar: zero frames under the 30fps floor (NFR1), compared against the 2026-07-16 baseline table.
+1. **The `?perf=1` capture runs and fills the stub.** The device session against the deployed production build follows `docs/performance-verdict.md`'s exact post-review procedure (three-mages-wipeout Replay at 1× and ×2, per-scenario `window.__perfSamples` copy + reset, single-read traces, `summarizePerfSamples` stats), covers the accumulated churn (4.10 traces, 4.11 move plate, post-monster asset load *— review correction 2026-07-24: NOT the 4.13 Reveal picker; the Replay procedure never enters Reveal and the sampler isn't wired there*), fills the STUBBED table in the 4.10 addendum (`docs/performance-verdict.md:201-204`), and is recorded as the epic's fresh baseline. Pass bar: zero frames under the 30fps floor (NFR1), compared against the 2026-07-16 baseline table.
 2. **`pnpm coverage` passes repeatedly without retry.** The instrumentation-timeout flake (recorded across 4.8/4.10/4.11; deferred-work.md 2026-07-20 entry) is fixed — known-heavy tests get explicit timeouts with rationale comments (the established `sim.test.ts`/`combat.test.ts` pattern) and/or coverage-run contention is reduced — then 5 consecutive full `pnpm coverage` runs pass clean, and the chosen approach is recorded in this story.
 3. **The stale planning text is corrected with dated amendments.** PRD FR38 describes the shipped single-cell king-move monster (two-cell text amended, not silently rewritten); the shipped Wipeout-as-Home-default is recorded against FR17/FR19; the AD-14 spine entry and dossier §2 gain dated amendments to the single-cell model; AD-2's mid-battle-tactics deferral note is verified present (it may already exist) and extended with 4.13's recorded relaxation if missing; epics.md's story-4.8 section gains a dated shipped-reality note; and a short PRD index paragraph covers Epic 5's new player-facing surfaces (unit-data card, battle-stats summary).
 4. **The engine is untouched.** No version bump; balance hash and goldens byte-identical; the full gate (`pnpm test`, `pnpm typecheck`, `pnpm lint`) stays green.
@@ -46,6 +46,24 @@ So that the epic builds on a trustworthy gate and honest documents.
   - [x] Update deferred-work.md's "PRD follow-up (from story 4.8's dossier, D-1b...)" section to RESOLVED with a pointer here
 - [x] Task 4: Gate (AC: 4)
   - [x] `pnpm test` + `pnpm typecheck` + `pnpm lint` green; confirm zero engine-source diffs in the File List (Task 2 touches only test files/config); balance hash untouched (no balance.ts diff — nothing to re-pin)
+
+### Review Findings
+
+<!-- Senior code review 2026-07-24 (Fable 5, 3-layer adversarial: Blind Hunter + Edge Case Hunter + Acceptance Auditor). 0 decision-needed, 13 patches, 0 deferred, 3 dismissed (story-AC stricter than epics-AC = enrichment not defect; test.prop timeout arg form verified valid in @fast-check/vitest 0.4 + vitest 4.1; guard margin nuance folded into patch 12). -->
+
+- [x] [Review][Patch] Coverage-flake fix incomplete — 6 more `matchSetupArb` full-battle properties + both sim band tests still on the 5s default; the describe-scope sweep runs at collection time where per-test timeouts don't reach [resolve.test.ts:463/480/484; crit-dodge.test.ts:221; leader.test.ts:111; combat.test.ts:252; sim.test.ts:213/267]
+- [x] [Review][Patch] AC2's 5-idle-runs "proof" would have passed pre-fix too — re-prove under artificial CPU load + add honest residual-risk wording (watch CI) [story Completion Notes; deferred-work.md coverage entry]
+- [x] [Review][Patch] "All 4 ACs satisfied" overstates AC1's recorded-deviation close (pass bar said zero floor breaches) [story Change Log; sprint-status.yaml]
+- [x] [Review][Patch] Verdict headline table still claims "zero frames below the 30fps floor" above its own new 4-breach baseline [performance-verdict.md:9]
+- [x] [Review][Patch] Scene-entry exemption rule unstated — "crossed 4×" vs 9 total sub-30 samples; ×2's entry cost regressed 40fps→8fps and "clean" doesn't flag it [performance-verdict.md story-5.0 record]
+- [x] [Review][Patch] ×2 suffix likely truncated (904 samples vs baseline's 1,279 for the identical replay, while 1× grew) — likely read-before-battle-end; record it and scope the claim to the captured window [performance-verdict.md story-5.0 record]
+- [x] [Review][Patch] "Covers the 4.13 Reveal picker" is decorative — the Replay procedure never enters Reveal and the sampler isn't wired there [story AC1 + Task-1 note; performance-verdict.md]
+- [x] [Review][Patch] epics.md two-cell/dragon scatter left unamended and the narrower scope unrecorded [epics.md:41/64/113/161/181/637/683]
+- [x] [Review][Patch] FR19 carries no note of its own (Wipeout-default recorded only at FR17) [prd.md:106]
+- [x] [Review][Patch] FR5's hidden-tactic clause is stale after 4.13 (tactic now chosen after reveal) — missed by the stale-text sweep that fixed its sibling FR34 [prd.md:52]
+- [x] [Review][Patch] FR38 amendment silent on the DEAD "two monsters never share a column" rule (shipped king-move ban allows front+back same column) + the stale "no shared column" comment inside validate.ts [prd.md:126; packages/engine/src/validate.ts:159-161 — comment-only engine touch, 4.9-review precedent]
+- [x] [Review][Patch] guard.test.ts 40s comment's "proportionally more headroom" is arithmetically inverted — restate with measured margins (Edge Hunter: guard ≈209ms vs monster 58-85ms instrumented-idle; both ≥90× margin) [guard.test.ts:226]
+- [x] [Review][Patch] Hygiene: PRD frontmatter `updated: 2026-07-16` predates its own amendments; capture durations quoted at 60Hz despite recorded 120Hz stretches; File List marks the new story file "(M)" [prd.md:5; performance-verdict.md; story File List]
 
 ## Dev Notes
 
@@ -116,16 +134,21 @@ Claude Fable 5 (claude-fable-5)
 
 ### Completion Notes List
 
-- **Task 2 (lever 1 sufficed):** explicit timeouts extended to every heavy test lacking one — `sim.test.ts` determinism (:47) and mode-default (:234) both run two full-pool sweeps → 20s each; `monster.test.ts`'s two `matchSetupArb` properties (~100 full battles each; the duplicate-target one is the recorded offender) → 20s each; `guard.test.ts`'s 500-run property already HAD a 20s timeout (the create-story recon's grep missed the bare-number arg form — 4.8 did ship it) → bumped to 40s for proportional headroom (500 runs vs the 100-run properties' 20s). No config/pool changes, no global timeout raise, no arbitrary trimming needed. Prettier reflowed the two `monster.test.ts` `test.prop` calls to multi-line arg form during `--write`.
+- **Task 2 (lever 1 sufficed; scope COMPLETED at review):** explicit timeouts on every `matchSetupArb` full-battle property and heavy sweep test in the suite — dev round: `sim.test.ts` determinism (:47) + mode-default (:234) (two full-pool sweeps each → 20s), `monster.test.ts`'s two properties (20s each; the duplicate-target one is the recorded offender), `guard.test.ts` 500-run property 20s→40s (it already HAD 20s — the recon grep missed the bare-number arg form). **Review round closed the holes the dev round missed:** `resolve.test.ts` ×3 (incl. seed-identity, which resolves 200 battles — the heaviest), `crit-dodge.test.ts` ×1, `leader.test.ts` ×1, and the single-mode band test (belt only — its heavy `runSweep` runs at describe-collection time where per-test timeouts don't reach; recorded as a known mechanism limit). `combat.test.ts`'s property already had 15s since 4.8. No config/pool changes, no global timeout raise. Prettier reflowed the multi-line `test.prop` forms.
+- **AC2 proof, review-strengthened:** the dev round's 5 idle runs were a weak proof (pre-fix idle runs also passed — the flake is load-dependent). The review added the honest test: **2 full `pnpm coverage` runs with all 10 cores saturated by busy-loop burners — both clean, zero timeouts.** Residual risk recorded: the collection-time sweep in `sim.test.ts` remains unguardable by per-test timeouts; if a coverage timeout ever names a sim band test again, the fix is moving the sweep into a `beforeAll` (which respects `hookTimeout`) — noted here so the next reader doesn't re-diagnose.
 - **Task 3:** all amendments applied as dated in-place notes matching each file's established style. One discovery beyond the plan: PRD FR34's "tactics are fixed at placement" deviation sentence was also stale (superseded by 4.13's Reveal picker) — amended alongside the planned items. Spine AD-2 deferral bullet existed as predicted (verify-first paid off) — extended with the 4.13 relaxation + post-link-play sequencing; the spine's dead "two-cell semantics" deferred bullet and the now-committed "landscape backgrounds" bullet were also annotated. deferred-work.md: coverage-flake entry and D-1b PRD-follow-up section marked RESOLVED; the `?perf=1` capture entry stays OPEN until Task 1's device session lands.
 - **Task 4:** gate green — typecheck clean, lint clean (after prettier), 572/572 tests, zero diffs under `packages/engine/src` / `apps/web/src`, no balance change (no hash re-pin owed).
 - **Task 1 (complete, 2026-07-24):** capture ran on Danilo's device against production. Battle 1×: 4,205 samples, min 23.98, median 59.88, 1%-low 37.0, 116 <55fps, **4 isolated sub-30 single-frame hitches** (scattered, ~1/17s). Battle ×2: 904 samples (prefix-sliced — the reset was missed, handled deterministically), clean after the 5-sample scene-entry burst. Two honest caveats recorded: missed reset (prefix-verified slice) and adaptive-120Hz refresh stretches (cross-capture comparability). The floor crossing was SURFACED per the AC's stop-and-surface rule; Danilo's call: "felt smooth" → accepted as a recorded deviation (not tuned/investigated), the capture is THE EPIC-5 BASELINE, re-checked at 5.2/5.3/5.9 and closed at 5.10. Trace analysis script + extracted traces in the session scratchpad (not committed — the verdict doc carries the numbers).
 
 ### File List
 
-- packages/engine/test/sim.test.ts (M — 2 explicit timeouts + rationale comments)
+- packages/engine/test/sim.test.ts (M — 2 explicit timeouts + rationale comments; review: band-test belt + collection-time note)
 - packages/engine/test/monster.test.ts (M — 2 explicit timeouts + shared rationale comment; prettier reflow)
-- packages/engine/test/guard.test.ts (M — 20s→40s on the 500-run property, comment extended)
+- packages/engine/test/guard.test.ts (M — 20s→40s on the 500-run property; review: comment arithmetic corrected to measured margins)
+- packages/engine/test/resolve.test.ts (M — review: 3 property timeouts + rationale)
+- packages/engine/test/crit-dodge.test.ts (M — review: property timeout)
+- packages/engine/test/leader.test.ts (M — review: property timeout)
+- packages/engine/src/validate.ts (M — review: stale "no shared column" COMMENT corrected to the shipped king-move rule; comment-only, no behavior/hash change — recorded AC4 letter-deviation, 4.9-review precedent)
 - docs/planning-artifacts/prds/prd-lordly-2026-07-11/prd.md (M — FR38 superseded note, FR17 wipeout-default note, FR34 4.13-relaxation note, intro/vignette/roster/Open-Item-3 dated touches, new Feature 6c index paragraph)
 - docs/planning-artifacts/architecture/architecture-lordly-2026-07-12/ARCHITECTURE-SPINE.md (M — AD-14 amendment + `[AMENDED]` tag; Deferred list: mid-battle bullet extended, two-cell bullet resolved, backgrounds bullet updated)
 - docs/planning-artifacts/epic-4-dossier/DOSSIER.md (M — §2 amendment block; D-1b follow-ups pointer)
@@ -133,9 +156,10 @@ Claude Fable 5 (claude-fable-5)
 - docs/implementation-artifacts/deferred-work.md (M — 2 entries RESOLVED)
 - docs/implementation-artifacts/sprint-status.yaml (M — status tracking)
 - docs/performance-verdict.md (M — 4.10 stub table filled + story-5.0 capture record, the epic-5 baseline)
-- docs/implementation-artifacts/5-0-housekeeping-and-gate-reliability.md (M — this record)
+- docs/implementation-artifacts/5-0-housekeeping-and-gate-reliability.md (A — this record; new file)
 
 ## Change Log
 
 - 2026-07-23: Tasks 2/3/4 complete (coverage-flake timeouts + full stale-text bundle + gate green). Task 1 prepped (prod current); awaiting Danilo's on-device `?perf=1` capture — the last gate before review.
-- 2026-07-24: Task 1 complete — capture run, analyzed, floor crossing surfaced, Danilo accepted ("felt smooth"), verdict doc updated as the epic-5 baseline, deferred-work entry resolved. All ACs satisfied → review.
+- 2026-07-24: Task 1 complete — capture run, analyzed, floor crossing surfaced, Danilo accepted ("felt smooth"), verdict doc updated as the epic-5 baseline, deferred-work entry resolved. ACs 2–4 satisfied; **AC1 closed on a recorded, PO-accepted deviation from its zero-floor-breach pass bar** (4 in-battle crossings + the missed reset, both recorded) → review.
+- 2026-07-24 (senior review, Fable 5, 3-layer adversarial): 0 decisions, **13 patches applied** (6 more property timeouts + the band-test belt; loaded-core AC2 proof; verdict-doc headline supersede + explicit scene-entry exemption rule + 9-total accounting + ×2 truncation note + duration caveat; FR5/FR19/FR38-column-rule/PRD-frontmatter amendments; epics.md document-level shipped-reality note; validate.ts stale comment [engine COMMENT-only — recorded AC4 letter-deviation, 4.9-review precedent, no behavior/hash change]; guard comment arithmetic; AC1 4.13-coverage claim corrected; record-honesty wording), 0 deferred, 3 dismissed. Gate re-run green incl. 2 loaded-core coverage runs → done.

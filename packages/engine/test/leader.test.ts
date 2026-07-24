@@ -108,19 +108,23 @@ describe('LeaderFell emission (FR35, story 4.5)', () => {
     expect(log.events[idx - 2]?.type).toBe('PoisonTicked'); // the death came from the tick, not combat
   });
 
-  test.prop([matchSetupArb])('across any battle: at most one LeaderFell per side, each on the designated leader, each right after that unit died', (s) => {
-    const events = resolveBattle(s).events;
-    const fells = events.filter((e) => e.type === 'LeaderFell');
-    for (const side of ['A', 'B'] as Side[]) {
-      expect(fells.filter((e) => e.type === 'LeaderFell' && e.side === side).length).toBeLessThanOrEqual(1);
-    }
-    for (let i = 0; i < events.length; i++) {
-      const e = events[i];
-      if (e?.type !== 'LeaderFell') continue;
-      expect(e.unit).toBe(`${e.side}:${s.leaders[e.side]}`); // the FR35 leader id
-      expect(events[i - 1]).toEqual({ type: 'UnitDied', unit: e.unit }); // combat OR poison — always after the death
-    }
-  });
+  test.prop([matchSetupArb])(
+    'across any battle: at most one LeaderFell per side, each on the designated leader, each right after that unit died',
+    (s) => {
+      const events = resolveBattle(s).events;
+      const fells = events.filter((e) => e.type === 'LeaderFell');
+      for (const side of ['A', 'B'] as Side[]) {
+        expect(fells.filter((e) => e.type === 'LeaderFell' && e.side === side).length).toBeLessThanOrEqual(1);
+      }
+      for (let i = 0; i < events.length; i++) {
+        const e = events[i];
+        if (e?.type !== 'LeaderFell') continue;
+        expect(e.unit).toBe(`${e.side}:${s.leaders[e.side]}`); // the FR35 leader id
+        expect(events[i - 1]).toEqual({ type: 'UnitDied', unit: e.unit }); // combat OR poison — always after the death
+      }
+    },
+    20_000,
+  ); // ~100 full battles brush Vitest's 5s default under v8-instrumented coverage load (story 5.0 review) — a load flake, not a slow assertion
 });
 
 describe('the sober-package physical penalty (FR35, dossier §4)', () => {

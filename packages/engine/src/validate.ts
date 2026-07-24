@@ -156,9 +156,11 @@ export function validateMatchSetup(setup: MatchSetup): void {
         throw new InvalidMatchSetupError('out-of-grid', `side ${side} unit ${i} placed outside the grid at '${String(cell.row)}/${String(cell.col)}'`);
       }
     });
-    // Footprint legality (story 4.8, AD-14: monster anchors, ≤2 monsters, no
-    // shared column, no overlapping cell — small or monster) — the SAME
-    // predicate `canPlace`/`legalAnchors` call below. One implementation.
+    // Placement legality (story 4.8 device revision, AD-14: single-cell
+    // monsters, ≤2 monsters, the 8-neighbor king-move reservation, no
+    // overlapping cell — small or monster; sharing a COLUMN is legal when the
+    // cells aren't adjacent, e.g. front+back) — the SAME predicate
+    // `canPlace`/`legalAnchors` call below. One implementation.
     const units = cells.map((cell, i) => ({ class: (army[i] as { class: UnitClass }).class, placement: cell as Placement }));
     const violation = footprintViolation(units);
     if (violation !== undefined) {

@@ -460,32 +460,48 @@ describe('resolveBattle chassis (FR13, FR17, AD-1, AD-12)', () => {
 });
 
 describe('chassis properties (NFR2, FR20)', () => {
-  test.prop([matchSetupArb])('terminates with a bounded, well-formed log', (s) => {
-    const log = resolveBattle(s);
-    // Per-engagement ceiling (10 units since 4.2): passes(≤2) + turns(≤ 10
-    // units × 2 actions, each ≤2 events: misfire marker + effect) + poison
-    // ticks(≤10 — poisoned units tick at EVERY natural engagement end) +
-    // StatusCleared(≤30 — at most 3 non-poison statuses per living unit shed
-    // at the seam) + 1 EngagementEnded = 73. Deaths are BATTLE-wide (a unit
-    // dies once): ≤10 UnitDied total. Single mode runs one engagement;
-    // wipeout is bounded by BALANCE.engagementCap (its termination
-    // guarantee). BattleStarted/BattleEnded bookend once.
-    const engagements = s.mode === 'wipeout' ? BALANCE.engagementCap : 1;
-    expect(log.events.length).toBeLessThanOrEqual(1 + engagements * (2 + 40 + 10 + 30 + 1) + 10 + 1);
-    expect(log.events.filter((e) => e.type === 'UnitDied').length).toBeLessThanOrEqual(10);
-    expect(log.events[0]?.type).toBe('BattleStarted');
-    expect(log.events[log.events.length - 1]?.type).toBe('BattleEnded');
-  });
+  // Explicit 20s timeouts on the three matchSetupArb properties below (story
+  // 5.0 review): each resolves ~100 arbitrary full battles (seed-identity
+  // resolves 200) and brushes Vitest's 5s default under v8-instrumented
+  // coverage + parallel project load — a load flake, not a slow assertion.
+  test.prop([matchSetupArb])(
+    'terminates with a bounded, well-formed log',
+    (s) => {
+      const log = resolveBattle(s);
+      // Per-engagement ceiling (10 units since 4.2): passes(≤2) + turns(≤ 10
+      // units × 2 actions, each ≤2 events: misfire marker + effect) + poison
+      // ticks(≤10 — poisoned units tick at EVERY natural engagement end) +
+      // StatusCleared(≤30 — at most 3 non-poison statuses per living unit shed
+      // at the seam) + 1 EngagementEnded = 73. Deaths are BATTLE-wide (a unit
+      // dies once): ≤10 UnitDied total. Single mode runs one engagement;
+      // wipeout is bounded by BALANCE.engagementCap (its termination
+      // guarantee). BattleStarted/BattleEnded bookend once.
+      const engagements = s.mode === 'wipeout' ? BALANCE.engagementCap : 1;
+      expect(log.events.length).toBeLessThanOrEqual(1 + engagements * (2 + 40 + 10 + 30 + 1) + 10 + 1);
+      expect(log.events.filter((e) => e.type === 'UnitDied').length).toBeLessThanOrEqual(10);
+      expect(log.events[0]?.type).toBe('BattleStarted');
+      expect(log.events[log.events.length - 1]?.type).toBe('BattleEnded');
+    },
+    20_000,
+  );
 
-  test.prop([matchSetupArb])('seed identity: same setup → bit-identical log (FR20)', (s) => {
-    expect(resolveBattle(s)).toEqual(resolveBattle(s));
-  });
+  test.prop([matchSetupArb])(
+    'seed identity: same setup → bit-identical log (FR20)',
+    (s) => {
+      expect(resolveBattle(s)).toEqual(resolveBattle(s));
+    },
+    20_000,
+  );
 
-  test.prop([matchSetupArb])('never mutates its input (AD-1)', (s) => {
-    const before = structuredClone(s);
-    resolveBattle(s);
-    expect(s).toEqual(before);
-  });
+  test.prop([matchSetupArb])(
+    'never mutates its input (AD-1)',
+    (s) => {
+      const before = structuredClone(s);
+      resolveBattle(s);
+      expect(s).toEqual(before);
+    },
+    20_000,
+  );
 
   it('returns a DEEP-frozen log — nested event fields cannot be mutated (AD-1/AD-2)', () => {
     const [s] = fc.sample(matchSetupArb, { numRuns: 1, seed: 42 });

@@ -20,6 +20,8 @@ inputDocuments:
 
 This document provides the complete epic and story breakdown for Lord Battle Tactics, decomposing the requirements from the PRD, UX Design if it exists, and Architecture requirements into implementable stories.
 
+> **Shipped-reality note (2026-07-24, story 5.0 review):** every mention of a TWO-CELL monster or "dragon and golem" in this document (requirements inventory, coverage map, Epic 4 texts) is historical planning language. As shipped (story 4.8 device revision): wave 1 fielded the **Golem only**, and a monster is **single-cell** — one tile, 2 slots, all 8 king-move neighbors reserved; sharing a column is legal when the cells aren't adjacent. Authority: PRD FR38's amendment + `docs/rules.md` §Monsters. Dragons arrive with Epic 5's roster waves. Historical epic/story texts below are NOT rewritten (the per-story shipped-reality notes and the story records carry the deltas).
+
 ## Requirements Inventory
 
 ### Functional Requirements
