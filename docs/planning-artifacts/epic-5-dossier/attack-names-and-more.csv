@@ -1,0 +1,57 @@
+Attack Name,Damage Type,Element,Attacks description
+Bite,Physical,,Tears the flesh of the target with sharp fangs
+Claw,Physical,,Slashes an enemy with its claws
+Cleave,Physical,,Cleaves an enemy with his axe
+Lash,Physical,,Lashes enemy with a whip
+Peck,Physical,,Pecks the target with its pointed beak
+Pierce,Physical,(divine for angel knight),Pierces target's body with the weapon
+Pull strings,Physical,,Uses a doll to attack an enemy
+Rend,Physical,,Rends the enemy with his claws
+Shoot,Physical,,Shoots an arrow at a distant enemy
+Slash,Physical,,Slashes an enemy with his sword
+Smash,Physical,,
+Sonic boom,Physical,,Swings his sword with enough force to create a deadly shockwave
+Strike,Physical,,Bludgeons target with the equipped weapon
+Thrust,Physical,,Thrusts the weapon at the target
+Magical & Special Attacks,,,
+Abyss,Skill,Dark,"By sucking a portion of the soul into the netherworld, the target is put to sleep"
+Banish,Skill,Divine,Holy ring of light with the power of disintegrating undead.
+Clear Disaster,Skill,Water,Frigid hoarfrost that inflicts hypothermia on the entire enemy unit and puts them to sleep
+Crimson Tide,Skill,Fire,Summons a giant fireball that explodes on the entire enemy unit
+Divine Ray,Skill,Divine,Bolt of holy lightning with the power to disintegrate an entire unit of undead creatures
+Effect magic,Magical,Any,Casts a status effect spell of her inherent element
+Elemental Magic (Basic),Magical,Any,"Casts a damaging spell on the enemy, depending on char element or equipped book"
+Elemental Magic (Advanced),Magical,Any,Casts an advanced spell of his inherent element
+Earthquake,Skill,Earth,Summons a sinkhole to swallow up the entire enemy unit
+Evocation,Magical,any,Casts an advanced spell of the most effective element
+Lightning,Magical,Wind,Casts a bolt of lightning to strike an enemy
+Mesmerize,Skill,Dark,Peculiar gaze that inflicts pain and puts multiple targets to sleep
+Nightmare,Magical,Dark,Supportive spell of bane that puts its target into a nightmarish slumber
+Ninja Art,Skill,Any,Casts an advanced spell of a random element
+Radiant Gale,Skill,Wind,Summons a flash of wind and lightning at the entire enemy unit        
+Thunderflare,Magical,Wind,Spell of wind that calls down bolts of lightning upon the area of effect
+Thunder arrow,Skill,Wind,A ball of eletricity taht is fired at the target
+Weapon magic,Magical,Any,Casts a basic spell of his chosen weapon's element
+Wind shot,Skill,Wind,Strong blast of wind that damages the target with its impact
+Windstorm,Skill,Wind,Creates a vortex of wind that strikes the entire enemy unit
+Dragon Breath Attacks,,,
+Acid Breath,Skill,Earth,Spits a ball of acid at a group of enemies
+Breath of Cold,Skill,Water,Dragon's breath that freezes all within its area of effect
+Cold Breath,Skill,Water,Spits a blast of ice at a group of enemies
+Fire Breath (Dragon),Skill,Fire,Spits a blast of flame at a group of enemies
+Fire Breath (Wyrm),Skill,Fire,Spits a blast of flames from its mouth
+Lightning Breath,Skill,Lightning,Spits a blast of lightning at a group of enemies
+Rotten Breath,Skill,Dark,Dragon's breath that putrefies all within its area of effect
+Sacred Breath,Skill,Divine,Dragon's breath with the power of desintegrating the undead
+Thunder Breath,Skill,Wind,
+Utility & Status Moves,,,
+Gaze of Terror,Skill,Dark,Anyone who meets its cursed gaze is turned into stone. If somehow its gaze could be blocked...
+Healing,Heal,Divine,Restores health to an ally through prayer
+Healing Plus,Heal,Divine,Restorative spell of virtue that heals multiple characters through prayer
+Life Drain,Skill,Dark,"With the power of bane, the attacker absorbs the target's life essence into his own"
+Magic Missile,Skill,Divine,A ball of pure light with the power of desintegrate undead
+Petrify,Skill,Dark,Breath of Cockatrice that turns all within the area of effect into stone
+Pumpkin Shower,Skill,Dark,"Upon impact, the magical pumpkin reduces the target's HP by half"
+Pumpkin Smash,Skill,Dark,"Magic Spell that summons many rotten pumpkins upon the enemy, greatly reducing their HP"
+Throw a kiss (fairy),Skill,Divine,Sweet kiss that temporarily enhances the target's performance <3
+Throw a kiss (gremlim),Skill,Dark,Sickly kiss that temporarily hinders the target's performance

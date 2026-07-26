@@ -4,7 +4,7 @@ baseline_commit: 286cda5b266a9f3d048aaf3ecf1f05c6d7a0b104
 
 # Story 5.1: The roster and moves dossier
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -21,31 +21,31 @@ so that the roster stories implement a settled design instead of discovering it 
 
 ## Tasks / Subtasks
 
-- [ ] Task 0: Set up the dossier home (AC: 1, 4)
-  - [ ] Create `docs/planning-artifacts/epic-5-dossier/DOSSIER.md` as the single authoritative design record (the 4.1 pattern: sectioned per AC, a dated decision log, evidence beside each decision). The epic-4 dossier stays untouched — era decisions that survive (single-cell monsters, ADR 0003, Guard shield) are REFERENCED, not copied.
-  - [ ] Open with the constraint header: no new systems (the epic fence), `logVersion` 4 untouched, ADR 0003 frozen (no new draw sites — any move that would add a `battle`-stream draw is out of scope for this era), Guard = Full/Half shield (4.7 amendment, not the superseded bodyguard text above it).
-- [ ] Task 1: Sitting 1 — the class list and the source evidence (AC: 1)
-  - [ ] Danilo supplies the target roster: which humans join the shipped 11 smalls, which monsters join Golem, and (if dragons) which slayer classes pair with them. His pasted OB64 research is authoritative (the standing agreement); the reference links live in `docs/planning-artifacts/midjourney-asset-prompts-2026-07-23.md#Reference-material` (ogrebattle64archive male/female class guides, spriters-resource sheets, rpgamer class list).
-  - [ ] For every mechanic in question, capture the OB64 evidence IN the dossier next to the decision (quote or screenshot reference + link). Where OB64 has no answer or Danilo deviates on purpose, record the deviation explicitly with rationale (the OB64-fidelity convention).
-  - [ ] Check each new class against the 7-role vocabulary (Vanguard/Skirmisher/Sniper/Artillery/Support/Control/Brute — epic-4 dossier §1). New relations are allowed as versioned `roleRelations` entries; a new ROLE is a bigger call — flag it explicitly if proposed.
-- [ ] Task 2: Sitting 2 — stat rows, codes, and the move table (AC: 2)
-  - [ ] Every new class gets the full row: HP/STR/VIT/INT/MEN/AGI/DEX, role, sex (name-stream key — the gender-split convention, D-1f), UNIQUE 3-letter code (taken: KNI MER ARC WIZ CLE WIT BER PHA NIN VAL SOR GOL), slot cost via `sizeClass`, and actions-f/m/b + move-kind-f/m/b.
-  - [ ] The owed 4.7 fine-tune: walk the shipped 12's move table (`balance.ts` `classes[*].moves` — currently START-GENERIC: Knight mid=guard-half, Phalanx front/mid=guard-full back=bash, Wizard/Sorceress front=staff mid/back=blast, everyone else uniform) row by row with Danilo and record keep-or-change per class. Changes are balance data only (`balanceVersion` ticks at 5.4) — but any change to existing classes re-records goldens in 5.4, so mark each changed row "re-records existing battles: yes/no" as 5.4's audit input.
-  - [ ] Decide the two 4.7 deferred rulings (deferred-work.md, code review of 4-7):
+- [x] Task 0: Set up the dossier home (AC: 1, 4)
+  - [x] Create `docs/planning-artifacts/epic-5-dossier/DOSSIER.md` as the single authoritative design record (the 4.1 pattern: sectioned per AC, a dated decision log, evidence beside each decision). The epic-4 dossier stays untouched — era decisions that survive (single-cell monsters, ADR 0003, Guard shield) are REFERENCED, not copied.
+  - [x] Open with the constraint header: no new systems (the epic fence), `logVersion` 4 untouched, ADR 0003 frozen (no new draw sites — any move that would add a `battle`-stream draw is out of scope for this era), Guard = Full/Half shield (4.7 amendment, not the superseded bodyguard text above it).
+- [x] Task 1: Sitting 1 — the class list and the source evidence (AC: 1)
+  - [x] Danilo supplies the target roster: which humans join the shipped 11 smalls, which monsters join Golem, and (if dragons) which slayer classes pair with them. His pasted OB64 research is authoritative (the standing agreement); the reference links live in `docs/planning-artifacts/midjourney-asset-prompts-2026-07-23.md#Reference-material` (ogrebattle64archive male/female class guides, spriters-resource sheets, rpgamer class list).
+  - [x] For every mechanic in question, capture the OB64 evidence IN the dossier next to the decision (quote or screenshot reference + link). Where OB64 has no answer or Danilo deviates on purpose, record the deviation explicitly with rationale (the OB64-fidelity convention).
+  - [x] Check each new class against the 7-role vocabulary (Vanguard/Skirmisher/Sniper/Artillery/Support/Control/Brute — epic-4 dossier §1). New relations are allowed as versioned `roleRelations` entries; a new ROLE is a bigger call — flag it explicitly if proposed.
+- [x] Task 2: Sitting 2 — stat rows, codes, and the move table (AC: 2)
+  - [x] Every new class gets the full row: HP/STR/VIT/INT/MEN/AGI/DEX, role, sex (name-stream key — the gender-split convention, D-1f), UNIQUE 3-letter code (taken: KNI MER ARC WIZ CLE WIT BER PHA NIN VAL SOR GOL), slot cost via `sizeClass`, and actions-f/m/b + move-kind-f/m/b.
+  - [x] The owed 4.7 fine-tune: walk the shipped 12's move table (`balance.ts` `classes[*].moves` — currently START-GENERIC: Knight mid=guard-half, Phalanx front/mid=guard-full back=bash, Wizard/Sorceress front=staff mid/back=blast, everyone else uniform) row by row with Danilo and record keep-or-change per class. Changes are balance data only (`balanceVersion` ticks at 5.4) — but any change to existing classes re-records goldens in 5.4, so mark each changed row "re-records existing battles: yes/no" as 5.4's audit input.
+  - [x] Decide the two 4.7 deferred rulings (deferred-work.md, code review of 4-7):
     - `attackMoveOf` (resolve.ts:451-455) falls back to `moves.back as MoveKind` for a confused misfire — unsound if any future table puts Guard in the back row. Rule now: either the dossier FORBIDS back-row Guard as a data rule, or it mandates the scan-for-first-real-MoveKind fix (lands in 5.4 if any table row triggers it).
     - Overlapping guards on one cell (resolve.ts:466-473): own guard-half + front ally's guard-full — today the target's own weaker charge is consumed first. Rule now: keep shipped behavior or switch to "strongest shield on the cell wins" (flag: may re-record goldens/sweep battles in 5.4).
-  - [ ] New move kinds (if any class needs a new attack verb): each is a `MoveKind` union extension riding `balanceVersion` only (the 4.7 `bash` precedent — no event-shape change), and each must state its damage type for the 5.6 card glyph rule (blast/spell = magic; slash/arrow/bash/staff = physical). A new move that needs NEW MECHANICS (extra draws, statuses, targeting rules) violates the epic fence — redesign or defer it.
-  - [ ] Sanity-audit each new stat row on paper (the 4.1 method — a design-time sweep is still not executable for unshipped classes): 3–5 neutral melee hits to kill a small, and note each class's intended showcase (the binding ≤65% sweeps stay with 5.4/5.5 per their ACs).
-- [ ] Task 3: Sitting 3 — monsters (AC: 3)
-  - [ ] Each monster: single-cell + 8-neighbor king-move reservation (the shipped 4.8 model as amended in epic-4 dossier §2 — no new placement semantics), slot cost (Golem precedent: 2), stat row, per-row moves, and loom treatment (Golem precedent: dedicated frame, ≥48px-equivalent presence, one HP bar/code at the cell).
-  - [ ] If dragons land: slayer classes and their `roleRelations` entries arrive in the SAME table (D-1b's pairing — a dragon without its counterplay doesn't ship). Elements (FR16) and any dragon-specific ideas must fit existing systems or be explicitly deferred.
-  - [ ] Max-monsters-per-army and no-shared-column rules: confirm the shipped values (max 2, never same column) still hold for the grown roster, or record the revision as balance data for 5.5.
-- [ ] Task 4: Assemble, gate, and hand off (AC: 4)
-  - [ ] Versioning section: NO `logVersion` bump this era (walk it: new classes = new `UnitClass` values in setup/balance data, no event-shape change — the 4.8 precedent; new `MoveKind` values ride the hash — the 4.7 precedent). State the tick points: `balanceVersion` (now 9) ticks at 5.4 (humans + shipped-12 revision), 5.5 (monsters), conditionally 5.10 (verdict tuning).
-  - [ ] Name the downstream carries explicitly for the 5.4/5.5/5.6 create-story passes: name-table growth per new class+sex (`names.ts` — `rollName` exhaustion fallback must stay unreachable, the 4.2 forward-note), Draft grid + army-row scenes vs BASE_WIDTH=360 (the standing coupling-site rule), AI-pool newcomer representation (single-unit substitutions first), and the 5.6 card reading everything live from BALANCE.
-  - [ ] Decision log complete (dated, with rationale and evidence links); PRD follow-ups flagged (FR38 wave wording, FR15 table growth) — not edited here.
-  - [ ] Danilo signs off the WHOLE dossier — the story's done-gate (the 4.1 precedent: a design story's review IS the PO sign-off; no code-review pass applies).
-  - [ ] Gate check: `packages/engine` and `apps/web` diffs EMPTY; prettier clean on the new docs.
+  - [x] New move kinds (if any class needs a new attack verb): each is a `MoveKind` union extension riding `balanceVersion` only (the 4.7 `bash` precedent — no event-shape change), and each must state its damage type for the 5.6 card glyph rule (blast/spell = magic; slash/arrow/bash/staff = physical). A new move that needs NEW MECHANICS (extra draws, statuses, targeting rules) violates the epic fence — redesign or defer it.
+  - [x] Sanity-audit each new stat row on paper (the 4.1 method — a design-time sweep is still not executable for unshipped classes): 3–5 neutral melee hits to kill a small, and note each class's intended showcase (the binding ≤65% sweeps stay with 5.4/5.5 per their ACs).
+- [x] Task 3: Sitting 3 — monsters (AC: 3)
+  - [x] Each monster: single-cell + 8-neighbor king-move reservation (the shipped 4.8 model as amended in epic-4 dossier §2 — no new placement semantics), slot cost (Golem precedent: 2), stat row, per-row moves, and loom treatment (Golem precedent: dedicated frame, ≥48px-equivalent presence, one HP bar/code at the cell).
+  - [x] If dragons land: slayer classes and their `roleRelations` entries arrive in the SAME table (D-1b's pairing — a dragon without its counterplay doesn't ship). Elements (FR16) and any dragon-specific ideas must fit existing systems or be explicitly deferred.
+  - [x] Max-monsters-per-army and no-shared-column rules: confirm the shipped values (max 2, never same column) still hold for the grown roster, or record the revision as balance data for 5.5.
+- [x] Task 4: Assemble, gate, and hand off (AC: 4)
+  - [x] Versioning section: NO `logVersion` bump this era (walk it: new classes = new `UnitClass` values in setup/balance data, no event-shape change — the 4.8 precedent; new `MoveKind` values ride the hash — the 4.7 precedent). State the tick points: `balanceVersion` (now 9) ticks at 5.4 (humans + shipped-12 revision), 5.5 (monsters), conditionally 5.10 (verdict tuning).
+  - [x] Name the downstream carries explicitly for the 5.4/5.5/5.6 create-story passes: name-table growth per new class+sex (`names.ts` — `rollName` exhaustion fallback must stay unreachable, the 4.2 forward-note), Draft grid + army-row scenes vs BASE_WIDTH=360 (the standing coupling-site rule), AI-pool newcomer representation (single-unit substitutions first), and the 5.6 card reading everything live from BALANCE.
+  - [x] Decision log complete (dated, with rationale and evidence links); PRD follow-ups flagged (FR38 wave wording, FR15 table growth) — not edited here.
+  - [x] Danilo signs off the WHOLE dossier — the story's done-gate (the 4.1 precedent: a design story's review IS the PO sign-off; no code-review pass applies).
+  - [x] Gate check: `packages/engine` and `apps/web` diffs EMPTY; prettier clean on the new docs.
 
 ## Dev Notes
 
@@ -103,8 +103,33 @@ The Midjourney sprite pipeline is COMPLETE for the current 12: `docs/planning-ar
 
 ### Agent Model Used
 
+Fable 5 (claude-fable-5)
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- 2026-07-25 (Task 0): Dossier home created at `docs/planning-artifacts/epic-5-dossier/DOSSIER.md` — constraint header (epic fence, logVersion 4 untouched, ADR 0003 frozen, Guard = Full/Half shield per the 4.7 amendment, single-cell king-move monsters, balanceVersion 9 tick points), empty decision log, §1–§4 sitting sections. Shipped-12 move-table baseline re-verified against `balance.ts` (version 9) at write time and pre-loaded into §2 as Sitting 2's walking material; the two 4.7 deferred rulings copied in with their `resolve.ts:451-455` / `:466-473` source context. Prettier-clean. Zero engine/web diffs.
+- 2026-07-26 (Task 1, Sitting 1): Danilo's evidence corpus received (3 CSVs beside the dossier: OB64 reference extract, MVP wish list = the July-2026 endgoal roadmap, move catalog). Class list SETTLED: 5.4 humans (shipped 11 revised + Fencer, Dragon Hunter, Hawkman, Vultan, Raven), 5.5 monsters (Golem + Gryphon/Wyrm/Hellhound/Whelp + 6 named dragons), boosters + status-dependent classes DEFERRED (fence), promoted tiers recorded as future roadmap. Role vocabulary grown 7→10 (Dragon/Beast/Dragonslayer — the flagged "bigger call", accepted). `ROSTER.md` created as the Danilo-requested source-of-truth table companion (DOSSIER.md holds decisions/evidence; ROSTER.md the current shape + original descriptions).
+- 2026-07-27 (STORY DONE): Danilo's whole-dossier SIGN-OFF ("i love it. im excited to proceed") — the story's done-gate per the 4.1 precedent (a design story's review IS the PO sign-off; no code-review pass applies). Final gate verified: `packages/engine` + `apps/web` diffs EMPTY, prettier clean on all new docs, balanceVersion 9 + hash untouched. THE GATE IS OPEN: 5.4/5.5/5.6 may be created. Art shopping list ready for the MJ pipeline (5 humans + 10 monsters).
+- 2026-07-27 (Tasks 2+3 COMPLETE, Task 4 near-complete): Engine stat rows APPROVED by Danilo (E5-D15, incl. Valkyrie INT 12→18); §2/§3 flipped to DECIDED; §4 versioning walk CONFIRMED against the settled table (15 UnitClass values + bolt/breath MoveKinds + race field + 3 roles/1 relation — no event-shape change, logVersion 4 holds); PRD follow-ups extended (FR14 roles, leader rule). Remaining: Danilo's whole-dossier sign-off + final gate check.
+- 2026-07-27 (Task 2 partial + Task 3 partial): Fine-tune walk COMPLETE (E5-D4 Wizard/Sorceress lose splash → new `bolt` kind; E5-P2 guard fine-tune; E5-D10 flavor pack; per-class re-record flags tabled in §2). The two 4.7 rulings DECIDED (E5-D12: back-row Guard forbidden as data; overlapping guards keep shipped) — deferred-work.md entries marked resolved-by-ruling. New MoveKinds settled (`bolt` magic ranged-single; `breath` physical row-AoE; both zero-draw, riding balanceVersion). Monster caps confirmed + NEW humans-only leader rule (E5-D13, race field carried by 5.5). E5-D14 consistency ruling: Wind Shot/Thunder Arrow ride `arrow` (physical Skills). Engine-scale stat rows for all 16 new/amended classes PROPOSED in ROSTER.md (kill-audit + showcase per class) — awaiting Danilo's review (Task 2 remainder).
+
 ### File List
+
+- `docs/planning-artifacts/epic-5-dossier/DOSSIER.md` (new)
+- `docs/planning-artifacts/epic-5-dossier/ob64-recall-draft.md` (new — agent recall draft, superseded by Danilo's CSVs as evidence)
+- `docs/planning-artifacts/epic-5-dossier/lordly-original-ob64-class-list-and-more.csv` (new — Danilo's OB64 reference extract, AC-1 evidence)
+- `docs/planning-artifacts/epic-5-dossier/lordly-my-mvp-wish-wip.csv` (new — Danilo's MVP wish list, Sitting 1 input)
+- `docs/planning-artifacts/epic-5-dossier/attack-names-and-more.csv` (new — move catalog evidence)
+- `docs/planning-artifacts/epic-5-dossier/ROSTER.md` (new — the source-of-truth roster/moves table, Danilo-requested companion; DOSSIER.md holds the decisions)
+- `docs/implementation-artifacts/deferred-work.md` (modified — the two 4.7 entries marked resolved-by-ruling, E5-D12)
+
+## Change Log
+
+- 2026-07-25: Story started (dev-story); dossier home created (Task 0).
+- 2026-07-26: Sitting 1 — evidence corpus (3 Danilo CSVs) received; class list settled; ROSTER.md source-of-truth companion created; decisions E5-D1..D9 + role-vocabulary growth.
+- 2026-07-27: Sittings 2+3 — fine-tune walk, both 4.7 rulings closed (deferred-work.md updated), monster rules + humans-only leader rule, engine stat rows approved (E5-D10..D15); §4 versioning walk confirmed (logVersion 4 holds).
+- 2026-07-27: Danilo's whole-dossier sign-off → story DONE (design-story precedent: PO sign-off is the review). Zero engine/web diffs; no version bumps.
+- `docs/implementation-artifacts/sprint-status.yaml` (modified — 5-1 in-progress)
+- `docs/implementation-artifacts/5-1-the-roster-and-moves-dossier.md` (modified — this file)
