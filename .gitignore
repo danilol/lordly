@@ -15,3 +15,6 @@ docs/planning-artifacts/ux-designs/*/imports/
 
 # High-res art masters (source for downscaled sprite tiles; not shipped)
 /art-src/
+
+# OB64 reference art (Atlus copyright) — local reference ONLY, never published (public repo, FR31)
+docs/planning-artifacts/ux-designs/ui/ob64/
