@@ -33,16 +33,10 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
     license: 'CC0-1.0',
     licenseName: 'Creative Commons Zero 1.0 (public domain)',
     licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
-    assets: [
-      'apps/web/src/assets/units.png',
-      // PWA icons (story 3.3, FR29): the knight frame (vault_guard), NEAREST
-      // integer-upscaled (×6, ×16) onto the theme background. CC0 needs no
-      // attribution, but every redistributed derived file is listed here
-      // (FR31 manifest); the attribution test asserts each exists on disk.
-      'apps/web/public/icon-192.png',
-      'apps/web/public/icon-512.png',
-      'apps/web/public/icon-512-maskable.png',
-    ],
+    // Story 5.2: the PWA icons (formerly derived from this pack's knight
+    // frame, story 3.3) were regenerated from Danilo's Midjourney app-icon
+    // master — they now live in the 'Lordly Midjourney art' entry below.
+    assets: ['apps/web/src/assets/units.png'],
     classSources: {
       knight: 'dc-mon/vault_guard.png',
       mercenary: 'dc-mon/deep_elf_fighter.png',
@@ -100,6 +94,12 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
       'apps/web/src/assets/panel-frame.png',
       'apps/web/src/assets/ground-tile.jpg',
       'apps/web/src/assets/wordmark.jpg',
+      // The app-icon master (crown over shield, pick 2026-07-27) and its
+      // derived PWA icons + favicon — replacing the DCSS-knight-derived set.
+      'apps/web/public/icon-192.png',
+      'apps/web/public/icon-512.png',
+      'apps/web/public/icon-512-maskable.png',
+      'apps/web/public/favicon.png',
     ],
     classSources: {},
   },
