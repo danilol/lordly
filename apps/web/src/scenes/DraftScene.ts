@@ -16,7 +16,7 @@ import {
 } from '../config/constants';
 import { canAddUnit, canContinue, classRulesCard, moveLabel, movesVaryByRow } from '../flow/draftModel';
 import type { MatchFlow } from '../flow/MatchFlow';
-import { applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText } from '../config/ui';
+import { addButton, addFramedPanel, applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
 
 /** Icon-grid layout (story 4.3 redesign): a compact tile per class — all classes on one screen, no scroll. */
@@ -203,7 +203,7 @@ export class DraftScene extends Scene {
     const addH = 46;
     const addCx = DETAIL.x + DETAIL.w - 8 - addW / 2; // right edge padded 8 from the panel
     const textW = addCx - addW / 2 - (DETAIL.x + 92) - 8; // wrap width that clears the button column
-    this.dynamic.push(this.add.rectangle(DETAIL.x, DETAIL.y, DETAIL.w, DETAIL.h, PALETTE.cardFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.cardStroke));
+    this.dynamic.push(addFramedPanel(this, DETAIL.x, DETAIL.y, DETAIL.w, DETAIL.h, { origin: [0, 0] }));
     this.dynamic.push(addUnitSprite(this, DETAIL.x + 44, DETAIL.y + 52, this.selected, 48));
     const tx = DETAIL.x + 92;
     this.dynamic.push(crispText(this, tx, DETAIL.y + 12, card.name.toUpperCase(), { fontFamily: 'Arial Black', fontSize: '18px', color: PALETTE.title }));
@@ -258,29 +258,26 @@ export class DraftScene extends Scene {
       'defender',
     );
     let cx = tx;
-    if (strongVs.length) cx = this.chip(cx, DETAIL.y + 98, `strong vs ${strongVs.join(', ')}`, PALETTE.buttonFillEnabled, PALETTE.title);
-    if (weakTo.length) this.chip(cx, DETAIL.y + 98, `weak to ${weakTo.join(', ')}`, PALETTE.enemyLine, PALETTE.title);
+    // Chip contrast (story 5.2): the strong-vs chip sits on the gold enabled
+    // fill, so its label is ink; the weak-to chip keeps its red ground with a
+    // light-tint label (gold-on-gold and gold-on-red were the re-tone traps).
+    if (strongVs.length) cx = this.chip(cx, DETAIL.y + 98, `strong vs ${strongVs.join(', ')}`, PALETTE.buttonFillEnabled, PALETTE.buttonTextOnGold);
+    if (weakTo.length) this.chip(cx, DETAIL.y + 98, `weak to ${weakTo.join(', ')}`, PALETTE.enemyLine, PALETTE.codeTextEnemy);
     if (!strongVs.length && !weakTo.length) this.chip(cx, DETAIL.y + 98, 'neutral matchups', PALETTE.buttonFill, PALETTE.mutedText);
 
     // Add-to-army button — compact, top-right, gated on remaining slots.
-    const addBtn = this.add
-      .rectangle(addCx, DETAIL.y + 8 + addH / 2, addW, addH, canAdd ? PALETTE.buttonFillEnabled : PALETTE.buttonFill)
-      .setStrokeStyle(2, canAdd ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke);
-    this.dynamic.push(
-      addBtn,
-      crispText(this, addBtn.x, addBtn.y, 'Add to\narmy', {
-        fontFamily: 'Arial',
-        fontSize: '13px',
-        color: canAdd ? PALETTE.buttonText : PALETTE.buttonTextDisabled,
-        align: 'center',
-      }).setOrigin(0.5),
-    );
-    if (canAdd) {
-      addBtn.setInteractive({ useHandCursor: true }).on('pointerup', () => {
+    const addBtn = addButton(this, addCx, DETAIL.y + 8 + addH / 2, {
+      width: addW,
+      height: addH,
+      label: 'Add to\narmy',
+      fontSize: 13,
+      style: canAdd ? 'primary' : 'disabled',
+      onTap: () => {
         this.addToArmy(this.selected);
         this.redraw();
-      });
-    }
+      },
+    });
+    this.dynamic.push(addBtn.rect, addBtn.label);
 
     // 3. The army tray.
     const army = this.flow.getState().playerArmy;
@@ -332,17 +329,14 @@ export class DraftScene extends Scene {
 
     // 4. Continue.
     const ready = canContinue(army);
-    const btn = this.add
-      .rectangle(BASE_WIDTH / 2, 540, 200, 48, ready ? PALETTE.buttonFillEnabled : PALETTE.buttonFill)
-      .setStrokeStyle(2, ready ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke);
-    this.dynamic.push(
-      btn,
-      crispText(this, BASE_WIDTH / 2, 540, DRAFT_CONTINUE_LABEL, {
-        fontFamily: 'Arial',
-        fontSize: '18px',
-        color: ready ? PALETTE.buttonText : PALETTE.buttonTextDisabled,
-      }).setOrigin(0.5),
-    );
-    if (ready) btn.setInteractive({ useHandCursor: true }).on('pointerup', () => this.scene.start('Placement', { flow: this.flow }));
+    const btn = addButton(this, BASE_WIDTH / 2, 540, {
+      width: 200,
+      height: 48,
+      label: DRAFT_CONTINUE_LABEL,
+      fontSize: 18,
+      style: ready ? 'primary' : 'disabled',
+      onTap: () => this.scene.start('Placement', { flow: this.flow }),
+    });
+    this.dynamic.push(btn.rect, btn.label);
   }
 }

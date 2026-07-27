@@ -33,8 +33,10 @@ export const base = {
       workbox: {
         // Precache EVERYTHING the app is (fully self-contained — zero runtime
         // fetches; the sprite sheet ships inlined). png covers the public/
-        // icons + favicon. Phaser chunk ~1.31 MiB — under workbox's 2 MiB cap.
-        globPatterns: ['**/*.{js,css,html,png,ico,svg}'],
+        // icons + favicon; jpg covers the story-5.2 Home background (emitted
+        // as a hashed dist asset — preprocessed to ~210KB, far under the cap).
+        // Phaser chunk ~1.31 MiB — under workbox's 2 MiB cap.
+        globPatterns: ['**/*.{js,css,html,png,jpg,ico,svg}'],
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
@@ -50,9 +52,10 @@ export const base = {
         orientation: 'portrait',
         start_url: './',
         scope: './',
-        // PALETTE.background (config/constants.ts) — the game's canvas color.
-        theme_color: '#1a1a2e',
-        background_color: '#1a1a2e',
+        // PALETTE.background (config/constants.ts) — the game's canvas color
+        // (story 5.2: the medieval night-slate ground).
+        theme_color: '#161a2e',
+        background_color: '#161a2e',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },

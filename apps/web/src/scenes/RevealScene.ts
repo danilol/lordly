@@ -17,7 +17,7 @@ import {
   unitCodeStyle,
 } from '../config/constants';
 import type { MatchSetup } from '@lordly/engine';
-import { addElementBadge, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText } from '../config/ui';
+import { addButton, addElementBadge, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText } from '../config/ui';
 import { drawIsoBoard } from '../config/board';
 import { unitTileCenter } from '../flow/battleView';
 import type { MatchFlow } from '../flow/MatchFlow';
@@ -102,12 +102,14 @@ export class RevealScene extends Scene {
     this.renderTactics();
 
     const btnY = BASE_HEIGHT - 44;
-    const btn = this.add
-      .rectangle(BASE_WIDTH / 2, btnY, BUTTON_WIDTH, BUTTON_HEIGHT, PALETTE.buttonFillEnabled)
-      .setStrokeStyle(2, PALETTE.buttonStrokeEnabled)
-      .setInteractive({ useHandCursor: true });
-    crispText(this, btn.x, btn.y, REVEAL_FIGHT_LABEL, { fontFamily: 'Arial', fontSize: '20px', color: PALETTE.buttonText }).setOrigin(0.5);
-    btn.on('pointerup', () => this.scene.start('Battle', { flow: this.flow }));
+    addButton(this, BASE_WIDTH / 2, btnY, {
+      width: BUTTON_WIDTH,
+      height: BUTTON_HEIGHT,
+      label: REVEAL_FIGHT_LABEL,
+      fontSize: 20,
+      style: 'primary',
+      onTap: () => this.scene.start('Battle', { flow: this.flow }),
+    });
   }
 
   /**
@@ -180,7 +182,8 @@ export class RevealScene extends Scene {
         const label = crispText(this, BASE_WIDTH / 2, oy + bh / 2, TACTIC_DISPLAY_NAME[t], {
           fontFamily: 'Arial',
           fontSize: '12px',
-          color: isSel ? PALETTE.buttonText : PALETTE.bodyText,
+          // Ink on the gold selected row (story 5.2 — bone-on-gold is the contrast trap).
+          color: isSel ? PALETTE.buttonTextOnGold : PALETTE.bodyText,
         })
           .setOrigin(0.5)
           .setDepth(101);

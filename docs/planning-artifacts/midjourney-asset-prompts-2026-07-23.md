@@ -202,6 +202,42 @@ classic 90s tactical RPG portrait like Tactics Ogre,
 --ar 1:1 --no text, watermark, frame
 ```
 
+## 6. UI chrome — buttons, panels, ground texture (story 5.2)
+
+*Added 2026-07-27 (story 5.2, Task 0). The old detailed guide had a chrome section; this replaces it, simpler.*
+
+These become 9-slice textures: the game stretches the MIDDLE and keeps the corners, so the prompt must ask for a **uniform decorative border with a plain center**. Generate at default size — I downscale hard (these ship tiny).
+
+**Button frame** (one asset serves every button size):
+
+```
+ornate medieval gold metal frame, rectangular, uniform decorative border on all four sides,
+tooled metal bevel look, plain solid very dark center, symmetric corners,
+simple bold shapes, readable when small, centered on a plain solid white background,
+retro tactical RPG menu style like Ogre Battle 64, --ar 2:1 --style raw --no text, watermark
+```
+
+**Panel frame** (same language, heavier — for the big framed panels):
+
+```
+ornate medieval gold picture frame, rectangular, wide decorative border with engraved details,
+uniform on all four sides, plain solid very dark center, symmetric corners,
+tooled metal and dark wood look, centered on a plain solid white background,
+retro tactical RPG menu style like Ogre Battle 64, --ar 3:4 --style raw --no text, watermark
+```
+
+**Ground texture** (menu-scene backgrounds — must tile invisibly, hence `--tile`):
+
+```
+seamless dark stone floor texture, very subtle, low contrast, muted dark slate blue tones,
+worn medieval castle stone, no strong features, calm and even,
+--tile --ar 1:1 --style raw --no text, watermark
+```
+
+**Wordmark + app icon:** use the §3 prompts as they are. Remember the §3 fallback: if MidJourney keeps misspelling "LORDLY", generate only the crown emblem and I set the text with a real font.
+
+**Quality check (chrome):** squint at the button frame at thumbnail size — the border must still read as a frame, and the center must be truly plain (any pattern in the center will smear when stretched).
+
 ---
 
 ## Before choosing a winner: the glitch check

@@ -173,6 +173,16 @@ components:
 >
 > **Both spines win on conflict with any mock or import.** Where the visual-directions specimen (`.working/visual-directions.html`), the OB64 reference screenshots, or the current `apps/web/src/config/constants.ts` palette disagree with this file, this file is the authority — mocks illustrate, the spine decides.
 
+## Amendment (story 5.2, 2026-07-27) — ONE theme: the two-theme system is retired unbuilt
+
+Dated amendment (the 4.0 precedent — the sections below are NOT rewritten; this note wins on conflict):
+
+- **The Heritage Parchment / Night Tactics two-theme system is RETIRED UNBUILT** (PO one-theme decision, 2026-07-23, Epic 5 breakdown). The `{components.theme-toggle}` component and the "design every screen in both" rule are retired with it. Heritage tokens in the frontmatter remain as historical record only.
+- **The single shipped theme** is the Night Tactics family, re-toned as the medieval look and shipped in `apps/web/src/config/constants.ts` `PALETTE` (story 5.2). As-shipped tokens (device-tuning at the 5.2 device pass may adjust values; this block is then re-dated): ground `#161a2e` · panel/button body `#10131f` · gold `#e3b64b` · gold-deep (frame edge, always an edge) `#9c7c26` · bone `#e8e4d8` · bone-soft `#9a9db0` · ink-on-gold `#2a2119` (the primary-button label — bone-on-gold is the contrast trap) · disabled frame `#3a4157` · card `#1f2438`. **The side pair is untouched**: blue-you `#4a8fe0`; the shipped enemy red family (`#e06a6a` text / `0xc0433a` line) stays the device-accepted value — a recorded deviation from this spec's `red-enemy-night #e0533f` (side colors are not chrome; reconcile only if a device pass ever asks).
+- **The FR39f label-contrast treatment survives unchanged** on the new surfaces (`code-fill-you`/`code-fill-enemy`/`code-stroke` — built precisely for textured grounds).
+- **The "zero custom art" constraint is superseded** (Brand & Style below): Danilo now generates original art through his own Midjourney pipeline (`docs/planning-artifacts/midjourney-asset-prompts-2026-07-23.md`) — his prompts, his account, zero commissioning. The constraint's spirit (no cost, no artist dependency) holds; the "free/CC packs + procedural only" letter is retired. FR31's licensing bar still applies via the attribution manifest.
+- **Chrome renders through one seam**: every button/panel goes through `addButton`/`addFramedPanel` (`apps/web/src/config/ui.ts`) — interim procedural bevel today; the Midjourney 9-slice chrome swaps in inside those builders, call sites untouched.
+
 ## Brand & Style
 
 Lordly is a five-minute tactical duel that wears its heart on its sleeve: it wants to feel like *Ogre Battle 64* — heroic, medieval-fantasy, dragons-and-magic — read at arm's length on a phone at a bus stop. The whole match is decided *before* the clash, in class picks and placement reads; the visuals exist to make that plan legible and then to make watching it pay off a genuine show.

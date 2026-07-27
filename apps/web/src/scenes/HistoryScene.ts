@@ -14,7 +14,8 @@ import {
   PALETTE,
   TACTIC_DISPLAY_NAME,
 } from '../config/constants';
-import { applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText, enableDragScroll } from '../config/ui';
+import { addButton, applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText, enableDragScroll } from '../config/ui';
+import type { ButtonHandle } from '../config/ui';
 import { formatHistoryRow } from '../flow/historyModel';
 import { MatchFlow } from '../flow/MatchFlow';
 import { createStorage } from '../flow/storage';
@@ -193,49 +194,47 @@ export class HistoryScene extends Scene {
    * 3.1 review) demotes this row gracefully instead of crashing the scene.
    */
   private renderReplayButton(content: GameObjects.Container, headerTop: number, entry: HistoryEntry, wasDrag: () => boolean): void {
-    const btn = this.add
-      .rectangle(REPLAY_X, headerTop, REPLAY_W, REPLAY_H, PALETTE.buttonFillEnabled)
-      .setOrigin(0, 0)
-      .setStrokeStyle(2, PALETTE.buttonStrokeEnabled)
-      .setInteractive({ useHandCursor: true });
-    const glyph = crispText(this, REPLAY_X + REPLAY_W / 2, headerTop + REPLAY_H / 2, HISTORY_REPLAY_LABEL, {
-      fontFamily: 'Arial',
-      fontSize: '18px',
-      color: PALETTE.buttonText,
-    }).setOrigin(0.5);
-    btn.on('pointerup', () => {
-      if (wasDrag()) return; // a scroll releasing over Replay is not a tap
-      if (this.transitioning) return; // re-entry latch: a double-tap must not fire two scene.starts (BattleScene precedent, singleton-scene memory)
-      // Validate + hydrate inside the try (the ONLY thing that legitimately
-      // throws: a render-valid but replay-invalid entry — the 3.1 two-tier gap);
-      // scene.start is OUTSIDE so a transition error can't be mislabeled "not
-      // replayable" (review).
-      let flow: MatchFlow;
-      try {
-        flow = new MatchFlow();
-        flow.startReplay(entry.setup);
-      } catch {
-        this.demoteToNonReplayable(content, btn, glyph, headerTop);
-        return;
-      }
-      this.transitioning = true;
-      this.scene.start('Battle', { flow }); // straight to Battle — the reveal moment belongs to live play
+    const btn = addButton(this, REPLAY_X, headerTop, {
+      width: REPLAY_W,
+      height: REPLAY_H,
+      label: HISTORY_REPLAY_LABEL,
+      fontSize: 18,
+      style: 'primary',
+      origin: [0, 0],
+      onTap: () => {
+        if (wasDrag()) return; // a scroll releasing over Replay is not a tap
+        if (this.transitioning) return; // re-entry latch: a double-tap must not fire two scene.starts (BattleScene precedent, singleton-scene memory)
+        // Validate + hydrate inside the try (the ONLY thing that legitimately
+        // throws: a render-valid but replay-invalid entry — the 3.1 two-tier gap);
+        // scene.start is OUTSIDE so a transition error can't be mislabeled "not
+        // replayable" (review).
+        let flow: MatchFlow;
+        try {
+          flow = new MatchFlow();
+          flow.startReplay(entry.setup);
+        } catch {
+          this.demoteToNonReplayable(content, btn, headerTop);
+          return;
+        }
+        this.transitioning = true;
+        this.scene.start('Battle', { flow }); // straight to Battle — the reveal moment belongs to live play
+      },
     });
-    content.add(btn);
-    content.add(glyph);
+    content.add(btn.rect);
+    content.add(btn.label);
   }
 
   /** In-place demotion of a tapped-but-replay-invalid button: mute the EXISTING objects (no double-draw), then add only the marker. */
-  private demoteToNonReplayable(content: GameObjects.Container, btn: GameObjects.Rectangle, glyph: GameObjects.Text, headerTop: number): void {
-    btn.disableInteractive();
-    btn.setFillStyle(PALETTE.buttonFill).setStrokeStyle(1, PALETTE.buttonStroke);
-    glyph.setColor(PALETTE.buttonTextDisabled).setY(headerTop + REPLAY_H / 2 - 6); // lift the glyph to make room for the marker under it
+  private demoteToNonReplayable(content: GameObjects.Container, btn: ButtonHandle, headerTop: number): void {
+    btn.setStyle('disabled'); // mutes the chrome AND blocks further taps (the builder's one mutation path)
+    btn.label.setY(headerTop + REPLAY_H / 2 - 6); // lift the glyph to make room for the marker under it
     content.add(this.notReplayableMarker(headerTop));
   }
 
   /** The EXPERIENCE.md:98 "visibly marked non-replayable" treatment: a compact muted slot in the header band with the caption beneath it. */
   private renderNotReplayable(content: GameObjects.Container, headerTop: number): void {
-    const slot = this.add.rectangle(REPLAY_X, headerTop, REPLAY_W, 26, PALETTE.buttonFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.buttonStroke);
+    // Muted frame (story 5.2): the gold buttonStroke would read as tappable chrome — this slot is a marker, not a button.
+    const slot = this.add.rectangle(REPLAY_X, headerTop, REPLAY_W, 26, PALETTE.buttonFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.buttonStrokeDisabled);
     const glyph = crispText(this, REPLAY_X + REPLAY_W / 2, headerTop + 13, HISTORY_REPLAY_LABEL, {
       fontFamily: 'Arial',
       fontSize: '15px',

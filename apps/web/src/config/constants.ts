@@ -32,24 +32,37 @@ export function unitDisplaySize(cls: UnitClass, baseSize: number): number {
 
 // Shared UI palette — the single source for colors used across scenes and
 // the Phaser game config. Hex strings for text/config, numbers for shapes.
+// Story 5.2 (the medieval look): re-toned to DESIGN.md's Night Tactics tokens
+// as the SINGLE shipped theme (the two-theme Heritage/Night system is retired
+// unbuilt — PO one-theme decision 2026-07-23, dated DESIGN.md amendment).
+// Gold is the metal: frames, enabled fills, and the title — never a side.
 export const PALETTE = {
-  background: '#1a1a2e',
+  /** night slate ground (`{colors.ground-night}`). */
+  background: '#161a2e',
   /** The same ground as `background`, as a number for shape fills (e.g. the Help scene's opaque header strip). */
-  backgroundFill: 0x1a1a2e,
-  title: '#e8d5a3',
-  buttonFill: 0x3a3a4e,
-  buttonStroke: 0x55556a,
-  buttonTextDisabled: '#77778a',
-  // Enabled-button + scene UI (story 1.8).
-  buttonText: '#e8d5a3',
-  buttonFillEnabled: 0x4a6a4e,
-  buttonStrokeEnabled: 0x7ab07f,
-  cardFill: 0x24243a,
-  cardStroke: 0x44445e,
-  bodyText: '#c8c8d8',
-  mutedText: '#88889a',
-  gridCellFill: 0x20203a,
-  gridCellStroke: 0x44445e,
+  backgroundFill: 0x161a2e,
+  /** glowing gold (`{colors.gold-night}`) — title, leader crown, pips. */
+  title: '#e3b64b',
+  /** panel-body-night — the inner face of buttons/panels, darker than the canvas. */
+  buttonFill: 0x10131f,
+  /** gold-deep-night — the frame edge on default buttons (always an edge, never a fill). */
+  buttonStroke: 0x9c7c26,
+  buttonTextDisabled: '#9a9db0',
+  /** bone — label on a default (dark-bodied) button. */
+  buttonText: '#e8e4d8',
+  /** Enabled/selected = the gold FILL (DESIGN button component); label flips to ink via buttonTextOnGold. */
+  buttonFillEnabled: 0xe3b64b,
+  buttonStrokeEnabled: 0x9c7c26,
+  /** ink — the label on a gold-filled (primary/selected) button; bone-on-gold is the contrast trap. */
+  buttonTextOnGold: '#2a2119',
+  /** muted slate — a disabled button's frame (no gold on disabled chrome). */
+  buttonStrokeDisabled: 0x3a4157,
+  cardFill: 0x1f2438,
+  cardStroke: 0x3a4157,
+  bodyText: '#e8e4d8',
+  mutedText: '#9a9db0',
+  gridCellFill: 0x26304a,
+  gridCellStroke: 0x3a4157,
   unitFill: 0x3a3a5e,
   unitStroke: 0x7a7ab0,
   // Enemy-side marker on the placement grid (FR6 groundwork; first-time legibility).
@@ -63,7 +76,7 @@ export const PALETTE = {
   // enabled-BUTTON accent only (button theming deferred — deferred-work.md).
   playerText: '#4a8fe0',
   playerLine: 0x4a8fe0,
-  hpBarBack: 0x2a2a3e,
+  hpBarBack: 0x262c45,
   hpBarPlayer: 0x4a8fe0,
   hpBarEnemy: 0x8a3a3a,
   winText: '#4a8fe0',
@@ -82,6 +95,47 @@ export const PALETTE = {
   // from the bright side reds so it reads as "weakened," not "enemy."
   penaltyTint: '#b0736a',
 } as const;
+
+// ---- Chrome style seam (story 5.2, the medieval look) ----
+
+/** A button's visual state: primary/selected (gold fill), default (dark body, gold frame), disabled (muted, non-interactive). */
+export type ButtonStyle = 'primary' | 'default' | 'disabled';
+
+export interface ButtonStyleTokens {
+  /** Body fill (number — shape/nineslice tint). */
+  fill: number;
+  /** Frame edge. */
+  stroke: number;
+  /** Label color (hex string for crispText). */
+  text: string;
+}
+
+/**
+ * The ONE style source every button renders through (`addButton`,
+ * config/ui.ts). DESIGN.md button component, night theme: default = panel
+ * body + gold frame + bone label; primary/selected = gold FILL + ink label
+ * (bone-on-gold is the contrast trap); disabled = muted frame + bone-soft
+ * label, no gold anywhere. When the Midjourney 9-slice chrome lands, the
+ * texture swap happens inside `addButton` — these tokens keep governing the
+ * label and any tinting, and call sites never change.
+ */
+export function buttonStyleTokens(style: ButtonStyle): ButtonStyleTokens {
+  switch (style) {
+    case 'primary':
+      return { fill: PALETTE.buttonFillEnabled, stroke: PALETTE.buttonStrokeEnabled, text: PALETTE.buttonTextOnGold };
+    case 'default':
+      return { fill: PALETTE.buttonFill, stroke: PALETTE.buttonStroke, text: PALETTE.buttonText };
+    case 'disabled':
+      return { fill: PALETTE.buttonFill, stroke: PALETTE.buttonStrokeDisabled, text: PALETTE.buttonTextDisabled };
+  }
+}
+
+// ---- Home look (story 5.2) ----
+
+/** The wordmark line on Home — the game's short identity; the long `GAME_NAME` stays in the page title/manifest. */
+export const HOME_WORDMARK = 'Lordly';
+/** Texture key for the Home castle background (Danilo's Midjourney art, loaded in Boot). */
+export const HOME_BG_KEY = 'home-castle';
 
 // Text render resolution multiplier: the game renders at the 360×640 base and
 // Scale.FIT upscales the canvas, which softens text. Rendering glyphs to a

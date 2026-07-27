@@ -1,9 +1,11 @@
 import { GameObjects, Scene, Types } from 'phaser';
 import type { Element, UnitClass } from '@lordly/engine';
+import type { ButtonStyle } from './constants';
 import {
   backingScaleFor,
   BASE_HEIGHT,
   BASE_WIDTH,
+  buttonStyleTokens,
   ELEMENT_BADGE_RADIUS,
   ELEMENT_COLORS,
   HOME_BACK_LABEL,
@@ -139,6 +141,90 @@ export function addUnitSprite(scene: Scene, x: number, y: number, cls: UnitClass
   const sprite = scene.add.sprite(x, y, UNITS_SHEET_KEY, UNIT_FRAMES[cls]);
   sprite.setDisplaySize(size, size);
   return sprite;
+}
+
+export interface ButtonOptions {
+  width: number;
+  height: number;
+  label: string;
+  /** Label px size (default 15 — the DESIGN `{typography.label}` size). */
+  fontSize?: number;
+  /** Visual state (default 'default'). 'disabled' also blocks the tap. */
+  style?: ButtonStyle;
+  /** Rectangle origin (default centered 0.5/0.5 — History's header button uses 0/0). */
+  origin?: readonly [number, number];
+  onTap?: () => void;
+}
+
+export interface ButtonHandle {
+  rect: GameObjects.Rectangle;
+  label: GameObjects.Text;
+  /** Restyles in place (toggles, gating) — the one mutation path, so state changes can't drift from the style seam. */
+  setStyle(style: ButtonStyle): void;
+}
+
+/**
+ * THE button (story 5.2). Every tappable chrome button renders through this
+ * one builder so the medieval look lives in exactly one place: today the
+ * interim procedural treatment (body fill + gold frame via
+ * `buttonStyleTokens`), and when Danilo's Midjourney 9-slice chrome lands the
+ * texture swap happens INSIDE this function — call sites never change.
+ * Interactivity follows the style: 'disabled' never fires `onTap`.
+ * Non-chrome tap surfaces (unit cards, board cells) are NOT buttons and keep
+ * their side-colored treatments.
+ */
+export function addButton(scene: Scene, x: number, y: number, opts: ButtonOptions): ButtonHandle {
+  const [ox, oy] = opts.origin ?? [0.5, 0.5];
+  let current: ButtonStyle = opts.style ?? 'default';
+  let tokens = buttonStyleTokens(current);
+  const rect = scene.add.rectangle(x, y, opts.width, opts.height, tokens.fill).setOrigin(ox, oy).setStrokeStyle(2, tokens.stroke);
+  // The label always sits at the rect's visual center, whatever the origin.
+  const label = crispText(scene, x + (0.5 - ox) * opts.width, y + (0.5 - oy) * opts.height, opts.label, {
+    fontFamily: 'Arial',
+    fontSize: `${opts.fontSize ?? 15}px`,
+    color: tokens.text,
+    align: 'center',
+  }).setOrigin(0.5);
+
+  const applyInteractivity = () => {
+    if (current === 'disabled' || !opts.onTap) rect.disableInteractive();
+    else rect.setInteractive({ useHandCursor: true });
+  };
+  if (opts.onTap) rect.on('pointerup', () => current !== 'disabled' && opts.onTap!());
+  applyInteractivity();
+
+  return {
+    rect,
+    label,
+    setStyle(style: ButtonStyle) {
+      current = style;
+      tokens = buttonStyleTokens(style);
+      rect.setFillStyle(tokens.fill).setStrokeStyle(2, tokens.stroke);
+      label.setColor(tokens.text);
+      applyInteractivity();
+    },
+  };
+}
+
+/**
+ * THE framed panel (story 5.2) — the DESIGN gold-framed "picture frame"
+ * container (Draft's detail panel, Battle's log panel). Interim procedural:
+ * panel body + gold-deep frame edge; the Midjourney panel-frame 9-slice swaps
+ * in HERE when it lands, call sites untouched.
+ */
+export function addFramedPanel(
+  scene: Scene,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  opts?: { alpha?: number; origin?: readonly [number, number] },
+): GameObjects.Rectangle {
+  const [ox, oy] = opts?.origin ?? [0.5, 0.5];
+  return scene.add
+    .rectangle(x, y, width, height, PALETTE.buttonFill, opts?.alpha ?? 1)
+    .setOrigin(ox, oy)
+    .setStrokeStyle(2, PALETTE.buttonStroke);
 }
 
 export function addHomeBack(scene: Scene): GameObjects.Rectangle {

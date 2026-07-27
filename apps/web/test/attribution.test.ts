@@ -12,6 +12,7 @@ import { ART_ATTRIBUTIONS, REDISTRIBUTABLE_LICENSES } from '../src/assets/attrib
 const EXISTING_ASSETS = new Set(
   Object.keys({
     ...import.meta.glob('../src/assets/*.png'),
+    ...import.meta.glob('../src/assets/*.jpg'), // story 5.2: the Midjourney backgrounds ship as compressed jpg
     ...import.meta.glob('../public/*.png'),
   }),
 );

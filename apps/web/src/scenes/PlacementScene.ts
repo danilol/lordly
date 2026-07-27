@@ -14,7 +14,7 @@ import {
   CLASS_ABBREVIATIONS,
   LEADER_CROWN_GLYPH,
 } from '../config/constants';
-import { applyHiDpiCamera, addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
+import { addButton, applyHiDpiCamera, addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
 import { bannedCells, placedCount, rowActionCounts, sameCell, toAnchor } from '../flow/placement';
 import type { MatchFlow } from '../flow/MatchFlow';
@@ -378,22 +378,18 @@ export class PlacementScene extends Scene {
     // leader is required, same footing as full placement).
     const ready = placed === state.playerArmy.length && state.playerArmy.length > 0 && state.playerLeader !== null;
     const btnY = 596;
-    const btn = this.add
-      .rectangle(BASE_WIDTH / 2, btnY, 200, 50, ready ? PALETTE.buttonFillEnabled : PALETTE.buttonFill)
-      .setStrokeStyle(2, ready ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke);
     // When everything is placed the last gate is the crown, so the hint switches
     // from "place all N units" to the crown prompt (story 4.5) instead of
     // misleadingly repeating the placement ask.
     const fullyPlaced = placed === state.playerArmy.length && state.playerArmy.length > 0;
     const hint = fullyPlaced ? PLACEMENT_CROWN_HINT : placementSubmitHint(state.playerArmy.length);
-    const label = crispText(this, BASE_WIDTH / 2, btnY, ready ? PLACEMENT_SUBMIT_LABEL : hint, {
-      fontFamily: 'Arial',
-      fontSize: ready ? '18px' : '13px',
-      color: ready ? PALETTE.buttonText : PALETTE.buttonTextDisabled,
-    }).setOrigin(0.5);
-    this.dynamic.push(btn, label);
-    if (ready) {
-      btn.setInteractive({ useHandCursor: true }).on('pointerup', () => {
+    const btn = addButton(this, BASE_WIDTH / 2, btnY, {
+      width: 200,
+      height: 50,
+      label: ready ? PLACEMENT_SUBMIT_LABEL : hint,
+      fontSize: ready ? 18 : 13,
+      style: ready ? 'primary' : 'disabled',
+      onTap: () => {
         // Assembles + AI commit + validate (AD-13). Placement's own model
         // already rejects an illegal drop as it happens, so this should
         // never throw in normal play — but device-reported: it used to fail
@@ -407,7 +403,8 @@ export class PlacementScene extends Scene {
           return;
         }
         this.scene.start('Reveal', { flow: this.flow });
-      });
-    }
+      },
+    });
+    this.dynamic.push(btn.rect, btn.label);
   }
 }

@@ -23,6 +23,8 @@ sources:
 
 **The game is a Phaser scene-FSM (AD-5).** Each screen is a Phaser Scene; match progress lives in one serializable `MatchState` owned by the `MatchFlow` controller and passed on every transition (AD-13). There is no web-DOM chrome around the game — the whole experience renders inside the Phaser canvas. Two themes (Heritage Parchment default / Night Tactics) are switchable and persist via `lordly.v1.settings` (AD-8); every screen must be designed in both.
 
+> **Amendment (story 5.2, 2026-07-27):** the two-theme system is RETIRED UNBUILT (PO one-theme decision 2026-07-23 — see DESIGN.md's dated amendment for the single shipped theme). Every theme-toggle reference in this document (the sentence above, the Settings component row, and the Settings section) is historical; Settings itself stays deferred, now without a theme toggle in its scope.
+
 **The battle engine is upstream of everything shown (AD-1, AD-2).** The engine resolves the entire battle into an immutable `BattleLog` before playback begins. The Battle scene is a *pure player* of that log — it renders events, it never computes combat. Anything the UI shows must already be an event in the log (AD-12).
 
 ## Information Architecture

@@ -1,5 +1,7 @@
 import { Scene, Textures } from 'phaser';
 import unitsUrl from '../assets/units.png';
+import homeCastleUrl from '../assets/home-castle.jpg';
+import { HOME_BG_KEY } from '../config/constants';
 import { UNIT_FRAMES, UNITS_SHEET_KEY, UNIT_FRAME_SIZE } from '../config/sprites';
 import { showInitFallback } from '../flow/initFallback';
 
@@ -37,6 +39,11 @@ export class BootScene extends Scene {
       showInitFallback(document, new Error(`asset failed to load: ${file?.key ?? 'unknown'}`));
     });
     this.load.spritesheet(UNITS_SHEET_KEY, unitsUrl, { frameWidth: UNIT_FRAME_SIZE, frameHeight: UNIT_FRAME_SIZE });
+    // Story 5.2: the Home castle background (Danilo's Midjourney art, jpg —
+    // emitted as a hashed file, precached by workbox alongside the bundle).
+    // Same loaderror path as the sheet: Home renders it unconditionally, so a
+    // missing texture is the same "silent broken game" class of failure.
+    this.load.image(HOME_BG_KEY, homeCastleUrl);
   }
 
   create() {

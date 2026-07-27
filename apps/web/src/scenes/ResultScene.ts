@@ -15,7 +15,8 @@ import {
   CARD_CLASS_FONT_PX,
   CLASS_ABBREVIATIONS,
 } from '../config/constants';
-import { applyHiDpiCamera, addElementBadge, addUnitSprite, crispText, prefersReducedMotion } from '../config/ui';
+import { addButton, applyHiDpiCamera, addElementBadge, addUnitSprite, crispText, prefersReducedMotion } from '../config/ui';
+import type { ButtonStyle } from '../config/constants';
 import type { MatchFlow } from '../flow/MatchFlow';
 
 /**
@@ -96,11 +97,11 @@ export class ResultScene extends Scene {
     this.drawComposition('A', roster, 'Your army', BASE_HEIGHT * 0.4, PALETTE.playerText);
     this.drawComposition('B', roster, 'Enemy army', BASE_HEIGHT * 0.56, PALETTE.enemyText);
 
-    this.button(BASE_HEIGHT * 0.79, RESULT_REMATCH_LABEL, PALETTE.buttonFillEnabled, PALETTE.buttonStrokeEnabled, () => {
+    this.button(BASE_HEIGHT * 0.79, RESULT_REMATCH_LABEL, 'primary', () => {
       this.flow.startMatch(); // fresh seed (AD-10), carries lastAiArchetypeId forward (FR25)
       this.scene.start('Draft', { flow: this.flow });
     });
-    this.button(BASE_HEIGHT * 0.9, RESULT_HOME_LABEL, PALETTE.buttonFill, PALETTE.buttonStroke, () => {
+    this.button(BASE_HEIGHT * 0.9, RESULT_HOME_LABEL, 'default', () => {
       this.scene.start('Home'); // Home builds a fresh MatchFlow on Play
     });
   }
@@ -144,12 +145,7 @@ export class ResultScene extends Scene {
     });
   }
 
-  private button(y: number, text: string, fill: number, stroke: number, onTap: () => void) {
-    const btn = this.add
-      .rectangle(BASE_WIDTH / 2, y, BUTTON_WIDTH, BUTTON_HEIGHT, fill)
-      .setStrokeStyle(2, stroke)
-      .setInteractive({ useHandCursor: true });
-    crispText(this, btn.x, btn.y, text, { fontFamily: 'Arial', fontSize: '20px', color: PALETTE.buttonText }).setOrigin(0.5);
-    btn.on('pointerup', onTap);
+  private button(y: number, text: string, style: ButtonStyle, onTap: () => void) {
+    addButton(this, BASE_WIDTH / 2, y, { width: BUTTON_WIDTH, height: BUTTON_HEIGHT, label: text, fontSize: 20, style, onTap });
   }
 }

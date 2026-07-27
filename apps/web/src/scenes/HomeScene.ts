@@ -7,10 +7,12 @@ import {
   BUTTON_HEIGHT,
   BUTTON_WIDTH,
   GAME_NAME,
+  HOME_BG_KEY,
   HOME_CREDITS_LABEL,
   HOME_HELP_LABEL,
   HOME_HISTORY_LABEL,
   HOME_PLAY_LABEL,
+  HOME_WORDMARK,
   SPUR_BUTTON_WIDTH,
   SPUR_COUNT,
   MODE_BUTTON_GAP,
@@ -24,7 +26,7 @@ import {
   PALETTE,
 } from '../config/constants';
 import { MatchFlow } from '../flow/MatchFlow';
-import { applyHiDpiCamera, crispText } from '../config/ui';
+import { addButton, applyHiDpiCamera, crispText } from '../config/ui';
 
 export class HomeScene extends Scene {
   /** The battle mode the next match starts in (FR17/FR19) — Wipeout by default (Danilo, 2026-07-19: Wipeout is the headline experience). */
@@ -46,34 +48,53 @@ export class HomeScene extends Scene {
     this.cameras.main.setBackgroundColor(PALETTE.background);
     applyHiDpiCamera(this);
 
-    crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.3, GAME_NAME, {
-      fontFamily: 'Arial Black',
-      fontSize: '32px',
+    // The castle courtyard (story 5.2 — Danilo's Midjourney art, loaded in
+    // Boot). Cover-scaled onto the 360×640 logical stage: the busy, beautiful
+    // image is exactly right for Home, where no gameplay text sits (MJ guide
+    // §3). A dark scrim under the control band keeps buttons readable over it
+    // (the FR39f spirit applied to chrome; exact alpha is a device-tuning
+    // value for Danilo's pass).
+    const bg = this.add.image(BASE_WIDTH / 2, BASE_HEIGHT / 2, HOME_BG_KEY);
+    bg.setScale(Math.max(BASE_WIDTH / bg.width, BASE_HEIGHT / bg.height));
+    this.add.rectangle(BASE_WIDTH / 2, BASE_HEIGHT * 0.76, BASE_WIDTH, BASE_HEIGHT * 0.48, PALETTE.buttonFill, 0.55);
+
+    // The wordmark (story 5.2): serif + gold with a dark stroke so it reads
+    // over the art — the INTERIM stand-in until the Midjourney wordmark lands
+    // (guide §3; the swap happens here, nothing else moves). The long name
+    // stays as a quiet subtitle.
+    crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.26, HOME_WORDMARK, {
+      fontFamily: 'Georgia, serif',
+      fontSize: '52px',
+      fontStyle: 'bold',
       color: PALETTE.title,
-      align: 'center',
-      wordWrap: { width: BASE_WIDTH - 40 },
-    }).setOrigin(0.5);
+    })
+      .setOrigin(0.5)
+      .setStroke('#10131f', 8)
+      .setShadow(0, 3, '#000000', 6);
+    crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.33, GAME_NAME, {
+      fontFamily: 'Georgia, serif',
+      fontSize: '13px',
+      color: PALETTE.buttonText,
+    })
+      .setOrigin(0.5)
+      .setStroke('#10131f', 4);
 
     // Enabled (story 1.8): starts a fresh match and enters the Draft scene.
-    const button = this.add
-      .rectangle(BASE_WIDTH / 2, BASE_HEIGHT * 0.58, BUTTON_WIDTH, BUTTON_HEIGHT, PALETTE.buttonFillEnabled)
-      .setStrokeStyle(2, PALETTE.buttonStrokeEnabled)
-      .setInteractive({ useHandCursor: true });
-
-    crispText(this, button.x, button.y, HOME_PLAY_LABEL, {
-      fontFamily: 'Arial',
-      fontSize: '20px',
-      color: PALETTE.buttonText,
-    }).setOrigin(0.5);
-
-    button.on('pointerup', () => {
-      // MatchFlow owns match truth and is passed EXPLICITLY between scenes
-      // (AD-5) — never via the Phaser registry. A fresh flow per Play tap;
-      // Result→Rematch reuses the flow and calls startMatch again (which
-      // carries the mode forward — story 1.10).
-      const flow = new MatchFlow();
-      flow.startMatch(this.mode);
-      this.scene.start('Draft', { flow });
+    addButton(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.58, {
+      width: BUTTON_WIDTH,
+      height: BUTTON_HEIGHT,
+      label: HOME_PLAY_LABEL,
+      fontSize: 20,
+      style: 'primary',
+      onTap: () => {
+        // MatchFlow owns match truth and is passed EXPLICITLY between scenes
+        // (AD-5) — never via the Phaser registry. A fresh flow per Play tap;
+        // Result→Rematch reuses the flow and calls startMatch again (which
+        // carries the mode forward — story 1.10).
+        const flow = new MatchFlow();
+        flow.startMatch(this.mode);
+        this.scene.start('Draft', { flow });
+      },
     });
 
     crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.7, MODE_HEADING, {
@@ -95,13 +116,7 @@ export class HomeScene extends Scene {
   private spurButton(index: number, label: string, onTap: () => void) {
     const startX = (BASE_WIDTH - (SPUR_COUNT * SPUR_BUTTON_WIDTH + (SPUR_COUNT - 1) * MODE_BUTTON_GAP)) / 2;
     const x = startX + index * (SPUR_BUTTON_WIDTH + MODE_BUTTON_GAP) + SPUR_BUTTON_WIDTH / 2;
-    const y = BASE_HEIGHT * 0.9;
-    this.add
-      .rectangle(x, y, SPUR_BUTTON_WIDTH, MODE_BUTTON_HEIGHT, PALETTE.buttonFill)
-      .setStrokeStyle(2, PALETTE.buttonStroke)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerup', onTap);
-    crispText(this, x, y, label, { fontFamily: 'Arial', fontSize: '15px', color: PALETTE.buttonText }).setOrigin(0.5);
+    addButton(this, x, BASE_HEIGHT * 0.9, { width: SPUR_BUTTON_WIDTH, height: MODE_BUTTON_HEIGHT, label, onTap });
   }
 
   /** The Standard/Wipeout toggle (story 1.10, AC2) — a real player-facing choice, redrawn on change. */
@@ -123,20 +138,17 @@ export class HomeScene extends Scene {
     options.forEach((opt, i) => {
       const selected = this.mode === opt.mode;
       const x = startX + i * (w + gap) + w / 2;
-      const btn = this.add
-        .rectangle(x, y, w, h, selected ? PALETTE.buttonFillEnabled : PALETTE.buttonFill)
-        .setStrokeStyle(2, selected ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerup', () => {
+      const btn = addButton(this, x, y, {
+        width: w,
+        height: h,
+        label: opt.label,
+        style: selected ? 'primary' : 'default',
+        onTap: () => {
           this.mode = opt.mode;
           this.redrawModeToggle();
-        });
-      const label = crispText(this, x, y, opt.label, {
-        fontFamily: 'Arial',
-        fontSize: '15px',
-        color: selected ? PALETTE.buttonText : PALETTE.buttonTextDisabled,
-      }).setOrigin(0.5);
-      this.modeUi.push(btn, label);
+        },
+      });
+      this.modeUi.push(btn.rect, btn.label);
     });
 
     // One-line description of the selected mode; the wipeout cap is READ

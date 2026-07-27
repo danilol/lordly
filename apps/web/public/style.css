@@ -2,7 +2,8 @@ body {
     margin: 0;
     padding: 0;
     color: rgba(255, 255, 255, 0.87);
-    background-color: #0f0f0f;
+    /* PALETTE.background (story 5.2) — a seamless pre-boot splash into the night-slate canvas. */
+    background-color: #161a2e;
 }
 
 #app {

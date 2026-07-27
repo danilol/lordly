@@ -4,7 +4,7 @@ baseline_commit: ebaa64e8d30bb3cb1e2f5f9f67711bed6ab1acb4
 
 # Story 5.2: The medieval look
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -20,29 +20,29 @@ so that the game's identity reads from the first screen.
 
 ## Tasks / Subtasks
 
-- [ ] Task 0: Close the art-supply gap in the prompt guide (AC: 1)
-  - [ ] The simplified `midjourney-asset-prompts-2026-07-23.md` has NO chrome/texture section (the epic AC's "prompt pack sections 4–6" references the OLD guide, rewritten away 2026-07-24 — the old version lives in git history). Add a "UI chrome" section: button frame (9-slice-friendly: uniform ornate border, plain center), panel frame (same, larger), wordmark ("LORDLY" — §3's logo prompt exists; note the guide's own fallback: MJ misspells, so emblem-only + real text is plan B), app icon (§3 prompt exists). Follow the guide's house rules (plain background, `--sref` after first winner, top-5-picks → `selected/` convention).
-  - [ ] Hand the section to Danilo; batches land per the folder convention (`selected/button-frame.png`, `selected/panel-frame.png`, `selected/wordmark.png`, `selected/app-icon.png` — final names dev's call, recorded in the manifest below).
-  - [ ] FLOAT RULE (epic line 955 + the established art-story split): this story NEVER blocks on art. Build all plumbing below against the current procedural look as the interim; swap in art as picks land; the story stays in-progress until Danilo's device pass on the real art.
+- [x] Task 0: Close the art-supply gap in the prompt guide (AC: 1)
+  - [x] The simplified `midjourney-asset-prompts-2026-07-23.md` has NO chrome/texture section (the epic AC's "prompt pack sections 4–6" references the OLD guide, rewritten away 2026-07-24 — the old version lives in git history). Add a "UI chrome" section: button frame (9-slice-friendly: uniform ornate border, plain center), panel frame (same, larger), wordmark ("LORDLY" — §3's logo prompt exists; note the guide's own fallback: MJ misspells, so emblem-only + real text is plan B), app icon (§3 prompt exists). Follow the guide's house rules (plain background, `--sref` after first winner, top-5-picks → `selected/` convention).
+  - [x] Hand the section to Danilo; batches land per the folder convention (`selected/button-frame.png`, `selected/panel-frame.png`, `selected/wordmark.png`, `selected/app-icon.png` — final names dev's call, recorded in the manifest below).
+  - [x] FLOAT RULE (epic line 955 + the established art-story split): this story NEVER blocks on art. Build all plumbing below against the current procedural look as the interim; swap in art as picks land; the story stays in-progress until Danilo's device pass on the real art.
 - [ ] Task 1: Centralize the chrome builders (AC: 1, 2)
-  - [ ] Today every scene draws its own button/panel rectangles from `PALETTE` (`config/constants.ts`). Extract shared builders into `config/ui.ts` (the established shared-treatment home — `crispText`/`addUnitSprite`/`addElementBadge` precedent): `addButton(...)` (default/enabled/disabled states, 44px min height — FR30) and `addFramedPanel(...)`. Route every scene's buttons/panels through them; grep each scene for `add.rectangle` chrome to catch all sites (Home, Draft, Placement, Reveal, Battle, Result, History, Help, Credits).
+  - [x] Today every scene draws its own button/panel rectangles from `PALETTE` (`config/constants.ts`). Extract shared builders into `config/ui.ts` (the established shared-treatment home — `crispText`/`addUnitSprite`/`addElementBadge` precedent): `addButton(...)` (default/enabled/disabled states, 44px min height — FR30) and `addFramedPanel(...)`. Route every scene's buttons/panels through them; grep each scene for `add.rectangle` chrome to catch all sites (Home, Draft, Placement, Reveal, Battle, Result, History, Help, Credits).
   - [ ] Swap the builders' internals to the generated art when it lands — Phaser NineSlice (`scene.add.nineslice`) for frames so one texture serves all sizes; keep the procedural path as the pre-art interim inside the SAME builder signature (call sites never change).
-  - [ ] Retire the legacy green enabled-button accent (`buttonFillEnabled`/`buttonStrokeEnabled` — DESIGN.md: gold is the accent; the green was deliberately parked in 2.1). This resolves the gold-accents half of deferred-work.md line 102.
-  - [ ] Scene GROUNDS (the AC's "ground textures … every scene"): the non-battle scenes' flat `PALETTE.background` ground gets the medieval treatment — either a subtle tiled texture (small, cheap — same asset budget rules) or a re-toned solid ground, dev + device call. The BATTLE scene's ground under the boards stays untouched (5.3's terrain); its chrome (log panel, HUD) restyles like everywhere else.
+  - [x] Retire the legacy green enabled-button accent (`buttonFillEnabled`/`buttonStrokeEnabled` — DESIGN.md: gold is the accent; the green was deliberately parked in 2.1). This resolves the gold-accents half of deferred-work.md line 102.
+  - [x] Scene GROUNDS (the AC's "ground textures … every scene"): the non-battle scenes' flat `PALETTE.background` ground gets the medieval treatment — either a subtle tiled texture (small, cheap — same asset budget rules) or a re-toned solid ground, dev + device call. The BATTLE scene's ground under the boards stays untouched (5.3's terrain); its chrome (log panel, HUD) restyles like everywhere else. _(Dev call: re-toned night-slate solid shipped as the interim; the §6 tile texture remains an option when the chrome batch lands — rides the art-swap subtask.)_
 - [ ] Task 2: Home gets the look (AC: 1)
-  - [ ] `selected/home-castle.png` becomes the Home background (the MJ guide §3 already designates it: "busy-and-beautiful is exactly right" for Home — no gameplay text there). Preprocess before shipping (see Dev Notes asset budget), load via BootScene's established load-with-failure-path pattern.
+  - [x] `selected/home-castle.png` becomes the Home background (the MJ guide §3 already designates it: "busy-and-beautiful is exactly right" for Home — no gameplay text there). Preprocess before shipping (see Dev Notes asset budget), load via BootScene's established load-with-failure-path pattern.
   - [ ] Wordmark: replace the `GAME_NAME` Arial Black text with the wordmark image (or MJ emblem + styled text per the guide's fallback). Keep `applyHiDpiCamera`/`Scale.FIT` behavior — images position on the 360×640 logical stage like everything else.
   - [ ] Legibility over art: Home's buttons/toggle must stay readable over the castle art — reuse the FR39f approach if needed (scrim/panel behind controls), device-verified.
 - [ ] Task 3: PWA icons + web shell colors (AC: 1)
   - [ ] Regenerate `public/icon-192.png`, `icon-512.png`, `icon-512-maskable.png` from the new MJ master (maskable: respect the safe zone — content in the inner ~80%). Update `vite/config.base.mjs` manifest `theme_color`/`background_color` and `index.html` `theme-color`/splash (`public/style.css` body #0f0f0f) if the shipped theme's ground changes. Favicon (`public/favicon.png`) rides the same master.
   - [ ] The attribution test asserts icon files exist on disk (3.3 precedent) — keep it green through the swap.
-- [ ] Task 4: DESIGN.md dated amendment — the one-theme record (AC: 2)
-  - [ ] Amend `docs/planning-artifacts/ux-designs/ux-lordly-2026-07-13/DESIGN.md` (dated note, the 4.0 amendment precedent — never rewrite history): (a) two-theme Heritage/Night RETIRED UNBUILT (PO 2026-07-23; the theme-toggle component + "design every screen in both" rule go with it); (b) record the SINGLE shipped theme's tokens as-shipped (actual hex values after the restyle — reconcile the frontmatter `colors:` block or add a dated "shipped theme" block); (c) note the zero-custom-art constraint's evolution: the Brand section's "zero custom-commissioned art" hard fence is superseded by Danilo's own Midjourney pipeline (his generated art ≠ commissioned art — the FR31 licensing bar still applies via the manifest); (d) FR39f tokens survive unchanged unless device says otherwise.
-  - [ ] EXPERIENCE.md: the theme-toggle behavioral row + Settings `[ASSUMPTION]` (lines 48, 77, 186) reference the retired system — add the matching dated note (do NOT restructure the doc; Settings itself stays deferred).
+- [x] Task 4: DESIGN.md dated amendment — the one-theme record (AC: 2)
+  - [x] Amend `docs/planning-artifacts/ux-designs/ux-lordly-2026-07-13/DESIGN.md` (dated note, the 4.0 amendment precedent — never rewrite history): (a) two-theme Heritage/Night RETIRED UNBUILT (PO 2026-07-23; the theme-toggle component + "design every screen in both" rule go with it); (b) record the SINGLE shipped theme's tokens as-shipped (actual hex values after the restyle — reconcile the frontmatter `colors:` block or add a dated "shipped theme" block); (c) note the zero-custom-art constraint's evolution: the Brand section's "zero custom-commissioned art" hard fence is superseded by Danilo's own Midjourney pipeline (his generated art ≠ commissioned art — the FR31 licensing bar still applies via the manifest); (d) FR39f tokens survive unchanged unless device says otherwise.
+  - [x] EXPERIENCE.md: the theme-toggle behavioral row + Settings `[ASSUMPTION]` (lines 48, 77, 186) reference the retired system — add the matching dated note (do NOT restructure the doc; Settings itself stays deferred).
 - [ ] Task 5: Attribution and Credits (AC: 3)
-  - [ ] New manifest entry for the MJ chrome/wordmark/icon assets under the 'Lordly original sprites' precedent (attribution.ts — Danilo's own generated art, own entry, CC-BY-4.0, `author: 'Danilo Lima'`). List every shipped derived file.
+  - [x] New manifest entry for the MJ chrome/wordmark/icon assets under the 'Lordly original sprites' precedent (attribution.ts — Danilo's own generated art, own entry, CC-BY-4.0, `author: 'Danilo Lima'`). List every shipped derived file.
   - [ ] Retire ONLY what's replaced: the DCSS entry's `icon-192/512/maskable` asset lines move to the new entry when icons re-derive from the MJ master. **`units.png` STAYS DCSS-attributed — sprites are story 5.9's swap, not this one.**
-  - [ ] Credits scene renders from the manifest (2.4) — verify the new entry appears; update `attribution.test.ts` expectations.
+  - [x] Credits scene renders from the manifest (2.4) — verify the new entry appears; update `attribution.test.ts` expectations. _(Verified: `flow/credits.ts` renders generically and skips the Supplies line for an empty `classSources`; the existence-glob in the test now covers jpg.)_
 - [ ] Task 6: Gate + perf spot-check + device pass (AC: 1, 2, 3)
   - [ ] Full gate: `pnpm typecheck && pnpm lint && pnpm coverage`, web build succeeds; engine untouched (zero engine diffs; no version bumps — pure shell story).
   - [ ] NFR1 spot-check: `?perf=1` capture on device vs the 5.0 baseline (Battle 1× + ×2, the perf-doc procedure); textures must not breach the 30fps floor. Record a perf-verdict addendum line.
@@ -117,8 +117,41 @@ Web tests live in `apps/web/test/*.test.ts` (vitest, jsdom-free — pure functio
 
 ### Agent Model Used
 
+Fable 5 (claude-fable-5)
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- 2026-07-27 (interim restyle COMPLETE — the buildable half; art floats): red-green on the new style seam (`test/ui-chrome.test.ts` written first, 4 failing → green). `buttonStyleTokens` + `ButtonStyle` in constants.ts; `addButton`/`addFramedPanel` in ui.ts (interim procedural bevel; the MJ 9-slice swap point is INSIDE the builders). All 13 button sites migrated (Home Play/spurs/mode-toggle, Draft Add/Continue, Placement Ready, Reveal Fight, Battle speed×2/Skip/Log, Result Rematch/Home, History Replay incl. the demote path via `setStyle('disabled')`); Battle log panel + Draft DETAIL panel on `addFramedPanel`. PALETTE re-toned to DESIGN's Night tokens (ground `#161a2e`, gold `#e3b64b`, bone text, ink-on-gold primary labels; legacy green retired — deferred-work line 102 resolved-as-amended). Contrast fixes where gold-fill labels appeared (Reveal dropdown selected row, Draft strong-chip). Side colors deliberately untouched (recorded deviation in the DESIGN amendment: shipped enemy red family stays). Home: `home-castle.jpg` (processed 816×1456 png → 717×1280 jpg, 213KB — sips, the Golem workflow), Boot-loaded with the existing failure path, cover-scaled + control-band scrim; interim serif-gold "Lordly" wordmark (stroke+shadow) with the long name as subtitle. Web shell: manifest/`index.html`/`style.css` grounds → `#161a2e`; workbox glob +jpg (verified precached in dist/sw.js). Attribution: new 'Lordly Midjourney art (Epic 5)' entry (Danilo, CC-BY-4.0); test glob covers jpg. DESIGN.md + EXPERIENCE.md dated one-theme amendments written. Gate: 577 tests green, typecheck+lint clean, web build succeeds. PENDING (art-dependent + device): MJ chrome batch (guide §6 added — Danilo generates), 9-slice swap, wordmark image, PWA icons off the new master (+ retire the DCSS icon lines), FR39f device verify, NFR1 `?perf=1` spot-check vs the 5.0 baseline, Danilo's device pass.
+
 ### File List
+
+- `apps/web/src/config/constants.ts` (modified — PALETTE re-tone, ButtonStyle/buttonStyleTokens, HOME_WORDMARK, HOME_BG_KEY)
+- `apps/web/src/config/ui.ts` (modified — addButton, addFramedPanel)
+- `apps/web/src/scenes/HomeScene.ts` (modified — background, scrim, wordmark, buttons via builder)
+- `apps/web/src/scenes/BootScene.ts` (modified — home-castle load)
+- `apps/web/src/scenes/DraftScene.ts` (modified — framed detail panel, chips contrast, Add/Continue via builder)
+- `apps/web/src/scenes/PlacementScene.ts` (modified — Ready via builder)
+- `apps/web/src/scenes/RevealScene.ts` (modified — Fight via builder, dropdown contrast)
+- `apps/web/src/scenes/BattleScene.ts` (modified — speed/Skip/Log via builder + handles, framed log panel)
+- `apps/web/src/scenes/ResultScene.ts` (modified — button helper over the builder)
+- `apps/web/src/scenes/HistoryScene.ts` (modified — Replay via builder, demote via setStyle, marker stroke)
+- `apps/web/src/assets/home-castle.jpg` (new — processed from selected/home-castle.png)
+- `apps/web/src/assets/attribution.ts` (modified — Lordly Midjourney art entry)
+- `apps/web/test/ui-chrome.test.ts` (new — style-seam pins)
+- `apps/web/test/attribution.test.ts` (modified — jpg existence glob)
+- `apps/web/vite/config.base.mjs` (modified — glob +jpg, manifest colors)
+- `apps/web/index.html` (modified — theme-color)
+- `apps/web/public/style.css` (modified — splash ground)
+- `docs/planning-artifacts/midjourney-asset-prompts-2026-07-23.md` (modified — §6 UI chrome prompts)
+- `docs/planning-artifacts/ux-designs/ux-lordly-2026-07-13/DESIGN.md` (modified — dated one-theme amendment)
+- `docs/planning-artifacts/ux-designs/ux-lordly-2026-07-13/EXPERIENCE.md` (modified — dated note)
+- `docs/implementation-artifacts/deferred-work.md` (modified — line-102 resolution)
+- `docs/implementation-artifacts/sprint-status.yaml` (modified)
+- `docs/implementation-artifacts/5-2-the-medieval-look.md` (modified — this file)
+
+## Change Log
+
+- 2026-07-27: Story created (recon: missing chrome prompts, asset budget, scope fences).
+- 2026-07-27: Dev — interim procedural restyle shipped end-to-end (style seam + builders + 13 site migrations + Home castle background + one-theme doc amendments + attribution). Art-dependent half floats on Danilo's MJ chrome batch (guide §6). Gate green: 577 tests, typecheck/lint/build.

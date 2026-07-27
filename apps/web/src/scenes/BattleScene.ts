@@ -30,7 +30,8 @@ import {
   unitDisplaySize,
 } from '../config/constants';
 import type { BattleSpeedId } from '../config/constants';
-import { addElementBadge, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText, prefersReducedMotion } from '../config/ui';
+import { addButton, addElementBadge, addFramedPanel, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText, prefersReducedMotion } from '../config/ui';
+import type { ButtonHandle } from '../config/ui';
 import { drawIsoBoard } from '../config/board';
 import { attachPerfSampler } from '../config/perf';
 import { beatDurationMs, buildBeatSchedule, eventTrace, movePlate, unitTileCenter } from '../flow/battleView';
@@ -143,7 +144,7 @@ export class BattleScene extends Scene {
   /** Current playback speed factor (FR23). LOADED from settings in create() — the one field that loads instead of resetting (singleton-scene rule). */
   private speedFactor = 1;
   /** The speed buttons' rectangles, for selected-state redraws (labels keep one live color — review: the disabled token misread as "unavailable"). */
-  private speedUi = new Map<BattleSpeedId, GameObjects.Rectangle>();
+  private speedUi = new Map<BattleSpeedId, ButtonHandle>();
   /** Re-entry guard for the Skip button (review: a double-tap fired scene.start twice). */
   private transitioning = false;
   private currentIndex = 0;
@@ -270,10 +271,7 @@ export class BattleScene extends Scene {
     this.speedFactor = next.factor;
     this.storage.saveSettings({ battleSpeed: next.id });
     for (const [speedId, button] of this.speedUi) {
-      const selected = speedId === next.id;
-      button
-        .setFillStyle(selected ? PALETTE.buttonFillEnabled : PALETTE.buttonFill)
-        .setStrokeStyle(2, selected ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke);
+      button.setStyle(speedId === next.id ? 'primary' : 'default');
     }
     if (this.pendingTimer && !this.currentSilent) {
       this.pendingTimer.remove();
@@ -996,43 +994,50 @@ export class BattleScene extends Scene {
     // Speed toggles (selected state reflects the LOADED preference).
     for (const speed of BATTLE_SPEEDS) {
       const slot = nextSlot(72);
-      const selected = speed.factor === this.speedFactor;
-      const button = this.add
-        .rectangle(slot.center, barY, slot.width, 44, selected ? PALETTE.buttonFillEnabled : PALETTE.buttonFill)
-        .setStrokeStyle(2, selected ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke)
-        .setInteractive({ useHandCursor: true });
-      crispText(this, slot.center, barY, speed.label, { fontFamily: 'Arial', fontSize: '13px', color: PALETTE.buttonText }).setOrigin(0.5);
-      button.on('pointerup', () => this.setSpeed(speed.id));
+      const button = addButton(this, slot.center, barY, {
+        width: slot.width,
+        height: 44,
+        label: speed.label,
+        fontSize: 13,
+        style: speed.factor === this.speedFactor ? 'primary' : 'default',
+        onTap: () => this.setSpeed(speed.id),
+      });
       this.speedUi.set(speed.id, button);
     }
 
     // Skip: momentary action, never persisted.
     const skipSlot = nextSlot(84);
-    const skip = this.add
-      .rectangle(skipSlot.center, barY, skipSlot.width, 44, PALETTE.buttonFill)
-      .setStrokeStyle(2, PALETTE.buttonStroke)
-      .setInteractive({ useHandCursor: true });
-    crispText(this, skipSlot.center, barY, BATTLE_SKIP_LABEL, { fontFamily: 'Arial', fontSize: '13px', color: PALETTE.buttonText }).setOrigin(0.5);
-    skip.on('pointerup', () => this.skipToResult());
+    addButton(this, skipSlot.center, barY, {
+      width: skipSlot.width,
+      height: 44,
+      label: BATTLE_SKIP_LABEL,
+      fontSize: 13,
+      onTap: () => this.skipToResult(),
+    });
 
     const logSlot = nextSlot(84);
     this.buildLogPanel(logSlot.center, logSlot.width, barY);
   }
 
   private buildLogPanel(buttonX: number, buttonWidth: number, barY: number) {
-    const button = this.add
-      .rectangle(buttonX, barY, buttonWidth, 44, PALETTE.buttonFill)
-      .setStrokeStyle(2, PALETTE.buttonStroke)
-      .setInteractive({ useHandCursor: true });
-    const buttonLabel = crispText(this, button.x, button.y, BATTLE_LOG_LABEL, { fontFamily: 'Arial', fontSize: '13px', color: PALETTE.buttonText }).setOrigin(
-      0.5,
-    );
+    const button = addButton(this, buttonX, barY, {
+      width: buttonWidth,
+      height: 44,
+      label: BATTLE_LOG_LABEL,
+      fontSize: 13,
+      // Toggling only shows/hides the panel — playback is never paused (AC7).
+      onTap: () => {
+        this.logOpen = !this.logOpen;
+        if (this.logOpen) this.logText.setText(this.logLines.join('\n')); // catch up on lines accumulated while closed
+        this.logPanel.setVisible(this.logOpen);
+        button.setStyle(this.logOpen ? 'primary' : 'default');
+        button.label.setText(this.logOpen ? '× Log' : BATTLE_LOG_LABEL);
+      },
+    });
 
     const panelTop = 336;
     const panelHeight = 236;
-    const bg = this.add
-      .rectangle(BASE_WIDTH / 2, panelTop + panelHeight / 2, BASE_WIDTH - 16, panelHeight, PALETTE.cardFill, 0.92)
-      .setStrokeStyle(1, PALETTE.cardStroke);
+    const bg = addFramedPanel(this, BASE_WIDTH / 2, panelTop + panelHeight / 2, BASE_WIDTH - 16, panelHeight, { alpha: 0.92 });
     this.logText = crispText(this, 16, panelTop + 8, '', {
       fontFamily: 'Arial',
       fontSize: '11px',
@@ -1041,15 +1046,6 @@ export class BattleScene extends Scene {
       wordWrap: { width: BASE_WIDTH - 48 },
     }).setOrigin(0, 0);
     this.logPanel = this.add.container(0, 0, [bg, this.logText]).setDepth(1500).setVisible(false);
-
-    // Toggling only shows/hides the panel — playback is never paused (AC7).
-    button.on('pointerup', () => {
-      this.logOpen = !this.logOpen;
-      if (this.logOpen) this.logText.setText(this.logLines.join('\n')); // catch up on lines accumulated while closed
-      this.logPanel.setVisible(this.logOpen);
-      button.setStrokeStyle(2, this.logOpen ? PALETTE.buttonStrokeEnabled : PALETTE.buttonStroke);
-      buttonLabel.setText(this.logOpen ? '× Log' : BATTLE_LOG_LABEL);
-    });
   }
 
   /** Appends narration lines, keeping the newest LOG_PANEL_LINES visible (a scrolling window). */

@@ -80,4 +80,20 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
       golem: 'original — stone-and-moss golem (sheet frame 6)',
     },
   },
+  {
+    // Story 5.2 — the medieval look: Danilo's own Midjourney-generated art
+    // (his account, his prompts — the Golem-entry precedent: original art,
+    // NOT a third-party pack; the FR31 licensing bar still applies via this
+    // manifest). Currently the Home castle background; the UI-chrome batch
+    // (button/panel frames, wordmark, app-icon master) joins this entry's
+    // assets as Danilo's picks land in `selected/` and get wired in.
+    pack: 'Lordly Midjourney art (Epic 5)',
+    author: 'Danilo Lima',
+    url: 'https://github.com/danilol/lordly',
+    license: 'CC-BY-4.0',
+    licenseName: 'Creative Commons Attribution 4.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+    assets: ['apps/web/src/assets/home-castle.jpg'],
+    classSources: {},
+  },
 ];
