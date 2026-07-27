@@ -1038,12 +1038,14 @@ export class BattleScene extends Scene {
     const panelTop = 336;
     const panelHeight = 236;
     const bg = addFramedPanel(this, BASE_WIDTH / 2, panelTop + panelHeight / 2, BASE_WIDTH - 16, panelHeight, { alpha: 0.92 });
-    this.logText = crispText(this, 16, panelTop + 8, '', {
+    // Inset past the 9-slice frame's 10px border (device pass 2026-07-27):
+    // the old x16/y+8 start sat under the gold edge.
+    this.logText = crispText(this, 22, panelTop + 14, '', {
       fontFamily: 'Arial',
       fontSize: '11px',
       color: PALETTE.bodyText,
       lineSpacing: 4,
-      wordWrap: { width: BASE_WIDTH - 48 },
+      wordWrap: { width: BASE_WIDTH - 60 },
     }).setOrigin(0, 0);
     this.logPanel = this.add.container(0, 0, [bg, this.logText]).setDepth(1500).setVisible(false);
   }

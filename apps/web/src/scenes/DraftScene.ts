@@ -177,7 +177,10 @@ export class DraftScene extends Scene {
     const text = crispText(this, x + 6, y, label, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color }).setOrigin(0, 0.5);
     const w = text.width + 12;
     const box = this.add.rectangle(x, y, w, 16, fill, 0.85).setOrigin(0, 0.5);
-    box.setDepth(text.depth - 1); // pill behind its label
+    // Pill above the panel (insertion order), label above the pill (depth).
+    // The old `box.setDepth(-1)` sank the pill BELOW the detail panel, leaving
+    // ink-colored labels naked on the dark body (device pass, 2026-07-27).
+    text.setDepth(1);
     this.dynamic.push(box, text);
     return x + w + 6;
   }
@@ -267,11 +270,14 @@ export class DraftScene extends Scene {
     if (!strongVs.length && !weakTo.length) this.chip(cx, DETAIL.y + 98, 'neutral matchups', PALETTE.buttonFill, PALETTE.mutedText);
 
     // Add-to-army button — compact, top-right, gated on remaining slots.
+    // Label is the single word "Add" since the art drop (device pass
+    // 2026-07-27): the two-line "Add to army" overflowed the 9-slice frame's
+    // inner box on the 66×46 button; one word fits inside the gold fill.
     const addBtn = addButton(this, addCx, DETAIL.y + 8 + addH / 2, {
       width: addW,
       height: addH,
-      label: 'Add to\narmy',
-      fontSize: 13,
+      label: 'Add',
+      fontSize: 15,
       style: canAdd ? 'primary' : 'disabled',
       onTap: () => {
         this.addToArmy(this.selected);

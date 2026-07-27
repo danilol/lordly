@@ -157,8 +157,14 @@ export const WORDMARK_KEY = 'lordly-wordmark';
 export const CHROME_SLICE_SCALE = 3;
 /** button-frame.png (400×200): the ornate border is ≈36 texture px → ≈12 logical px on a button. */
 export const BUTTON_FRAME_SLICE = 36;
-/** panel-frame.png (300×400): the ornate border is ≈45 texture px → ≈15 logical px on a panel. */
-export const PANEL_FRAME_SLICE = 45;
+/**
+ * panel-frame.png (300×400): slice at 30 texture px → a 10-logical-px border.
+ * Deliberately SMALLER than the art's full ornate border (≈45px): the panels'
+ * existing inner content (Draft detail title at +12, Battle log text) was laid
+ * out against a 1px stroke — a 15px border swallowed it (Danilo's device pass,
+ * 2026-07-27). 10px keeps the gold read without eating the content box.
+ */
+export const PANEL_FRAME_SLICE = 30;
 /** Stone ground tile (512×512 source): drawn at this tile scale so stones read ~35px — a floor, not boulders. Device-tunable. */
 export const GROUND_TILE_SCALE = 0.35;
 
