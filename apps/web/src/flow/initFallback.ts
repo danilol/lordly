@@ -1,4 +1,4 @@
-import { GAME_NAME, PALETTE } from '../config/constants';
+import { HOME_WORDMARK, PALETTE } from '../config/constants';
 
 /**
  * Renders the plain-DOM "failed to start" message when Phaser init fails
@@ -18,7 +18,8 @@ export function showInitFallback(doc: Document, error: unknown): void {
   fallbackShown = true;
   const host = doc.getElementById('game-container') ?? doc.body;
   const message = doc.createElement('p');
-  message.textContent = `${GAME_NAME} failed to start — your browser may not support it. Try a different or updated browser.`;
+  // The short name — the full royal-epithet GAME_NAME reads absurd in an error line.
+  message.textContent = `${HOME_WORDMARK} failed to start — your browser may not support it. Try a different or updated browser.`;
   message.style.cssText = `color: ${PALETTE.bodyText}; background: ${PALETTE.background}; font: 16px Arial, sans-serif; padding: 24px; text-align: center; margin: 0;`;
   host.appendChild(message);
 }

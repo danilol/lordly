@@ -45,7 +45,7 @@ export const base = {
       // manifest icons (they'd be precached twice — harmless dedupe, but noise).
       includeManifestIcons: false,
       manifest: {
-        name: 'Lord Battle Tactics',
+        name: 'Lordly: Ruler of the Board, Master of Tactics',
         short_name: 'Lordly',
         description: 'Draft three units, place them in secret, and watch your plan fight — an OB64-style auto-battler. Fully offline.',
         display: 'standalone',

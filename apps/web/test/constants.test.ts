@@ -29,7 +29,7 @@ import {
 
 describe('web smoke test', () => {
   it('exposes the game name without booting Phaser', () => {
-    expect(GAME_NAME).toBe('Lord Battle Tactics');
+    expect(GAME_NAME).toBe('Lordly: Ruler of the Board, Master of Tactics');
   });
 
   it('exposes the Home scene labels and portrait base resolution (FR30)', () => {

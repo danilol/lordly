@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GAME_NAME } from '../src/config/constants';
+import { HOME_WORDMARK } from '../src/config/constants';
 import { resetInitFallbackForTest, showInitFallback } from '../src/flow/initFallback';
 
 /**
@@ -52,7 +52,7 @@ describe('showInitFallback (AC5)', () => {
     showInitFallback(doc, new Error('WebGL unavailable'));
 
     expect(container.children).toHaveLength(1);
-    expect(container.children[0]?.textContent).toContain(GAME_NAME);
+    expect(container.children[0]?.textContent).toContain(HOME_WORDMARK); // the short name — the epithet GAME_NAME reads absurd in an error line
     expect(container.children[0]?.textContent).toContain('failed to start');
     expect(body.children).toHaveLength(0); // did not double-render into body
   });

@@ -1,7 +1,12 @@
 import { BALANCE } from '@lordly/engine';
 import type { Element, MoveKind, SpellKind, Tactic, UnitClass } from '@lordly/engine';
 
-export const GAME_NAME = 'Lord Battle Tactics';
+// The game's full official name (story 5.2, Danilo 2026-07-27): the royal
+// epithet answers "who is Lordly?" — page title + PWA manifest. On Home the
+// wordmark shows HOME_WORDMARK and the subtitle shows GAME_SUBTITLE (the
+// epithet alone — repeating "Lordly:" under the wordmark would be redundant).
+export const GAME_NAME = 'Lordly: Ruler of the Board, Master of Tactics';
+export const GAME_SUBTITLE = 'Ruler of the Board, Master of Tactics';
 
 export const HOME_PLAY_LABEL = 'Play vs AI';
 

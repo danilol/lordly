@@ -6,7 +6,7 @@ import {
   BASE_WIDTH,
   BUTTON_HEIGHT,
   BUTTON_WIDTH,
-  GAME_NAME,
+  GAME_SUBTITLE,
   HOME_BG_KEY,
   HOME_CREDITS_LABEL,
   HOME_HELP_LABEL,
@@ -71,7 +71,7 @@ export class HomeScene extends Scene {
       .setOrigin(0.5)
       .setStroke('#10131f', 8)
       .setShadow(0, 3, '#000000', 6);
-    crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.33, GAME_NAME, {
+    crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.33, GAME_SUBTITLE, {
       fontFamily: 'Georgia, serif',
       fontSize: '13px',
       color: PALETTE.buttonText,
