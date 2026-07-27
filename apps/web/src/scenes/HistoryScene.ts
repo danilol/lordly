@@ -14,7 +14,17 @@ import {
   PALETTE,
   TACTIC_DISPLAY_NAME,
 } from '../config/constants';
-import { addButton, addSceneGround, applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText, enableDragScroll } from '../config/ui';
+import {
+  addButton,
+  addHeaderStrip,
+  addSceneGround,
+  applyHiDpiCamera,
+  addBackAffordance,
+  addElementBadge,
+  addUnitSprite,
+  crispText,
+  enableDragScroll,
+} from '../config/ui';
 import type { ButtonHandle } from '../config/ui';
 import { formatHistoryRow } from '../flow/historyModel';
 import { MatchFlow } from '../flow/MatchFlow';
@@ -103,7 +113,7 @@ export class HistoryScene extends Scene {
 
     // Opaque header strip over scrolled content (GeometryMask quirk workaround),
     // then the drag-guarded back affordance above it — the 2.4 shipped pattern.
-    this.add.rectangle(BASE_WIDTH / 2, VIEW_TOP / 2, BASE_WIDTH, VIEW_TOP, PALETTE.backgroundFill).setDepth(10);
+    addHeaderStrip(this, VIEW_TOP, 10); // story 5.2 review: the stone-tiled masking strip (a flat slate band read as a mismatched panel over the ground)
     addBackAffordance(
       this,
       HOME_BACK_LABEL,
@@ -155,8 +165,8 @@ export class HistoryScene extends Scene {
     // and a ♛ crown badge on the leader's card. Pre-era entries (stored before
     // story 4.2 added tactics/leaders) simply omit both — optional-chained.
     let cy = headerTop + HEADER_H + 4;
-    cy = this.renderCompLine(content, cy, row.yourComp, PALETTE.playerLine, entry.setup.tactics?.A, entry.setup.leaders?.A);
-    cy = this.renderCompLine(content, cy, row.enemyComp, PALETTE.enemyLine, entry.setup.tactics?.B, entry.setup.leaders?.B);
+    cy = this.renderCompLine(content, cy, row.yourComp, 'A', entry.setup.tactics?.A, entry.setup.leaders?.A);
+    cy = this.renderCompLine(content, cy, row.enemyComp, 'B', entry.setup.tactics?.B, entry.setup.leaders?.B);
 
     const rule = this.add.rectangle(BASE_WIDTH / 2, cy + 6, BASE_WIDTH - MARGIN * 2, 1, PALETTE.cardStroke).setOrigin(0.5, 0);
     content.add(rule);
@@ -169,7 +179,7 @@ export class HistoryScene extends Scene {
    * leader's card. The label is a STACKED line (extra height), never a widened
    * row — the 4.2 army-row-coupling 360px-overflow lesson. Returns the next free y.
    */
-  private renderCompLine(content: GameObjects.Container, y: number, comp: readonly Unit[], sideColor: number, tactic?: Tactic, leaderIndex?: number): number {
+  private renderCompLine(content: GameObjects.Container, y: number, comp: readonly Unit[], side: 'A' | 'B', tactic?: Tactic, leaderIndex?: number): number {
     let top = y;
     if (tactic) {
       content.add(
@@ -183,7 +193,7 @@ export class HistoryScene extends Scene {
     const totalW = comp.length * CARD_W + (comp.length - 1) * CARD_GAP;
     let x = (BASE_WIDTH - totalW) / 2;
     comp.forEach((unit, i) => {
-      x = this.renderUnitCard(content, x, top, unit, sideColor, i === leaderIndex);
+      x = this.renderUnitCard(content, x, top, unit, side, i === leaderIndex);
     });
     return top + CARD_H + 4;
   }
@@ -226,9 +236,14 @@ export class HistoryScene extends Scene {
 
   /** In-place demotion of a tapped-but-replay-invalid button: mute the EXISTING objects (no double-draw), then add only the marker. */
   private demoteToNonReplayable(content: GameObjects.Container, btn: ButtonHandle, headerTop: number): void {
-    btn.setStyle('disabled'); // mutes the chrome AND blocks further taps (the builder's one mutation path)
-    btn.label.setY(headerTop + REPLAY_H / 2 - 6); // lift the glyph to make room for the marker under it
-    content.add(this.notReplayableMarker(headerTop));
+    // Review 2026-07-27: destroy the button art and render the SAME treatment
+    // the version-gated path uses, rather than ghosting the 9-slice in place.
+    // Two reasons: (1) one state must not have two looks in the same list, and
+    // (2) the frame's 12px logical border leaves a ~20px interior, too short
+    // for the 18px glyph AND the caption — the caption used to land on top of
+    // the bottom gold band. The muted 26px slot has the room by design.
+    for (const part of btn.parts) part.destroy();
+    this.renderNotReplayable(content, headerTop);
   }
 
   /** The EXPERIENCE.md:98 "visibly marked non-replayable" treatment: a compact muted slot in the header band with the caption beneath it. */
@@ -255,9 +270,14 @@ export class HistoryScene extends Scene {
   }
 
   /** One compact unit card (DESIGN unit-card): side-colored border + ~15% wash, sprite, 3-letter code, element dot, and (story 4.5) a ♛ badge if it's the leader. Returns the next x. */
-  private renderUnitCard(content: GameObjects.Container, x: number, y: number, unit: Unit, sideColor: number, isLeader = false): number {
-    // Opaque side-blended backing (device pass 2026-07-27): the 0.15 wash let the stone floor swallow the card.
-    const backing = sideColor === PALETTE.playerLine ? PALETTE.cardFillYou : PALETTE.cardFillEnemy;
+  private renderUnitCard(content: GameObjects.Container, x: number, y: number, unit: Unit, side: 'A' | 'B', isLeader = false): number {
+    // Side identity is passed as the SIDE, never reverse-matched from a colour
+    // number (review 2026-07-27 — the mirror/chirality bug class this repo has
+    // already been bitten by: a re-tone that split the line colour from the
+    // card tint would silently paint your units with the enemy backing).
+    // Opaque backing (device pass): the old 0.15 wash let the stone swallow the card.
+    const sideColor = side === 'A' ? PALETTE.playerLine : PALETTE.enemyLine;
+    const backing = side === 'A' ? PALETTE.cardFillYou : PALETTE.cardFillEnemy;
     const card = this.add.rectangle(x, y, CARD_W, CARD_H, backing).setOrigin(0, 0).setStrokeStyle(2, sideColor);
     const sprite = addUnitSprite(this, x + CARD_W / 2, y + 20, unit.class, 32);
     const code = crispText(this, x + CARD_W / 2, y + CARD_H - 3, CLASS_ABBREVIATIONS[unit.class], {

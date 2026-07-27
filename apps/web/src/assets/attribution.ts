@@ -78,9 +78,9 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
     // Story 5.2 — the medieval look: Danilo's own Midjourney-generated art
     // (his account, his prompts — the Golem-entry precedent: original art,
     // NOT a third-party pack; the FR31 licensing bar still applies via this
-    // manifest). Currently the Home castle background; the UI-chrome batch
-    // (button/panel frames, wordmark, app-icon master) joins this entry's
-    // assets as Danilo's picks land in `selected/` and get wired in.
+    // manifest). Covers the whole shipped look: the Home castle background,
+    // the button/panel 9-slice frames, the stone ground tile, the wordmark,
+    // and the PWA icons + favicon derived from the app-icon master.
     pack: 'Lordly Midjourney art (Epic 5)',
     author: 'Danilo Lima',
     url: 'https://github.com/danilol/lordly',

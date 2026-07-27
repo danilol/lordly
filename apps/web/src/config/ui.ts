@@ -6,6 +6,8 @@ import {
   BASE_HEIGHT,
   BASE_WIDTH,
   BUTTON_FRAME_SLICE,
+  buttonCenter,
+  buttonPlateInset,
   buttonStyleTokens,
   CHROME_BUTTON_KEY,
   CHROME_PANEL_KEY,
@@ -186,11 +188,11 @@ export interface ButtonHandle {
  * their side-colored treatments.
  */
 export function addButton(scene: Scene, x: number, y: number, opts: ButtonOptions): ButtonHandle {
-  const [ox, oy] = opts.origin ?? [0.5, 0.5];
+  const origin = opts.origin ?? ([0.5, 0.5] as const);
+  const [ox, oy] = origin;
   let current: ButtonStyle = opts.style ?? 'default';
   let tokens = buttonStyleTokens(current);
-  const cx = x + (0.5 - ox) * opts.width;
-  const cy = y + (0.5 - oy) * opts.height;
+  const { cx, cy } = buttonCenter(x, y, opts.width, opts.height, origin);
   const S = CHROME_SLICE_SCALE;
   const frame = scene.add
     .nineslice(
@@ -206,10 +208,13 @@ export function addButton(scene: Scene, x: number, y: number, opts: ButtonOption
       BUTTON_FRAME_SLICE,
     )
     .setScale(1 / S);
-  // The primary gold fill sits ON TOP of the frame's opaque dark center,
-  // inset so the ornate ring stays visible; hidden for default/disabled.
-  const inset = Math.round(BUTTON_FRAME_SLICE / S) + 2;
-  const fill = scene.add.rectangle(cx, cy, opts.width - inset * 2, opts.height - inset * 2, tokens.fill).setVisible(current === 'primary');
+  // The primary gold plate sits ON TOP of the frame's opaque dark center,
+  // inset so the ornate ring stays visible; hidden for default/disabled. The
+  // inset is clamped per axis so a small button never yields a degenerate
+  // plate (buttonPlateInset — pure and tested).
+  const plateW = opts.width - buttonPlateInset(opts.width) * 2;
+  const plateH = opts.height - buttonPlateInset(opts.height) * 2;
+  const fill = scene.add.rectangle(cx, cy, plateW, plateH, tokens.fill).setVisible(current === 'primary');
   const label = crispText(scene, cx, cy, opts.label, {
     fontFamily: 'Arial',
     fontSize: `${opts.fontSize ?? 15}px`,
@@ -222,7 +227,7 @@ export function addButton(scene: Scene, x: number, y: number, opts: ButtonOption
   const applyStyle = () => {
     tokens = buttonStyleTokens(current);
     fill.setVisible(current === 'primary').setFillStyle(tokens.fill);
-    frame.setAlpha(current === 'disabled' ? 0.45 : 1);
+    frame.setAlpha(tokens.frameAlpha);
     label.setColor(tokens.text);
     if (current === 'disabled' || !opts.onTap) rect.disableInteractive();
     else rect.setInteractive({ useHandCursor: true });
@@ -287,6 +292,33 @@ export function addSceneGround(scene: Scene): GameObjects.TileSprite {
     .tileSprite(BASE_WIDTH / 2, BASE_HEIGHT / 2, BASE_WIDTH, BASE_HEIGHT, GROUND_TILE_KEY)
     .setTileScale(GROUND_TILE_SCALE)
     .setDepth(-10);
+}
+
+/**
+ * The opaque top strip that masks scrolled content in Help/Credits/History
+ * (a Phaser 4 GeometryMask silently fails to clip — the 2.4 workaround).
+ * Since story 5.2 gave those scenes a stone floor, a flat `backgroundFill`
+ * strip read as an unexplained mismatched panel (review 2026-07-27), so the
+ * strip is now the SAME stone plus a gold-deep rule along its bottom edge —
+ * it masks exactly as before but looks like a deliberate header band.
+ */
+export function addHeaderStrip(scene: Scene, height: number, depth: number): GameObjects.TileSprite {
+  const strip = scene.add
+    .tileSprite(BASE_WIDTH / 2, height / 2, BASE_WIDTH, height, GROUND_TILE_KEY)
+    .setTileScale(GROUND_TILE_SCALE)
+    .setDepth(depth);
+  scene.add.rectangle(BASE_WIDTH / 2, height, BASE_WIDTH, 2, PALETTE.buttonStroke).setDepth(depth);
+  return strip;
+}
+
+/**
+ * A reading backdrop for the long-form scrolling scenes (Help, Credits).
+ * Their text sits directly on the stone otherwise — the only fully unbacked
+ * reading surfaces in the app (review 2026-07-27). Fixed to the viewport (it
+ * does NOT scroll with the content) and drawn under it.
+ */
+export function addReadingBackdrop(scene: Scene, top: number, bottom: number): GameObjects.Rectangle {
+  return scene.add.rectangle(BASE_WIDTH / 2, (top + bottom) / 2, BASE_WIDTH - 8, bottom - top, PALETTE.buttonFill, 0.88).setDepth(-5);
 }
 
 export function addHomeBack(scene: Scene): GameObjects.Rectangle {

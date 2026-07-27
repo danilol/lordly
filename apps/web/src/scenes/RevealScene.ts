@@ -17,7 +17,7 @@ import {
   unitCodeStyle,
 } from '../config/constants';
 import type { MatchSetup } from '@lordly/engine';
-import { addButton, addElementBadge, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText } from '../config/ui';
+import { addButton, addElementBadge, addFramedPanel, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText } from '../config/ui';
 import { drawIsoBoard } from '../config/board';
 import { unitTileCenter } from '../flow/battleView';
 import type { MatchFlow } from '../flow/MatchFlow';
@@ -170,14 +170,26 @@ export class RevealScene extends Scene {
     if (this.pickerOpen) {
       // Options drop into the empty band BELOW both fixed lines (not between
       // them), at high depth so they sit above anything underneath.
+      //
+      // Chrome treatment (story 5.2 review, Danilo's call — option b): the OPEN
+      // menu is ONE gold-framed surface (`addFramedPanel`) with flat rows
+      // inside, rather than four ornate mini-buttons. A menu row is not a
+      // button (the HistoryScene not-replayable marker sets the precedent for
+      // deliberately non-button chrome), and at 24px a row is below both the
+      // FR30 tap floor and `addButton`'s usable frame size — that height stays
+      // as shipped in 4.13 and is logged in deferred-work.md.
       const optionsTop = enemyY + bh + 8;
+      const pad = 6;
+      this.tacticEls.push(addFramedPanel(this, bx - pad, optionsTop - pad, bw + pad * 2, ALL_TACTICS.length * bh + pad * 2, { origin: [0, 0] }).setDepth(99));
       ALL_TACTICS.forEach((t, i) => {
         const isSel = t === setup.tactics.A;
         const oy = optionsTop + i * bh;
+        // Selected = the gold plate; unselected rows show the panel's own body
+        // (no per-row stroke — a dark-gold border on a bright-gold fill was the
+        // gold-on-gold trap flagged in review).
         const row = this.add
-          .rectangle(bx, oy, bw, bh, isSel ? PALETTE.buttonFillEnabled : PALETTE.cardFill)
+          .rectangle(bx, oy, bw, bh, isSel ? PALETTE.buttonFillEnabled : PALETTE.cardFill, isSel ? 1 : 0.001)
           .setOrigin(0, 0)
-          .setStrokeStyle(1, PALETTE.buttonStroke)
           .setDepth(100);
         const label = crispText(this, BASE_WIDTH / 2, oy + bh / 2, TACTIC_DISPLAY_NAME[t], {
           fontFamily: 'Arial',

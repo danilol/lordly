@@ -1,6 +1,6 @@
 # How to Play
 
-Lord Battle Tactics is a duel of small armies. You draft a five-slot army of named soldiers, place them on your 3×3 board, and watch the battle resolve itself — your plan does the fighting.
+Lordly is a duel of small armies. You draft a five-slot army of named soldiers, place them on your 3×3 board, and watch the battle resolve itself — your plan does the fighting.
 
 A match: **Draft → Place → Reveal → Battle → Result**. Win, rematch, repeat.
 

@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 import { ART_ATTRIBUTIONS } from '../assets/attribution';
 import { BASE_HEIGHT, BASE_WIDTH, CREDITS_TITLE, HOME_BACK_LABEL, PALETTE } from '../config/constants';
-import { addSceneGround, applyHiDpiCamera, addBackAffordance, crispText, enableDragScroll } from '../config/ui';
+import { addHeaderStrip, addReadingBackdrop, addSceneGround, applyHiDpiCamera, addBackAffordance, crispText, enableDragScroll } from '../config/ui';
 import { formatCredits } from '../flow/credits';
 
 const VIEW_TOP = 44;
@@ -24,6 +24,8 @@ export class CreditsScene extends Scene {
     applyHiDpiCamera(this);
     addSceneGround(this); // story 5.2: the medieval stone floor under the menu chrome
 
+    // Story 5.2 review: long-form text needs a backdrop over the stone floor.
+    addReadingBackdrop(this, VIEW_TOP, BASE_HEIGHT);
     const content = this.add.container(0, VIEW_TOP);
     let y = 8;
     const title = crispText(this, BASE_WIDTH / 2, y, CREDITS_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5, 0);
@@ -63,7 +65,7 @@ export class CreditsScene extends Scene {
     }
 
     const wasDrag = enableDragScroll(this, content, VIEW_TOP, y, BASE_HEIGHT - 16);
-    this.add.rectangle(BASE_WIDTH / 2, VIEW_TOP / 2, BASE_WIDTH, VIEW_TOP, PALETTE.backgroundFill).setDepth(10);
+    addHeaderStrip(this, VIEW_TOP, 10); // story 5.2 review: the stone-tiled masking strip (a flat slate band read as a mismatched panel over the ground)
     addBackAffordance(
       this,
       HOME_BACK_LABEL,

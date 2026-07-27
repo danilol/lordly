@@ -1,7 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 import rulesRaw from '../../../../docs/rules.md?raw';
 import { BACK_LABEL, BASE_HEIGHT, BASE_WIDTH, MIN_FONT_PX, PALETTE } from '../config/constants';
-import { addSceneGround, applyHiDpiCamera, addBackAffordance, crispText, enableDragScroll } from '../config/ui';
+import { addHeaderStrip, addReadingBackdrop, addSceneGround, applyHiDpiCamera, addBackAffordance, crispText, enableDragScroll } from '../config/ui';
 import { parseRulesDoc } from '../flow/rulesDoc';
 import type { RulesLine } from '../flow/rulesDoc';
 import type { MatchFlow } from '../flow/MatchFlow';
@@ -45,11 +45,13 @@ export class HelpScene extends Scene {
     applyHiDpiCamera(this);
     addSceneGround(this); // story 5.2: the medieval stone floor under the menu chrome
 
+    // Story 5.2 review: long-form text needs a backdrop over the stone floor.
+    addReadingBackdrop(this, VIEW_TOP, BASE_HEIGHT);
     const content = this.add.container(0, VIEW_TOP);
     const contentHeight = this.renderLines(content, parseRulesDoc(rulesRaw));
     const wasDrag = enableDragScroll(this, content, VIEW_TOP, contentHeight, BASE_HEIGHT - 16);
 
-    this.add.rectangle(BASE_WIDTH / 2, VIEW_TOP / 2, BASE_WIDTH, VIEW_TOP, PALETTE.backgroundFill).setDepth(10);
+    addHeaderStrip(this, VIEW_TOP, 10); // story 5.2 review: the stone-tiled masking strip (a flat slate band read as a mismatched panel over the ground)
     addBackAffordance(
       this,
       BACK_LABEL,

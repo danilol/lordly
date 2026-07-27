@@ -54,16 +54,19 @@ export class ResultScene extends Scene {
     // Full-screen verdict banner (FR22): a side-colored band owning the top of
     // the screen (win = blue-side, lose = red-side, draw = neutral — the
     // DESIGN outcome rule) with a brief procedural entrance. Zero art.
-    const [label, color, band] =
+    const [label, color, band, bannerFill] =
       ended.winner === 'draw'
-        ? [RESULT_DRAW_LABEL, PALETTE.drawText, PALETTE.cardStroke]
+        ? [RESULT_DRAW_LABEL, PALETTE.drawText, PALETTE.cardStroke, PALETTE.cardFill]
         : ended.winner === 'A'
-          ? [RESULT_WIN_LABEL, PALETTE.winText, PALETTE.playerLine]
-          : [RESULT_LOSE_LABEL, PALETTE.loseText, PALETTE.enemyLine];
+          ? [RESULT_WIN_LABEL, PALETTE.winText, PALETTE.playerLine, PALETTE.cardFillYou]
+          : [RESULT_LOSE_LABEL, PALETTE.loseText, PALETTE.enemyLine, PALETTE.cardFillEnemy];
     const bannerY = BASE_HEIGHT * 0.16;
-    this.add.rectangle(BASE_WIDTH / 2, bannerY, BASE_WIDTH, 76, band, 0.16);
-    this.add.rectangle(BASE_WIDTH / 2, bannerY - 38, BASE_WIDTH, 2, band, 0.6);
-    this.add.rectangle(BASE_WIDTH / 2, bannerY + 38, BASE_WIDTH, 2, band, 0.6);
+    // Opaque band + solid rules (review 2026-07-27): the old 0.16/0.6 washes
+    // dissolved the match's primary outcome signal into the story-5.2 stone
+    // floor. Same side-blended tokens the comp chips below already use.
+    this.add.rectangle(BASE_WIDTH / 2, bannerY, BASE_WIDTH, 76, bannerFill);
+    this.add.rectangle(BASE_WIDTH / 2, bannerY - 38, BASE_WIDTH, 2, band);
+    this.add.rectangle(BASE_WIDTH / 2, bannerY + 38, BASE_WIDTH, 2, band);
     const banner = crispText(this, BASE_WIDTH / 2, bannerY, label, { fontFamily: 'Arial Black', fontSize: '40px', color }).setOrigin(0.5);
     if (!reduceMotion) {
       banner.setScale(0.6).setAlpha(0);

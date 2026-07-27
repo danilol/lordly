@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite --config vite/config.dev.mjs",
-    "build": "vite build --config vite/config.prod.mjs",
+    "check:art": "node scripts/check-frame-art.mjs",
+    "build": "node scripts/check-frame-art.mjs && vite build --config vite/config.prod.mjs",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit"
   },

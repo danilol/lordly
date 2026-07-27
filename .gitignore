@@ -16,5 +16,9 @@ docs/planning-artifacts/ux-designs/*/imports/
 # High-res art masters (source for downscaled sprite tiles; not shipped)
 /art-src/
 
-# OB64 reference art (Atlus copyright) — local reference ONLY, never published (public repo, FR31)
-docs/planning-artifacts/ux-designs/ui/ob64/
+# Raw Midjourney batches + OB64 reference art — local ONLY, never published.
+# The ob64/ sub-tree is Atlus-copyright; the parent holds ~1GB of raw generations
+# whose WINNERS are copied into ux-designs/midjourney/selected/ (tracked). Ignoring
+# only the sub-folder left the parent stageable by `git add -A` in a PUBLIC repo
+# (story 5.2 code review — it already nearly happened once).
+docs/planning-artifacts/ux-designs/ui/

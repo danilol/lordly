@@ -73,7 +73,10 @@ export class HomeScene extends Scene {
       color: PALETTE.buttonText,
     })
       .setOrigin(0.5)
-      .setStroke('#10131f', 4);
+      // 2px, not 4: Phaser strokes THEN fills, so the stroke encroaches inward
+      // ~half its width per stem — 4px closed up 13px Georgia (review 2026-07-27).
+      .setStroke('#10131f', 2)
+      .setShadow(0, 2, '#000000', 4);
 
     // Enabled (story 1.8): starts a fresh match and enters the Draft scene.
     addButton(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.58, {

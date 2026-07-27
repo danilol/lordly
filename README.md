@@ -1,4 +1,4 @@
-# Lordly — Lord Battle Tactics
+# Lordly — Ruler of the Board, Master of Tactics
 
 A pass-and-play tactics game: draft a warband, place it on the field, then watch a fully deterministic battle unfold. The rules live in a pure TypeScript engine (`packages/engine`); the Phaser 4 web app (`apps/web`) is only the shell that renders it. See the [PRD](docs/planning-artifacts/prds/prd-lordly-2026-07-11/prd.md) and the [architecture spine](docs/planning-artifacts/architecture/architecture-lordly-2026-07-12/ARCHITECTURE-SPINE.md) for the full picture.
 

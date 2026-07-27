@@ -114,32 +114,64 @@ export const PALETTE = {
 export type ButtonStyle = 'primary' | 'default' | 'disabled';
 
 export interface ButtonStyleTokens {
-  /** Body fill (number — shape/nineslice tint). */
+  /** Gold plate fill, shown for `primary` only (number — shape fill). */
   fill: number;
-  /** Frame edge. */
-  stroke: number;
   /** Label color (hex string for crispText). */
   text: string;
+  /**
+   * Alpha applied to the ornate 9-slice FRAME. Dimming is what marks a
+   * disabled button now that the frame is art: there is no stroke to re-color
+   * (review 2026-07-27 — the old `stroke` token was never rendered by
+   * `addButton`, so `buttonStrokeDisabled` silently did nothing here; it
+   * survives in PALETTE for the non-button rectangles that still draw strokes,
+   * e.g. HistoryScene's not-replayable marker).
+   */
+  frameAlpha: number;
 }
 
 /**
  * The ONE style source every button renders through (`addButton`,
- * config/ui.ts). DESIGN.md button component, night theme: default = panel
- * body + gold frame + bone label; primary/selected = gold FILL + ink label
- * (bone-on-gold is the contrast trap); disabled = muted frame + bone-soft
- * label, no gold anywhere. When the Midjourney 9-slice chrome lands, the
- * texture swap happens inside `addButton` — these tokens keep governing the
- * label and any tinting, and call sites never change.
+ * config/ui.ts). DESIGN.md button component, night theme: default = the
+ * frame art's own dark body + bone label; primary/selected = a gold plate
+ * inside the frame + ink label (bone-on-gold is the contrast trap); disabled
+ * = dimmed frame + muted label, no gold plate. Every field here is RENDERED —
+ * a token nothing draws is a token that lies (review 2026-07-27).
  */
 export function buttonStyleTokens(style: ButtonStyle): ButtonStyleTokens {
   switch (style) {
     case 'primary':
-      return { fill: PALETTE.buttonFillEnabled, stroke: PALETTE.buttonStrokeEnabled, text: PALETTE.buttonTextOnGold };
+      return { fill: PALETTE.buttonFillEnabled, text: PALETTE.buttonTextOnGold, frameAlpha: 1 };
     case 'default':
-      return { fill: PALETTE.buttonFill, stroke: PALETTE.buttonStroke, text: PALETTE.buttonText };
+      return { fill: PALETTE.buttonFill, text: PALETTE.buttonText, frameAlpha: 1 };
     case 'disabled':
-      return { fill: PALETTE.buttonFill, stroke: PALETTE.buttonStrokeDisabled, text: PALETTE.buttonTextDisabled };
+      return { fill: PALETTE.buttonFill, text: PALETTE.buttonTextDisabled, frameAlpha: DISABLED_FRAME_ALPHA };
   }
+}
+
+/** How far the ornate frame dims on a disabled button (the only "this is not tappable" signal the art can carry). */
+export const DISABLED_FRAME_ALPHA = 0.45;
+
+/** Smallest gold plate `buttonPlateInset` will leave inside a frame — below this the plate reads as a smudge, not a fill. */
+export const MIN_BUTTON_PLATE_PX = 8;
+
+/**
+ * How far the `primary` gold plate sits inside the frame art, per axis
+ * (pure — tested in ui-chrome.test.ts). Nominally the frame's own logical
+ * border plus 2px so the ornate ring stays visible, but CLAMPED so a small
+ * button can never produce a zero/negative-size plate: at 48×44 (History's
+ * Replay, the tightest shipped button) the nominal 14 is used, while a
+ * hypothetical 24px-tall row gets 8 instead of a degenerate −4
+ * (review 2026-07-27 — the unclamped version is exactly what a naive
+ * migration of Reveal's 24px dropdown rows would have hit).
+ */
+export function buttonPlateInset(size: number): number {
+  const nominal = Math.round(BUTTON_FRAME_SLICE / CHROME_SLICE_SCALE) + 2;
+  return Math.min(nominal, Math.max(0, Math.floor((size - MIN_BUTTON_PLATE_PX) / 2)));
+}
+
+/** A button's centre point, given its origin — the label and art layers all hang off this (pure, tested). */
+export function buttonCenter(x: number, y: number, width: number, height: number, origin: readonly [number, number]): { cx: number; cy: number } {
+  return { cx: x + (0.5 - origin[0]) * width, cy: y + (0.5 - origin[1]) * height };
 }
 
 // ---- Home look (story 5.2) ----
