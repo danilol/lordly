@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buttonStyleTokens, PALETTE } from '../src/config/constants';
+import { BUTTON_FRAME_SLICE, buttonStyleTokens, CHROME_SLICE_SCALE, PALETTE, PANEL_FRAME_SLICE } from '../src/config/constants';
 
 // Story 5.2 (the medieval look): the chrome builders' style seam. Every button
 // in the app renders through buttonStyleTokens — these pins keep the three
@@ -49,6 +49,21 @@ describe('buttonStyleTokens (story 5.2) — the one chrome style source', () => 
       expect(t.stroke, style).toBeGreaterThanOrEqual(0x000000);
       expect(t.stroke, style).toBeLessThanOrEqual(0xffffff);
     }
+  });
+});
+
+describe('9-slice geometry (story 5.2 art drop) — corners must fit the smallest chrome', () => {
+  it('button-frame corners fit the 44px tap-target floor at the slice scale', () => {
+    // NineSlice corners render at TEXTURE px in game units; builders draw at
+    // CHROME_SLICE_SCALE× then scale down. If two corners exceed the scaled
+    // 44px minimum button height, the frame collapses/overlaps.
+    expect(2 * BUTTON_FRAME_SLICE).toBeLessThanOrEqual(44 * CHROME_SLICE_SCALE);
+    // Narrowest shipped button: History's 48px Replay control.
+    expect(2 * BUTTON_FRAME_SLICE).toBeLessThanOrEqual(48 * CHROME_SLICE_SCALE);
+  });
+
+  it('panel-frame corners fit the smallest framed panel (Draft detail, 116px tall)', () => {
+    expect(2 * PANEL_FRAME_SLICE).toBeLessThanOrEqual(116 * CHROME_SLICE_SCALE);
   });
 });
 

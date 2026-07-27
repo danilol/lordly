@@ -1,7 +1,11 @@
 import { Scene, Textures } from 'phaser';
 import unitsUrl from '../assets/units.png';
 import homeCastleUrl from '../assets/home-castle.jpg';
-import { HOME_BG_KEY } from '../config/constants';
+import buttonFrameUrl from '../assets/button-frame.png';
+import panelFrameUrl from '../assets/panel-frame.png';
+import groundTileUrl from '../assets/ground-tile.jpg';
+import wordmarkUrl from '../assets/wordmark.jpg';
+import { CHROME_BUTTON_KEY, CHROME_PANEL_KEY, GROUND_TILE_KEY, HOME_BG_KEY, WORDMARK_KEY } from '../config/constants';
 import { UNIT_FRAMES, UNITS_SHEET_KEY, UNIT_FRAME_SIZE } from '../config/sprites';
 import { showInitFallback } from '../flow/initFallback';
 
@@ -39,11 +43,17 @@ export class BootScene extends Scene {
       showInitFallback(document, new Error(`asset failed to load: ${file?.key ?? 'unknown'}`));
     });
     this.load.spritesheet(UNITS_SHEET_KEY, unitsUrl, { frameWidth: UNIT_FRAME_SIZE, frameHeight: UNIT_FRAME_SIZE });
-    // Story 5.2: the Home castle background (Danilo's Midjourney art, jpg —
-    // emitted as a hashed file, precached by workbox alongside the bundle).
-    // Same loaderror path as the sheet: Home renders it unconditionally, so a
-    // missing texture is the same "silent broken game" class of failure.
+    // Story 5.2: the Home castle background + the Midjourney chrome (button/
+    // panel 9-slice frames, stone ground tile, wordmark) — all emitted as
+    // hashed files and precached by workbox alongside the bundle. Same
+    // loaderror path as the sheet: every scene renders this chrome
+    // unconditionally, so a missing texture is the same "silent broken game"
+    // class of failure.
     this.load.image(HOME_BG_KEY, homeCastleUrl);
+    this.load.image(CHROME_BUTTON_KEY, buttonFrameUrl);
+    this.load.image(CHROME_PANEL_KEY, panelFrameUrl);
+    this.load.image(GROUND_TILE_KEY, groundTileUrl);
+    this.load.image(WORDMARK_KEY, wordmarkUrl);
   }
 
   create() {

@@ -142,6 +142,26 @@ export const HOME_WORDMARK = 'Lordly';
 /** Texture key for the Home castle background (Danilo's Midjourney art, loaded in Boot). */
 export const HOME_BG_KEY = 'home-castle';
 
+// ---- Chrome art (story 5.2 — Danilo's Midjourney batch, picks 2026-07-27) ----
+
+export const CHROME_BUTTON_KEY = 'chrome-button-frame';
+export const CHROME_PANEL_KEY = 'chrome-panel-frame';
+export const GROUND_TILE_KEY = 'ground-tile';
+export const WORDMARK_KEY = 'lordly-wordmark';
+/**
+ * NineSlice corners render at TEXTURE scale (1 texture px = 1 game unit), so
+ * the builders draw every frame at CHROME_SLICE_SCALE× and setScale back down
+ * — corners then sample 3 texture px per logical px, staying crisp on the
+ * DPR-3 backing store (the story-4.0 text-ceiling lesson, applied to art).
+ */
+export const CHROME_SLICE_SCALE = 3;
+/** button-frame.png (400×200): the ornate border is ≈36 texture px → ≈12 logical px on a button. */
+export const BUTTON_FRAME_SLICE = 36;
+/** panel-frame.png (300×400): the ornate border is ≈45 texture px → ≈15 logical px on a panel. */
+export const PANEL_FRAME_SLICE = 45;
+/** Stone ground tile (512×512 source): drawn at this tile scale so stones read ~35px — a floor, not boulders. Device-tunable. */
+export const GROUND_TILE_SCALE = 0.35;
+
 // Text render resolution multiplier: the game renders at the 360×640 base and
 // Scale.FIT upscales the canvas, which softens text. Rendering glyphs to a
 // higher-resolution texture keeps them crisp when the canvas is scaled up.

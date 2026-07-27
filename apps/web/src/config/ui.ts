@@ -5,11 +5,18 @@ import {
   backingScaleFor,
   BASE_HEIGHT,
   BASE_WIDTH,
+  BUTTON_FRAME_SLICE,
   buttonStyleTokens,
+  CHROME_BUTTON_KEY,
+  CHROME_PANEL_KEY,
+  CHROME_SLICE_SCALE,
   ELEMENT_BADGE_RADIUS,
   ELEMENT_COLORS,
+  GROUND_TILE_KEY,
+  GROUND_TILE_SCALE,
   HOME_BACK_LABEL,
   PALETTE,
+  PANEL_FRAME_SLICE,
   TEXT_RESOLUTION,
   unitDisplaySize,
 } from './constants';
@@ -157,19 +164,24 @@ export interface ButtonOptions {
 }
 
 export interface ButtonHandle {
+  /** The (invisible) hit-area rectangle — also the anchor call sites position against. */
   rect: GameObjects.Rectangle;
   label: GameObjects.Text;
+  /** EVERY display object of the button, in render order — push these into dynamic-redraw arrays / scroll containers, or the art layers leak. */
+  parts: readonly GameObjects.GameObject[];
   /** Restyles in place (toggles, gating) — the one mutation path, so state changes can't drift from the style seam. */
   setStyle(style: ButtonStyle): void;
 }
 
 /**
  * THE button (story 5.2). Every tappable chrome button renders through this
- * one builder so the medieval look lives in exactly one place: today the
- * interim procedural treatment (body fill + gold frame via
- * `buttonStyleTokens`), and when Danilo's Midjourney 9-slice chrome lands the
- * texture swap happens INSIDE this function — call sites never change.
- * Interactivity follows the style: 'disabled' never fires `onTap`.
+ * one builder so the medieval look lives in exactly one place — since the
+ * 2026-07-27 art drop that look is Danilo's Midjourney gold frame as a
+ * 9-slice. Layers: frame nineslice (drawn at CHROME_SLICE_SCALE× and scaled
+ * down so the corners stay crisp on a DPR-3 backing store), a gold inset fill
+ * that only shows on 'primary' (the frame's own dark center is the
+ * default/disabled body), an invisible hit-area rect, and the label.
+ * Disabled = dimmed frame + muted label, and never fires `onTap`.
  * Non-chrome tap surfaces (unit cards, board cells) are NOT buttons and keep
  * their side-colored treatments.
  */
@@ -177,40 +189,64 @@ export function addButton(scene: Scene, x: number, y: number, opts: ButtonOption
   const [ox, oy] = opts.origin ?? [0.5, 0.5];
   let current: ButtonStyle = opts.style ?? 'default';
   let tokens = buttonStyleTokens(current);
-  const rect = scene.add.rectangle(x, y, opts.width, opts.height, tokens.fill).setOrigin(ox, oy).setStrokeStyle(2, tokens.stroke);
-  // The label always sits at the rect's visual center, whatever the origin.
-  const label = crispText(scene, x + (0.5 - ox) * opts.width, y + (0.5 - oy) * opts.height, opts.label, {
+  const cx = x + (0.5 - ox) * opts.width;
+  const cy = y + (0.5 - oy) * opts.height;
+  const S = CHROME_SLICE_SCALE;
+  const frame = scene.add
+    .nineslice(
+      cx,
+      cy,
+      CHROME_BUTTON_KEY,
+      undefined,
+      opts.width * S,
+      opts.height * S,
+      BUTTON_FRAME_SLICE,
+      BUTTON_FRAME_SLICE,
+      BUTTON_FRAME_SLICE,
+      BUTTON_FRAME_SLICE,
+    )
+    .setScale(1 / S);
+  // The primary gold fill sits ON TOP of the frame's opaque dark center,
+  // inset so the ornate ring stays visible; hidden for default/disabled.
+  const inset = Math.round(BUTTON_FRAME_SLICE / S) + 2;
+  const fill = scene.add.rectangle(cx, cy, opts.width - inset * 2, opts.height - inset * 2, tokens.fill).setVisible(current === 'primary');
+  const label = crispText(scene, cx, cy, opts.label, {
     fontFamily: 'Arial',
     fontSize: `${opts.fontSize ?? 15}px`,
     color: tokens.text,
     align: 'center',
   }).setOrigin(0.5);
+  // Invisible hit area — interactivity decoupled from the art layers.
+  const rect = scene.add.rectangle(x, y, opts.width, opts.height, 0x000000, 0).setOrigin(ox, oy);
 
-  const applyInteractivity = () => {
+  const applyStyle = () => {
+    tokens = buttonStyleTokens(current);
+    fill.setVisible(current === 'primary').setFillStyle(tokens.fill);
+    frame.setAlpha(current === 'disabled' ? 0.45 : 1);
+    label.setColor(tokens.text);
     if (current === 'disabled' || !opts.onTap) rect.disableInteractive();
     else rect.setInteractive({ useHandCursor: true });
   };
   if (opts.onTap) rect.on('pointerup', () => current !== 'disabled' && opts.onTap!());
-  applyInteractivity();
+  applyStyle();
 
   return {
     rect,
     label,
+    parts: [frame, fill, rect, label],
     setStyle(style: ButtonStyle) {
       current = style;
-      tokens = buttonStyleTokens(style);
-      rect.setFillStyle(tokens.fill).setStrokeStyle(2, tokens.stroke);
-      label.setColor(tokens.text);
-      applyInteractivity();
+      applyStyle();
     },
   };
 }
 
 /**
- * THE framed panel (story 5.2) — the DESIGN gold-framed "picture frame"
- * container (Draft's detail panel, Battle's log panel). Interim procedural:
- * panel body + gold-deep frame edge; the Midjourney panel-frame 9-slice swaps
- * in HERE when it lands, call sites untouched.
+ * THE framed panel (story 5.2) — Danilo's Midjourney gold picture-frame as a
+ * 9-slice (Draft's detail panel, Battle's log panel). Same crispness trick as
+ * the button: drawn at CHROME_SLICE_SCALE×, scaled back down. The art's own
+ * dark center is the panel body; `alpha` makes the whole plate translucent
+ * (the Battle log overlay).
  */
 export function addFramedPanel(
   scene: Scene,
@@ -219,12 +255,38 @@ export function addFramedPanel(
   width: number,
   height: number,
   opts?: { alpha?: number; origin?: readonly [number, number] },
-): GameObjects.Rectangle {
+): GameObjects.NineSlice {
   const [ox, oy] = opts?.origin ?? [0.5, 0.5];
+  const S = CHROME_SLICE_SCALE;
   return scene.add
-    .rectangle(x, y, width, height, PALETTE.buttonFill, opts?.alpha ?? 1)
-    .setOrigin(ox, oy)
-    .setStrokeStyle(2, PALETTE.buttonStroke);
+    .nineslice(
+      x + (0.5 - ox) * width,
+      y + (0.5 - oy) * height,
+      CHROME_PANEL_KEY,
+      undefined,
+      width * S,
+      height * S,
+      PANEL_FRAME_SLICE,
+      PANEL_FRAME_SLICE,
+      PANEL_FRAME_SLICE,
+      PANEL_FRAME_SLICE,
+    )
+    .setScale(1 / S)
+    .setAlpha(opts?.alpha ?? 1);
+}
+
+/**
+ * The medieval stone ground (story 5.2) — Danilo's seamless Midjourney tile
+ * under the menu scenes (Draft, Placement, Result, History, Help, Credits).
+ * NOT Home (the castle painting) and NOT Battle/Reveal (story 5.3 owns the
+ * terrain under the boards). Depth −10 so even below-zero content (Placement's
+ * depth −1 grid backdrops) stays above the floor.
+ */
+export function addSceneGround(scene: Scene): GameObjects.TileSprite {
+  return scene.add
+    .tileSprite(BASE_WIDTH / 2, BASE_HEIGHT / 2, BASE_WIDTH, BASE_HEIGHT, GROUND_TILE_KEY)
+    .setTileScale(GROUND_TILE_SCALE)
+    .setDepth(-10);
 }
 
 export function addHomeBack(scene: Scene): GameObjects.Rectangle {

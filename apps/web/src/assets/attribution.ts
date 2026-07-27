@@ -93,7 +93,14 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
     license: 'CC-BY-4.0',
     licenseName: 'Creative Commons Attribution 4.0',
     licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
-    assets: ['apps/web/src/assets/home-castle.jpg'],
+    assets: [
+      'apps/web/src/assets/home-castle.jpg',
+      // The chrome batch (picks 2026-07-27): 9-slice frames, ground tile, wordmark.
+      'apps/web/src/assets/button-frame.png',
+      'apps/web/src/assets/panel-frame.png',
+      'apps/web/src/assets/ground-tile.jpg',
+      'apps/web/src/assets/wordmark.jpg',
+    ],
     classSources: {},
   },
 ];

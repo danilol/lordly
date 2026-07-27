@@ -15,7 +15,7 @@ import {
   CARD_CLASS_FONT_PX,
   CLASS_ABBREVIATIONS,
 } from '../config/constants';
-import { addButton, applyHiDpiCamera, addElementBadge, addUnitSprite, crispText, prefersReducedMotion } from '../config/ui';
+import { addButton, addSceneGround, applyHiDpiCamera, addElementBadge, addUnitSprite, crispText, prefersReducedMotion } from '../config/ui';
 import type { ButtonStyle } from '../config/constants';
 import type { MatchFlow } from '../flow/MatchFlow';
 
@@ -40,6 +40,7 @@ export class ResultScene extends Scene {
   create() {
     this.cameras.main.setBackgroundColor(PALETTE.background);
     applyHiDpiCamera(this);
+    addSceneGround(this); // story 5.2: the medieval stone floor under the menu chrome
     const reduceMotion = prefersReducedMotion();
 
     const log = this.flow.resolve();

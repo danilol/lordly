@@ -1,7 +1,7 @@
 import { GameObjects, Scene } from 'phaser';
 import rulesRaw from '../../../../docs/rules.md?raw';
 import { BACK_LABEL, BASE_HEIGHT, BASE_WIDTH, MIN_FONT_PX, PALETTE } from '../config/constants';
-import { applyHiDpiCamera, addBackAffordance, crispText, enableDragScroll } from '../config/ui';
+import { addSceneGround, applyHiDpiCamera, addBackAffordance, crispText, enableDragScroll } from '../config/ui';
 import { parseRulesDoc } from '../flow/rulesDoc';
 import type { RulesLine } from '../flow/rulesDoc';
 import type { MatchFlow } from '../flow/MatchFlow';
@@ -43,6 +43,7 @@ export class HelpScene extends Scene {
   create() {
     this.cameras.main.setBackgroundColor(PALETTE.background);
     applyHiDpiCamera(this);
+    addSceneGround(this); // story 5.2: the medieval stone floor under the menu chrome
 
     const content = this.add.container(0, VIEW_TOP);
     const contentHeight = this.renderLines(content, parseRulesDoc(rulesRaw));

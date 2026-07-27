@@ -16,7 +16,7 @@ import {
 } from '../config/constants';
 import { canAddUnit, canContinue, classRulesCard, moveLabel, movesVaryByRow } from '../flow/draftModel';
 import type { MatchFlow } from '../flow/MatchFlow';
-import { addButton, addFramedPanel, applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText } from '../config/ui';
+import { addButton, addSceneGround, addFramedPanel, applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
 
 /** Icon-grid layout (story 4.3 redesign): a compact tile per class — all classes on one screen, no scroll. */
@@ -84,6 +84,7 @@ export class DraftScene extends Scene {
 
     this.cameras.main.setBackgroundColor(PALETTE.background);
     applyHiDpiCamera(this);
+    addSceneGround(this); // story 5.2: the medieval stone floor under the menu chrome
     addBackAffordance(this, HOME_BACK_LABEL, () => this.scene.start('Home'));
 
     crispText(this, BASE_WIDTH / 2, 26, DRAFT_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
@@ -277,7 +278,7 @@ export class DraftScene extends Scene {
         this.redraw();
       },
     });
-    this.dynamic.push(addBtn.rect, addBtn.label);
+    this.dynamic.push(...addBtn.parts);
 
     // 3. The army tray.
     const army = this.flow.getState().playerArmy;
@@ -337,6 +338,6 @@ export class DraftScene extends Scene {
       style: ready ? 'primary' : 'disabled',
       onTap: () => this.scene.start('Placement', { flow: this.flow }),
     });
-    this.dynamic.push(btn.rect, btn.label);
+    this.dynamic.push(...btn.parts);
   }
 }

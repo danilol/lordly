@@ -14,7 +14,7 @@ import {
   PALETTE,
   TACTIC_DISPLAY_NAME,
 } from '../config/constants';
-import { addButton, applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText, enableDragScroll } from '../config/ui';
+import { addButton, addSceneGround, applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText, enableDragScroll } from '../config/ui';
 import type { ButtonHandle } from '../config/ui';
 import { formatHistoryRow } from '../flow/historyModel';
 import { MatchFlow } from '../flow/MatchFlow';
@@ -68,6 +68,7 @@ export class HistoryScene extends Scene {
     this.transitioning = false;
     this.cameras.main.setBackgroundColor(PALETTE.background);
     applyHiDpiCamera(this);
+    addSceneGround(this); // story 5.2: the medieval stone floor under the menu chrome
 
     const entries = this.storage.loadHistory();
 
@@ -220,8 +221,7 @@ export class HistoryScene extends Scene {
         this.scene.start('Battle', { flow }); // straight to Battle — the reveal moment belongs to live play
       },
     });
-    content.add(btn.rect);
-    content.add(btn.label);
+    for (const part of btn.parts) content.add(part);
   }
 
   /** In-place demotion of a tapped-but-replay-invalid button: mute the EXISTING objects (no double-draw), then add only the marker. */

@@ -14,7 +14,7 @@ import {
   CLASS_ABBREVIATIONS,
   LEADER_CROWN_GLYPH,
 } from '../config/constants';
-import { addButton, applyHiDpiCamera, addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
+import { addButton, addSceneGround, applyHiDpiCamera, addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
 import { bannedCells, placedCount, rowActionCounts, sameCell, toAnchor } from '../flow/placement';
 import type { MatchFlow } from '../flow/MatchFlow';
@@ -76,6 +76,7 @@ export class PlacementScene extends Scene {
 
     this.cameras.main.setBackgroundColor(PALETTE.background);
     applyHiDpiCamera(this);
+    addSceneGround(this); // story 5.2: the medieval stone floor under the menu chrome
     addHomeBack(this);
     this.gridLeft = (BASE_WIDTH - (3 * CELL + 2 * GAP)) / 2;
 
@@ -405,6 +406,6 @@ export class PlacementScene extends Scene {
         this.scene.start('Reveal', { flow: this.flow });
       },
     });
-    this.dynamic.push(btn.rect, btn.label);
+    this.dynamic.push(...btn.parts);
   }
 }

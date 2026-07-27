@@ -8,11 +8,11 @@ import {
   BUTTON_WIDTH,
   GAME_SUBTITLE,
   HOME_BG_KEY,
+  WORDMARK_KEY,
   HOME_CREDITS_LABEL,
   HOME_HELP_LABEL,
   HOME_HISTORY_LABEL,
   HOME_PLAY_LABEL,
-  HOME_WORDMARK,
   SPUR_BUTTON_WIDTH,
   SPUR_COUNT,
   MODE_BUTTON_GAP,
@@ -26,7 +26,7 @@ import {
   PALETTE,
 } from '../config/constants';
 import { MatchFlow } from '../flow/MatchFlow';
-import { addButton, applyHiDpiCamera, crispText } from '../config/ui';
+import { addButton, addFramedPanel, applyHiDpiCamera, crispText } from '../config/ui';
 
 export class HomeScene extends Scene {
   /** The battle mode the next match starts in (FR17/FR19) — Wipeout by default (Danilo, 2026-07-19: Wipeout is the headline experience). */
@@ -58,20 +58,16 @@ export class HomeScene extends Scene {
     bg.setScale(Math.max(BASE_WIDTH / bg.width, BASE_HEIGHT / bg.height));
     this.add.rectangle(BASE_WIDTH / 2, BASE_HEIGHT * 0.76, BASE_WIDTH, BASE_HEIGHT * 0.48, PALETTE.buttonFill, 0.55);
 
-    // The wordmark (story 5.2): serif + gold with a dark stroke so it reads
-    // over the art — the INTERIM stand-in until the Midjourney wordmark lands
-    // (guide §3; the swap happens here, nothing else moves). The long name
-    // stays as a quiet subtitle.
-    crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.26, HOME_WORDMARK, {
-      fontFamily: 'Georgia, serif',
-      fontSize: '52px',
-      fontStyle: 'bold',
-      color: PALETTE.title,
-    })
-      .setOrigin(0.5)
-      .setStroke('#10131f', 8)
-      .setShadow(0, 3, '#000000', 6);
-    crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.33, GAME_SUBTITLE, {
+    // The wordmark plaque (story 5.2, art drop 2026-07-27): Danilo's gold
+    // blackletter LORDLY mounted on a gold-framed plate — the logo ships on
+    // its own dark ground, so framing it needs no background extraction. The
+    // epithet subtitle stays crisp TEXT below (a baked-in subtitle would blur
+    // at this width).
+    const plaqueY = BASE_HEIGHT * 0.235;
+    addFramedPanel(this, BASE_WIDTH / 2, plaqueY, 320, 128);
+    const wordmark = this.add.image(BASE_WIDTH / 2, plaqueY, WORDMARK_KEY);
+    wordmark.setDisplaySize(288, Math.round((288 * wordmark.height) / wordmark.width));
+    crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.365, GAME_SUBTITLE, {
       fontFamily: 'Georgia, serif',
       fontSize: '13px',
       color: PALETTE.buttonText,
@@ -148,7 +144,7 @@ export class HomeScene extends Scene {
           this.redrawModeToggle();
         },
       });
-      this.modeUi.push(btn.rect, btn.label);
+      this.modeUi.push(...btn.parts);
     });
 
     // One-line description of the selected mode; the wipeout cap is READ

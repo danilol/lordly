@@ -1,7 +1,7 @@
 import { Scene } from 'phaser';
 import { ART_ATTRIBUTIONS } from '../assets/attribution';
 import { BASE_HEIGHT, BASE_WIDTH, CREDITS_TITLE, HOME_BACK_LABEL, PALETTE } from '../config/constants';
-import { applyHiDpiCamera, addBackAffordance, crispText, enableDragScroll } from '../config/ui';
+import { addSceneGround, applyHiDpiCamera, addBackAffordance, crispText, enableDragScroll } from '../config/ui';
 import { formatCredits } from '../flow/credits';
 
 const VIEW_TOP = 44;
@@ -22,6 +22,7 @@ export class CreditsScene extends Scene {
   create() {
     this.cameras.main.setBackgroundColor(PALETTE.background);
     applyHiDpiCamera(this);
+    addSceneGround(this); // story 5.2: the medieval stone floor under the menu chrome
 
     const content = this.add.container(0, VIEW_TOP);
     let y = 8;
