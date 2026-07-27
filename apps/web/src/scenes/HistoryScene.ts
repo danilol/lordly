@@ -256,7 +256,9 @@ export class HistoryScene extends Scene {
 
   /** One compact unit card (DESIGN unit-card): side-colored border + ~15% wash, sprite, 3-letter code, element dot, and (story 4.5) a ♛ badge if it's the leader. Returns the next x. */
   private renderUnitCard(content: GameObjects.Container, x: number, y: number, unit: Unit, sideColor: number, isLeader = false): number {
-    const card = this.add.rectangle(x, y, CARD_W, CARD_H, sideColor, 0.15).setOrigin(0, 0).setStrokeStyle(2, sideColor);
+    // Opaque side-blended backing (device pass 2026-07-27): the 0.15 wash let the stone floor swallow the card.
+    const backing = sideColor === PALETTE.playerLine ? PALETTE.cardFillYou : PALETTE.cardFillEnemy;
+    const card = this.add.rectangle(x, y, CARD_W, CARD_H, backing).setOrigin(0, 0).setStrokeStyle(2, sideColor);
     const sprite = addUnitSprite(this, x + CARD_W / 2, y + 20, unit.class, 32);
     const code = crispText(this, x + CARD_W / 2, y + CARD_H - 3, CLASS_ABBREVIATIONS[unit.class], {
       fontFamily: 'Arial Black',

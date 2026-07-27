@@ -64,6 +64,13 @@ export const PALETTE = {
   buttonStrokeDisabled: 0x3a4157,
   cardFill: 0x1f2438,
   cardStroke: 0x3a4157,
+  // Unit-card backings (device pass 2026-07-27): the old ~15%-alpha side
+  // washes vanished over the story-5.2 stone floor — cards read as bare
+  // stone. These are the SAME look pre-blended opaque: cardFill + 15% of the
+  // side line color, so sprites and codes get a solid dark stage while side
+  // identity stays blue-vs-red (the DESIGN unit-card component, one source).
+  cardFillYou: 0x253451,
+  cardFillEnemy: 0x372938,
   bodyText: '#e8e4d8',
   mutedText: '#9a9db0',
   gridCellFill: 0x26304a,

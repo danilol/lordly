@@ -303,7 +303,7 @@ export class DraftScene extends Scene {
       const x = startX + i * (slotW + gap);
       const unit = army[i];
       const slot = unit
-        ? this.add.rectangle(x, trayY, slotW, 52, PALETTE.playerLine, 0.15).setOrigin(0, 0).setStrokeStyle(2, PALETTE.playerLine)
+        ? this.add.rectangle(x, trayY, slotW, 52, PALETTE.cardFillYou).setOrigin(0, 0).setStrokeStyle(2, PALETTE.playerLine)
         : this.add.rectangle(x, trayY, slotW, 52, PALETTE.gridCellFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.gridCellStroke);
       this.dynamic.push(slot);
       if (unit) {

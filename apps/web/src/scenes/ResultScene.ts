@@ -132,7 +132,8 @@ export class ResultScene extends Scene {
     units.forEach((unit, i) => {
       const x = startX + i * (chipW + gap) + chipW / 2;
       const cy = y + 44;
-      this.add.rectangle(x, cy, chipW, chipH, sideLine, 0.12).setStrokeStyle(1, sideLine);
+      // Opaque side-blended backing (device pass 2026-07-27): the 0.12 wash let the stone floor swallow the chip.
+      this.add.rectangle(x, cy, chipW, chipH, side === 'A' ? PALETTE.cardFillYou : PALETTE.cardFillEnemy).setStrokeStyle(1, sideLine);
       addUnitSprite(this, x, cy - 14, unit.class, 28);
       crispText(this, x, cy + 8, CLASS_ABBREVIATIONS[unit.class], {
         fontFamily: 'Arial Black',

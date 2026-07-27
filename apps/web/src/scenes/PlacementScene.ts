@@ -263,7 +263,8 @@ export class PlacementScene extends Scene {
       // code over the soldier NAME (FR37/dossier §7 — name under the code).
       // The card stays a Container so the drag contract (setSize hit area,
       // unitIndex data, setDraggable) is untouched by the layout change.
-      const body = this.add.rectangle(0, 0, 64, 64, PALETTE.playerLine, 0.15).setStrokeStyle(2, PALETTE.playerLine);
+      // Opaque side-blended backing (device pass 2026-07-27): the 0.15 wash let the stone floor swallow the card.
+      const body = this.add.rectangle(0, 0, 64, 64, PALETTE.cardFillYou).setStrokeStyle(2, PALETTE.playerLine);
       const sprite = addUnitSprite(this, 0, -12, unit.class, 28);
       const code = crispText(this, 0, 10, CLASS_ABBREVIATIONS[unit.class], {
         fontFamily: 'Arial Black',
