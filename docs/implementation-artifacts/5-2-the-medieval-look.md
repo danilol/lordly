@@ -4,7 +4,7 @@ baseline_commit: ebaa64e8d30bb3cb1e2f5f9f67711bed6ab1acb4
 
 # Story 5.2: The medieval look
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -32,7 +32,7 @@ so that the game's identity reads from the first screen.
 - [ ] Task 2: Home gets the look (AC: 1)
   - [x] `selected/home-castle.png` becomes the Home background (the MJ guide §3 already designates it: "busy-and-beautiful is exactly right" for Home — no gameplay text there). Preprocess before shipping (see Dev Notes asset budget), load via BootScene's established load-with-failure-path pattern.
   - [x] Wordmark: replace the `GAME_NAME` Arial Black text with the wordmark image (or MJ emblem + styled text per the guide's fallback). Keep `applyHiDpiCamera`/`Scale.FIT` behavior — images position on the 360×640 logical stage like everything else. _(Done: Danilo's gold blackletter LORDLY mounted on a panel-frame plaque — no background extraction needed; the epithet subtitle stays crisp text below.)_
-  - [ ] Legibility over art: Home's buttons/toggle must stay readable over the castle art — reuse the FR39f approach if needed (scrim/panel behind controls), device-verified.
+  - [x] Legibility over art: Home's buttons/toggle must stay readable over the castle art — reuse the FR39f approach if needed (scrim/panel behind controls), device-verified. _(Device pass 2026-07-27: Danilo accepted after two fix rounds — see Change Log.)_
 - [x] Task 3: PWA icons + web shell colors (AC: 1)
   - [x] Regenerate `public/icon-192.png`, `icon-512.png`, `icon-512-maskable.png` from the new MJ master (maskable: respect the safe zone — content in the inner ~80%). Update `vite/config.base.mjs` manifest `theme_color`/`background_color` and `index.html` `theme-color`/splash (`public/style.css` body #0f0f0f) if the shipped theme's ground changes. Favicon (`public/favicon.png`) rides the same master. _(Done 2026-07-27: Danilo's crown-over-shield pick `_3`; maskable padded onto the art's own sampled bg #122539 — seamless, content in the safe zone; favicon 64px.)_
   - [x] The attribution test asserts icon files exist on disk (3.3 precedent) — keep it green through the swap.
@@ -43,11 +43,11 @@ so that the game's identity reads from the first screen.
   - [x] New manifest entry for the MJ chrome/wordmark/icon assets under the 'Lordly original sprites' precedent (attribution.ts — Danilo's own generated art, own entry, CC-BY-4.0, `author: 'Danilo Lima'`). List every shipped derived file.
   - [x] Retire ONLY what's replaced: the DCSS entry's `icon-192/512/maskable` asset lines move to the new entry when icons re-derive from the MJ master. **`units.png` STAYS DCSS-attributed — sprites are story 5.9's swap, not this one.** _(Done 2026-07-27 with the icon regeneration.)_
   - [x] Credits scene renders from the manifest (2.4) — verify the new entry appears; update `attribution.test.ts` expectations. _(Verified: `flow/credits.ts` renders generically and skips the Supplies line for an empty `classSources`; the existence-glob in the test now covers jpg.)_
-- [ ] Task 6: Gate + perf spot-check + device pass (AC: 1, 2, 3)
-  - [ ] Full gate: `pnpm typecheck && pnpm lint && pnpm coverage`, web build succeeds; engine untouched (zero engine diffs; no version bumps — pure shell story).
-  - [ ] NFR1 spot-check: `?perf=1` capture on device vs the 5.0 baseline (Battle 1× + ×2, the perf-doc procedure); textures must not breach the 30fps floor. Record a perf-verdict addendum line.
-  - [ ] Workbox precache stays under control: every file ≤ 2MiB (workbox cap — `castle-battleground`-class PNGs are 1.7–1.9MB RAW, so preprocessing is mandatory), and note the total precache delta in the story record.
-  - [ ] Danilo's on-device acceptance of the whole look = the story's art gate (art-story split: he owns picks + device pass).
+- [x] Task 6: Gate + perf spot-check + device pass (AC: 1, 2, 3)
+  - [x] Full gate: `pnpm typecheck && pnpm lint && pnpm coverage`, web build succeeds; engine untouched (zero engine diffs; no version bumps — pure shell story). _(Coverage run green 2026-07-27; typecheck/lint/test/build re-run green after every fix round — 579 tests.)_
+  - [x] NFR1 spot-check: `?perf=1` capture on device vs the 5.0 baseline (Battle 1× + ×2, the perf-doc procedure); textures must not breach the 30fps floor. Record a perf-verdict addendum line. _(Danilo's capture 2026-07-27: PASS — median 59.88/60.24, zero sub-30 inside the battle stretch, one scene-entry burst matching the baseline's known/exempt class. Addendum written in docs/performance-verdict.md.)_
+  - [x] Workbox precache stays under control: every file ≤ 2MiB (workbox cap — `castle-battleground`-class PNGs are 1.7–1.9MB RAW, so preprocessing is mandatory), and note the total precache delta in the story record. _(All art preprocessed; delta ≈ 700KB across 6 files, largest 213KB; every file verified in dist/sw.js precache.)_
+  - [x] Danilo's on-device acceptance of the whole look = the story's art gate (art-story split: he owns picks + device pass). _(Accepted 2026-07-27 after two fix rounds: "it's better now… all is good.")_
 
 ## Dev Notes
 
@@ -156,6 +156,9 @@ Fable 5 (claude-fable-5)
 - `docs/implementation-artifacts/5-2-the-medieval-look.md` (modified — this file)
 
 ## Change Log
+
+- 2026-07-27 (STORY → REVIEW): AC 3 closed — Danilo ran the `?perf=1` capture (~2,000 samples); verdict PASS (median 59.88/60.24, zero in-battle sub-30, one scene-entry burst in the baseline's known/exempt class, ~0.9% isolated sub-30 singles). Perf-verdict addendum written. All tasks complete; all four ACs satisfied; 579 tests, full gate green. Next: senior code review (different LLM recommended).
+- 2026-07-27 (device pass, VISUALS ACCEPTED): Danilo walked the deployed build on his phone. Round 1 findings (all fixed, `ed62df8`): detail-panel white band (texture top-edge crop), 15px panel border swallowing content laid out against the 1px-stroke era (PANEL_FRAME_SLICE 45→30), "Add to army" overflowing its 66×46 frame (label → single-line "Add"), matchup-chip pill sunk below the panel (the depth(−1) trap — exposed by the ink label). Round 2 (fixed, `ca9616e`): ~15%-alpha unit-card side washes vanished over the stone floor — new opaque pre-blended `cardFillYou`/`cardFillEnemy` backings in History/Result/Draft-tray/Placement. Danilo: "it's better now. we can continue." FR39f verified in the same pass (board codes untouched — Battle ground unchanged; card codes now on opaque backings). REMAINING: the `?perf=1` capture (AC 3).
 
 - 2026-07-27: Story created (recon: missing chrome prompts, asset budget, scope fences).
 - 2026-07-27: Dev — interim procedural restyle shipped end-to-end (style seam + builders + 13 site migrations + Home castle background + one-theme doc amendments + attribution). Art-dependent half floats on Danilo's MJ chrome batch (guide §6). Gate green: 577 tests, typecheck/lint/build.

@@ -217,3 +217,13 @@ The deferred capture above ran 2026-07-24 (three deferrals after 4.10 — closed
 - **Standing instruction:** this capture is the baseline the Epic 5 visual stories (5.2 chrome, 5.3 backgrounds, 5.9 full-roster sheet) measure against; story 5.10's closing capture re-checks the floor after all of them. If sub-30 singles grow beyond "isolated" (or a sustained dip appears), the pooling fix named above (trace/popup/wash reuse) is the first lever.
 
 Device-class caveat unchanged: the capture device is a Pixel 9 Pro XL, an accepted deviation from AC1's Pixel 6a-class floor (documented in the 2026-07-16 review note above).
+
+## Addendum — story 5.2 the medieval look (2026-07-27, Danilo's device, deployed production build)
+
+The AC-3 spot-check against the story-5.0 baseline above, after the full chrome restyle (9-slice button/panel frames, 512px stone ground tile in six scenes, Home castle jpg + wordmark plaque, new PWA icons). Method note, stated honestly: figures below are hand-tallied from Danilo's pasted per-frame trace (~2,000 samples across the session; the second dump again contained the first as an exact prefix — the known missed-reset behavior, handled the 5.0 way). Not machine-computed; the 5.0 record remains the precision baseline.
+
+- **Median holds at 59.88/60.24** (alternating 60Hz sample values) through the whole session; the battle portion is a long uninterrupted ~60fps stretch with **zero sub-30 samples inside it** (baseline: 4 scattered mid-battle).
+- **Sub-30 census: ~18 samples of ~2,000 (~0.9%), all isolated single frames except one.** The singles: six ~29.94 boundary frames (33.4ms — the same class as the baseline's 30.03 "worst frame"), seven isolated 20–24fps frames in the interactive/menu sections (scroll/drag moments, the baseline reported the same class).
+- **The one multi-frame event: a 5-frame burst at ~12fps (min 10.91) at a scene transition** — immediately before the clean battle stretch, i.e. the Battle entry. This is the SAME known scene-entry burst the 5.0 baseline recorded (~5 frames bottoming at 8fps) and exempted under its explicit scene-transition rule; magnitude is comparable (bottom 10.9 vs 8.0). The 5.0 flag "worth an eye when 5.2/5.3 add load-time assets" is answered: the added assets (~700KB total, largest 213KB) did not worsen the entry burst.
+- **Adaptive-refresh caveat carried forward:** sustained ~120fps runs and ~40fps plateaus appear throughout (the 5.0 caveat verbatim) — sample values are not 1:1 frame-cost measures.
+- **Verdict: PASS.** No NFR1 in-battle floor breach; the medieval chrome is perf-neutral vs the epic-5 baseline. Story 5.3 (battle backgrounds) inherits this as its comparison point and should re-check the entry burst when the terrain art loads.
