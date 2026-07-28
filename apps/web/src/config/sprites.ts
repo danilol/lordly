@@ -38,6 +38,17 @@ export const UNIT_FRAMES: Record<UnitClass, number> = {
   // MONSTER_LOOM_SCALE) so it overhangs the ring it reserves — one cell, one
   // oversized sprite, never a two-cell body (dossier D-3c).
   golem: 6,
+  // STORY 5.4 — INTERIM sprites (the 4.3 convention; dedicated art is story
+  // 5.9's): the human wave reuses the closest existing frame so the 17-class
+  // loop runs and reads. Fencer + the three birdmen borrow the Mercenary
+  // (Skirmisher melee); the Dragon Hunter borrows the Archer (the F ranged
+  // hunter silhouette). Placeholders, NOT final art — attribution.ts carries
+  // the matching "(INTERIM: shares …)" notes.
+  fencer: 1,
+  dragonhunter: 2,
+  hawkman: 1,
+  vultan: 1,
+  raven: 1,
 };
 
 // FR31 animation representations — tween-based (the CC0 tiles are single-frame,

@@ -84,13 +84,15 @@ describe('balance data (FR14, FR15, FR16, AD-4)', () => {
     expect(BALANCE.classes.witch.role).toBe('control');
   });
 
-  it('encodes the FR14 role relations: the RPS triangle (symmetric) + the caster hunts (one-way)', () => {
+  it('encodes the FR14 role relations: the RPS triangle (symmetric) + the one-way hunts', () => {
     expect(BALANCE.roleRelations).toEqual([
       { attacker: 'artillery', defender: 'vanguard', kind: 'symmetric' },
       { attacker: 'vanguard', defender: 'sniper', kind: 'symmetric' },
       { attacker: 'sniper', defender: 'artillery', kind: 'symmetric' },
       { attacker: 'sniper', defender: 'support', kind: 'hunt' },
       { attacker: 'sniper', defender: 'control', kind: 'hunt' },
+      // Story 5.4 (E5-P1): inert until 5.5 ships a class with role 'dragon'.
+      { attacker: 'dragonslayer', defender: 'dragon', kind: 'hunt' },
     ]);
   });
 

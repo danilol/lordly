@@ -263,56 +263,6 @@ function act(unit: UnitState, units: UnitState[], battle: Stream, setup: MatchSe
   const physical = leaderFallen.A || leaderFallen.B ? leaderPenaltyPhysical(unit.side, enemySide, leaderFallen) : physicalDamage;
 
   switch (unit.class) {
-    // Vanguard + Skirmisher act by their (class, row) MOVE (story 4.7, dossier
-    // §4 — the table is DATA, not code): a Guard row raises a shield instead
-    // of attacking; every other row melees the nearest reachable target with
-    // its row's move kind. Role only shifts the RPS multiplier, applied inside
-    // damagePipeline.
-    case 'knight':
-    case 'mercenary':
-    case 'berserker':
-    case 'phalanx':
-    case 'ninja':
-    case 'valkyrie':
-    case 'golem': {
-      const move = BALANCE.classes[unit.class].moves[unit.snapshot.placement.row];
-      if (move === 'guard-full' || move === 'guard-half') return raiseGuard(unit, move === 'guard-full' ? 'full' : 'half');
-      const idx = selectMeleeTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
-      if (idx === undefined) return skip(unit);
-      const target = enemies[idx] as UnitState;
-      return strike(unit, [target], physical, move, units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
-    }
-    case 'archer': {
-      // Archer's move is row-uniform ('arrow' in every slot) — looked up from
-      // the table anyway so a future per-row archer tweak is data-only.
-      const move = BALANCE.classes[unit.class].moves[unit.snapshot.placement.row] as MoveKind;
-      const idx = selectRangedTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
-      if (idx === undefined) return skip(unit);
-      const target = enemies[idx] as UnitState;
-      return strike(unit, [target], physical, move, units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
-    }
-    // Artillery: a Wizard/Sorceress FRONT row is a physical, MELEE-targeted
-    // staff attack (dossier §4 — distinct from the Cleric's global staff
-    // fallback); mid/back keep the row-blast. Tactic interaction (D-2c): under
-    // `leader` the blast targets the enemy leader's ROW (AoE treats the leader
-    // as the focal point); under every other tactic — and when the leader is
-    // not alive — it keeps its own rule (row with most living, tie rearmost).
-    case 'mage':
-    case 'sorceress': {
-      const move = BALANCE.classes[unit.class].moves[unit.snapshot.placement.row];
-      if (move === 'staff') {
-        const idx = selectMeleeTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
-        if (idx === undefined) return skip(unit);
-        const target = enemies[idx] as UnitState;
-        return strike(unit, [target], physical, 'staff', units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
-      }
-      const leaderRow = tactic === 'leader' ? enemies.find((e) => e.id === enemyLeaderId && e.alive)?.rowIndex : undefined;
-      const row = leaderRow ?? selectBlastRow(enemies);
-      if (row === undefined) return skip(unit);
-      const targets = enemies.filter((e) => e.alive && e.rowIndex === row);
-      // Blast is MAGIC — no leader-fall penalty, no Guard (dossier §4: both physical only).
-      return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode), 'blast', units, setup.leaders, leaderFallen);
-    }
     case 'cleric': {
       // Heals ignore tactics entirely (dossier §4). The staff fallback is a
       // single-target ranged attack and DOES obey the tactic.
@@ -356,6 +306,72 @@ function act(unit: UnitState, units: UnitState[], battle: Stream, setup: MatchSe
       if (!enemies.some((e) => e.alive)) return skip(unit);
       return [{ type: 'ActionFizzled', unit: unit.id }];
     }
+    // Every ATTACKING class acts by its (class, row) MOVE (story 4.7, dossier
+    // §4 — the table is DATA, not code; story 5.4 carries it to the logical
+    // end: ONE move-driven dispatch instead of per-class case lists, which is
+    // what lets the mixed kits — Vultan/Raven back-`arrow`, Valkyrie
+    // back-`bolt` — route per row with no special-casing). Only the Cleric
+    // (heal logic) and Witch (cast logic) act outside the move table. The
+    // inner switch is EXHAUSTIVE over `RowMove` with no default, so a future
+    // kind (5.5's `breath`) is a compile error here, never a silent melee.
+    default: {
+      const move = BALANCE.classes[unit.class].moves[unit.snapshot.placement.row];
+      switch (move) {
+        // A Guard row raises a shield instead of attacking (FR33, story 4.7).
+        case 'guard-full':
+        case 'guard-half':
+          return raiseGuard(unit, move === 'guard-full' ? 'full' : 'half');
+        // The magic ranged single-target bolt (story 5.4, dossier E5-D4):
+        // Wizard/Sorceress mid/back and the Valkyrie's back-row Lightning.
+        // MAGIC — no leader-fall penalty, no Guard, and NO `roll`, so it
+        // consumes ZERO battle-stream draws (ADR 0003: only physical
+        // single-target hits draw). Unattenuated in both modes: the wipeout
+        // attenuation compensated the blast's whole-row coverage, which the
+        // bolt gave up.
+        case 'bolt': {
+          const idx = selectRangedTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
+          if (idx === undefined) return skip(unit);
+          const target = enemies[idx] as UnitState;
+          return strike(unit, [target], magicDamage, 'bolt', units, setup.leaders, leaderFallen);
+        }
+        // Physical ranged single-target (FR9): the Archer's row-uniform arrow
+        // and the Vultan/Raven back-row Skills (Wind Shot / Thunder Arrow —
+        // display names over the same `arrow` kind, E5-D14). Physical, so the
+        // full dodge/crit draws apply.
+        case 'arrow': {
+          const idx = selectRangedTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
+          if (idx === undefined) return skip(unit);
+          const target = enemies[idx] as UnitState;
+          return strike(unit, [target], physical, 'arrow', units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
+        }
+        // The row blast (FR10). NO class's table carries it since story 5.4
+        // (E5-D4 — reserved for a future Archmage), but the rule stays live
+        // data-driven: any class given a 'blast' row blasts, with the D-2c
+        // tactic interaction (under `leader` the AoE targets the enemy
+        // leader's ROW; otherwise fullest row, tie rearmost) intact.
+        case 'blast': {
+          const leaderRow = tactic === 'leader' ? enemies.find((e) => e.id === enemyLeaderId && e.alive)?.rowIndex : undefined;
+          const row = leaderRow ?? selectBlastRow(enemies);
+          if (row === undefined) return skip(unit);
+          const targets = enemies.filter((e) => e.alive && e.rowIndex === row);
+          // Blast is MAGIC — no leader-fall penalty, no Guard (dossier §4: both physical only).
+          return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode), 'blast', units, setup.leaders, leaderFallen);
+        }
+        // Physical melee single-target (FR8), reach-filtered with Last Stand:
+        // every slash/bash row, plus the Wizard/Sorceress FRONT-row staff jab
+        // (dossier §4 — MELEE-targeted, distinct from the Cleric's global
+        // staff fallback above). Role only shifts the RPS multiplier, applied
+        // inside damagePipeline.
+        case 'slash':
+        case 'bash':
+        case 'staff': {
+          const idx = selectMeleeTarget(unit.colIndex, enemies, tactic, enemyLeaderId);
+          if (idx === undefined) return skip(unit);
+          const target = enemies[idx] as UnitState;
+          return strike(unit, [target], physical, move, units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
+        }
+      }
+    }
   }
 }
 
@@ -377,45 +393,6 @@ function misfire(unit: UnitState, units: UnitState[], battle: Stream, setup: Mat
   const physical = leaderFallen.A || leaderFallen.B ? leaderPenaltyPhysical(unit.side, unit.side, leaderFallen) : physicalDamage;
 
   switch (unit.class) {
-    // Every physical attacker misfires as a melee strike on a random ally
-    // (story 4.3: the melee newcomers join the shipped physical trio).
-    case 'knight':
-    case 'mercenary':
-    case 'archer':
-    case 'berserker':
-    case 'phalanx':
-    case 'ninja':
-    case 'valkyrie':
-    case 'golem': {
-      if (allies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
-      // A2 (misfire redirect target) draws first, THEN A3/A4 for the resulting
-      // physical strike on the ally — ADR 0003's frozen order (a misfired
-      // physical attack onto an ally is an A3/A4 draw site).
-      const target = allies[nextInt(battle, 0, allies.length - 1)] as UnitState;
-      return strike(unit, [target], physical, attackMoveOf(unit), units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
-    }
-    case 'mage':
-    case 'sorceress': {
-      // A FRONT-row Wizard/Sorceress's normal action is a physical single-target
-      // staff (story 4.7), so its misfire is row-consistent: a physical strike on
-      // a random ally, exactly like the melee misfire above — an A2 (redirect
-      // target) + A3/A4 (dodge/crit) draw site (ADR 0003 already classes a
-      // misfired physical single-target attack this way; NO frozen-table change).
-      // Mid/back rows keep the magic self-blast (review decision, story 4.7).
-      const move = BALANCE.classes[unit.class].moves[unit.snapshot.placement.row];
-      if (move === 'staff') {
-        if (allies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
-        const target = allies[nextInt(battle, 0, allies.length - 1)] as UnitState;
-        return strike(unit, [target], physical, 'staff', units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
-      }
-      // Blasts its OWN fullest row (recorded decision: the mage itself counts
-      // and can be struck by its own blast). Magic — no leader-fall penalty, no draws.
-      const own = units.filter((u) => u.side === unit.side);
-      const row = selectBlastRow(own);
-      if (row === undefined) return [{ type: 'ActionFizzled', unit: unit.id }];
-      const targets = own.filter((u) => u.alive && u.rowIndex === row);
-      return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode), 'blast', units, setup.leaders, leaderFallen);
-    }
     case 'cleric': {
       if (enemies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
       const patient = enemies[nextInt(battle, 0, enemies.length - 1)] as UnitState;
@@ -429,6 +406,39 @@ function misfire(unit: UnitState, units: UnitState[], battle: Stream, setup: Mat
       if (target.statuses.has(unit.witchSpell)) return [{ type: 'ActionFizzled', unit: unit.id }]; // no stack
       target.statuses.add(unit.witchSpell);
       return [{ type: 'StatusApplied', source: unit.id, target: target.id, spell: unit.witchSpell }];
+    }
+    // Every attacking class misfires ROW-CONSISTENTLY (the story-4.7 review
+    // principle: a misfire is the unit's normal attack shape, misdirected) —
+    // move-driven like `act()` since story 5.4:
+    // - a `bolt` row bolts a random ally — MAGIC, so the A2 redirect pick is
+    //   its ONLY draw (no A3/A4; ADR 0003 classes magic as draw-free). This
+    //   replaces the retired self-blast: the casters' mid/back move IS the
+    //   single-target bolt now (E5-D4), so the misfire mirrors it.
+    // - a `blast` row (no class this era) keeps the recorded self-blast rule:
+    //   its OWN fullest row, the caster itself included. Magic — no draws.
+    // - every physical row (slash/bash/staff/arrow, and a Guard row's
+    //   `attackMoveOf` fallback) strikes a random ally: A2 (redirect target)
+    //   then A3/A4 (dodge/crit) — ADR 0003's frozen order for a misfired
+    //   physical single-target attack.
+    default: {
+      const move = attackMoveOf(unit);
+      if (move === 'bolt') {
+        if (allies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
+        const target = allies[nextInt(battle, 0, allies.length - 1)] as UnitState; // A2 — the only draw
+        return strike(unit, [target], magicDamage, 'bolt', units, setup.leaders, leaderFallen);
+      }
+      if (move === 'blast') {
+        const own = units.filter((u) => u.side === unit.side);
+        const row = selectBlastRow(own);
+        if (row === undefined) return [{ type: 'ActionFizzled', unit: unit.id }];
+        const targets = own.filter((u) => u.alive && u.rowIndex === row);
+        return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode), 'blast', units, setup.leaders, leaderFallen);
+      }
+      if (allies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
+      // A2 (misfire redirect target) draws first, THEN A3/A4 for the resulting
+      // physical strike on the ally — ADR 0003's frozen order.
+      const target = allies[nextInt(battle, 0, allies.length - 1)] as UnitState;
+      return strike(unit, [target], physical, move, units, setup.leaders, leaderFallen, rollHit(unit.class, target.class, battle));
     }
   }
 }
@@ -451,13 +461,14 @@ function raiseGuard(unit: UnitState, tier: 'full' | 'half'): BattleEvent[] {
 }
 
 /**
- * The physical attack kind a confused unit's misfire swings with (FR16/FR32).
- * Normally the acting unit's own row move; a unit whose row RAISES Guard
- * (Knight-mid, Phalanx-front/mid) has no attack shape to misfire with — the
- * confusion misfire branch keeps its established "always a melee-style
- * strike" behavior (story 4.7 doesn't special-case a guarding confusion), so
- * it falls back to the class's own BACK-row move, which the frozen table
- * always keeps as a real attack (Knight back = slash, Phalanx back = bash).
+ * The attack kind a confused unit's misfire swings with (FR16/FR32).
+ * Normally the acting unit's own row move (row-consistent, the 4.7 review
+ * principle); a unit whose row RAISES Guard (Knight-mid, Phalanx-front/mid)
+ * has no attack shape to misfire with, so it falls back to the class's own
+ * BACK-row move, which the table always keeps as a real attack (Knight back =
+ * slash, Phalanx back = bash). Since story 5.4 the returned kind may be
+ * `bolt` — the misfire dispatch routes it as a magic strike (no draws), so
+ * the fallback contract is "a real attack", no longer "a melee-style strike".
  */
 function attackMoveOf(unit: UnitState): MoveKind {
   const moves = BALANCE.classes[unit.class].moves;

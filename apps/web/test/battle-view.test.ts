@@ -411,8 +411,10 @@ describe('movePlate — the FR39b ledger seam (story 4.11, D-3a: the ledger IS t
     // action, one plate, single decrement by construction.
     const c = ctx([snap('A:0', 'mercenary', 'fire', 'front')], { 'A:0': 1 });
     expect(movePlate({ type: 'ActionMisfired', unit: 'A:0' }, c)).toBeNull();
-    // The paired effect (a strike on an ally) plates normally:
-    expect(movePlate(strike('A:0', 'slash'), c)).toEqual({ unitId: 'A:0', label: 'Sword Slash', remaining: 0, max: 2 });
+    // The paired effect (a strike on an ally) plates normally — with the
+    // actor's own class verb (story 5.4/E5-D10: the Mercenary's slash reads
+    // "Cut Throat", misfire or not).
+    expect(movePlate(strike('A:0', 'slash'), c)).toEqual({ unitId: 'A:0', label: 'Cut Throat', remaining: 0, max: 2 });
   });
 
   it('shows NO plate for skipped turns (Q3 default — the Zzz/waits popup already reads) or any no-actor event', () => {

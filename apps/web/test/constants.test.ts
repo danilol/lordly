@@ -164,22 +164,42 @@ describe('travel-trace colors (story 4.10 review) — the format statusTraceColo
   });
 });
 
-describe('move-plate display vocabulary (story 4.11, FR39b/D-3a) — union-keyed drift guards', () => {
+describe('move-plate display vocabulary (story 4.11, FR39b/D-3a; class verbs since 5.4/E5-D10) — union-keyed drift guards', () => {
   it('names every non-blast move in the OB64 plate register', () => {
-    expect(MOVE_PLATE_NAMES).toEqual({ slash: 'Sword Slash', arrow: 'Arrow', staff: 'Staff', bash: 'Bash' });
+    expect(MOVE_PLATE_NAMES).toEqual({ slash: 'Sword Slash', arrow: 'Arrow', staff: 'Staff', bash: 'Bash', bolt: 'Magic Bolt' });
   });
 
   it('flavors the blast by element — the EXPERIENCE "Ice Blast" mapping (open Q2 default)', () => {
     for (const element of ALL_ELEMENTS) {
-      expect(moveDisplayName('blast', element)).toBe(`${BLAST_ELEMENT_WORD[element]} Blast`);
+      expect(moveDisplayName('blast', element, 'mage')).toBe(`${BLAST_ELEMENT_WORD[element]} Blast`);
     }
-    expect(moveDisplayName('blast', 'water')).toBe('Ice Blast');
-    expect(moveDisplayName('blast', 'earth')).toBe('Stone Blast');
+    expect(moveDisplayName('blast', 'water', 'mage')).toBe('Ice Blast');
+    expect(moveDisplayName('blast', 'earth', 'sorceress')).toBe('Stone Blast');
   });
 
-  it('passes non-blast kinds straight through regardless of element', () => {
-    expect(moveDisplayName('slash', 'fire')).toBe('Sword Slash');
-    expect(moveDisplayName('arrow', 'water')).toBe('Arrow');
+  it('passes non-blast kinds straight through regardless of element when the class has no named verb', () => {
+    expect(moveDisplayName('slash', 'fire', 'knight')).toBe('Sword Slash');
+    expect(moveDisplayName('arrow', 'water', 'archer')).toBe('Arrow');
+  });
+
+  it('the dossier-named class verbs override the generic plate (story 5.4, E5-D10) — same kind, class-specific name', () => {
+    expect(moveDisplayName('slash', 'fire', 'berserker')).toBe('Cleave');
+    expect(moveDisplayName('slash', 'fire', 'ninja')).toBe('Rend');
+    expect(moveDisplayName('slash', 'fire', 'mercenary')).toBe('Cut Throat');
+    expect(moveDisplayName('slash', 'fire', 'golem')).toBe('Smash');
+    expect(moveDisplayName('bash', 'fire', 'phalanx')).toBe('Pierce');
+    expect(moveDisplayName('slash', 'fire', 'fencer')).toBe('Lunge');
+    expect(moveDisplayName('slash', 'fire', 'dragonhunter')).toBe('Skewer');
+    expect(moveDisplayName('slash', 'fire', 'hawkman')).toBe('Talon Strike');
+    // The E5-D14 Skills: the same physical `arrow` kind, per-class verbs.
+    expect(moveDisplayName('arrow', 'wind', 'vultan')).toBe('Wind Shot');
+    expect(moveDisplayName('arrow', 'wind', 'raven')).toBe('Thunder Arrow');
+    // The bolt: casters ride the generic plate; the Valkyrie's is "Lightning".
+    expect(moveDisplayName('bolt', 'fire', 'mage')).toBe('Magic Bolt');
+    expect(moveDisplayName('bolt', 'fire', 'sorceress')).toBe('Magic Bolt');
+    expect(moveDisplayName('bolt', 'fire', 'valkyrie')).toBe('Lightning');
+    // And her melee spear reads "Pierce" (E5-D10) — element never matters off-blast.
+    expect(moveDisplayName('slash', 'earth', 'valkyrie')).toBe('Pierce');
   });
 
   it('surfaces the FR16 spell names, Title-Cased, one per SpellKind', () => {

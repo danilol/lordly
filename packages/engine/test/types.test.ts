@@ -69,6 +69,12 @@ describe('domain types (AD-4, AD-9, AD-11)', () => {
       'valkyrie',
       'sorceress',
       'golem',
+      // Story 5.4 — the human wave (dossier ROSTER.md).
+      'fencer',
+      'dragonhunter',
+      'hawkman',
+      'vultan',
+      'raven',
     ]);
     expect(ALL_ELEMENTS).toEqual(['fire', 'water', 'wind', 'earth']);
     expect(ALL_SIDES).toEqual(['A', 'B']);

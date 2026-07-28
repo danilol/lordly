@@ -88,13 +88,15 @@ const POISON_DUEL = {
 
 describe('LeaderFell emission (FR35, story 4.5)', () => {
   it('a leader killed in COMBAT emits LeaderFell exactly once, right after its UnitDied', () => {
-    // 5 knights vs 5 mages: the mages blast the 3-knight front to death on pass
-    // 1; A:0 (front-left) is A's default leader, so its death fires LeaderFell(A)
-    // between the front casualties. B's leader (a back mage) is never touched.
-    const log = resolveBattle(setup(KNIGHT_WALL_VS_MAGE_BATTERY, { leaders: { A: 0, B: 0 } }));
-    expect(log.events.filter((e) => e.type === 'LeaderFell')).toEqual([{ type: 'LeaderFell', side: 'A', unit: 'A:0' }]);
+    // 5 knights vs 5 mages: since story 5.4 the battery's bolts snipe A's MID
+    // pair (ranged targeting: rearmost row), and A:4 (mid-right, the facing-
+    // column pick for three of the five casters) dies on pass 2 — draw-free
+    // arithmetic, so it holds on every seed. Crown A:4 and its death fires
+    // LeaderFell(A). B's leader (a back mage) is never touched.
+    const log = resolveBattle(setup(KNIGHT_WALL_VS_MAGE_BATTERY, { leaders: { A: 4, B: 0 } }));
+    expect(log.events.filter((e) => e.type === 'LeaderFell')).toEqual([{ type: 'LeaderFell', side: 'A', unit: 'A:4' }]);
     const idx = log.events.findIndex((e) => e.type === 'LeaderFell');
-    expect(log.events[idx - 1]).toEqual({ type: 'UnitDied', unit: 'A:0' }); // rides immediately after the death
+    expect(log.events[idx - 1]).toEqual({ type: 'UnitDied', unit: 'A:4' }); // rides immediately after the death
   });
 
   it('a leader killed by POISON emits LeaderFell, right after the fatal PoisonTicked→UnitDied pair', () => {
@@ -203,33 +205,44 @@ describe('the sober-package physical penalty (FR35, dossier §4)', () => {
 });
 
 describe('tactic reversion to Autonomous (FR35, dossier §4)', () => {
-  // A curated pair (found by search): A on 'strongest' whose leader A:0 falls
-  // early — from A's first tactic-relevant action its leader is already down, so
-  // A plays IDENTICALLY to a fully-Autonomous run. A control with a surviving
-  // leader proves the tactic genuinely diverges when it is NOT reverted.
+  // Re-curated for story 5.4 (the old fixture's pre-fall coincidence relied on
+  // tactic-blind row blasts; E5-D4's bolt applies the tactic on EVERY caster
+  // action, so it could never coincide again). This fixture makes the
+  // coincidence STRUCTURAL instead: every A unit except the archer has a
+  // singleton legal-target list (melee blockade funnels onto B's front-center
+  // ninja; the mid knight Guards), and the archer's autonomous pick (rearmost:
+  // the back-center ninja, its facing column) IS the strongest pick (all three
+  // ninjas + witch tie at 85 hp max, and the tie falls through to the same
+  // autonomous priority) — until B's back line starts dying, which happens
+  // after A:0 falls. So: leader down before A's first post-fall archer action
+  // → the 'strongest' run is event-identical to Autonomous. The control run
+  // (crowning A:1, who is never hit) diverges deterministically at the
+  // archer's second action (strongest → the full-HP witch, autonomous → the
+  // wounded back ninja). SEED probed: A:0 (sorceress, 78 hp) needs one ninja
+  // crit among the first four swings to die before the archer's pass-2 shot.
   const REVERSION = {
     armies: {
-      A: [u('mage', 'fire', 'A0'), u('sorceress', 'fire', 'A1'), u('mage', 'fire', 'A2'), u('archer', 'fire', 'A3'), u('sorceress', 'fire', 'A4')],
-      B: [u('archer', 'fire', 'B0'), u('ninja', 'fire', 'B1'), u('mercenary', 'fire', 'B2'), u('mercenary', 'fire', 'B3'), u('valkyrie', 'fire', 'B4')],
+      A: [u('sorceress', 'fire', 'A0'), u('knight', 'fire', 'A1'), u('knight', 'fire', 'A2'), u('knight', 'fire', 'A3'), u('archer', 'fire', 'A4')],
+      B: [u('ninja', 'fire', 'B0'), u('ninja', 'fire', 'B1'), u('ninja', 'fire', 'B2'), u('witch', 'fire', 'B3'), u('sorceress', 'fire', 'B4')],
     },
     placements: {
       A: [
-        { row: 'front', col: 'center' },
-        { row: 'back', col: 'right' },
-        { row: 'mid', col: 'right' },
-        { row: 'back', col: 'center' },
-        { row: 'mid', col: 'center' },
+        { row: 'front', col: 'center' }, // A:0 — the doomed leader (all three ninjas funnel onto it)
+        { row: 'front', col: 'left' },
+        { row: 'front', col: 'right' },
+        { row: 'mid', col: 'left' }, // Guards — deliberately NOT mid-center (that would shield A:0's killers' target... itself)
+        { row: 'back', col: 'center' }, // the archer — the only tactic-sensitive unit
       ],
       B: [
-        { row: 'mid', col: 'left' },
-        { row: 'mid', col: 'right' },
-        { row: 'back', col: 'center' },
         { row: 'front', col: 'center' },
+        { row: 'mid', col: 'center' },
+        { row: 'back', col: 'center' },
+        { row: 'back', col: 'left' },
         { row: 'back', col: 'right' },
       ],
     },
   } satisfies Pick<MatchSetup, 'armies' | 'placements'>;
-  const SEED = 2749173325;
+  const SEED = 12;
 
   it("once A's leader falls, A's tactic reverts to Autonomous (a 'strongest' run becomes a plain Autonomous run)", () => {
     const strongest = resolveBattle(setup(REVERSION, { seed: SEED, tactics: { A: 'strongest', B: 'autonomous' }, leaders: { A: 0, B: 0 } }));

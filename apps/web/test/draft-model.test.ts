@@ -96,9 +96,9 @@ describe('rules cards derive from BALANCE data, never hardcoded (FR2 + data-must
 });
 
 describe('per-row move labels (story 4.7, FR32/FR33)', () => {
-  it('exactly Knight, Phalanx, Wizard(mage), Sorceress vary by row (the DraftScene breakdown-line gate)', () => {
+  it('exactly the row-varied seven vary by row (the DraftScene breakdown-line gate) — story 5.4 adds Valkyrie, Vultan, Raven', () => {
     const varying = ALL_CLASSES.filter(movesVaryByRow);
-    expect(new Set(varying)).toEqual(new Set(['knight', 'phalanx', 'mage', 'sorceress']));
+    expect(new Set(varying)).toEqual(new Set(['knight', 'phalanx', 'mage', 'sorceress', 'valkyrie', 'vultan', 'raven']));
     for (const cls of ALL_CLASSES) {
       const uniform = new Set(ALL_ROWS.map((row) => BALANCE.classes[cls].moves[row])).size === 1;
       expect(movesVaryByRow(cls), cls).toBe(!uniform);

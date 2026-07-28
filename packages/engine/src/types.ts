@@ -14,12 +14,12 @@
 
 /**
  * The unit classes (FR1, FR15), shipped-six first, then the wave-1 smalls
- * (story 4.3), then the Golem (story 4.8) — the 12th and final wave-1 class,
- * the roster's only `sizeClass: 'monster'` (a single-cell unit that RESERVES
- * its 8 king-move neighbors at placement — device revision, 2026-07-20 —
- * never a two-cell body; AD-14). Dragons and beasts are DEFERRED to a later
- * wave together with their slayer classes (dossier D-1b) — wave 1 ships
- * Golem only, despite the epics/PRD's stale "dragon and golem" wording.
+ * (story 4.3), then the Golem (story 4.8) — wave 1's only `sizeClass:
+ * 'monster'` (a single-cell unit that RESERVES its 8 king-move neighbors at
+ * placement — device revision, 2026-07-20 — never a two-cell body; AD-14) —
+ * then the 5.4 human wave (epic-5 dossier, ROSTER.md's normative table):
+ * Fencer, Dragon Hunter, and the three birdmen (Hawkman/Vultan/Raven —
+ * flying is FLAVOR only, E5-D10). Monsters beyond the Golem land in 5.5.
  */
 export const ALL_CLASSES = [
   'knight',
@@ -34,20 +34,29 @@ export const ALL_CLASSES = [
   'valkyrie',
   'sorceress',
   'golem',
+  'fencer',
+  'dragonhunter',
+  'hawkman',
+  'vultan',
+  'raven',
 ] as const;
 
 /** One unit class. Matchups derive from the class's `role` and the role-relation table (FR14, AD-4 — story 4.3). */
 export type UnitClass = (typeof ALL_CLASSES)[number];
 
 /**
- * The seven combat roles (FR14, dossier §1 — story 4.3). Matchups live on the
- * ROLE, not the class: new classes inherit relations by role, so the rule count
- * stays flat as the roster grows. The shipped-six role assignments reproduce the
- * old `rpsBeats`/`rpsHunts` triangle exactly (the FR14 degenerate case).
+ * The combat roles (FR14, dossier §1 — story 4.3; ten since story 5.4).
+ * Matchups live on the ROLE, not the class: new classes inherit relations by
+ * role, so the rule count stays flat as the roster grows. The shipped-six role
+ * assignments reproduce the old `rpsBeats`/`rpsHunts` triangle exactly (the
+ * FR14 degenerate case). Story 5.4 (epic-5 dossier E5-P1) adds `dragonslayer`
+ * (the Dragon Hunter) plus `dragon`/`beast` — the latter two have NO class
+ * until story 5.5's monsters; the one-way dragonslayer→dragon hunt already
+ * sits in `roleRelations`, inert until a dragon exists.
  */
-export const ALL_ROLES = ['vanguard', 'skirmisher', 'sniper', 'artillery', 'support', 'control', 'brute'] as const;
+export const ALL_ROLES = ['vanguard', 'skirmisher', 'sniper', 'artillery', 'support', 'control', 'brute', 'dragon', 'beast', 'dragonslayer'] as const;
 
-/** One of the seven combat roles (FR14). */
+/** One of the combat roles (FR14). */
 export type Role = (typeof ALL_ROLES)[number];
 
 /**
@@ -186,9 +195,14 @@ export const LOG_VERSION = 4;
 /**
  * The physical shape of an attack (FR32, story 4.2): the renderer's flavor
  * reads THIS, never the class — story 4.7's row-varied moves make class
- * inference wrong. 'bash' joins with the Phalanx (4.7).
+ * inference wrong. 'bash' joins with the Phalanx (4.7). 'bolt' (story 5.4,
+ * dossier E5-D4/E5-D14) is the MAGIC ranged single-target attack — Wizard/
+ * Sorceress mid/back and the Valkyrie's back-row Lightning; like every magic
+ * effect it never crits, dodges, or is Guarded, and consumes ZERO battle-
+ * stream draws (ADR 0003). 'blast' stays in the union for replay (old logs
+ * carry it) but NO class uses it this era — reserved for a future Archmage.
  */
-export type MoveKind = 'slash' | 'arrow' | 'blast' | 'staff' | 'bash';
+export type MoveKind = 'slash' | 'arrow' | 'blast' | 'staff' | 'bash' | 'bolt';
 
 /**
  * A class's per-row move (FR32/FR33, story 4.7, dossier §4 — DATA, not code):

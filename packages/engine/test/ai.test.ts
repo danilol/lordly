@@ -219,26 +219,28 @@ describe('chooseSetup (FR24/FR25, AD-6, AD-10)', () => {
     const choice = chooseSetup(STRATEGY_POOL, aiStream(1));
     expect(choice.archetypeId).toBe('three-mages');
     expect(choice.classes).toEqual(['mage', 'mage', 'mage', 'knight', 'knight']);
-    // Literal placement verbatim (flip 0 — no mirroring).
+    // Literal placement verbatim (flip 0 — no mirroring; the 5.4 re-screened
+    // battery: mages back, knight screens front/mid).
     expect(choice.placement).toEqual([
-      { row: 'mid', col: 'left' },
-      { row: 'mid', col: 'center' },
-      { row: 'mid', col: 'right' },
       { row: 'back', col: 'left' },
       { row: 'back', col: 'center' },
+      { row: 'back', col: 'right' },
+      { row: 'front', col: 'center' },
+      { row: 'mid', col: 'center' },
     ]);
   });
 
   it('anchor: seed 2 on ai/A picks gale MIRRORED left↔right (flip 1)', () => {
     const choice = chooseSetup(STRATEGY_POOL, aiStream(2));
     expect(choice.archetypeId).toBe('gale');
-    // Literal [mid/center, front/left, back/center, front/right, back/left]
-    // hand-mirrored: rows untouched, left→right, right→left, center stays.
+    // Literal [mid/center, mid/left, back/center, mid/right, back/left] (the
+    // 5.4 un-exposed storm) hand-mirrored: rows untouched, left→right,
+    // right→left, center stays.
     expect(choice.placement).toEqual([
       { row: 'mid', col: 'center' },
-      { row: 'front', col: 'right' },
+      { row: 'mid', col: 'right' },
       { row: 'back', col: 'center' },
-      { row: 'front', col: 'left' },
+      { row: 'mid', col: 'left' },
       { row: 'back', col: 'right' },
     ]);
   });

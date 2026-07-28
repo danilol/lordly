@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/balance';
-import { blastDamage, physicalDamage, resolveBattle } from '../src/resolve';
+import { blastDamage, magicDamage, physicalDamage, resolveBattle } from '../src/resolve';
 import type { BattleEvent, BattleLog, MatchSetup, Unit } from '../src/types';
 
 /**
@@ -313,44 +313,40 @@ describe('wipeout mode (FR19)', () => {
     expect(log.events[log.events.length - 1]?.type).toBe('BattleEnded');
   });
 
-  it('the Mage row-blast is wipeout-attenuated (×3/4) and that attenuation persists to the engagementCap — FR10 compounding guard (story 4.12)', () => {
-    // The FR10 blastAttenuation is wipeout-ONLY because blasts compound across
-    // engagements (v1: three-mages 74.6% dominant). The single-hit attenuation
-    // is pinned in damage/sim tests, but nothing pinned that it KEEPS applying
-    // engagement after engagement up to the cap. This does: same comp, same
-    // seed, both modes.
-    const attenuated = blastDamage('mage', 'cleric', false, 'wipeout');
-    const unattenuated = blastDamage('mage', 'cleric', false, 'single');
-    expect(attenuated).toBeLessThan(unattenuated); // the ×3/4 really bites (13 vs 18 at balanceVersion 9)
+  it('the bolt is NEVER wipeout-attenuated (story 5.4): the same unattenuated magic number in BOTH modes, engagement 1 through the last — while blastDamage keeps its mode split', () => {
+    // The FR10 blastAttenuation compensated the blast's whole-row coverage
+    // compounding across engagements. The 5.4 bolt (E5-D4) gave that coverage
+    // up, so it deliberately does NOT attenuate — `magicDamage` in both
+    // modes. `blastDamage`'s own mode split stays pinned here at the
+    // arithmetic level (the rule is reserved data — no class rides it now).
+    expect(blastDamage('mage', 'cleric', false, 'wipeout')).toBeLessThan(blastDamage('mage', 'cleric', false, 'single'));
+    const boltNumber = magicDamage('mage', 'cleric'); // 30 − floor(24/2) = 18, no relation
 
-    // Every A-sourced blast target's damage, per engagement (no witch → no
-    // weaken; magic never crits → the event value is the raw blastDamage).
-    const aBlastDamagesPerSeg = (mode: MatchSetup['mode']): number[][] =>
+    // Every A-sourced bolt target's damage, per engagement (no witch → no
+    // weaken; magic never crits → the event value is the raw magicDamage).
+    const aBoltDamagesPerSeg = (mode: MatchSetup['mode']): number[][] =>
       segments(resolveBattle(magesVsClerics(0xdead, mode))).map((seg) =>
         seg
-          .filter((e): e is Extract<BattleEvent, { type: 'UnitAttacked' }> => e.type === 'UnitAttacked' && e.kind === 'blast' && e.source.startsWith('A'))
+          .filter((e): e is Extract<BattleEvent, { type: 'UnitAttacked' }> => e.type === 'UnitAttacked' && e.kind === 'bolt' && e.source.startsWith('A'))
           .flatMap((e) => e.targets.map((t) => t.damage)),
       );
 
-    // WIPEOUT: nobody dies, all 10 engagements run, and EVERY blast in EVERY
-    // engagement — engagement 1 through the cap — lands the attenuated value.
-    const wipeoutSegs = aBlastDamagesPerSeg('wipeout');
-    expect(wipeoutSegs).toHaveLength(BALANCE.engagementCap);
+    // WIPEOUT: every bolt in every engagement — first through last — lands
+    // the SAME unattenuated number (the compounding seam never re-prices it).
+    const wipeoutSegs = aBoltDamagesPerSeg('wipeout');
+    expect(wipeoutSegs.length).toBeGreaterThanOrEqual(2); // the healing column survives at least one seam
     for (const [i, dmgs] of wipeoutSegs.entries()) {
-      expect(dmgs.length, `engagement ${i + 1} has A blasts`).toBeGreaterThan(0);
+      expect(dmgs.length, `engagement ${i + 1} has A bolts`).toBeGreaterThan(0);
       expect(
-        dmgs.every((d) => d === attenuated),
-        `engagement ${i + 1} blast damages all attenuated`,
+        dmgs.every((d) => d === boltNumber),
+        `engagement ${i + 1} bolt damages all unattenuated`,
       ).toBe(true);
     }
-    // The LAST engagement specifically still attenuates — the compounding cap.
-    expect(wipeoutSegs.at(-1)!.every((d) => d === attenuated)).toBe(true);
 
-    // SINGLE: the same first-engagement blasts are UN-attenuated (the mode
-    // contrast — attenuation is a wipeout rule, not a global one).
-    const singleSegs = aBlastDamagesPerSeg('single');
+    // SINGLE: identical number — the bolt has NO mode split at all.
+    const singleSegs = aBoltDamagesPerSeg('single');
     expect(singleSegs[0]!.length).toBeGreaterThan(0);
-    expect(singleSegs[0]!.every((d) => d === unattenuated)).toBe(true);
+    expect(singleSegs[0]!.every((d) => d === boltNumber)).toBe(true);
   });
 
   it('poison persists across engagements and ticks at every natural engagement end', () => {

@@ -63,9 +63,19 @@ describe('docs/rules.md drift guard (story 2.4, AC2/AC6 — numbers are law)', (
     expect(raw).toContain(`×${disadvantage}`);
   });
 
-  it('states the wipeout blast attenuation with the exact ratio (story 3.0 — wipeout-scoped)', () => {
-    const attenuation = BALANCE.formulas.blastAttenuation.num / BALANCE.formulas.blastAttenuation.den;
-    expect(raw).toContain(`takes only ×${attenuation} of the damage`);
+  it('describes the Magic Bolt and never the retired row blast (story 5.4, E5-D4) — no class carries a blast row anymore', () => {
+    // The blast RULE stays reserved engine data (wipeout.test pins its
+    // arithmetic), but the player-facing doc must describe only what the
+    // roster can actually do: the single-target bolt, with magic's
+    // no-crit/no-dodge/no-Guard trio.
+    for (const cls of ALL_CLASSES) {
+      for (const row of ['front', 'mid', 'back'] as const) {
+        expect(BALANCE.classes[cls].moves[row], `${cls}/${row} must not be a blast`).not.toBe('blast');
+      }
+    }
+    expect(raw).toContain('Magic Bolt (Wizard, Sorceress');
+    expect(raw).toContain('rearmost enemy');
+    expect(raw.toLowerCase()).not.toContain('blasts the fullest'); // the stale 4.x wording must be gone
   });
 
   it('states the poison damage and the wipeout engagement cap from balance data', () => {
@@ -109,18 +119,34 @@ describe('docs/rules.md drift guard — per-row moves and Guard (story 4.7, FR32
     expect(BALANCE.classes.phalanx.moves.back).toBe('bash');
     expect(raw).toContain('a Phalanx in the front or mid row');
 
-    // Wizard(mage)/Sorceress: front is a physical melee-targeted staff jab, not the blast.
+    // Wizard(mage)/Sorceress: front is a physical melee-targeted staff jab;
+    // mid/back are the story-5.4 Magic Bolt (E5-D4 — the blast is retired).
     for (const cls of ['mage', 'sorceress'] as const) {
       expect(BALANCE.classes[cls].moves.front, cls).toBe('staff');
-      expect(BALANCE.classes[cls].moves.mid, cls).toBe('blast');
-      expect(BALANCE.classes[cls].moves.back, cls).toBe('blast');
+      expect(BALANCE.classes[cls].moves.mid, cls).toBe('bolt');
+      expect(BALANCE.classes[cls].moves.back, cls).toBe('bolt');
     }
     expect(raw).toContain('front row swings a weak, melee-targeted staff jab');
+
+    // Valkyrie: spear up close, back-row Lightning (her bolt) — story 5.4.
+    expect(BALANCE.classes.valkyrie.moves.front).toBe('slash');
+    expect(BALANCE.classes.valkyrie.moves.mid).toBe('slash');
+    expect(BALANCE.classes.valkyrie.moves.back).toBe('bolt');
+    expect(raw).toContain('back row she casts Lightning');
+
+    // Vultan/Raven: talons up close, back-row arrow Skills (E5-D14).
+    for (const cls of ['vultan', 'raven'] as const) {
+      expect(BALANCE.classes[cls].moves.front, cls).toBe('slash');
+      expect(BALANCE.classes[cls].moves.mid, cls).toBe('slash');
+      expect(BALANCE.classes[cls].moves.back, cls).toBe('arrow');
+    }
+    expect(raw).toContain('Wind Shot');
+    expect(raw).toContain('Thunder Arrow');
 
     // Every OTHER class stays uniform across all three rows — the doc never
     // claims a row-dependent move for them.
     for (const cls of ALL_CLASSES) {
-      if (['knight', 'phalanx', 'mage', 'sorceress'].includes(cls)) continue;
+      if (['knight', 'phalanx', 'mage', 'sorceress', 'valkyrie', 'vultan', 'raven'].includes(cls)) continue;
       const { front, mid, back } = BALANCE.classes[cls].moves;
       expect(front, cls).toBe(mid);
       expect(mid, cls).toBe(back);

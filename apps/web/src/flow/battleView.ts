@@ -190,7 +190,7 @@ export function movePlate(event: BattleEvent, ctx: MovePlateContext): MovePlateD
       const actor = ctx.roster.get(event.source);
       if (!actor) return null;
       unitId = event.source;
-      label = moveDisplayName(event.kind, actor.element);
+      label = moveDisplayName(event.kind, actor.element, actor.class);
       break;
     }
     case 'UnitHealed':

@@ -19,6 +19,7 @@ const EXPECTED_HASHES: Record<number, string> = {
   7: 'dd4a7f6c', // story 4.6: +critMultiplier (×3/2) + dexChanceDivisor (3) — the FR36 crit/dodge tuning data (ADR 0003 §Chances)
   8: '249d336f', // story 4.7: +moves table (per-class/row RowMove) + guardHalf (×1/2) — the FR32/FR33 per-row moves + Guard shield data
   9: '57107fa9', // story 4.8: +golem class row (Brute, 2-slot monster, HP 300/VIT 36/MEN 8) — the FR38 wave-1 monster (Golem only — dragon deferred, dossier D-1b)
+  10: '7d0a6a4e', // story 5.4: +5 human classes (fencer/dragonhunter/hawkman/vultan/raven) + `bolt` rows (casters lose splash, E5-D4; valkyrie Lightning + INT 18) + phalanx guard rows 1 action (E5-P2) + dragonslayer→dragon hunt (E5-P1, inert until 5.5)
 };
 
 describe('balance-hash guard (AD-8)', () => {

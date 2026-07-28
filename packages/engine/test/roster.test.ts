@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE } from '../src/balance';
 import { resolveBattle } from '../src/resolve';
+import { createStreams, nextInt } from '../src/rng';
 import { ALL_CLASSES, ALL_ROWS } from '../src/types';
 import type { BattleEvent, Element, MatchSetup, RowMove, Unit, UnitClass } from '../src/types';
 
@@ -51,16 +52,16 @@ describe('FR9 Archer — rearmost reachable, arcs over the front line', () => {
     expect(archerShots.length).toBe(2);
     for (const shot of archerShots) {
       // rearmost reachable = the back-row mage, over the front knights; archer beats mage ×3/2: 24−4=20 → 30.
-      // (B's melee fillers can't touch the back-row archer, and B's mage blasts A's fullest
-      // row — the 3-knight front — so both shots land: 80→50→20, no deaths in between.)
+      // (B's melee fillers can't touch the back-row archer, and B's mage bolts back at it —
+      // 18/cast (24 ×3/4) on 90 hp — so both shots land: 80→50→20, no deaths in between.)
       expect(shot.kind).toBe('arrow');
       expect(shot.targets).toEqual([{ unit: 'B:1', damage: 30, hpAfter: expect.any(Number), outcome: 'hit' }]);
     }
   });
 });
 
-describe('FR10 Mage — row blast, reach ignored, per-target RPS, multi-kill', () => {
-  const blastBattle = () =>
+describe('story 5.4 `bolt` — the casters’ single-target magic (E5-D4; FR10’s row blast is retired from the roster)', () => {
+  const boltBattle = () =>
     setup({
       armies: {
         A: [u('archer', 'fire'), u('archer', 'water'), u('mage', 'wind'), u('knight', 'earth'), u('knight', 'fire')],
@@ -84,69 +85,105 @@ describe('FR10 Mage — row blast, reach ignored, per-target RPS, multi-kill', (
       },
     });
 
-  it('blasts the row with most living enemies and carries one targets[] entry per unit', () => {
-    const log = resolveBattle(blastBattle());
-    const blasts = byType(log, 'UnitAttacked').filter((a) => a.source === 'A:2');
-    expect(blasts.length).toBeGreaterThan(0);
-    // B rows: front 2, mid 1, back 2 — the 2-2 tie breaks toward the REARMOST row,
-    // so the back-row mage pair is struck by ONE event.
-    expect(blasts[0]?.targets.map((t) => t.unit).sort()).toEqual(['B:0', 'B:1']);
-    // mage → mage: 30 − 11 = 19, neutral.
-    expect(blasts[0]?.targets.every((t) => t.damage === 19)).toBe(true);
+  it('bolts ONE enemy via ranged targeting (rearmost row, then the FR8 column chain) at the unattenuated magic number', () => {
+    const log = resolveBattle(boltBattle());
+    const bolts = byType(log, 'UnitAttacked').filter((a) => a.source === 'A:2');
+    expect(bolts.length).toBeGreaterThan(0);
+    for (const b of bolts) {
+      expect(b.kind).toBe('bolt');
+      expect(b.targets).toHaveLength(1); // single-target — E5-D4's whole point
+    }
+    // A:2 sits back-center (col 1, facing 1). B's rearmost row is back: B:0
+    // (col 0) and B:1 (col 2) — neither facing, equal center distance, the
+    // higher column wins the tie → B:1. mage → mage: 30 − floor(22/2) = 19, neutral.
+    expect(bolts[0]?.targets[0]?.unit).toBe('B:1');
+    expect(bolts[0]?.targets[0]?.damage).toBe(19);
   });
 
-  it('one blast can kill multiple units: UnitDied per target after the single UnitAttacked', () => {
-    const log = resolveBattle(blastBattle());
-    // pass 1: each A archer snipes its mirrored B mage for 30 (80→50) and A:2's
-    // blast lands 19 (→31); pass 2: the archers again (→1), then A:2's second
-    // blast kills BOTH mages at 1 hp. A:2 itself survives on 23 — it ate three
-    // enemy blasts × 19 (B:1 is dead before its pass-2 action) — so the only
-    // deaths are the two B mages.
-    const deaths = byType(log, 'UnitDied')
-      .map((d) => d.unit)
-      .sort();
-    expect(deaths).toEqual(['B:0', 'B:1']);
-    const killingBlast = byType(log, 'UnitAttacked').filter((a) => a.source === 'A:2')[1];
-    expect(killingBlast?.targets.every((t) => t.hpAfter === 0)).toBe(true);
-    const i = log.events.indexOf(killingBlast as BattleEvent);
-    // B:0 is B's default leader (index 0), so its death rides a LeaderFell beat
-    // IMMEDIATELY after its UnitDied (story 4.5, FR35) — between the two
-    // casualties, in target order. The blast is MAGIC, so no penalty applies.
-    expect(log.events[i + 1]?.type).toBe('UnitDied'); // B:0
-    expect(log.events[i + 2]?.type).toBe('LeaderFell'); // B:0 was B's leader
-    expect(log.events[i + 3]?.type).toBe('UnitDied'); // B:1
+  it('an all-bolt battle consumes ZERO battle-stream draws beyond the engagement tie flip (ADR 0003) — logs are identical across seeds with the same flip', () => {
+    // Ten mages, every placement mid/back, so EVERY action is a bolt (no
+    // staff, no physical anywhere). The only battle-stream draw left is E1,
+    // the engagement tie flip — so two seeds whose first draw lands the same
+    // way MUST produce byte-identical logs. If the bolt ever consulted the
+    // stream (a stray rollHit, a stray redirect), the drawn values would
+    // diverge between the seeds and this equality would break.
+    const casters = (): Unit[] => (['fire', 'water', 'wind', 'earth', 'fire'] as const).map((element, i) => u('mage', element, `M${i}`));
+    const boltsOnly = (seed: number) =>
+      setup(
+        {
+          armies: { A: casters(), B: casters() },
+          placements: {
+            A: [
+              { row: 'back', col: 'left' },
+              { row: 'back', col: 'center' },
+              { row: 'back', col: 'right' },
+              { row: 'mid', col: 'left' },
+              { row: 'mid', col: 'center' },
+            ],
+            B: [
+              { row: 'back', col: 'left' },
+              { row: 'back', col: 'center' },
+              { row: 'back', col: 'right' },
+              { row: 'mid', col: 'left' },
+              { row: 'mid', col: 'center' },
+            ],
+          },
+        },
+        seed,
+      );
+    // Find two different seeds with the SAME tie flip, computed exactly as
+    // resolveBattle draws it (E1: nextInt(battle, 0, 1)).
+    const flip = (seed: number) => nextInt(createStreams(seed).battle, 0, 1);
+    const first = 1;
+    let second = 2;
+    while (flip(second) !== flip(first)) second += 1;
+    const a = resolveBattle(boltsOnly(first));
+    const b = resolveBattle(boltsOnly(second));
+    expect(a.events).toEqual(b.events);
+    // And the battle really was all bolts (the fixture's own guard).
+    for (const e of a.events) if (e.type === 'UnitAttacked') expect(e.kind).toBe('bolt');
   });
 
-  it('most-living wins over rearmost when there is no tie', () => {
+  it('a bolt is MAGIC: it ignores a live Guard charge entirely — full damage, no redirect, no charge consumed (dossier §4)', () => {
+    // B's Phalanx guards MID-CENTER (guard-full), shielding itself AND the
+    // witch directly behind it (back-center) — exactly the cell A's mage
+    // bolts (rearmost row holds only the witch). A physical hit there would
+    // be negated to 0 and consume the charge; the bolt must land its full 20
+    // (30 − floor(20/2), no relation) with no `redirectedFrom`.
     const log = resolveBattle(
       setup({
         armies: {
           A: [u('mage', 'fire'), u('knight', 'water'), u('knight', 'wind'), u('knight', 'earth'), u('knight', 'fire')],
-          B: [u('knight', 'earth'), u('cleric', 'fire'), u('knight', 'water'), u('knight', 'wind'), u('cleric', 'water')],
+          // The witch is EARTH (poison) deliberately: a fire witch would
+          // Weaken A's mage and halve the very number this test pins.
+          B: [u('phalanx', 'earth'), u('witch', 'earth'), u('knight', 'water'), u('knight', 'wind'), u('knight', 'earth')],
         },
         placements: {
           A: [
             { row: 'back', col: 'center' },
             { row: 'front', col: 'left' },
-            { row: 'front', col: 'right' },
             { row: 'front', col: 'center' },
+            { row: 'front', col: 'right' },
             { row: 'mid', col: 'center' },
           ],
           B: [
-            { row: 'front', col: 'left' }, // front trio = the fullest row
-            { row: 'back', col: 'center' }, // 1 back — outnumbered, rearmost loses
-            { row: 'front', col: 'right' },
+            { row: 'mid', col: 'center' }, // the guarding Phalanx (guard-full)
+            { row: 'back', col: 'center' }, // the shielded witch — the bolt's rearmost pick
+            { row: 'front', col: 'left' },
             { row: 'front', col: 'center' },
-            { row: 'mid', col: 'center' }, // 1 mid
+            { row: 'front', col: 'right' },
           ],
         },
       }),
     );
-    // B has 3 front + 1 mid + 1 back → most-living = front. The A mage (AGI 12) acts
-    // before every B unit, so the front trio is intact at blast time. (The rearmost
-    // tie-break itself is unit-tested in targeting.test and pinned above.)
-    const blast = byType(log, 'UnitAttacked').find((a) => a.source === 'A:0');
-    expect(blast?.targets.map((t) => t.unit).sort()).toEqual(['B:0', 'B:2', 'B:3']);
+    const bolts = byType(log, 'UnitAttacked').filter((a) => a.source === 'A:0');
+    expect(bolts.length).toBeGreaterThan(0);
+    for (const b of bolts.filter((x) => x.targets[0]?.unit === 'B:1')) {
+      expect(b.kind).toBe('bolt');
+      expect(b.targets[0]?.damage).toBe(20); // never halved (10) or negated (0)
+      expect(b.targets[0]?.outcome).toBe('hit'); // magic never crits or is dodged
+      expect(b.redirectedFrom).toBeUndefined();
+    }
   });
 });
 
@@ -466,9 +503,9 @@ describe('FR12/FR16 witch cast fizzle (no stack, deterministic)', () => {
   });
 });
 
-describe('FR14/FR32 roster wave 1 — new classes act by their ROLE (story 4.3)', () => {
-  // Sorceress (Artillery) blasts a row like the Wizard; Berserker (Vanguard) melees the
-  // nearest reachable like the Knight. "Start generic" — unique moves/Guard arrive in 4.7.
+describe('FR14/FR32 roster wave 1 — new classes act by their ROLE (story 4.3; casters re-kitted by 5.4/E5-D4)', () => {
+  // Sorceress (Artillery) bolts a single rearmost target like the Wizard;
+  // Berserker (Vanguard) melees the nearest reachable like the Knight.
   const log = resolveBattle(
     setup({
       armies: {
@@ -494,11 +531,15 @@ describe('FR14/FR32 roster wave 1 — new classes act by their ROLE (story 4.3)'
     }),
   );
 
-  it('the Sorceress row-blasts (Artillery): every attack is a blast, and one lands on the whole front row', () => {
+  it('the Sorceress bolts (Artillery, story 5.4): every attack is a single-target bolt at the rearmost enemy', () => {
     const shots = byType(log, 'UnitAttacked').filter((a) => a.source === 'A:0');
     expect(shots.length).toBeGreaterThan(0);
-    for (const s of shots) expect(s.kind).toBe('blast');
-    expect(shots.some((s) => s.targets.length > 1)).toBe(true); // a real row blast, not a single hit
+    for (const s of shots) {
+      expect(s.kind).toBe('bolt');
+      expect(s.targets).toHaveLength(1); // E5-D4: the splash is gone
+    }
+    // Rearmost = B's lone back-row archer (back-center — her facing column).
+    expect(shots[0]?.targets[0]?.unit).toBe('B:4');
   });
 
   it('the Berserker melees a single nearest target (Vanguard): every attack is a slash on one unit', () => {
@@ -507,6 +548,75 @@ describe('FR14/FR32 roster wave 1 — new classes act by their ROLE (story 4.3)'
     for (const s of shots) {
       expect(s.kind).toBe('slash');
       expect(s.targets).toHaveLength(1);
+    }
+  });
+});
+
+describe('story 5.4 human wave — the mixed kits route by ROW MOVE (ROSTER.md; E5-D10/E5-D14)', () => {
+  // One fixture, three units under test: a back-row Valkyrie (Lightning
+  // `bolt` ×2 — magic, zero draws), a back-row Vultan (Wind Shot `arrow` ×2 —
+  // physical, ranged), and a front-row Raven (Talon Strike `slash` melee).
+  const log = resolveBattle(
+    setup({
+      armies: {
+        A: [u('valkyrie', 'fire'), u('vultan', 'earth'), u('raven', 'water'), u('fencer', 'wind'), u('dragonhunter', 'fire')],
+        B: [u('knight', 'earth'), u('knight', 'water'), u('knight', 'wind'), u('knight', 'fire'), u('knight', 'earth')],
+      },
+      placements: {
+        A: [
+          { row: 'back', col: 'left' }, // valkyrie: Lightning ×2
+          { row: 'back', col: 'right' }, // vultan: Wind Shot ×2
+          { row: 'front', col: 'center' }, // raven: melee up close
+          { row: 'front', col: 'left' }, // fencer: melee
+          { row: 'front', col: 'right' }, // dragon hunter: melee
+        ],
+        B: [
+          { row: 'front', col: 'left' },
+          { row: 'front', col: 'center' },
+          { row: 'front', col: 'right' },
+          // Mid-LEFT deliberately: a mid-CENTER knight's Half Guard (its row
+          // move) would shield back-center B:4 — the exact cell both ranged
+          // tests below pin damage numbers on.
+          { row: 'mid', col: 'left' },
+          { row: 'back', col: 'center' },
+        ],
+      },
+    }),
+  );
+
+  it('the back-row Valkyrie casts Lightning: kind `bolt`, single target, MAGIC (never crits/dodges), at the INT-18 number', () => {
+    const shots = byType(log, 'UnitAttacked').filter((a) => a.source === 'A:0');
+    expect(shots.length).toBe(2); // back row: 2 actions (her side-gun row)
+    for (const s of shots) {
+      expect(s.kind).toBe('bolt');
+      expect(s.targets).toHaveLength(1);
+      expect(s.targets[0]?.outcome).toBe('hit'); // magic: no crit, no dodge
+      // Rearmost = B:4 (back-center): 18 − floor(14/2) = 11, no relation.
+      expect(s.targets[0]?.unit).toBe('B:4');
+      expect(s.targets[0]?.damage).toBe(11);
+    }
+  });
+
+  it('the back-row Vultan fires Wind Shot: kind `arrow`, single target, PHYSICAL ranged (rearmost, over the front)', () => {
+    const shots = byType(log, 'UnitAttacked').filter((a) => a.source === 'A:1');
+    expect(shots.length).toBe(2); // back row: 2 actions
+    for (const s of shots) {
+      expect(s.kind).toBe('arrow');
+      expect(s.targets).toHaveLength(1);
+      expect(s.targets[0]?.unit).toBe('B:4'); // rearmost — an arrow arcs over the front line
+      // Physical: 26 − floor(28/2) = 12 neutral; a crit lands 18, a dodge 0.
+      expect([0, 12, 18]).toContain(s.targets[0]?.damage);
+    }
+  });
+
+  it('the front-row Raven / Fencer / Dragon Hunter melee: kind `slash`, one nearest reachable target', () => {
+    for (const source of ['A:2', 'A:3', 'A:4']) {
+      const shots = byType(log, 'UnitAttacked').filter((a) => a.source === source);
+      expect(shots.length).toBeGreaterThan(0);
+      for (const s of shots) {
+        expect(s.kind).toBe('slash');
+        expect(s.targets).toHaveLength(1);
+      }
     }
   });
 });
@@ -581,9 +691,10 @@ describe('FR34 tactics wired through resolve (story 4.4)', () => {
     expect(leader?.targets[0]?.unit).toBe('B:1'); // Leader: the crowned front-center unit
   });
 
-  it('blast under leader targets the LEADER row (D-2c), not the fullest row', () => {
-    // B stacks three in the front row (Autonomous blast → front) but crowns the
-    // lone back-row unit; under `leader` the Sorceress blasts the back row.
+  it('bolt under leader snipes the crowned unit directly (story 5.4) — ranged targeting, so the tactic picks across rows', () => {
+    // Autonomous bolt → the rearmost B:4; crowning FRONT-CENTER B:1 must pull
+    // the bolt off its rearmost pick and onto the leader (FR9 global range:
+    // rows never gate a ranged tactic).
     const base = setup({
       armies: {
         A: [u('sorceress', 'fire'), u('cleric', 'water'), u('cleric', 'wind'), u('cleric', 'earth'), u('cleric', 'fire')],
@@ -598,20 +709,20 @@ describe('FR34 tactics wired through resolve (story 4.4)', () => {
           { row: 'mid', col: 'left' },
         ],
         B: [
-          { row: 'front', col: 'left' }, // B:0 ┐
-          { row: 'front', col: 'center' }, // B:1 ├ fullest row (3) — Autonomous blast
-          { row: 'front', col: 'right' }, // B:2 ┘
+          { row: 'front', col: 'left' }, // B:0
+          { row: 'front', col: 'center' }, // B:1 — crowned in the leader run
+          { row: 'front', col: 'right' }, // B:2
           { row: 'mid', col: 'center' }, // B:3
-          { row: 'back', col: 'center' }, // B:4 — the designated leader, alone in the back row
+          { row: 'back', col: 'center' }, // B:4 — rearmost: the Autonomous bolt pick
         ],
       },
     });
     const auto = byType(resolveBattle(withTactics(base, { A: 'autonomous', B: 'autonomous' }, { A: 0, B: 0 })), 'UnitAttacked').find((e) => e.source === 'A:0');
-    const leader = byType(resolveBattle(withTactics(base, { A: 'leader', B: 'autonomous' }, { A: 0, B: 4 })), 'UnitAttacked').find((e) => e.source === 'A:0');
-    // Autonomous: the 3-unit front row.
-    expect(auto?.targets.map((t) => t.unit).sort()).toEqual(['B:0', 'B:1', 'B:2']);
-    // Leader: the back row — just the crowned B:4.
-    expect(leader?.targets.map((t) => t.unit)).toEqual(['B:4']);
+    const leader = byType(resolveBattle(withTactics(base, { A: 'leader', B: 'autonomous' }, { A: 0, B: 1 })), 'UnitAttacked').find((e) => e.source === 'A:0');
+    // Autonomous: the rearmost enemy, one target.
+    expect(auto?.targets.map((t) => t.unit)).toEqual(['B:4']);
+    // Leader: the crowned front-center unit, one target.
+    expect(leader?.targets.map((t) => t.unit)).toEqual(['B:1']);
   });
 
   it("witch + weakest: casts on the lowest-HP unafflicted enemy, not the rearmost (dossier §4's prefer-unafflicted-then-tactic order)", () => {
@@ -683,26 +794,34 @@ describe('FR34 tactics wired through resolve (story 4.4)', () => {
   });
 });
 
-describe('FR32/FR33 per-row moves (story 4.7, dossier §4) — the frozen table is TOTAL over every (class, row)', () => {
-  // The dossier's start-generic table: only Knight, Phalanx, Wizard(mage),
-  // Sorceress vary their move by row — everyone else repeats one uniform kind
-  // in all three slots (row only changes ACTION COUNT for them, unchanged).
+describe('FR32/FR33 per-row moves (story 4.7, dossier §4; revised by story 5.4 / ROSTER.md) — the table is TOTAL over every (class, row)', () => {
+  // ROSTER.md's normative table (epic-5 dossier, approved E5-D15): the 5.4
+  // human wave joins, and the shipped-12 revision lands — casters' mid/back
+  // is the single-target `bolt` now (E5-D4, splash retired), the Valkyrie's
+  // back row is her Lightning bolt (E5-D10), and Vultan/Raven carry the
+  // back-row `arrow` Skills (E5-D14). Everyone else repeats one uniform kind.
   const FROZEN_TABLE: Record<UnitClass, { front: RowMove; mid: RowMove; back: RowMove }> = {
     knight: { front: 'slash', mid: 'guard-half', back: 'slash' },
     mercenary: { front: 'slash', mid: 'slash', back: 'slash' },
     archer: { front: 'arrow', mid: 'arrow', back: 'arrow' },
-    mage: { front: 'staff', mid: 'blast', back: 'blast' },
+    mage: { front: 'staff', mid: 'bolt', back: 'bolt' },
     cleric: { front: 'staff', mid: 'staff', back: 'staff' },
     witch: { front: 'staff', mid: 'staff', back: 'staff' }, // unreachable — the Witch never strikes
     berserker: { front: 'slash', mid: 'slash', back: 'slash' },
     phalanx: { front: 'guard-full', mid: 'guard-full', back: 'bash' },
     ninja: { front: 'slash', mid: 'slash', back: 'slash' },
-    valkyrie: { front: 'slash', mid: 'slash', back: 'slash' },
-    sorceress: { front: 'staff', mid: 'blast', back: 'blast' },
+    valkyrie: { front: 'slash', mid: 'slash', back: 'bolt' },
+    sorceress: { front: 'staff', mid: 'bolt', back: 'bolt' },
     golem: { front: 'slash', mid: 'slash', back: 'slash' }, // story 4.8 — uniform melee, "everyone else" bucket
+    // Story 5.4 — the human wave (ROSTER.md).
+    fencer: { front: 'slash', mid: 'slash', back: 'slash' },
+    dragonhunter: { front: 'slash', mid: 'slash', back: 'slash' },
+    hawkman: { front: 'slash', mid: 'slash', back: 'slash' },
+    vultan: { front: 'slash', mid: 'slash', back: 'arrow' },
+    raven: { front: 'slash', mid: 'slash', back: 'arrow' },
   };
 
-  it('every (class, row) resolves the exact frozen move — total over ALL_CLASSES × ALL_ROWS, no gaps', () => {
+  it('every (class, row) resolves the exact pinned move — total over ALL_CLASSES × ALL_ROWS, no gaps', () => {
     for (const cls of ALL_CLASSES) {
       for (const row of ALL_ROWS) {
         expect(BALANCE.classes[cls].moves[row], `${cls}/${row}`).toBe(FROZEN_TABLE[cls][row]);
@@ -710,10 +829,17 @@ describe('FR32/FR33 per-row moves (story 4.7, dossier §4) — the frozen table 
     }
   });
 
-  it('exactly Knight, Phalanx, Wizard(mage), and Sorceress vary their move by row — everyone else is uniform across all three rows', () => {
+  it('exactly the row-varied seven vary their move by row — everyone else is uniform across all three rows', () => {
     const varies = (cls: UnitClass) => new Set(ALL_ROWS.map((row) => BALANCE.classes[cls].moves[row])).size > 1;
     const varying = ALL_CLASSES.filter(varies);
-    expect(new Set(varying)).toEqual(new Set(['knight', 'phalanx', 'mage', 'sorceress']));
+    expect(new Set(varying)).toEqual(new Set(['knight', 'phalanx', 'mage', 'sorceress', 'valkyrie', 'vultan', 'raven']));
+  });
+
+  it('no class row is a back-row Guard — FORBIDDEN as data (E5-D12a): `attackMoveOf`’s guard fallback reads moves.back, which must stay a real attack', () => {
+    for (const cls of ALL_CLASSES) {
+      const back = BALANCE.classes[cls].moves.back;
+      expect(back === 'guard-full' || back === 'guard-half', `${cls}/back must not Guard`).toBe(false);
+    }
   });
 
   it('the Wizard(mage)/Sorceress FRONT row uses MELEE targeting for its physical staff — distinct from mid/back row-blast (dossier §4)', () => {

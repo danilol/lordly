@@ -26,8 +26,10 @@ function setup(partial: Pick<MatchSetup, 'armies' | 'placements'>, o: Partial<Pi
 
 const u = (cls: Unit['class'], element: Unit['element'], name: string): Unit => ({ class: cls, element, name });
 
-describe('Full Guard (Phalanx) shields itself AND the ally directly behind it, then expires unconsumed at re-arm', () => {
-  // A:0 = Phalanx front-center (guard-full, 2 actions — re-arms every action);
+describe('Full Guard (Phalanx) shields itself AND the ally directly behind it — ONE raise per engagement (E5-P2)', () => {
+  // A:0 = Phalanx front-center (guard-full — 1 action since story 5.4/E5-P2:
+  // the second same-engagement raise only re-armed a spent one-shot, so the
+  // extra action was a phantom and the dossier removed it);
   // A:1 = archer mid-center, the ally DIRECTLY BEHIND A:0 (row+1, same col) —
   // designated A's leader so B's archer (tactic 'leader') always snipes it
   // directly, regardless of Autonomous priority. B's clerics also inherit
@@ -79,17 +81,69 @@ describe('Full Guard (Phalanx) shields itself AND the ally directly behind it, t
     }
   });
 
-  it("re-arms on the Phalanx front row's second action (a fresh GuardRaised after the first was consumed)", () => {
+  it('raises exactly ONCE per engagement (E5-P2: guard rows carry 1 action — no same-engagement re-arm exists anymore)', () => {
     const raises = log.events.filter((e) => e.type === 'GuardRaised' && e.unit === 'A:0');
-    expect(raises.length).toBe(2);
+    expect(raises.length).toBe(1);
+  });
+
+  it('re-arms at the ENGAGEMENT seam (wipeout): the FR19 action reset restores the guard row, so a fresh charge rises next engagement', () => {
+    const wipeout = resolveBattle(
+      setup(FULL_GUARD_ALLY_BEHIND, { seed: 1, mode: 'wipeout', tactics: { A: 'autonomous', B: 'leader' }, leaders: { A: 1, B: 0 } }),
+    );
+    const engagements = wipeout.events.filter((e) => e.type === 'EngagementEnded').length;
+    expect(engagements).toBeGreaterThanOrEqual(2); // the clerics can't kill fast — the seam is reached
+    const raises = wipeout.events.filter((e) => e.type === 'GuardRaised' && e.unit === 'A:0').length;
+    expect(raises).toBeGreaterThanOrEqual(2); // one per engagement while the Phalanx lives — never two in one
+    expect(raises).toBeLessThanOrEqual(engagements);
   });
 
   it("a charge unconsumed by the engagement's natural end expires (GuardEnded, no shell lifecycle rule)", () => {
-    const ends = log.events.filter((e) => e.type === 'GuardEnded' && e.unit === 'A:0');
-    expect(ends.length).toBe(2); // one from consumption, one from natural-end expiry
-    const engEndIdx = log.events.findIndex((e) => e.type === 'EngagementEnded');
-    const lastEnd = ends[ends.length - 1];
-    expect(log.events.indexOf(lastEnd as (typeof log.events)[number])).toBeLessThan(engEndIdx);
+    // Nothing physical ever tests this charge: the enemy is an all-caster
+    // side whose bolts are MAGIC (they ignore Guard) and snipe A's rearmost
+    // row anyway. The one raise must still close with a GuardEnded — the
+    // explicit natural-end expiry, before EngagementEnded.
+    const expiry = resolveBattle(
+      setup({
+        armies: {
+          A: [
+            u('phalanx', 'fire', 'Bram'),
+            u('knight', 'water', 'Vess'),
+            u('knight', 'wind', 'Cedric'),
+            u('knight', 'earth', 'Doran'),
+            u('knight', 'fire', 'Edmund'),
+          ],
+          B: [u('mage', 'earth', 'Falk'), u('mage', 'fire', 'Gorm'), u('mage', 'water', 'Hask'), u('mage', 'wind', 'Ivo'), u('mage', 'earth', 'Jarek')],
+        },
+        placements: {
+          A: [
+            // The Phalanx guards from the FRONT; A's rearmost row is mid, so
+            // every enemy bolt (ranged: rearmost first) lands on the mid
+            // knights and the charge survives to the natural end. (Putting
+            // the Phalanx itself rearmost would get it bolted to death — a
+            // dead unit's charge expires SILENTLY, which is not this test.)
+            { row: 'front', col: 'center' },
+            { row: 'front', col: 'left' },
+            { row: 'front', col: 'right' },
+            { row: 'mid', col: 'left' },
+            { row: 'mid', col: 'right' },
+          ],
+          B: [
+            { row: 'back', col: 'left' },
+            { row: 'back', col: 'center' },
+            { row: 'back', col: 'right' },
+            { row: 'mid', col: 'left' },
+            { row: 'mid', col: 'center' },
+          ],
+        },
+      }),
+    );
+    expect(expiry.events.some((e) => e.type === 'UnitAttacked' && e.redirectedFrom !== undefined)).toBe(false); // magic never consumed it
+    const raises = expiry.events.filter((e) => e.type === 'GuardRaised' && e.unit === 'A:0');
+    const ends = expiry.events.filter((e) => e.type === 'GuardEnded' && e.unit === 'A:0');
+    expect(raises.length).toBe(1);
+    expect(ends.length).toBe(1); // the natural-end expiry — the only way this charge can end
+    const engEndIdx = expiry.events.findIndex((e) => e.type === 'EngagementEnded');
+    expect(expiry.events.indexOf(ends[0] as (typeof expiry.events)[number])).toBeLessThan(engEndIdx);
   });
 });
 

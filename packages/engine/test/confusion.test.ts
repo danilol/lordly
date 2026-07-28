@@ -54,10 +54,13 @@ const placementsA = [
 ] as const;
 
 describe('FR16 confusion misfires (seeded, probed pins)', () => {
-  it('a confused MAGE blasts its own fullest row (itself included); a confused CLERIC heals an enemy', () => {
-    // B's back row holds EXACTLY the mage (B:1) and cleric (B:2): rows count
-    // front 2 / mid 1 / back 2, and FR10's fullest-row tie breaks REARMOST —
-    // so the misfired blast strikes the mage's own back row, itself included.
+  it('a confused MAGE bolts a random ALLY (story 5.4 — row-consistent: its mid/back move IS the bolt now); a confused CLERIC heals an enemy', () => {
+    // Story 5.4 (E5-D4) retired the casters' row blast, and the misfire stays
+    // row-consistent (the 4.7 review principle): a back-row mage's normal
+    // action is a single-target magic bolt, so its misfire is that same bolt
+    // on a random ally — an A2 redirect draw, NO A3/A4 (magic never rolls).
+    // The old "blasts its own fullest row, itself included" behavior died
+    // with the blast rows; a misfire can no longer strike the caster itself.
     const log = resolveBattle(
       setup(
         {
@@ -80,16 +83,21 @@ describe('FR16 confusion misfires (seeded, probed pins)', () => {
             { row: 'mid', col: 'center' },
           ],
         },
-        3, // probed (re-probed for 4.6's crit/dodge draws): mage self-blast AND cleric enemy-heal both misfire on this seed
+        1, // probed (re-probed for 5.4's bolt misfire — the A2 redirect draw shifts every later draw): mage ally-bolt AND cleric enemy-heal both misfire on this seed
       ),
     );
     const pairs = misfirePairs(log);
-    // Confused B mage blasts its OWN back row — hitting itself and its cleric.
-    const selfBlast = pairs.find(([m, e]) => m.type === 'ActionMisfired' && m.unit === 'B:1' && e.type === 'UnitAttacked');
-    expect(selfBlast).toBeDefined();
-    if (selfBlast && selfBlast[1].type === 'UnitAttacked') {
-      expect(selfBlast[1].source).toBe('B:1');
-      expect(selfBlast[1].targets.map((t) => t.unit).sort()).toEqual(['B:1', 'B:2']); // friendly fire, self included
+    // Confused B mage bolts ONE random B ally — never itself, never a row.
+    const allyBolt = pairs.find(([m, e]) => m.type === 'ActionMisfired' && m.unit === 'B:1' && e.type === 'UnitAttacked');
+    expect(allyBolt).toBeDefined();
+    if (allyBolt && allyBolt[1].type === 'UnitAttacked') {
+      expect(allyBolt[1].source).toBe('B:1');
+      expect(allyBolt[1].kind).toBe('bolt');
+      expect(allyBolt[1].targets).toHaveLength(1); // single-target, like the normal action it mirrors
+      const struck = allyBolt[1].targets[0]?.unit;
+      expect(struck?.startsWith('B')).toBe(true); // friendly fire
+      expect(struck).not.toBe('B:1'); // ally picks exclude the confused unit itself
+      expect(allyBolt[1].targets[0]?.outcome).toBe('hit'); // magic: no crit/dodge draws on the misfire either
     }
     // Confused B cleric heals an ENEMY (A-side unit).
     const enemyHeal = pairs.find(([m, e]) => m.type === 'ActionMisfired' && m.unit === 'B:2' && e.type === 'UnitHealed');

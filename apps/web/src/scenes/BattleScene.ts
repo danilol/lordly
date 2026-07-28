@@ -123,6 +123,7 @@ const TRACE_TRAVEL: Record<TraceKind, 'step' | 'projectile'> = {
   staff: 'step',
   arrow: 'projectile',
   blast: 'projectile',
+  bolt: 'projectile', // story 5.4 — the magic bolt crosses the gap like the arrow/blast, no melee lunge
   heal: 'projectile',
   spell: 'projectile',
 };
@@ -597,6 +598,7 @@ export class BattleScene extends Scene {
         color = ISO_TILES.frontStroke;
         break;
       case 'blast':
+      case 'bolt': // story 5.4 — an ATTACK sliver, so it follows the actor-color rule like the blast
         color = actorFill;
         break;
       case 'heal':
@@ -622,7 +624,7 @@ export class BattleScene extends Scene {
       // travel, effects land immediately. An ATTACK with a vanished target
       // keeps the old aggression nudge; a heal/spell just stays still —
       // stepping a healer at the enemy board would fabricate an attack read (review).
-      if (trace.kind === 'arrow' || trace.kind === 'blast') this.meleeStep(attacker);
+      if (trace.kind === 'arrow' || trace.kind === 'blast' || trace.kind === 'bolt') this.meleeStep(attacker);
       washRow();
       return 0;
     }

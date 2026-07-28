@@ -150,7 +150,8 @@ export interface BalanceData {
  * forgotten (AD-8).
  */
 export const BALANCE: BalanceData = {
-  version: 9,
+  version: 10, // story 5.4: the human wave (dossier ROSTER.md) — 5 new classes, `bolt`, the shipped-12 revision
+
   slotBudget: 5,
   engagementCap: 10,
   classes: {
@@ -198,6 +199,8 @@ export const BALANCE: BalanceData = {
       sizeClass: 'small',
       role: 'sniper',
     },
+    // Story 5.4 (dossier E5-D4): casters LOSE the row splash — mid/back is the
+    // single-target magic `bolt` now; row AoE is reserved for a future Archmage.
     mage: {
       hp: 80,
       str: 6,
@@ -207,7 +210,7 @@ export const BALANCE: BalanceData = {
       agi: 12,
       dex: 14,
       actions: { front: 1, mid: 1, back: 2 },
-      moves: { front: 'staff', mid: 'blast', back: 'blast' },
+      moves: { front: 'staff', mid: 'bolt', back: 'bolt' },
       sizeClass: 'small',
       role: 'artillery',
     },
@@ -253,6 +256,9 @@ export const BALANCE: BalanceData = {
       sizeClass: 'small',
       role: 'vanguard',
     },
+    // Story 5.4 (dossier E5-P2): guard rows carry ONE action now (2/1/1 →
+    // 1/1/1) — a second same-turn Guard raise re-armed nothing but a spent
+    // charge, so the extra front action was a phantom. Back-row bash keeps 1.
     phalanx: {
       hp: 150,
       str: 22,
@@ -261,7 +267,7 @@ export const BALANCE: BalanceData = {
       men: 18,
       agi: 6,
       dex: 12,
-      actions: { front: 2, mid: 1, back: 1 },
+      actions: { front: 1, mid: 1, back: 1 },
       moves: { front: 'guard-full', mid: 'guard-full', back: 'bash' },
       sizeClass: 'small',
       role: 'vanguard',
@@ -279,19 +285,23 @@ export const BALANCE: BalanceData = {
       sizeClass: 'small',
       role: 'skirmisher',
     },
+    // Story 5.4 (dossier E5-D10 + the approved Valkyrie amendment): back row
+    // is the magic `bolt` ("Lightning") ×2 — her side-gun row; INT 12 → 18 so
+    // it lands as real damage (INT 18 − MEN/2 ≈ 11 vs MEN 14), not a nerf-trap.
     valkyrie: {
       hp: 105,
       str: 24,
       vit: 16,
-      int: 12,
+      int: 18,
       men: 16,
       agi: 20,
       dex: 20,
-      actions: { front: 2, mid: 1, back: 1 },
-      moves: { front: 'slash', mid: 'slash', back: 'slash' },
+      actions: { front: 2, mid: 1, back: 2 },
+      moves: { front: 'slash', mid: 'slash', back: 'bolt' },
       sizeClass: 'small',
       role: 'skirmisher',
     },
+    // Story 5.4 (dossier E5-D4): same splash removal as the mage — see above.
     sorceress: {
       hp: 78,
       str: 6,
@@ -301,7 +311,7 @@ export const BALANCE: BalanceData = {
       agi: 16,
       dex: 15,
       actions: { front: 1, mid: 1, back: 2 },
-      moves: { front: 'staff', mid: 'blast', back: 'blast' },
+      moves: { front: 'staff', mid: 'bolt', back: 'bolt' },
       sizeClass: 'small',
       role: 'artillery',
     },
@@ -329,6 +339,81 @@ export const BALANCE: BalanceData = {
       sizeClass: 'monster',
       role: 'brute',
     },
+    // Story 5.4 — the human wave (epic-5 dossier, ROSTER.md's approved
+    // engine-scale rows E5-D15; sweep-policed like every tuning value).
+    // The duelist: wins 1v1s on crit/dodge (DEX 24); dies to focus fire.
+    fencer: {
+      hp: 100,
+      str: 27,
+      vit: 16,
+      int: 8,
+      men: 13,
+      agi: 20,
+      dex: 24,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'slash' },
+      sizeClass: 'small',
+      role: 'skirmisher',
+    },
+    // Anti-dragon (E5-P1): Skewer lands the one-way ×1.5 dragonslayer→dragon
+    // hunt; ordinary stats vs everyone else. INERT until 5.5 ships a dragon.
+    dragonhunter: {
+      hp: 100,
+      str: 24,
+      vit: 16,
+      int: 8,
+      men: 14,
+      agi: 18,
+      dex: 22,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'slash' },
+      sizeClass: 'small',
+      role: 'dragonslayer',
+    },
+    // Reliable filler skirmisher — the budget mercenary. Flying is FLAVOR only (E5-D10).
+    hawkman: {
+      hp: 105,
+      str: 24,
+      vit: 18,
+      int: 8,
+      men: 12,
+      agi: 16,
+      dex: 16,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'slash' },
+      sizeClass: 'small',
+      role: 'skirmisher',
+    },
+    // Hybrid: melee up close, "Wind Shot" ×2 from the back — a physical Skill
+    // riding the shipped `arrow` kind (E5-D14), NOT a bolt.
+    vultan: {
+      hp: 110,
+      str: 26,
+      vit: 18,
+      int: 8,
+      men: 14,
+      agi: 24,
+      dex: 18,
+      actions: { front: 2, mid: 1, back: 2 },
+      moves: { front: 'slash', mid: 'slash', back: 'arrow' },
+      sizeClass: 'small',
+      role: 'skirmisher',
+    },
+    // Aggressive hybrid: hits harder and crits more than the Vultan, thinner.
+    // Back-row "Thunder Arrow" is the same physical `arrow` Skill (E5-D14).
+    raven: {
+      hp: 105,
+      str: 26,
+      vit: 16,
+      int: 8,
+      men: 13,
+      agi: 22,
+      dex: 20,
+      actions: { front: 2, mid: 1, back: 2 },
+      moves: { front: 'slash', mid: 'slash', back: 'arrow' },
+      sizeClass: 'small',
+      role: 'skirmisher',
+    },
   },
   // FR14 role relations (story 4.3) — the shipped-six triangle + hunts, verbatim:
   // Artillery→Vanguard→Sniper→Artillery (symmetric RPS); Sniper hunts Support &
@@ -339,6 +424,10 @@ export const BALANCE: BalanceData = {
     { attacker: 'sniper', defender: 'artillery', kind: 'symmetric' },
     { attacker: 'sniper', defender: 'support', kind: 'hunt' },
     { attacker: 'sniper', defender: 'control', kind: 'hunt' },
+    // Story 5.4 (dossier E5-P1): the Dragon Hunter's one-way ×1.5 vs the
+    // dragon role — no reverse penalty (a dragon mauls her back at ×1.0).
+    // INERT until story 5.5 ships a class with `role: 'dragon'`.
+    { attacker: 'dragonslayer', defender: 'dragon', kind: 'hunt' },
   ],
   elementSpells: { water: 'sleep', earth: 'poison', fire: 'weaken', wind: 'confusion' },
   formulas: {

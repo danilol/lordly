@@ -35,6 +35,38 @@ export function unitDisplaySize(cls: UnitClass, baseSize: number): number {
   return BALANCE.classes[cls].sizeClass === 'monster' ? Math.round(baseSize * MONSTER_LOOM_SCALE) : baseSize;
 }
 
+/**
+ * Draft icon-grid geometry (story 4.3's grid, RE-LAID by story 5.4): pure
+ * DATA + arithmetic, exported so the layout is testable without Phaser —
+ * the 12-class 4×80px grid measurably could not hold 17 classes (5 rows
+ * ended at y=422 against a detail panel at y=300, a 122px collision).
+ * Now: 5 columns of 62×50 tiles — 4 rows for 17 classes, grid bottom at
+ * 88 + 4×50 + 3×6 = 306, right edge at 9 + 5×62 + 4×8 = 351 ≤ 360, and
+ * every tile stays over the FR30 44px tap floor.
+ */
+export const DRAFT_GRID = { cols: 5, tileW: 62, tileH: 50, gapX: 8, gapY: 6, startX: 9, startY: 88 } as const;
+
+/**
+ * The class-detail panel below the grid (story 5.4 re-lay): starts under the
+ * 17-class grid bottom (306 + 4px) and ends at 418, clearing the army-tray
+ * label at y=426.
+ */
+export const DRAFT_DETAIL = { x: 8, y: 310, w: BASE_WIDTH - 16, h: 108 } as const;
+
+/** Top-left corner of draft tile `i` (row-major over DRAFT_GRID.cols). */
+export function draftGridTile(i: number): { x: number; y: number } {
+  return {
+    x: DRAFT_GRID.startX + (i % DRAFT_GRID.cols) * (DRAFT_GRID.tileW + DRAFT_GRID.gapX),
+    y: DRAFT_GRID.startY + Math.floor(i / DRAFT_GRID.cols) * (DRAFT_GRID.tileH + DRAFT_GRID.gapY),
+  };
+}
+
+/** Bottom y of a `count`-tile grid — the number that must clear DRAFT_DETAIL.y. */
+export function draftGridBottom(count: number): number {
+  const rows = Math.ceil(count / DRAFT_GRID.cols);
+  return DRAFT_GRID.startY + rows * DRAFT_GRID.tileH + (rows - 1) * DRAFT_GRID.gapY;
+}
+
 // Shared UI palette — the single source for colors used across scenes and
 // the Phaser game config. Hex strings for text/config, numbers for shapes.
 // Story 5.2 (the medieval look): re-toned to DESIGN.md's Night Tactics tokens
@@ -289,6 +321,12 @@ export const CLASS_ABBREVIATIONS: Record<UnitClass, string> = {
   valkyrie: 'VAL',
   sorceress: 'SOR',
   golem: 'GOL', // story 4.8
+  // Story 5.4 roster wave — the humans (dossier ROSTER.md's Code column).
+  fencer: 'FEN',
+  dragonhunter: 'DRH',
+  hawkman: 'HAW',
+  vultan: 'VUL',
+  raven: 'RAV',
 };
 
 /**
@@ -310,6 +348,13 @@ export const CLASS_DISPLAY_NAME: Record<UnitClass, string> = {
   valkyrie: 'Valkyrie',
   sorceress: 'Sorceress',
   golem: 'Golem', // story 4.8
+  // Story 5.4 roster wave — the humans. `dragonhunter` is the one engine key
+  // whose display name is two words (the codes stay 3 letters regardless).
+  fencer: 'Fencer',
+  dragonhunter: 'Dragon Hunter',
+  hawkman: 'Hawkman',
+  vultan: 'Vultan',
+  raven: 'Raven',
 };
 export const CARD_CLASS_FONT_PX = 13;
 
@@ -610,6 +655,29 @@ export const MOVE_PLATE_NAMES: Record<Exclude<MoveKind, 'blast'>, string> = {
   arrow: 'Arrow',
   staff: 'Staff',
   bash: 'Bash',
+  bolt: 'Magic Bolt', // story 5.4 (E5-D4) — the casters' single-target bolt; the Valkyrie overrides it below
+};
+/**
+ * Per-(class, kind) display names OVER the generic plate vocabulary (story
+ * 5.4, dossier E5-D10 — "display names over one kind"): the same engine
+ * `slash` narrates as the Berserker's "Cleave" or the Ninja's "Rend". Keyed
+ * by the engine unions both ways (AD-4), consulted FIRST by
+ * `moveDisplayName`; a class absent here (or a kind absent for it) falls back
+ * to `MOVE_PLATE_NAMES`/the blast composition — so the map stays sparse and a
+ * new class needs no entry unless the dossier names its moves.
+ */
+export const CLASS_MOVE_NAMES: Partial<Record<UnitClass, Partial<Record<Exclude<MoveKind, 'blast'>, string>>>> = {
+  mercenary: { slash: 'Cut Throat' },
+  berserker: { slash: 'Cleave' },
+  ninja: { slash: 'Rend' },
+  golem: { slash: 'Smash' },
+  phalanx: { bash: 'Pierce' },
+  valkyrie: { slash: 'Pierce', bolt: 'Lightning' },
+  fencer: { slash: 'Lunge' },
+  dragonhunter: { slash: 'Skewer' },
+  hawkman: { slash: 'Talon Strike' },
+  vultan: { slash: 'Talon Strike', arrow: 'Wind Shot' },
+  raven: { slash: 'Talon Strike', arrow: 'Thunder Arrow' },
 };
 /** The blast's element flavor word (open Q2 default — EXPERIENCE.md names "Ice Blast" for water). */
 export const BLAST_ELEMENT_WORD: Record<Element, string> = {
@@ -618,9 +686,13 @@ export const BLAST_ELEMENT_WORD: Record<Element, string> = {
   wind: 'Wind',
   earth: 'Stone',
 };
-/** The plate name for a move: element-flavored for a blast ("Ice Blast"), the fixed vocabulary otherwise. */
-export const moveDisplayName = (kind: MoveKind, element: Element): string =>
-  kind === 'blast' ? `${BLAST_ELEMENT_WORD[element]} Blast` : MOVE_PLATE_NAMES[kind];
+/**
+ * The plate name for a move: the actor class's own verb when the dossier
+ * named one (CLASS_MOVE_NAMES, story 5.4), element-flavored for a blast
+ * ("Ice Blast"), the fixed vocabulary otherwise.
+ */
+export const moveDisplayName = (kind: MoveKind, element: Element, cls: UnitClass): string =>
+  kind === 'blast' ? `${BLAST_ELEMENT_WORD[element]} Blast` : (CLASS_MOVE_NAMES[cls]?.[kind] ?? MOVE_PLATE_NAMES[kind]);
 /** The FR16 spell names, surfacing on the plate at last (dossier: a 2026-07-13 PO wish ships as a side effect). */
 export const SPELL_DISPLAY_NAME: Record<SpellKind, string> = {
   sleep: 'Sleep',

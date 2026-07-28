@@ -1,6 +1,6 @@
 import { ALL_CLASSES, ALL_ROWS, BALANCE, dealsAdvantage, MAX_MONSTERS_PER_ARMY, SLOT_COST, slotTotal } from '@lordly/engine';
 import type { ClassStats, UnitClass } from '@lordly/engine';
-import { CLASS_DISPLAY_NAME } from '../config/constants';
+import { CLASS_DISPLAY_NAME, CLASS_MOVE_NAMES } from '../config/constants';
 import type { DraftedUnit } from './MatchState';
 
 /** A class's compact draft rules card (FR2). All numbers come from BALANCE — never retyped. */
@@ -36,18 +36,24 @@ const CLASS_TEXT: Record<UnitClass, { role: string; behavior: string }> = {
   knight: { role: 'Front-line tank', behavior: 'Melee: nearest reachable row. Mid row Guards instead of attacking' },
   mercenary: { role: 'Neutral sellsword', behavior: 'Melee: nearest reachable enemy row, no class advantage' },
   archer: { role: 'Back-row sniper', behavior: 'Ranged: arcs over the front to hit the rearmost enemy row' },
-  mage: { role: 'Row artillery', behavior: 'Front: a weak staff jab. Mid/back: blasts the fullest enemy row' },
+  mage: { role: 'Artillery', behavior: 'Front: a weak staff jab. Mid/back: a Magic Bolt at the rearmost enemy' },
   cleric: { role: 'Support', behavior: 'Heals the most-hurt ally; a weak staff attack if none is hurt' },
   witch: { role: 'Control', behavior: 'Casts an element-keyed status on a rear enemy; deals no damage' },
   // Story 4.3 wave 1 — "start generic": role/stat variants of the shipped six.
   berserker: { role: 'Vanguard bruiser', behavior: 'Melee: nearest reachable enemy row; hits hard, lightly armored' },
   phalanx: { role: 'Vanguard wall', behavior: 'Melee: nearest reachable row. Front/mid Guard instead of attacking' },
   ninja: { role: 'Skirmisher', behavior: 'Melee: nearest reachable enemy row; very fast, no class advantage' },
-  valkyrie: { role: 'Skirmisher', behavior: 'Melee: nearest reachable enemy row; no class advantage' },
-  sorceress: { role: 'Row artillery', behavior: 'Front: a weak staff jab. Mid/back: blasts the fullest enemy row' },
+  valkyrie: { role: 'Skirmisher', behavior: 'Melee up close; from the back row casts Lightning at the rearmost enemy' },
+  sorceress: { role: 'Artillery', behavior: 'Front: a weak staff jab. Mid/back: a Magic Bolt at the rearmost enemy' },
   // Story 4.8 — the wave's only monster (single cell, costs 2 slots). Device
   // revision: NOT a two-cell body — one tile, so large no unit may stand beside it.
   golem: { role: 'Brute wall', behavior: 'Melee brute: huge HP, hits hard, weak to magic; so large no unit may stand beside it' },
+  // Story 5.4 — the human wave (behavior prose tracks ROSTER.md's showcase column).
+  fencer: { role: 'Duelist', behavior: 'Melee: nearest reachable enemy row; wins duels on crit and dodge, dies to focus fire' },
+  dragonhunter: { role: 'Dragonslayer', behavior: 'Melee: nearest reachable enemy row; deals ×1.5 to dragons, ordinary vs everyone else' },
+  hawkman: { role: 'Skirmisher', behavior: 'Melee: nearest reachable enemy row; a reliable, unremarkable line-holder' },
+  vultan: { role: 'Skirmisher', behavior: 'Melee up close; from the back row fires Wind Shot at the rearmost enemy' },
+  raven: { role: 'Skirmisher', behavior: 'Melee up close; from the back row fires Thunder Arrow at the rearmost enemy' },
 };
 
 /**
@@ -62,11 +68,18 @@ export function movesVaryByRow(cls: UnitClass): boolean {
   return new Set(ALL_ROWS.map((row) => moves[row])).size > 1;
 }
 
-/** A short player-facing label for one row's move (FR32/FR33) — Guard names its tier; everything else is Title Case. */
-export function moveLabel(move: ClassStats['moves']['front']): string {
+/**
+ * A short player-facing label for one row's move (FR32/FR33) — Guard names
+ * its tier; a class-named verb (story 5.4, E5-D10: the Valkyrie's back row
+ * reads "Lightning", not "Bolt") when the dossier assigned one; Title Case
+ * otherwise. Pass the class so the Draft card and the battle plate speak the
+ * same vocabulary (both read CLASS_MOVE_NAMES).
+ */
+export function moveLabel(move: ClassStats['moves']['front'], cls?: UnitClass): string {
   if (move === 'guard-full') return 'Guard (full)';
   if (move === 'guard-half') return 'Guard (half)';
-  return move.charAt(0).toUpperCase() + move.slice(1);
+  const named = cls !== undefined && move !== 'blast' ? CLASS_MOVE_NAMES[cls]?.[move] : undefined;
+  return named ?? move.charAt(0).toUpperCase() + move.slice(1);
 }
 
 /**

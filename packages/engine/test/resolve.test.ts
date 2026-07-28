@@ -531,23 +531,30 @@ describe('chassis properties (NFR2, FR20)', () => {
   });
 
   it('determinism anchor: pinned event-type sequence for a known setup', () => {
-    // Re-derived for 4.2's 5-unit armies (the 3-unit anchor retired with the
-    // era): a wall of 5 knights vs a battery of 5 mages — the sim.test anchor
-    // pair, whose full battle is hand-derived there. No cross-side AGI ties
-    // (8 vs 12), both boards mirror-symmetric, no witch: the sequence holds
-    // for EVERY seed; 0xbeef is pinned arbitrarily.
-    // Pass 1: mages (mid L, mid R, back L, back C, back R) each blast A's
-    // 3-knight front row for 34 (30 − floor(14/2) = 23, ×3/2 RPS); all three
-    // die on the FIFTH blast (4 × 34 = 136 < 140). The dead knights' queued
-    // turns skip. Story 4.7: A's MID knights (A:3, A:4) now Guard-half instead
-    // of swinging at the enemy mid mages (the Knight's per-row move table) —
-    // each raises a charge that nothing physical ever tests (only magic
-    // blasts reach them), so both simply expire (GuardEnded) at the
-    // engagement's natural end, unconsumed.
-    // Pass 2: only the three back mages (2 actions) still act — three blasts
-    // × 34 onto A's 2-knight mid row (140 → 38). B's mid mages, no longer
-    // struck by A:3/A:4, stay at full HP. Verdict: A 76/700 → 10%,
-    // B 400/400 → 100%, winner B (exact-fraction comparison).
+    // Re-derived for story 5.4 (E5-D4: the casters' row blast became the
+    // single-target `bolt`): a wall of 5 knights vs a battery of 5 mages —
+    // the sim.test anchor pair. Bolts use RANGED targeting (rearmost row →
+    // facing column → center → higher column), so the battery snipes A's MID
+    // knights first and the FRONT knights survive to swing back — which makes
+    // the trace SEED-SPECIFIC now (physical hits draw dodge/crit; the old
+    // all-blast battle drew nothing). 0xbeef stays the pinned seed; every
+    // non-draw number below is hand-derived:
+    // Pass 1: each mage bolts for 34 (30 − floor(14/2) = 23, ×3/2 RPS —
+    // magic, single-target, zero draws). Rearmost = A's mid pair: B:3 (col 0,
+    // facing 2) → A:4; B:4 (facing 0) → A:3; B:0 → A:4; B:1 (facing 1,
+    // neither — higher col wins the tie) → A:4; B:2 → A:3. A's front knights
+    // answer with melee slashes for 19 (26 ×3/4 reverse-RPS): A:0 and A:1
+    // reach nearest-row B:4 (mid, their reach/tie rules), A:2 → B:3. A's mid
+    // knights Guard-half (their row move) — charges nothing physical ever
+    // tests.
+    // Pass 2 (back mages' 2nd action; front knights' 2nd): B:0 and B:1
+    // finish A:4 (38 → 4 → 0, died — NOT A's leader, so no LeaderFell);
+    // B:2 → A:3 (72 → 38). A:0/A:1's slashes at B:4 are both DODGED on this
+    // seed (mage DEX 14 → 4% each — the draws are the seed's); A:2 hits B:3
+    // for 19. A:4 died holding a Guard charge — a dead unit's charge expires
+    // SILENTLY (the expiry loop narrates living units only), so exactly ONE
+    // GuardEnded (A:3) closes the engagement.
+    // Verdict: A 458/700 → 65%, B 324/400 → 81%, winner B.
     const s = setup(
       {
         armies: {
@@ -604,39 +611,33 @@ describe('chassis properties (NFR2, FR20)', () => {
     expect(trace).toEqual([
       'BattleStarted',
       'pass:1',
-      'atk:B:3>A:0-34,A:1-34,A:2-34',
-      'atk:B:4>A:0-34,A:1-34,A:2-34',
-      'atk:B:0>A:0-34,A:1-34,A:2-34',
-      'atk:B:1>A:0-34,A:1-34,A:2-34',
-      'atk:B:2>A:0-34,A:1-34,A:2-34',
-      'died:A:0',
-      // A:0 is A's default leader (index 0): its death rides the LeaderFell beat
-      // immediately after (story 4.5, FR35), and from A's next action on, its
-      // PHYSICAL damage is the ×3/4 sober-package cut — the two mid knights that
-      // hit for 19 pre-fall now hit for 14 (26 base ×3/4 RPS = 19, ×3/4 penalty
-      // = floor(14.25) = 14). The mages' magic blasts are untouched (physical-only).
-      'LeaderFell',
-      'died:A:1',
-      'died:A:2',
-      'skip:A:0:dead',
-      'skip:A:1:dead',
-      'skip:A:2:dead',
+      'atk:B:3>A:4-34',
+      'atk:B:4>A:3-34',
+      'atk:B:0>A:4-34',
+      'atk:B:1>A:4-34',
+      'atk:B:2>A:3-34',
+      'atk:A:0>B:4-19',
+      'atk:A:1>B:4-19',
+      'atk:A:2>B:3-19',
       'GuardRaised',
       'GuardRaised',
       'pass:2',
-      'atk:B:0>A:3-34,A:4-34',
-      'atk:B:1>A:3-34,A:4-34',
-      'atk:B:2>A:3-34,A:4-34',
-      'GuardEnded',
-      'GuardEnded',
+      'atk:B:0>A:4-34',
+      'atk:B:1>A:4-34',
+      'died:A:4',
+      'atk:B:2>A:3-34',
+      'atk:A:0>B:4-0', // dodged (damage 0) — this seed's A3 draw
+      'atk:A:1>B:4-0', // dodged — likewise
+      'atk:A:2>B:3-19',
+      'GuardEnded', // A:3 only — A:4 died holding its charge, which expires silently
       'EngagementEnded',
       'BattleEnded',
     ]);
     const verdict = log.events[log.events.length - 1];
     if (verdict?.type === 'BattleEnded') {
-      // Story 4.7: A's mid knights Guard instead of attacking, so B's mid
-      // mages are never struck — B holds a clean 400/400 = 100%.
-      expect(verdict).toEqual({ type: 'BattleEnded', winner: 'B', hpPct: { A: 10, B: 100 } });
+      // Story 5.4: the single-target battery no longer erases the wall — the
+      // front knights live and answer. 458/700 vs 324/400, exact fractions.
+      expect(verdict).toEqual({ type: 'BattleEnded', winner: 'B', hpPct: { A: 65, B: 81 } });
     }
   });
 });

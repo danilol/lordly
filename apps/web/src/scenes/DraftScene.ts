@@ -7,6 +7,9 @@ import {
   CLASS_ABBREVIATIONS,
   CLASS_DISPLAY_NAME,
   DRAFT_CONTINUE_LABEL,
+  DRAFT_DETAIL,
+  DRAFT_GRID,
+  draftGridTile,
   draftHint,
   DRAFT_RULES_LABEL,
   DRAFT_TITLE,
@@ -19,10 +22,15 @@ import type { MatchFlow } from '../flow/MatchFlow';
 import { addButton, addSceneGround, addFramedPanel, applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
 
-/** Icon-grid layout (story 4.3 redesign): a compact tile per class — all classes on one screen, no scroll. */
-const GRID = { cols: 4, tileW: 80, tileH: 62, gapX: 8, gapY: 6, startX: 8, startY: 88 };
+/**
+ * Icon-grid layout (story 4.3 redesign; re-laid for 17 classes by story 5.4):
+ * a compact tile per class — all classes on one screen, no scroll. Geometry
+ * lives in constants.ts (DRAFT_GRID/DRAFT_DETAIL) so the arithmetic is
+ * testable without Phaser; these aliases keep the scene readable.
+ */
+const GRID = DRAFT_GRID;
 /** The class-detail panel (below the grid) that fills in on selection. */
-const DETAIL = { x: 8, y: 300, w: BASE_WIDTH - 16, h: 116 };
+const DETAIL = DRAFT_DETAIL;
 /** Two taps on the same tile within this window count as a double-tap (draft shortcut). */
 const DOUBLE_TAP_MS = 300;
 
@@ -112,16 +120,19 @@ export class DraftScene extends Scene {
   /** The static class icon-grid: a tile per class, tapping SELECTS (does not draft). */
   private buildGrid() {
     ALL_CLASSES.forEach((cls, i) => {
-      const x = GRID.startX + (i % GRID.cols) * (GRID.tileW + GRID.gapX);
-      const y = GRID.startY + Math.floor(i / GRID.cols) * (GRID.tileH + GRID.gapY);
+      const { x, y } = draftGridTile(i);
       this.tiles.push({ cls, x, y });
       this.add.rectangle(x, y, GRID.tileW, GRID.tileH, PALETTE.cardFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.cardStroke);
-      addUnitSprite(this, x + GRID.tileW / 2, y + 22, cls, 28);
-      crispText(this, x + GRID.tileW / 2, y + GRID.tileH - 12, CLASS_DISPLAY_NAME[cls].toUpperCase(), {
+      addUnitSprite(this, x + GRID.tileW / 2, y + 17, cls, 26);
+      // 8px on the 62px tile: every single-word name fits one line; "DRAGON
+      // HUNTER" word-wraps to two (origin-top so line 1 stays anchored).
+      crispText(this, x + GRID.tileW / 2, y + 32, CLASS_DISPLAY_NAME[cls].toUpperCase(), {
         fontFamily: 'Arial Black',
-        fontSize: '9px',
+        fontSize: '8px',
         color: PALETTE.bodyText,
-      }).setOrigin(0.5);
+        align: 'center',
+        wordWrap: { width: GRID.tileW - 4 },
+      }).setOrigin(0.5, 0);
       this.add
         .rectangle(x, y, GRID.tileW, GRID.tileH, 0, 0)
         .setOrigin(0, 0)
@@ -172,9 +183,25 @@ export class DraftScene extends Scene {
     this.tweens.add({ targets: toast, alpha: 0, delay: 1400, duration: 500, onComplete: () => toast.destroy() });
   }
 
-  /** A small colored matchup pill; returns its right edge x so the next pill can follow. */
+  /**
+   * A small colored matchup pill; returns its right edge x so the next pill
+   * can follow. Story 5.4 closes the 4.3 review deferral: a pill that would
+   * run past the panel's right edge is ELLIPSIZED to fit, and one with no
+   * room at all is dropped — chips can never escape the frame (17 classes
+   * mean longer type lists, e.g. the Sniper's three-way hunt).
+   */
   private chip(x: number, y: number, label: string, fill: number, color: string): number {
+    const maxRight = DETAIL.x + DETAIL.w - 8;
     const text = crispText(this, x + 6, y, label, { fontFamily: 'Arial', fontSize: `${MIN_FONT_PX}px`, color }).setOrigin(0, 0.5);
+    let shown = label;
+    while (x + text.width + 12 > maxRight && shown.length > 2) {
+      shown = `${shown.slice(0, -2).trimEnd()}…`;
+      text.setText(shown);
+    }
+    if (x + text.width + 12 > maxRight) {
+      text.destroy(); // no room even for "…" — drop the pill rather than overflow
+      return x;
+    }
     const w = text.width + 12;
     const box = this.add.rectangle(x, y, w, 16, fill, 0.85).setOrigin(0, 0.5);
     // Pill above the panel (insertion order), label above the pill (depth).
@@ -208,9 +235,11 @@ export class DraftScene extends Scene {
     const addCx = DETAIL.x + DETAIL.w - 8 - addW / 2; // right edge padded 8 from the panel
     const textW = addCx - addW / 2 - (DETAIL.x + 92) - 8; // wrap width that clears the button column
     this.dynamic.push(addFramedPanel(this, DETAIL.x, DETAIL.y, DETAIL.w, DETAIL.h, { origin: [0, 0] }));
-    this.dynamic.push(addUnitSprite(this, DETAIL.x + 44, DETAIL.y + 52, this.selected, 48));
+    this.dynamic.push(addUnitSprite(this, DETAIL.x + 44, DETAIL.y + 48, this.selected, 48));
     const tx = DETAIL.x + 92;
-    this.dynamic.push(crispText(this, tx, DETAIL.y + 12, card.name.toUpperCase(), { fontFamily: 'Arial Black', fontSize: '18px', color: PALETTE.title }));
+    // Content offsets compressed for the 108px panel (story 5.4 re-lay: the
+    // 17-class grid claims the vertical the old 116px panel used).
+    this.dynamic.push(crispText(this, tx, DETAIL.y + 10, card.name.toUpperCase(), { fontFamily: 'Arial Black', fontSize: '18px', color: PALETTE.title }));
     // Review fix (2026-07-20): the slot cost is ONLY worth stating for a
     // monster (SLOT_COST.small === 1 is the assumed default — restating "1
     // slot" on all 11 small classes added nothing and pushed this line's
@@ -219,7 +248,7 @@ export class DraftScene extends Scene {
     // space, not double) free a little more room across the board.
     const costSegment = card.slotCost > 1 ? `${card.slotCost} slots · ` : '';
     this.dynamic.push(
-      crispText(this, tx, DETAIL.y + 38, `${card.role} · ${costSegment}act ${a.front}/${a.mid}/${a.back}`, {
+      crispText(this, tx, DETAIL.y + 34, `${card.role} · ${costSegment}act ${a.front}/${a.mid}/${a.back}`, {
         fontFamily: 'Arial',
         fontSize: '11px',
         color: PALETTE.bodyText,
@@ -236,12 +265,18 @@ export class DraftScene extends Scene {
     const varies = movesVaryByRow(this.selected);
     const m = card.moves;
     this.dynamic.push(
-      crispText(this, tx, DETAIL.y + 56, varies ? `F ${moveLabel(m.front)} · M ${moveLabel(m.mid)} · B ${moveLabel(m.back)}` : card.behavior, {
-        fontFamily: 'Arial',
-        fontSize: `${MIN_FONT_PX}px`,
-        color: varies ? PALETTE.title : PALETTE.mutedText,
-        wordWrap: { width: textW },
-      }),
+      crispText(
+        this,
+        tx,
+        DETAIL.y + 50,
+        varies ? `F ${moveLabel(m.front, this.selected)} · M ${moveLabel(m.mid, this.selected)} · B ${moveLabel(m.back, this.selected)}` : card.behavior,
+        {
+          fontFamily: 'Arial',
+          fontSize: `${MIN_FONT_PX}px`,
+          color: varies ? PALETTE.title : PALETTE.mutedText,
+          wordWrap: { width: textW },
+        },
+      ),
     );
     // Matchup pills by DAMAGE TYPE (green strong / red weak): a class is weak to
     // the types of the roles that beat it, strong vs the types it beats.
@@ -265,9 +300,9 @@ export class DraftScene extends Scene {
     // Chip contrast (story 5.2): the strong-vs chip sits on the gold enabled
     // fill, so its label is ink; the weak-to chip keeps its red ground with a
     // light-tint label (gold-on-gold and gold-on-red were the re-tone traps).
-    if (strongVs.length) cx = this.chip(cx, DETAIL.y + 98, `strong vs ${strongVs.join(', ')}`, PALETTE.buttonFillEnabled, PALETTE.buttonTextOnGold);
-    if (weakTo.length) this.chip(cx, DETAIL.y + 98, `weak to ${weakTo.join(', ')}`, PALETTE.enemyLine, PALETTE.codeTextEnemy);
-    if (!strongVs.length && !weakTo.length) this.chip(cx, DETAIL.y + 98, 'neutral matchups', PALETTE.buttonFill, PALETTE.mutedText);
+    if (strongVs.length) cx = this.chip(cx, DETAIL.y + 90, `strong vs ${strongVs.join(', ')}`, PALETTE.buttonFillEnabled, PALETTE.buttonTextOnGold);
+    if (weakTo.length) this.chip(cx, DETAIL.y + 90, `weak to ${weakTo.join(', ')}`, PALETTE.enemyLine, PALETTE.codeTextEnemy);
+    if (!strongVs.length && !weakTo.length) this.chip(cx, DETAIL.y + 90, 'neutral matchups', PALETTE.buttonFill, PALETTE.mutedText);
 
     // Add-to-army button — compact, top-right, gated on remaining slots.
     // Label is the single word "Add" since the art drop (device pass

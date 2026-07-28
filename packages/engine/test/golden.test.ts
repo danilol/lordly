@@ -195,7 +195,7 @@ describe('golden battles', () => {
 });
 
 describe('golden battles (story 1.6 — full roster era)', () => {
-  it('golden #4: the mage blast — archers soften a row, one blast kills two', () => {
+  it('golden #4: the caster duel — archers soften the back line, a bolt takes the kill through a Half Guard skirmish (story 5.4 re-record)', () => {
     const log = resolveBattle(
       setup(
         {
@@ -235,34 +235,38 @@ describe('golden battles (story 1.6 — full roster era)', () => {
         7,
       ),
     );
-    // Hand-derived for the 5-slot fixture: B's back row (2 mages) stays the
-    // blast target (front 1 / mid 2 / back 2 — the tie breaks rearmost); each
-    // A archer softens its reach-mirrored mage 30/shot (80→50→20), A's mage
-    // blasts 19 per pass (→31 after pass 1... with B:0's own pass-2 blast
-    // interleaved the pair sits at 1 hp), and the pass-2 blast finishes BOTH
-    // with one two-target event. A's front pair now screens the back row from
-    // B's melee, so — unlike the 3-unit era — only the two mages fall.
+    // Re-recorded for story 5.4 (E5-D4: the blast rows became single-target
+    // bolts), audited event by event 2026-07-28. Hand-derived: A's archers
+    // snipe rearmost — A:0 → B:1 (facing), A:1 → B:0 — 30/shot (20 ×3/2
+    // hunt); A:2's bolt picks B:1 (rearmost, higher-col tie) for 19
+    // (mage→mage, single-target now). B's mages bolt BACK at A's back-row
+    // archers for 18 (24 ×3/4 — artillery into the sniper's symmetric edge).
+    // B:1's lane: 80 −30 −19 (pass 1) −30 (pass 2) = 1, and A:2's pass-2
+    // bolt finishes it — ONE kill, one target per event; the old two-mage
+    // blast kill is impossible by design now, and B:0 SURVIVES at 35, so
+    // there is NO LeaderFell in this battle anymore.
     //
-    // Story 4.7: B:3 (a Knight, mid-left) Guard-halves on pass 1 instead of
-    // swinging — its shielded cells are itself AND the ally directly behind
-    // it, back-left, which is B:0 (the mage this golden kills). A:1's pass-2
-    // arrow at B:0 (would-be 30) is halved to 15 (`redirectedFrom: 'B:3'`,
-    // `GuardEnded` right after) — B:0 survives that ONE shot a little longer
-    // (16 hp instead of dying to it outright) but still falls two events
-    // later to A:2's finishing blast, so the death order/LeaderFell beat
-    // below are UNCHANGED; only the exact hp numbers move.
-    expect(log.events.filter((e) => e.type === 'UnitDied').map((e) => e.unit)).toEqual(['B:0', 'B:1']);
-    const killingBlast = log.events.filter((e) => e.type === 'UnitAttacked' && e.source === 'A:2')[1];
-    if (killingBlast?.type === 'UnitAttacked') {
-      expect(killingBlast.targets.every((t) => t.hpAfter === 0)).toBe(true);
-      const i = log.events.indexOf(killingBlast);
-      // B:0 is B's default leader (index 0): its death rides the LeaderFell beat
-      // immediately after its UnitDied (story 4.5, FR35), between the two
-      // casualties in target order. The blast is MAGIC, so no penalty applies.
-      expect(log.events[i + 1]?.type).toBe('UnitDied'); // B:0
-      expect(log.events[i + 2]?.type).toBe('LeaderFell'); // B:0 was B's leader
-      expect(log.events[i + 3]?.type).toBe('UnitDied'); // B:1
+    // Story 4.7's Guard beat still shows: B:3 (Knight, mid-left) Guard-halves
+    // on pass 1 — shielding B:0 directly behind it — so A:1's pass-2 arrow
+    // at B:0 (would-be 30) lands 15 with `redirectedFrom: 'B:3'` and the
+    // charge's `GuardEnded` right after. Verdict: A 418/520 = 80%,
+    // B 369/550 = 67%.
+    expect(log.events.filter((e) => e.type === 'UnitDied').map((e) => e.unit)).toEqual(['B:1']);
+    expect(log.events.some((e) => e.type === 'LeaderFell')).toBe(false); // B:0 (B's leader) survives on 35 hp
+    const killingBolt = log.events.filter((e) => e.type === 'UnitAttacked' && e.source === 'A:2')[1];
+    if (killingBolt?.type === 'UnitAttacked') {
+      expect(killingBolt.kind).toBe('bolt');
+      expect(killingBolt.targets).toEqual([{ unit: 'B:1', damage: 19, hpAfter: 0, outcome: 'hit' }]);
+      expect(log.events[log.events.indexOf(killingBolt) + 1]?.type).toBe('UnitDied'); // B:1
     }
+    const guardedArrow = log.events.find((e) => e.type === 'UnitAttacked' && e.redirectedFrom === 'B:3');
+    expect(guardedArrow).toBeDefined();
+    if (guardedArrow?.type === 'UnitAttacked') {
+      expect(guardedArrow.kind).toBe('arrow');
+      expect(guardedArrow.targets).toEqual([{ unit: 'B:0', damage: 15, hpAfter: 35, outcome: 'hit' }]); // 30 halved, re-clamped
+    }
+    const verdict4 = log.events[log.events.length - 1];
+    expect(verdict4).toEqual({ type: 'BattleEnded', winner: 'A', hpPct: { A: 80, B: 67 } });
     expect(log).toMatchSnapshot();
   });
 
@@ -420,6 +424,12 @@ describe('golden battles (story 4.7 — per-row moves and Guard)', () => {
     // clerics' staff fallback) hunt A:1 directly, guaranteeing the shielded
     // cell gets hit (guard.test.ts verifies this fixture's mechanics in
     // isolation; this golden pins the FULL battle log).
+    //
+    // Re-recorded for story 5.4 (E5-P2: guard rows carry 1 action, so the
+    // Phalanx raises ONCE per engagement — the pass-2 re-arm beat is gone),
+    // audited event by event 2026-07-28. The headline beat is UNCHANGED:
+    // B:0's pass-2 arrow at A:1 is negated to 0 via A:0's charge, GuardEnded
+    // riding right after. Verdict now A 616/620 = 99%, B 384/450 = 85%.
     const matchSetup: MatchSetup = {
       ...setup(
         {

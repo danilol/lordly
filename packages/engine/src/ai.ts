@@ -87,7 +87,13 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
     id: 'bulwark',
     name: 'Bulwark',
     // Story 4.3: one of the wall is a Berserker (Vanguard bruiser) — single-unit swap, identity intact, covers the newcomer (sweep-placed).
-    classes: ['knight', 'berserker', 'knight', 'knight', 'knight'],
+    // Story 5.4 re-tune: with the casters bolted (E5-D4) the pure wall lost
+    // its predator and sat at ~69%; the front-right knight becomes a Phalanx
+    // (guard-full, 1 action) — two slash actions per turn traded for a
+    // shield. Still every unit a Vanguard (the wall identity, and bolts keep
+    // their ×3/2 way in); a skirmisher swap here would have PROTECTED the
+    // wall from its own predator instead.
+    classes: ['knight', 'berserker', 'phalanx', 'knight', 'knight'],
     placement: [
       { row: 'front', col: 'left' },
       { row: 'front', col: 'center' },
@@ -99,10 +105,16 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
   {
     id: 'longbows',
     name: 'Longbows',
-    classes: ['archer', 'archer', 'archer', 'knight', 'cleric'],
+    // Story 5.4: one line-mate is a Vultan (back-row Wind Shot ×2 — an
+    // archer-shaped hybrid) — single-unit swap, identity intact, covers the
+    // newcomer (the 4.3 method). Re-tune (same pass): with the caster comps
+    // nerfed (E5-D4), the 3-sniper + heal-behind-a-wall shape shot to ~73% —
+    // one archer steps to the exposed FRONT row (farshot's 4.7 move: still
+    // snipes globally, now melee food), pulling it back toward band.
+    classes: ['vultan', 'archer', 'archer', 'knight', 'cleric'],
     placement: [
       { row: 'back', col: 'left' },
-      { row: 'back', col: 'right' },
+      { row: 'front', col: 'right' },
       { row: 'back', col: 'center' },
       { row: 'front', col: 'center' },
       { row: 'mid', col: 'center' },
@@ -112,23 +124,28 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
     id: 'three-mages',
     name: 'Three Mages',
     // Story 4.4 re-tune: FR9 global range let the triple-blast battery hide
-    // behind a full front screen and dominate (70% single). Pulling the two
-    // knights BACK exposes the mid-row mages to enemy melee/arrows — identity
-    // intact (still the anti-front-stack triple blast), win rate back in band.
+    // behind a full front screen and dominate (70% single) — the mages were
+    // pulled to the exposed MID row. Story 5.4 REVERSES that: E5-D4's bolt is
+    // a single-target attack (~1/3 the wall-clearing throughput of the row
+    // blast), and the mid-row exposure collapsed the comp to 17% while
+    // handing every melee wall a free win. The battery moves BACK behind its
+    // knight screens again — identity intact (the triple artillery battery;
+    // "anti-front-stack" is now the ×3/2 vanguard hunt, not a row wipe).
     classes: ['mage', 'mage', 'mage', 'knight', 'knight'],
     placement: [
-      { row: 'mid', col: 'left' },
-      { row: 'mid', col: 'center' },
-      { row: 'mid', col: 'right' },
       { row: 'back', col: 'left' },
       { row: 'back', col: 'center' },
+      { row: 'back', col: 'right' },
+      { row: 'front', col: 'center' },
+      { row: 'mid', col: 'center' },
     ],
   },
   {
     id: 'talons',
     name: 'Talons',
     // Story 4.3: one archer line-mate is a Valkyrie (Skirmisher) — single-unit swap, covers the newcomer (sweep-placed).
-    classes: ['archer', 'archer', 'archer', 'valkyrie', 'mercenary'],
+    // Story 5.4: the front screen is a Hawkman now (the budget skirmisher) — covers the newcomer.
+    classes: ['archer', 'archer', 'archer', 'valkyrie', 'hawkman'],
     placement: [
       { row: 'back', col: 'left' },
       { row: 'mid', col: 'right' },
@@ -140,10 +157,14 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
   {
     id: 'hex-coven',
     name: 'Hex Coven',
-    classes: ['witch', 'witch', 'knight', 'witch', 'knight'],
+    // Story 5.4: the coven's front-center screen is a Dragon Hunter — the
+    // dragonslayer needs pool representation before 5.5's dragons land.
+    // Re-tune (same pass): the mid witch joins the back line — three witches
+    // fully screened behind the two-melee front (37% exposed at mid).
+    classes: ['witch', 'witch', 'dragonhunter', 'witch', 'knight'],
     placement: [
       { row: 'back', col: 'left' },
-      { row: 'mid', col: 'center' },
+      { row: 'back', col: 'center' },
       { row: 'front', col: 'center' },
       { row: 'back', col: 'right' },
       { row: 'front', col: 'left' },
@@ -153,13 +174,20 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
     id: 'cabal',
     name: 'Cabal',
     // Story 4.3: the coven's flank is a Ninja (Skirmisher) now — single-unit swap, covers the newcomer (sweep-placed).
-    classes: ['mage', 'witch', 'cleric', 'mage', 'ninja'],
+    // Story 5.4 re-tune: the bolt's throughput cut (E5-D4) left the coven at
+    // 20% as everyone's fodder. Two moves: the ninja steps up as a FRONT
+    // screen (10% dodge — a slippery one), and the cleric becomes a KNIGHT —
+    // the bolt era's caster battery is preyed on by snipers, and only a
+    // vanguard (×3/2 vs snipers) punishes them; a heal couldn't. Identity
+    // intact: the caster cabal, now with a bodyguard. (Cleric stays covered
+    // via longbows/farshot/twin-golems.)
+    classes: ['mage', 'witch', 'knight', 'mage', 'ninja'],
     placement: [
       { row: 'back', col: 'left' },
       { row: 'mid', col: 'center' },
-      { row: 'back', col: 'center' },
+      { row: 'front', col: 'left' },
       { row: 'back', col: 'right' },
-      { row: 'mid', col: 'left' },
+      { row: 'front', col: 'center' },
     ],
   },
   {
@@ -170,8 +198,10 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
     // rivals — farshot itself has no front-row melee at all, so its RELATIVE
     // wipeout win rate rose above band. One archer steps to the front (a
     // screen, exposed to melee) — identity intact (still the two-archer
-    // snipe-and-support comp), pulling it back into band (mirrors gale's 4.4
-    // re-tune: move an archer forward to expose it).
+    // snipe-and-support comp). Story 5.4 probe note: fully retracting this
+    // exposure sent WIPEOUT to 68.5% (the cleric's sustain compounds across
+    // engagements — the very thing 4.7 was policing) while single sat at 48%,
+    // so the one-archer exposure STAYS.
     classes: ['archer', 'mage', 'cleric', 'archer', 'witch'],
     placement: [
       { row: 'front', col: 'left' },
@@ -185,7 +215,8 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
     id: 'wardens',
     name: 'Wardens',
     // Story 4.3: one line-mate is a Phalanx (Vanguard wall) now — single-unit swap keeps the tuned identity, covers the newcomer (sweep-placed).
-    classes: ['mercenary', 'knight', 'archer', 'mercenary', 'phalanx'],
+    // Story 5.4: the front-right mercenary is a Fencer (the crit/dodge duelist) — covers the newcomer.
+    classes: ['fencer', 'knight', 'archer', 'mercenary', 'phalanx'],
     placement: [
       { row: 'front', col: 'right' },
       { row: 'front', col: 'center' },
@@ -201,28 +232,35 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
     // ambush over-performed once FR9 gave it global range; one mercenary steps
     // to the front and the mage exposes from back to mid, pulling it back into
     // band. Identity intact — a mixed skirmish-and-cast ambush.
-    classes: ['mercenary', 'witch', 'archer', 'mercenary', 'mage'],
+    // Story 5.4: the front-center mercenary is a Raven (the aggressive
+    // talon skirmisher) — single-unit swap, covers the newcomer. Re-tune
+    // (same pass): the casters retreat to the BACK row behind the two-melee
+    // screen — the 4.4 exposure that policed row blasts just bleeds a
+    // single-target-era comp (35% before this).
+    classes: ['raven', 'witch', 'archer', 'mercenary', 'mage'],
     placement: [
       { row: 'front', col: 'center' },
       { row: 'back', col: 'left' },
-      { row: 'mid', col: 'right' },
+      { row: 'back', col: 'right' },
       { row: 'front', col: 'left' },
-      { row: 'mid', col: 'center' },
+      { row: 'back', col: 'center' },
     ],
   },
   {
     id: 'gale',
     name: 'Gale',
     // Story 4.3: one of the storm's artillery is a Sorceress (the Wizard's twin) — single-unit swap, covers the newcomer (sweep-placed).
-    // Story 4.4 re-tune: FR9 global range over-buffed the all-back caster/archer
-    // storm — the two archers move to the FRONT row (still snipe globally, now
-    // exposed as a screen), pulling gale back into band. Casters stay mid/back.
+    // Story 4.4 re-tune: FR9 global range over-buffed the all-back storm — the
+    // archers were exposed on the FRONT row. Story 5.4 re-tune: with the
+    // bolt's throughput cut (E5-D4) that exposure collapsed gale to 17%; the
+    // archers step back to the MID row (a soft screen, no longer sacrificial)
+    // — identity intact (the mixed caster/archer storm), rate back in band.
     classes: ['witch', 'archer', 'mage', 'archer', 'sorceress'],
     placement: [
       { row: 'mid', col: 'center' },
-      { row: 'front', col: 'left' },
+      { row: 'mid', col: 'left' },
       { row: 'back', col: 'center' },
-      { row: 'front', col: 'right' },
+      { row: 'mid', col: 'right' },
       { row: 'back', col: 'left' },
     ],
   },
@@ -241,12 +279,21 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
     // wall shape is systematically overtuned regardless of Golem's raw
     // stats; swapping to no-sustain ranged/control support pulled it back
     // into band at the dossier's HP 300.
+    // Story 5.4 re-tune: with the caster comps bolted (E5-D4) the wall
+    // converged just over band (65.3% single at runs=500). The golem anchors
+    // the front-LEFT CORNER now instead of center: its king-move ban frees
+    // the right lane, so enemy melee in the far column can walk PAST the
+    // wall onto the shooters (a front-center golem made the whole board
+    // melee-unreachable). Identity intact — the golem wall, cornered.
+    // (A vultan-for-archer swap was probed first and BUFFED it to 69.5%:
+    // the skirmisher's unpenalized raw damage into vanguards outweighed the
+    // lost sniper hunts.)
     classes: ['golem', 'archer', 'archer', 'witch'],
     placement: [
-      { row: 'front', col: 'center' },
+      { row: 'front', col: 'left' },
       { row: 'back', col: 'left' },
-      { row: 'back', col: 'right' },
       { row: 'back', col: 'center' },
+      { row: 'back', col: 'right' },
     ],
   },
   {

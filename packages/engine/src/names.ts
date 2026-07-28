@@ -36,6 +36,13 @@ export const CLASS_SEX: Record<UnitClass, NameSex> = {
   sorceress: 'f',
   // Story 4.8: the Golem has no sex — a construct-designation list (dossier §7).
   golem: 'c',
+  // Story 5.4 (epic-5 dossier, ROSTER.md's Sex column): the human wave —
+  // Fencer and the three birdmen male; the Dragon Hunter female.
+  fencer: 'm',
+  dragonhunter: 'f',
+  hawkman: 'm',
+  vultan: 'm',
+  raven: 'm',
 };
 
 /** ~48 male names, OB64-adjacent fantasy register. Plain data — edits are free (see module doc). */
@@ -88,6 +95,17 @@ export const MALE_NAMES: readonly string[] = [
   'Tancred',
   'Vance',
   'Wolfram',
+  // Story 5.4: the male-class count grew 8 → 12 (Fencer + the birdmen), so the
+  // list grows too — worst case stays 10 male draws per match (both armies all
+  // male, 5 slots each) against 56 entries, dedup margin comfortably intact.
+  'Aldous',
+  'Brennock',
+  'Corwin',
+  'Darius',
+  'Evrard',
+  'Gideon',
+  'Hollis',
+  'Torvald',
 ];
 
 /** ~48 female names, OB64-adjacent fantasy register. Plain data — edits are free (see module doc). */
@@ -140,6 +158,12 @@ export const FEMALE_NAMES: readonly string[] = [
   'Winifred',
   'Ysabel',
   'Zephyrine',
+  // Story 5.4: the Dragon Hunter joins the female classes (6 → 7) — a small
+  // top-up keeps the same margin discipline as the male list above.
+  'Branwen',
+  'Cordelia',
+  'Maeryn',
+  'Sigrun',
 ];
 
 /** ~12 rune-flavored construct designations for the Golem (dossier §7) — plain data, edits are free. */

@@ -13,48 +13,56 @@ Draft to fill your five slots (duplicates allowed). Each unit also rolls one of 
 | Knight | Front-line tank | 140 | 2/1/1 | Melee: nearest reachable row. Mid row Guards instead of attacking |
 | Mercenary | Neutral sellsword | 110 | 2/1/1 | Melee: nearest reachable enemy row, no class advantage |
 | Archer | Back-row sniper | 90 | 1/2/2 | Ranged: arcs over the front to hit the rearmost enemy row |
-| Wizard | Row artillery | 80 | 1/1/2 | Front: a weak staff jab. Mid/back: blasts the fullest enemy row |
+| Wizard | Artillery | 80 | 1/1/2 | Front: a weak staff jab. Mid/back: a Magic Bolt at the rearmost enemy |
 | Cleric | Support | 90 | 1/1/2 | Heals the most-hurt ally; a weak staff attack if none is hurt |
 | Witch | Control | 85 | 1/1/2 | Casts an element-keyed status on a rear enemy; deals no damage |
 | Berserker | Vanguard bruiser | 120 | 2/1/1 | Melee: nearest reachable enemy row; hits hard, lightly armored |
-| Phalanx | Vanguard wall | 150 | 2/1/1 | Melee: nearest reachable row. Front/mid Guard instead of attacking |
+| Phalanx | Vanguard wall | 150 | 1/1/1 | Melee: nearest reachable row. Front/mid Guard instead of attacking |
 | Ninja | Skirmisher | 85 | 2/1/1 | Melee: nearest reachable enemy row; very fast, no class advantage |
-| Valkyrie | Skirmisher | 105 | 2/1/1 | Melee: nearest reachable enemy row; no class advantage |
-| Sorceress | Row artillery | 78 | 1/1/2 | Front: a weak staff jab. Mid/back: blasts the fullest enemy row |
+| Valkyrie | Skirmisher | 105 | 2/1/2 | Melee up close; from the back row casts Lightning at the rearmost enemy |
+| Sorceress | Artillery | 78 | 1/1/2 | Front: a weak staff jab. Mid/back: a Magic Bolt at the rearmost enemy |
 | Golem | Brute wall | 300 | 2/1/1 | Melee brute: huge HP, hits hard, weak to magic; so large no unit may stand beside it |
+| Fencer | Duelist | 100 | 2/1/1 | Melee: nearest reachable enemy row; wins duels on crit and dodge, dies to focus fire |
+| Dragon Hunter | Dragonslayer | 100 | 2/1/1 | Melee: nearest reachable enemy row; deals ×1.5 to dragons, ordinary vs everyone else |
+| Hawkman | Skirmisher | 105 | 2/1/1 | Melee: nearest reachable enemy row; a reliable, unremarkable line-holder |
+| Vultan | Skirmisher | 110 | 2/1/2 | Melee up close; from the back row fires Wind Shot at the rearmost enemy |
+| Raven | Skirmisher | 105 | 2/1/2 | Melee up close; from the back row fires Thunder Arrow at the rearmost enemy |
 
 ### Roles and matchups
 
 Damage bonuses ride on a unit's **role**, not its class — so new soldiers slot into a matchup you already understand:
 
 - **Vanguard** — Knight, Berserker, Phalanx
-- **Skirmisher** — Mercenary, Ninja, Valkyrie
+- **Skirmisher** — Mercenary, Ninja, Valkyrie, Fencer, Hawkman, Vultan, Raven
 - **Sniper** — Archer
 - **Artillery** — Wizard, Sorceress
 - **Support** — Cleric
 - **Control** — Witch
+- **Dragonslayer** — Dragon Hunter
 
-The triangle: **Artillery beats Vanguard**, **Vanguard beats Sniper**, **Sniper beats Artillery**. An attack with the advantage deals ×1.5 damage; against its counter, ×0.75. And the archer's specialty — **Sniper hunts Support** and **Sniper hunts Control**: arrows deal ×1.5 to Cleric and Witch, one-way, with no bonus back. Skirmishers stand outside every relation — steady, never favored, never countered. So does the Golem's role, **Brute** — no ×1.5 either way, in either direction; its weakness to magic is pure stats (a low magic resistance), not a role bonus.
+The triangle: **Artillery beats Vanguard**, **Vanguard beats Sniper**, **Sniper beats Artillery**. An attack with the advantage deals ×1.5 damage; against its counter, ×0.75. And the archer's specialty — **Sniper hunts Support** and **Sniper hunts Control**: arrows deal ×1.5 to Cleric and Witch, one-way, with no bonus back. The Dragon Hunter's whole reputation is her hunt — **Dragonslayer hunts Dragon**: ×1.5 against dragonkind, one-way, no bonus back (no dragon flies these skies *yet*; her edge waits for them). Skirmishers stand outside every relation — steady, never favored, never countered. So does the Golem's role, **Brute** — no ×1.5 either way, in either direction; its weakness to magic is pure stats (a low magic resistance), not a role bonus.
 
 ### Rows matter
 
 Where a unit stands decides how often it acts — the numbers above are actions per engagement by row. Front-line fighters swing twice from the front rank; archers, casters, and the witch do their best work from the middle and back.
 
-For most classes, row only changes that count. Four classes' row also changes **what they do**:
+For most classes, row only changes that count. Seven classes' row also changes **what they do**:
 
 - **Knight** — front and back rows slash as normal; the **mid row raises a Guard shield instead of attacking**.
 - **Phalanx** — front and mid rows raise a Guard shield instead of attacking; the **back row bashes** as normal.
-- **Wizard and Sorceress** — mid and back rows blast the row as normal; the **front row swings a weak, melee-targeted staff jab** instead of blasting (a real physical hit, not the row-wide spell).
+- **Wizard and Sorceress** — mid and back rows cast the Magic Bolt; the **front row swings a weak, melee-targeted staff jab** instead (a real physical hit, not a spell).
+- **Valkyrie** — front and mid rows thrust her spear; from the **back row she casts Lightning** — a Magic Bolt with a storm on it.
+- **Vultan and Raven** — front and mid rows strike with their talons; from the **back row they shoot** — Wind Shot and Thunder Arrow, real arrows in all but name.
 
 ## How Units Fight
 
 The two boards face each other, front rows nearest. Your left column faces the enemy's right — one straight lane.
 
 - **Reach — melee only.** A melee unit can strike its facing enemy column and the columns beside it: a corner unit reaches two enemy columns, a center unit all three. When several targets in a row qualify, it favors its facing column, then the column nearer the center. **Last Stand:** if nothing is in reach, a melee unit strikes an out-of-reach enemy instead — a soldier never stands idle while an enemy lives.
-- **Ranged and magic reach the whole board.** Archers, the Cleric's staff, the Witch's curse, and the Wizard's blast are not bound by columns — they choose across the entire enemy grid.
-- **Melee (Knight, Berserker, Phalanx, Mercenary, Ninja, Valkyrie).** Strikes the **nearest occupied enemy row** it can reach — a living front unit shields the rows behind it. No bypassing the wall.
-- **Ranged (Archer).** Arrows arc over the front line and strike the **rearmost occupied enemy row** — the counter to artillery hiding in the back.
-- **Blast (Wizard, Sorceress).** Each cast strikes **every unit in one enemy row** — the row with the most living enemies (ties go rearward). In **Wipeout**, each struck unit takes only ×0.75 of the damage — over a long war, the artillery spreads thin.
+- **Ranged and magic reach the whole board.** Archers, the Cleric's staff, the Witch's curse, and the casters' Magic Bolts are not bound by columns — they choose across the entire enemy grid.
+- **Melee (Knight, Berserker, Phalanx, Mercenary, Ninja, Fencer, Dragon Hunter, Hawkman — and the Valkyrie, Vultan, and Raven up close).** Strikes the **nearest occupied enemy row** it can reach — a living front unit shields the rows behind it. No bypassing the wall.
+- **Ranged (Archer — plus the Vultan's Wind Shot and the Raven's Thunder Arrow from the back row).** Arrows arc over the front line and strike the **rearmost occupied enemy row** — the counter to artillery hiding in the back.
+- **Magic Bolt (Wizard, Sorceress — plus the Valkyrie's back-row Lightning).** A single bolt of pure magic at the **rearmost enemy**. It is not a blade or an arrow: it never crits, is never dodged, and passes straight through a Guard shield — the number it rolls is the number that lands.
 - **Heal (Cleric).** Restores the **living ally with the lowest HP share** (herself included). If nobody is hurt, she pokes with her staff instead — feebly.
 - **Curse (Witch).** Applies her prepared spell to the rearmost enemy, preferring one not yet afflicted. She deals no damage; she doesn't need to.
 
@@ -71,7 +79,7 @@ A unit's **DEX** governs the drama of a physical blow. Every melee strike, arrow
 - **Crit.** The attacker may land a critical hit for **×1.5** damage — the chance is the attacker's **DEX ÷ 3** (as a percent), applied after the role matchup.
 - **Dodge.** The defender may slip the blow entirely and take **no damage** — the chance is the defender's **DEX ÷ 3** (as a percent).
 
-Higher-DEX units — the Ninja above all — both crit more and dodge more. **Magic and healing never crit and can never be dodged** (a Wizard's blast, a Witch's curse, and a Cleric's heal always land as cast). Like everything else, both rolls come from the battle's seed, so the same battle always replays the same crits and dodges.
+Higher-DEX units — the Ninja above all, and the duelist Fencer close behind — both crit more and dodge more. **Magic and healing never crit and can never be dodged** (a caster's Magic Bolt, a Witch's curse, and a Cleric's heal always land as cast). Like everything else, both rolls come from the battle's seed, so the same battle always replays the same crits and dodges.
 
 ## Guard
 
@@ -115,7 +123,7 @@ The same spell never stacks on one target.
 
 ## The Timeline
 
-Combat runs in **turns**. Each turn, every unit with actions left acts once, fastest first — the order weaves between both armies. The natural speed order: **Ninja, Witch, Archer, Valkyrie, Sorceress, Mercenary, Wizard, Berserker, Cleric, Knight, Phalanx, Golem** — disruptors and skirmishers strike first; the heavy wall hits last, but survives to do it. Sleeping and fallen units forfeit their remaining actions.
+Combat runs in **turns**. Each turn, every unit with actions left acts once, fastest first — the order weaves between both armies. The natural speed order: **Ninja, Witch, Vultan, Archer, Raven, Valkyrie, Fencer, Dragon Hunter, Sorceress, Hawkman, Mercenary, Wizard, Berserker, Cleric, Knight, Phalanx, Golem** — disruptors and skirmishers strike first; the heavy wall hits last, but survives to do it. Sleeping and fallen units forfeit their remaining actions.
 
 ## Judging
 

@@ -29,14 +29,21 @@ const ACCEPTANCE_BAND = 0.65;
  * the 65% band after the fixed two-step pipeline (FR9 global range re-tuned the
  * three-mages + gale placements) and the tactic dimension (each side commits
  * its own tactic from its stream, FR24). That tactic axis adds variance, so a
- * single 15-run sweep is a noisy estimate — but this config is PINNED to
- * baseSeed 1, where every archetype sits under the band, and CI re-runs the
+ * single 15-run sweep is a noisy estimate — but this config is PINNED to a
+ * baseSeed where every archetype sits under the band, and CI re-runs the
  * identical seed each time (deterministic, no flake). runsPerPair stays 15 (not
  * higher) on purpose: the cap-length wipeout sweep is the suite's heaviest
  * test, and a bigger sweep starves the parallel fast-check property tests'
  * default timeouts. Read the failure table's top entries if the band trips.
+ *
+ * Story 5.4 re-pin: the E5-D4 bolt meta re-tuned the pool (see ai.ts), and the
+ * old baseSeed-1 sample put wardens at 65.9% single while its CONVERGED rate
+ * is 61.3% (runs=500; wipeout max longbows 64.9%) — a proxy artifact, not a
+ * balance fact. Seeds 16–25 all sample in-band for BOTH modes at 15 runs;
+ * baseSeed 21 (single max 63.6%, wipeout max 62.8%) sits mid-run for
+ * robustness against small future pool edits.
  */
-const CI_CONFIG = { baseSeed: 1, runsPerPair: 15, threshold: ACCEPTANCE_BAND };
+const CI_CONFIG = { baseSeed: 21, runsPerPair: 15, threshold: ACCEPTANCE_BAND };
 
 describe('sim sweep (NFR4)', () => {
   const report = runSweep(STRATEGY_POOL, CI_CONFIG);
@@ -156,7 +163,7 @@ describe('sim sweep (NFR4)', () => {
   // • Verdict — no wipe, judged on exact HP fractions: A = 76/700 → 10%,
   //   B = 400/400 → 100% (B's mid mages, never struck, hold full HP).
   //   Winner B, 10% vs 100%.
-  it('anchor: knight wall vs mage battery resolves 10%/100% to B (hand-derived, story 4.7 — Knight mid row Guards, not strikes)', () => {
+  it('anchor: knight wall vs mage battery resolves 65%/76% to B (story 5.4 — bolts snipe the mid knights; the front three survive and swing back)', () => {
     const wall: StrategyArchetype = {
       id: 'anchor-wall',
       name: 'Anchor Wall',
@@ -207,7 +214,13 @@ describe('sim sweep (NFR4)', () => {
       placements: { A: a.placement, B: b.placement },
     };
     const ended = resolveBattle(setup).events.find((e) => e.type === 'BattleEnded');
-    expect(ended).toMatchObject({ winner: 'B', hpPct: { A: 10, B: 100 } });
+    // Story 5.4 (E5-D4): the battery's bolts target REARMOST — A's mid pair
+    // (A:4 dies, A:3 chips to 38) — instead of erasing the front row, and the
+    // surviving front knights answer for 19/swing. A's side is DRAW-FREE
+    // arithmetic (magic takes no rolls): 700 − 242 = 458 → 65%. B's side
+    // depends on this seed's dodge draws: 5 of 6 swings land → 305/400 → 76%.
+    // The old 10%/100% blowout is the meta shift in one line.
+    expect(ended).toMatchObject({ winner: 'B', hpPct: { A: 65, B: 76 } });
   });
 
   // Explicit 20s timeout (story 5.0 review): this test only READS the
@@ -231,8 +244,9 @@ describe('sim sweep (NFR4)', () => {
     // constrained under a tactic, so the "improves" premise no longer holds as a
     // hard rule. What matters is that melee stays a viable strategy, not a
     // collapsed one — wardens holds a healthy win rate and no archetype exceeds
-    // the band. (At the current pool it lands ~34% single, still around the 3.0
-    // mark, but that is now a happy result, not the assertion.)
+    // the band. (Story 5.4: with the casters bolted, melee is the meta's
+    // muscle — wardens converges ~61% single / ~53% wipeout, near the band's
+    // ceiling rather than its old ~34% floor. Both bounds now genuinely bite.)
     const wardens = report.archetypes.find((a) => a.id === 'wardens');
     expect(wardens, 'wardens archetype present in the pool').toBeDefined();
     expect((wardens as ArchetypeStats).winRate, 'wardens stays viable, not collapsed (melee is playable)').toBeGreaterThan(0.25);

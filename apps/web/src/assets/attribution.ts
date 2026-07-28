@@ -53,6 +53,13 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
       ninja: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
       valkyrie: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
       sorceress: 'dc-mon/wizard.png (INTERIM: shares the Wizard tile)',
+      // Story 5.4 human wave — same INTERIM convention; dedicated tiles are
+      // story 5.9's (the roster art wave).
+      fencer: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
+      dragonhunter: 'dc-mon/deep_elf_master_archer.png (INTERIM: shares the Archer tile)',
+      hawkman: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
+      vultan: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
+      raven: 'dc-mon/deep_elf_fighter.png (INTERIM: shares the Mercenary tile)',
       // NOTE: the Golem is NOT from this pack — it has its own entry below
       // (Danilo's original art, sheet frame 6).
     },

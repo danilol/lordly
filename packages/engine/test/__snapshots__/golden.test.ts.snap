@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage blast — archers soften a row, one blast kills two 1`] = `
+exports[`golden battles (story 1.6 — full roster era) > golden #4: the caster duel — archers soften the back line, a bolt takes the kill through a Half Guard skirmish (story 5.4 re-record) 1`] = `
 {
   "events": [
     {
@@ -207,40 +207,22 @@ exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage bl
       "type": "UnitAttacked",
     },
     {
-      "kind": "blast",
+      "kind": "bolt",
       "source": "B:0",
       "targets": [
         {
           "damage": 18,
           "hpAfter": 72,
           "outcome": "hit",
-          "unit": "A:0",
-        },
-        {
-          "damage": 18,
-          "hpAfter": 72,
-          "outcome": "hit",
           "unit": "A:1",
-        },
-        {
-          "damage": 19,
-          "hpAfter": 61,
-          "outcome": "hit",
-          "unit": "A:2",
         },
       ],
       "type": "UnitAttacked",
     },
     {
-      "kind": "blast",
+      "kind": "bolt",
       "source": "A:2",
       "targets": [
-        {
-          "damage": 19,
-          "hpAfter": 31,
-          "outcome": "hit",
-          "unit": "B:0",
-        },
         {
           "damage": 19,
           "hpAfter": 31,
@@ -251,26 +233,14 @@ exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage bl
       "type": "UnitAttacked",
     },
     {
-      "kind": "blast",
+      "kind": "bolt",
       "source": "B:1",
       "targets": [
         {
           "damage": 18,
-          "hpAfter": 54,
+          "hpAfter": 72,
           "outcome": "hit",
           "unit": "A:0",
-        },
-        {
-          "damage": 18,
-          "hpAfter": 54,
-          "outcome": "hit",
-          "unit": "A:1",
-        },
-        {
-          "damage": 19,
-          "hpAfter": 42,
-          "outcome": "hit",
-          "unit": "A:2",
         },
       ],
       "type": "UnitAttacked",
@@ -341,7 +311,7 @@ exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage bl
       "targets": [
         {
           "damage": 15,
-          "hpAfter": 16,
+          "hpAfter": 35,
           "outcome": "hit",
           "unit": "B:0",
         },
@@ -366,40 +336,22 @@ exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage bl
       "type": "UnitAttacked",
     },
     {
-      "kind": "blast",
+      "kind": "bolt",
       "source": "B:0",
       "targets": [
         {
           "damage": 18,
-          "hpAfter": 36,
-          "outcome": "hit",
-          "unit": "A:0",
-        },
-        {
-          "damage": 18,
-          "hpAfter": 36,
+          "hpAfter": 54,
           "outcome": "hit",
           "unit": "A:1",
-        },
-        {
-          "damage": 19,
-          "hpAfter": 23,
-          "outcome": "hit",
-          "unit": "A:2",
         },
       ],
       "type": "UnitAttacked",
     },
     {
-      "kind": "blast",
+      "kind": "bolt",
       "source": "A:2",
       "targets": [
-        {
-          "damage": 19,
-          "hpAfter": 0,
-          "outcome": "hit",
-          "unit": "B:0",
-        },
         {
           "damage": 19,
           "hpAfter": 0,
@@ -408,15 +360,6 @@ exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage bl
         },
       ],
       "type": "UnitAttacked",
-    },
-    {
-      "type": "UnitDied",
-      "unit": "B:0",
-    },
-    {
-      "side": "B",
-      "type": "LeaderFell",
-      "unit": "B:0",
     },
     {
       "type": "UnitDied",
@@ -432,8 +375,8 @@ exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage bl
       "source": "B:2",
       "targets": [
         {
-          "damage": 12,
-          "hpAfter": 112,
+          "damage": 16,
+          "hpAfter": 108,
           "outcome": "hit",
           "unit": "A:3",
         },
@@ -445,8 +388,8 @@ exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage bl
       "source": "A:3",
       "targets": [
         {
-          "damage": 20,
-          "hpAfter": 80,
+          "damage": 16,
+          "hpAfter": 84,
           "outcome": "hit",
           "unit": "B:2",
         },
@@ -456,14 +399,14 @@ exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage bl
     {
       "engagement": 1,
       "hp": {
-        "A:0": 36,
-        "A:1": 36,
-        "A:2": 23,
-        "A:3": 112,
+        "A:0": 72,
+        "A:1": 54,
+        "A:2": 80,
+        "A:3": 108,
         "A:4": 94,
-        "B:0": 0,
+        "B:0": 35,
         "B:1": 0,
-        "B:2": 80,
+        "B:2": 84,
         "B:3": 140,
         "B:4": 110,
       },
@@ -471,11 +414,11 @@ exports[`golden battles (story 1.6 — full roster era) > golden #4: the mage bl
     },
     {
       "hpPct": {
-        "A": 59,
-        "B": 60,
+        "A": 80,
+        "B": 67,
       },
       "type": "BattleEnded",
-      "winner": "B",
+      "winner": "A",
     },
   ],
   "logVersion": 4,
@@ -7015,7 +6958,7 @@ exports[`golden battles (story 4.7 — per-row moves and Guard) > golden #10: a 
     },
     {
       "actionsRemaining": {
-        "A:0": 2,
+        "A:0": 1,
         "A:1": 2,
         "A:2": 2,
         "A:3": 2,
@@ -7140,7 +7083,7 @@ exports[`golden battles (story 4.7 — per-row moves and Guard) > golden #10: a 
     },
     {
       "actionsRemaining": {
-        "A:0": 1,
+        "A:0": 0,
         "A:1": 1,
         "A:2": 1,
         "A:3": 1,
@@ -7224,14 +7167,6 @@ exports[`golden battles (story 4.7 — per-row moves and Guard) > golden #10: a 
         },
       ],
       "type": "UnitAttacked",
-    },
-    {
-      "type": "GuardRaised",
-      "unit": "A:0",
-    },
-    {
-      "type": "GuardEnded",
-      "unit": "A:0",
     },
     {
       "engagement": 1,
