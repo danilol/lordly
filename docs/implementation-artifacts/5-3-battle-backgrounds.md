@@ -4,7 +4,7 @@ baseline_commit: b14a3904255e8a3ba4f3b7723d01f42ec568f958
 
 # Story 5.3: Battle backgrounds
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -39,11 +39,11 @@ so that every clash feels like a place in a medieval world.
   - [x] Audit what now sits over art in Battle: `passLabel` (y=22), `enemyLabel` (y=56), `BATTLE_PLAYER_LABEL`, board-tile unit codes (already carry the FR39f light-tint + dark-outline treatment built precisely for "future landscape backdrops" — `PALETTE.codeTextPlayer/codeTextEnemy` + `CODE_STROKE_COLOR`), floating combat numbers, the crit/dodge caption, the move plate (its own gold plate — fine), status glyphs, and the leader-fall banner. In Reveal: title, hint, `ARMY TACTICS`, the tactic bar/dropdown (now a framed panel — fine).
   - [x] The 5.2 review's repeated lesson applies here in full: **translucent washes vanish over photographic art.** Any element still using low alpha over the new terrain needs an opaque or scrimmed treatment. Check the blast wash and guard flash (they sit over tiles, not bare terrain — likely fine, but LOOK).
   - [x] Prefer the art's calm upper region + existing treatments; add a translucent scrim behind a text band only where the device pass says it's needed. Keep any scrim on the SAME `PALETTE` tokens (no new one-off colors).
-- [ ] Task 5: Docs, gate, device pass (AC: 1, 2, 3)
+- [x] Task 5: Docs, gate, device pass (AC: 1, 2, 3)
   - [x] `attribution.ts`: add the two processed backgrounds to the existing **'Lordly Midjourney art (Epic 5)'** entry's `assets` (do NOT create a new entry — same pack, same author/licence). The attribution test already globs `src/assets/*.jpg`.
   - [x] DESIGN.md: one line in the story-5.2 amendment block recording that Battle/Reveal ship terrain art with a seed-derived biome pick (the amendment block is where the as-shipped look now lives).
   - [x] Full gate: `pnpm typecheck && pnpm lint && pnpm coverage`, `pnpm --filter web build` (which now also runs `check:art`). Engine untouched — zero `packages/engine` diffs, no `logVersion`/`balanceVersion` movement.
-  - [ ] NFR1 capture (AC 3): `?perf=1` on the DEPLOYED build, three-mages wipeout at 1× and ×2, compared against the 5.0 baseline AND the 5.2 addendum. **The specific thing to watch:** 5.0 flagged and 5.2 confirmed a ~5-frame scene-ENTRY burst (bottoming 8–11 fps) when Battle loads its assets — two more full-screen textures land exactly there. If the entry burst grows materially, say so and treat it as a finding, not a footnote.
+  - [x] NFR1 capture (AC 3) — **PO-DEFERRED 2026-07-28** (Danilo chose option 2 after accepting the look; no blocking reason stated — momentum). Routed to story 5.10's closing capture; logged in deferred-work.md and flagged in performance-verdict.md so the doc never implies coverage it lacks. AC 3 is therefore **satisfied-with-recorded-deviation** (the 5.0 precedent), NOT satisfied. Original task text: `?perf=1` on the DEPLOYED build, three-mages wipeout at 1× and ×2, compared against the 5.0 baseline AND the 5.2 addendum. **The specific thing to watch:** 5.0 flagged and 5.2 confirmed a ~5-frame scene-ENTRY burst (bottoming 8–11 fps) when Battle loads its assets — two more full-screen textures land exactly there. If the entry burst grows materially, say so and treat it as a finding, not a footnote.
   - [x] Danilo's on-device acceptance of the look = the art gate (the standing art-story split: he owns picks + device pass). _(ACCEPTED 2026-07-28 after the enlarge-the-fight round: "it looks great. Let's move forward." — terrain, the seed rotation, the dim/scrim treatment and the enlarged boards all pass.)_
 
 ## Dev Notes
@@ -102,6 +102,8 @@ Web tests live in `apps/web/test/*.test.ts` (vitest; pure seams only — there i
 ### Debug Log References
 
 ### Completion Notes List
+
+- 2026-07-28 — **STORY → REVIEW.** AC 1 + AC 2 closed on device. **AC 3 is satisfied-with-recorded-deviation, not satisfied**: Danilo PO-deferred the `?perf=1` capture (option 2, no blocking reason — momentum after the look was accepted). Recorded in three places so it cannot drift silently: deferred-work.md, a dated note in performance-verdict.md (so the perf record never implies 5.3 was measured), and story 5.10's sprint entry, which already owns the pre-PvP closing capture. Honest risk statement: this story added two full-screen textures AND grew the rendered board area ~55%, and the known Battle scene-entry burst (5.0 baseline, confirmed in the 5.2 addendum) sits exactly where those assets load — so 5.10's capture carries a real unknown, not a formality.
 
 - 2026-07-28 — **AC 1 and AC 2 CLOSED by Danilo's device pass** ("it looks great"). Terrain in Battle + Reveal, the seed-derived biome rotation, the dim + HUD scrims, and the enlarged boards are all accepted on device. **AC 3 (the `?perf=1` capture) is the single remaining gate** — the story stays in-progress until it runs or is explicitly PO-deferred. It matters more here than usual: this story added two full-screen textures AND grew the rendered board area by ~55%, and both the 5.0 baseline and the 5.2 addendum recorded a scene-entry burst at exactly the moment Battle loads.
 
