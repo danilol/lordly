@@ -26,16 +26,12 @@
       // EXECUTES the configs and its loader can't resolve vite-plugin-pwa
       // from the workspace (knip known issue).
       "entry": ["vite/config.dev.mjs", "vite/config.prod.mjs"],
-      // `terser` is consumed DYNAMICALLY by vite (`minify: 'terser'` in
-      // config.prod.mjs is a string, not an import — vite requires the
-      // package at build time), so import tracing can't see it.
-      "ignoreDependencies": ["terser"],
       // `sips` is the macOS-only image decode in check-frame-art.mjs (the
       // script documents the skip-with-warning path on other hosts, e.g. CI).
-      // `vite` IS a listed devDependency here — but a custom `entry` list
-      // shadows knip's vite plugin, and with the plugin inactive knip loses
-      // the binary-to-package mapping and misreports it as unlisted.
-      "ignoreBinaries": ["sips", "vite"]
+      // (2026-07-29: the terser/vite ignores that briefly lived here covered
+      // a stale workspace symlink from the knip install itself — a plain
+      // `pnpm install` fixed resolution and knip's own hints retired them.)
+      "ignoreBinaries": ["sips"]
     }
   }
 }
