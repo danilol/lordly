@@ -4,7 +4,7 @@ baseline_commit: b14a3904255e8a3ba4f3b7723d01f42ec568f958
 
 # Story 5.3: Battle backgrounds
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -20,29 +20,29 @@ so that every clash feels like a place in a medieval world.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: The deterministic selection rule (AC: 1)
-  - [ ] Add a shell-side background manifest (`config/constants.ts`): an ordered `readonly` array of texture keys, one per biome. New art = one line. Keep it shell-side — a background is PRESENTATION and must never enter `MatchSetup` or the engine.
-  - [ ] Pick by **match seed**, not `Math.random`: `BACKGROUNDS[seed % BACKGROUNDS.length]` as a PURE exported helper (e.g. `backgroundKeyForSeed(seed)`) in `constants.ts` or `flow/battleView.ts`, unit-tested. Rationale (already agreed and logged in deferred-work.md, 2026-07-27): a replay re-resolves from the stored setup + seed, so a seed-derived pick reproduces the ORIGINAL terrain; `Math.random` would silently swap scenery on replay.
-  - [ ] **Read the seed from `committedSetup.seed`, not `MatchState.seed`** — verify against `MatchFlow.startReplay` which path a replay populates, and pin whichever you choose with a test asserting a replayed setup yields the same key. (`MatchState.seed` is the live match's seed; `committedSetup` is what history stores and replay restores — `packages/engine/src/types.ts:165`.)
-  - [ ] The background is per-MATCH, not per-engagement: a Wipeout run's 2–5 engagements all play on the same terrain (the seed doesn't change mid-match — state the invariant in a test).
-  - [ ] Record the rule in `docs/rules.md`? **No** — it is not a game rule. Record it in the story's Dev Agent Record + a one-line note in `DESIGN.md`'s story-5.2 amendment block (the chrome/ground paragraph), which is where the shipped look is now documented.
-- [ ] Task 2: Process and load the art (AC: 1, 3)
-  - [ ] Both picks are RAW 1.7–1.9 MB PNGs. Preprocess exactly like 5.2's Home castle: downscale to the display target and convert to jpg (5.2 precedent: 816×1456 png → 717×1280 jpg ≈ 213 KB, via `sips`). Two backgrounds ≈ 400–450 KB total — check the precache delta and state the real number (the 5.2 review caught an understated one).
-  - [ ] Load in `BootScene.preload` beside the existing chrome (same `this.load.image` + `loaderror` failure path; Boot already fails loudly rather than booting a broken game).
-  - [ ] Workbox glob already covers `jpg` (5.2). Verify the new files appear in `dist/sw.js` precache after `pnpm --filter web build`.
-- [ ] Task 3: Render the terrain (AC: 1, 2)
-  - [ ] **DEPTH TRAP — read this before writing a line:** `drawIsoBoard` (`config/board.ts:20`) already draws each board's Graphics at **depth −10**, and `addSceneGround` (`config/ui.ts`) also uses −10. The terrain must sit BELOW both (e.g. −20) or it will fight the boards for z-order. Do not reuse `addSceneGround` here — that helper is the menu-scene stone floor; battle terrain is its own thing.
-  - [ ] Add a shared helper (`config/ui.ts`, beside `addSceneGround`) so Battle and Reveal cannot drift: cover-scale the image onto the 360×640 stage (the `HomeScene.ts` pattern: `setScale(Math.max(BASE_WIDTH / img.width, BASE_HEIGHT / img.height))`), depth below the boards, no tween.
-  - [ ] Wire into `BattleScene.create()` and `RevealScene.create()` right after `applyHiDpiCamera`. Both scenes keep `cameras.main.setBackgroundColor(PALETTE.background)` as the letterbox/underlay.
-  - [ ] **Reduced motion:** the AC says no parallax or movement. The simplest compliant implementation is a STATIC image — then `prefersReducedMotion()` needs no branch at all. If you add any drift/parallax, it must be gated on `prefersReducedMotion()` (`config/ui.ts`) — but static is the recommended ship (it also costs nothing at NFR1).
-- [ ] Task 4: Legibility over the terrain (AC: 2)
-  - [ ] Audit what now sits over art in Battle: `passLabel` (y=22), `enemyLabel` (y=56), `BATTLE_PLAYER_LABEL`, board-tile unit codes (already carry the FR39f light-tint + dark-outline treatment built precisely for "future landscape backdrops" — `PALETTE.codeTextPlayer/codeTextEnemy` + `CODE_STROKE_COLOR`), floating combat numbers, the crit/dodge caption, the move plate (its own gold plate — fine), status glyphs, and the leader-fall banner. In Reveal: title, hint, `ARMY TACTICS`, the tactic bar/dropdown (now a framed panel — fine).
-  - [ ] The 5.2 review's repeated lesson applies here in full: **translucent washes vanish over photographic art.** Any element still using low alpha over the new terrain needs an opaque or scrimmed treatment. Check the blast wash and guard flash (they sit over tiles, not bare terrain — likely fine, but LOOK).
-  - [ ] Prefer the art's calm upper region + existing treatments; add a translucent scrim behind a text band only where the device pass says it's needed. Keep any scrim on the SAME `PALETTE` tokens (no new one-off colors).
+- [x] Task 1: The deterministic selection rule (AC: 1)
+  - [x] Add a shell-side background manifest (`config/constants.ts`): an ordered `readonly` array of texture keys, one per biome. New art = one line. Keep it shell-side — a background is PRESENTATION and must never enter `MatchSetup` or the engine.
+  - [x] Pick by **match seed**, not `Math.random`: `BACKGROUNDS[seed % BACKGROUNDS.length]` as a PURE exported helper (e.g. `backgroundKeyForSeed(seed)`) in `constants.ts` or `flow/battleView.ts`, unit-tested. Rationale (already agreed and logged in deferred-work.md, 2026-07-27): a replay re-resolves from the stored setup + seed, so a seed-derived pick reproduces the ORIGINAL terrain; `Math.random` would silently swap scenery on replay.
+  - [x] **Read the seed from `committedSetup.seed`, not `MatchState.seed`** — verify against `MatchFlow.startReplay` which path a replay populates, and pin whichever you choose with a test asserting a replayed setup yields the same key. (`MatchState.seed` is the live match's seed; `committedSetup` is what history stores and replay restores — `packages/engine/src/types.ts:165`.)
+  - [x] The background is per-MATCH, not per-engagement: a Wipeout run's 2–5 engagements all play on the same terrain (the seed doesn't change mid-match — state the invariant in a test).
+  - [x] Record the rule in `docs/rules.md`? **No** — it is not a game rule. Record it in the story's Dev Agent Record + a one-line note in `DESIGN.md`'s story-5.2 amendment block (the chrome/ground paragraph), which is where the shipped look is now documented.
+- [x] Task 2: Process and load the art (AC: 1, 3)
+  - [x] Both picks are RAW 1.7–1.9 MB PNGs. Preprocess exactly like 5.2's Home castle: downscale to the display target and convert to jpg (5.2 precedent: 816×1456 png → 717×1280 jpg ≈ 213 KB, via `sips`). Two backgrounds ≈ 400–450 KB total — check the precache delta and state the real number (the 5.2 review caught an understated one).
+  - [x] Load in `BootScene.preload` beside the existing chrome (same `this.load.image` + `loaderror` failure path; Boot already fails loudly rather than booting a broken game).
+  - [x] Workbox glob already covers `jpg` (5.2). Verify the new files appear in `dist/sw.js` precache after `pnpm --filter web build`.
+- [x] Task 3: Render the terrain (AC: 1, 2)
+  - [x] **DEPTH TRAP — read this before writing a line:** `drawIsoBoard` (`config/board.ts:20`) already draws each board's Graphics at **depth −10**, and `addSceneGround` (`config/ui.ts`) also uses −10. The terrain must sit BELOW both (e.g. −20) or it will fight the boards for z-order. Do not reuse `addSceneGround` here — that helper is the menu-scene stone floor; battle terrain is its own thing.
+  - [x] Add a shared helper (`config/ui.ts`, beside `addSceneGround`) so Battle and Reveal cannot drift: cover-scale the image onto the 360×640 stage (the `HomeScene.ts` pattern: `setScale(Math.max(BASE_WIDTH / img.width, BASE_HEIGHT / img.height))`), depth below the boards, no tween.
+  - [x] Wire into `BattleScene.create()` and `RevealScene.create()` right after `applyHiDpiCamera`. Both scenes keep `cameras.main.setBackgroundColor(PALETTE.background)` as the letterbox/underlay.
+  - [x] **Reduced motion:** the AC says no parallax or movement. The simplest compliant implementation is a STATIC image — then `prefersReducedMotion()` needs no branch at all. If you add any drift/parallax, it must be gated on `prefersReducedMotion()` (`config/ui.ts`) — but static is the recommended ship (it also costs nothing at NFR1).
+- [x] Task 4: Legibility over the terrain (AC: 2)
+  - [x] Audit what now sits over art in Battle: `passLabel` (y=22), `enemyLabel` (y=56), `BATTLE_PLAYER_LABEL`, board-tile unit codes (already carry the FR39f light-tint + dark-outline treatment built precisely for "future landscape backdrops" — `PALETTE.codeTextPlayer/codeTextEnemy` + `CODE_STROKE_COLOR`), floating combat numbers, the crit/dodge caption, the move plate (its own gold plate — fine), status glyphs, and the leader-fall banner. In Reveal: title, hint, `ARMY TACTICS`, the tactic bar/dropdown (now a framed panel — fine).
+  - [x] The 5.2 review's repeated lesson applies here in full: **translucent washes vanish over photographic art.** Any element still using low alpha over the new terrain needs an opaque or scrimmed treatment. Check the blast wash and guard flash (they sit over tiles, not bare terrain — likely fine, but LOOK).
+  - [x] Prefer the art's calm upper region + existing treatments; add a translucent scrim behind a text band only where the device pass says it's needed. Keep any scrim on the SAME `PALETTE` tokens (no new one-off colors).
 - [ ] Task 5: Docs, gate, device pass (AC: 1, 2, 3)
-  - [ ] `attribution.ts`: add the two processed backgrounds to the existing **'Lordly Midjourney art (Epic 5)'** entry's `assets` (do NOT create a new entry — same pack, same author/licence). The attribution test already globs `src/assets/*.jpg`.
-  - [ ] DESIGN.md: one line in the story-5.2 amendment block recording that Battle/Reveal ship terrain art with a seed-derived biome pick (the amendment block is where the as-shipped look now lives).
-  - [ ] Full gate: `pnpm typecheck && pnpm lint && pnpm coverage`, `pnpm --filter web build` (which now also runs `check:art`). Engine untouched — zero `packages/engine` diffs, no `logVersion`/`balanceVersion` movement.
+  - [x] `attribution.ts`: add the two processed backgrounds to the existing **'Lordly Midjourney art (Epic 5)'** entry's `assets` (do NOT create a new entry — same pack, same author/licence). The attribution test already globs `src/assets/*.jpg`.
+  - [x] DESIGN.md: one line in the story-5.2 amendment block recording that Battle/Reveal ship terrain art with a seed-derived biome pick (the amendment block is where the as-shipped look now lives).
+  - [x] Full gate: `pnpm typecheck && pnpm lint && pnpm coverage`, `pnpm --filter web build` (which now also runs `check:art`). Engine untouched — zero `packages/engine` diffs, no `logVersion`/`balanceVersion` movement.
   - [ ] NFR1 capture (AC 3): `?perf=1` on the DEPLOYED build, three-mages wipeout at 1× and ×2, compared against the 5.0 baseline AND the 5.2 addendum. **The specific thing to watch:** 5.0 flagged and 5.2 confirmed a ~5-frame scene-ENTRY burst (bottoming 8–11 fps) when Battle loads its assets — two more full-screen textures land exactly there. If the entry burst grows materially, say so and treat it as a finding, not a footnote.
   - [ ] Danilo's on-device acceptance of the look = the art gate (the standing art-story split: he owns picks + device pass).
 
@@ -103,4 +103,29 @@ Web tests live in `apps/web/test/*.test.ts` (vitest; pure seams only — there i
 
 ### Completion Notes List
 
+- 2026-07-28 — Tasks 1–4 + the doc/gate half of Task 5 DONE. Red-green throughout: `battle-background.test.ts` written first (9 failing), then the implementation.
+  - **The rule (AC 1).** `BATTLE_BACKGROUNDS` manifest + pure `backgroundKeyForSeed(seed)` in `constants.ts`. Verified the story's open question against source before choosing a seed source: `commit()` writes `seed: state.seed` and `startReplay()` sets `state.seed = setup.seed`, so `state.seed === committedSetup.seed` on BOTH paths — the scenes read `state.seed` (always defined, no optional handling) and a test pins the equivalence so the choice can't rot. Tests cover: ≥2 biomes, no duplicate keys, totality over the full uint32 seed space, every biome reachable, a replayed setup painting the ORIGINAL terrain, and terrain constancy across a multi-engagement wipeout.
+  - **Typing note:** `noUncheckedIndexedAccess` made the modulo index `| undefined`. Resolved with a provably-unreachable `?? BATTLE_BACKGROUNDS[0]` rather than an `as` cast — a cast would have hidden a genuinely empty manifest; the fallback keeps the function total and the non-emptiness is test-pinned.
+  - **Art (AC 1/3).** Both 816×1456 PNGs (1.7/1.9 MB) → 717×1280 jpg: `terrain-castle.jpg` 176 KB, `terrain-plains.jpg` 220 KB. **Precache delta ≈ 404 KB** (measured in `dist/`, not estimated — the 5.2 review's lesson). Loaded in Boot by ITERATING the manifest through a `Record<BattleBackgroundKey, string>`, so a manifest key with no load is a compile error rather than a missing texture at runtime.
+  - **Render (AC 1).** `addBattleTerrain(scene, seed)` in `ui.ts` at **depth −20** — deliberately below `drawIsoBoard`'s −10 (the trap the story flagged). Cover-scaled with the HomeScene idiom. **Static by design**, so the reduced-motion rule is satisfied unconditionally with no branch and no per-frame cost.
+  - **Legibility (AC 2) — a real finding, not a formality.** I looked at both processed images before judging: the castle is a dark evening courtyard, but the plains is a BRIGHT sky-and-meadow painting, and every Battle overlay (bone HUD labels, side-coloured combat numbers, status glyphs) is tuned for a dark ground. Shipping as-is would have washed out the HUD on one of the two biomes. Added a full-bleed `TERRAIN_DIM_ALPHA` (0.45) over the art plus an extra `addHudScrim` band behind each scene's top labels (`BATTLE_HUD_BAND_H` 72 / `REVEAL_HUD_BAND_H` 84, depth −11 so it can never cover a tile). One set of text treatments now stays valid on every biome, present and future. Both alphas are device-tunable constants with range-guard tests.
+  - **Gate:** 603 tests (43 files, +12), typecheck + lint clean, `pnpm --filter web build` green (the 5.2 frame-art guard runs inside it), both terrain jpgs verified in the `dist/sw.js` precache. Engine untouched — zero `packages/engine` diffs, no version bumps.
+  - **NOT done (Danilo's, and the story stays in-progress until then):** the `?perf=1` capture on the deployed build (AC 3 — watch the known Battle scene-entry burst; two more full-screen textures now load there) and the on-device look acceptance (AC 2's gate, including whether 0.45 dim / 0.5 scrim feel right).
+
 ### File List
+
+- `apps/web/src/config/constants.ts` (modified — BATTLE_BACKGROUNDS manifest, backgroundKeyForSeed, TERRAIN_DIM_ALPHA, HUD_SCRIM_ALPHA, BATTLE_HUD_BAND_H, REVEAL_HUD_BAND_H)
+- `apps/web/src/config/ui.ts` (modified — addBattleTerrain, addHudScrim)
+- `apps/web/src/scenes/BootScene.ts` (modified — manifest-driven terrain loads)
+- `apps/web/src/scenes/BattleScene.ts` (modified — terrain + HUD scrim)
+- `apps/web/src/scenes/RevealScene.ts` (modified — terrain + HUD scrim)
+- `apps/web/src/assets/terrain-castle.jpg`, `terrain-plains.jpg` (new — processed from selected/)
+- `apps/web/src/assets/attribution.ts` (modified — both biomes added to the Epic-5 Midjourney entry)
+- `apps/web/test/battle-background.test.ts` (new — 12 tests: rule, replay stability, legibility ranges)
+- `docs/planning-artifacts/ux-designs/ux-lordly-2026-07-13/DESIGN.md` (modified — terrain paragraph in the story-5.2 amendment block)
+- `docs/implementation-artifacts/5-3-battle-backgrounds.md`, `sprint-status.yaml` (modified)
+
+## Change Log
+
+- 2026-07-28: Story created (recon: the depth −10 collision, the two seed sources, the known scene-entry perf burst).
+- 2026-07-28: Dev — seed-derived terrain shipped in Battle + Reveal with both biomes, a manifest-driven Boot load, and a legibility treatment added after inspecting the actual art (the two biomes bracket the brightness range). 603 tests, full gate green, engine untouched. Awaiting Danilo's device pass + the AC-3 perf capture.

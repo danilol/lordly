@@ -5,7 +5,9 @@ import buttonFrameUrl from '../assets/button-frame.png';
 import panelFrameUrl from '../assets/panel-frame.png';
 import groundTileUrl from '../assets/ground-tile.jpg';
 import wordmarkUrl from '../assets/wordmark.jpg';
-import { CHROME_BUTTON_KEY, CHROME_PANEL_KEY, GROUND_TILE_KEY, HOME_BG_KEY, WORDMARK_KEY } from '../config/constants';
+import terrainCastleUrl from '../assets/terrain-castle.jpg';
+import terrainPlainsUrl from '../assets/terrain-plains.jpg';
+import { BATTLE_BACKGROUNDS, CHROME_BUTTON_KEY, CHROME_PANEL_KEY, GROUND_TILE_KEY, HOME_BG_KEY, WORDMARK_KEY } from '../config/constants';
 import { UNIT_FRAMES, UNITS_SHEET_KEY, UNIT_FRAME_SIZE } from '../config/sprites';
 import { showInitFallback } from '../flow/initFallback';
 
@@ -54,6 +56,14 @@ export class BootScene extends Scene {
     this.load.image(CHROME_PANEL_KEY, panelFrameUrl);
     this.load.image(GROUND_TILE_KEY, groundTileUrl);
     this.load.image(WORDMARK_KEY, wordmarkUrl);
+    // Story 5.3: the battle terrain biomes. Keyed by the BATTLE_BACKGROUNDS
+    // manifest so the loaded set and the rotation can never disagree — a key
+    // in the manifest with no load here would render as a missing texture.
+    const terrainUrls: Record<(typeof BATTLE_BACKGROUNDS)[number], string> = {
+      'terrain-castle': terrainCastleUrl,
+      'terrain-plains': terrainPlainsUrl,
+    };
+    for (const key of BATTLE_BACKGROUNDS) this.load.image(key, terrainUrls[key]);
   }
 
   create() {

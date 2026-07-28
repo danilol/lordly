@@ -2,7 +2,10 @@ import { GameObjects, Scene, Types } from 'phaser';
 import type { Element, UnitClass } from '@lordly/engine';
 import type { ButtonStyle } from './constants';
 import {
+  backgroundKeyForSeed,
   backingScaleFor,
+  HUD_SCRIM_ALPHA,
+  TERRAIN_DIM_ALPHA,
   BASE_HEIGHT,
   BASE_WIDTH,
   BUTTON_FRAME_SLICE,
@@ -292,6 +295,44 @@ export function addSceneGround(scene: Scene): GameObjects.TileSprite {
     .tileSprite(BASE_WIDTH / 2, BASE_HEIGHT / 2, BASE_WIDTH, BASE_HEIGHT, GROUND_TILE_KEY)
     .setTileScale(GROUND_TILE_SCALE)
     .setDepth(-10);
+}
+
+/**
+ * The battle terrain (story 5.3): a full-bleed, cover-scaled biome image under
+ * the floating formation grids in Battle and Reveal.
+ *
+ * DEPTH: −20, deliberately BELOW `drawIsoBoard`'s −10 (config/board.ts) — the
+ * boards and their units must never sit behind the ground they stand on. This
+ * is NOT `addSceneGround` (that is the menu scenes' tiled stone floor); the two
+ * are separate on purpose and never appear in the same scene.
+ *
+ * Static by design: the AC forbids parallax/movement under reduced motion, and
+ * a still image satisfies that unconditionally while costing nothing per frame
+ * (NFR1) — there is no motion here to gate on `prefersReducedMotion()`.
+ */
+export function addBattleTerrain(scene: Scene, seed: number): GameObjects.Image {
+  const img = scene.add.image(BASE_WIDTH / 2, BASE_HEIGHT / 2, backgroundKeyForSeed(seed));
+  img.setScale(Math.max(BASE_WIDTH / img.width, BASE_HEIGHT / img.height)).setDepth(-20);
+  // A full-bleed dim over the art (FR39f, AC2). NOT decoration: the shipped
+  // biomes sit at opposite ends of the brightness range — the castle is a dark
+  // evening courtyard, the plains a bright sky-and-meadow painting — and every
+  // overlay in these scenes (bone HUD labels, side-coloured combat numbers,
+  // status glyphs) is tuned for a DARK ground. Without this, the same text
+  // that reads on the castle washes out on the plains. Dimming both to a
+  // common floor keeps one set of text treatments valid on every biome and
+  // makes new art safe to add. Device-tunable (TERRAIN_DIM_ALPHA).
+  scene.add.rectangle(BASE_WIDTH / 2, BASE_HEIGHT / 2, BASE_WIDTH, BASE_HEIGHT, PALETTE.backgroundFill, TERRAIN_DIM_ALPHA).setDepth(-19);
+  return img;
+}
+
+/**
+ * The extra scrim behind a scene's top HUD band (Battle's turn/side labels,
+ * Reveal's title + hint). The terrain dim alone leaves the busiest part of the
+ * castle art — lit towers and a pale sky sliver — directly behind 10–13px
+ * text. Sits below the boards (−11 < −10) so it can never cover a tile.
+ */
+export function addHudScrim(scene: Scene, height: number): GameObjects.Rectangle {
+  return scene.add.rectangle(BASE_WIDTH / 2, height / 2, BASE_WIDTH, height, PALETTE.backgroundFill, HUD_SCRIM_ALPHA).setDepth(-11);
 }
 
 /**

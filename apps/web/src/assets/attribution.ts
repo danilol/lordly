@@ -80,7 +80,8 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
     // NOT a third-party pack; the FR31 licensing bar still applies via this
     // manifest). Covers the whole shipped look: the Home castle background,
     // the button/panel 9-slice frames, the stone ground tile, the wordmark,
-    // and the PWA icons + favicon derived from the app-icon master.
+    // the PWA icons + favicon derived from the app-icon master, and the two
+    // battle-terrain biomes (story 5.3).
     pack: 'Lordly Midjourney art (Epic 5)',
     author: 'Danilo Lima',
     url: 'https://github.com/danilol/lordly',
@@ -100,6 +101,9 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
       'apps/web/public/icon-512.png',
       'apps/web/public/icon-512-maskable.png',
       'apps/web/public/favicon.png',
+      // Story 5.3: the two battle-terrain biomes (seed-picked at render time).
+      'apps/web/src/assets/terrain-castle.jpg',
+      'apps/web/src/assets/terrain-plains.jpg',
     ],
     classSources: {},
   },

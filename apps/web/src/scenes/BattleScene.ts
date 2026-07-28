@@ -4,6 +4,7 @@ import {
   BASE_HEIGHT,
   BASE_WIDTH,
   BATTLE_BEAT_MS,
+  BATTLE_HUD_BAND_H,
   BATTLE_ENEMY_LABEL,
   BATTLE_LEADER_FELL_BANNER,
   BATTLE_LOG_LABEL,
@@ -30,7 +31,18 @@ import {
   unitDisplaySize,
 } from '../config/constants';
 import type { BattleSpeedId } from '../config/constants';
-import { addButton, addElementBadge, addFramedPanel, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText, prefersReducedMotion } from '../config/ui';
+import {
+  addBattleTerrain,
+  addButton,
+  addHudScrim,
+  addElementBadge,
+  addFramedPanel,
+  addHomeBack,
+  addUnitSprite,
+  applyHiDpiCamera,
+  crispText,
+  prefersReducedMotion,
+} from '../config/ui';
 import type { ButtonHandle } from '../config/ui';
 import { drawIsoBoard } from '../config/board';
 import { attachPerfSampler } from '../config/perf';
@@ -212,6 +224,12 @@ export class BattleScene extends Scene {
 
     this.cameras.main.setBackgroundColor(PALETTE.background);
     applyHiDpiCamera(this);
+    // Story 5.3: the terrain this battle is fought on — seed-derived, so a
+    // replay of this match lands on the same ground (and Reveal, reading the
+    // same seed, already showed it during the face-off). Depth −20, below the
+    // boards' −10.
+    addBattleTerrain(this, this.flow.getState().seed);
+    addHudScrim(this, BATTLE_HUD_BAND_H); // small HUD labels sit over the art's busiest region
 
     // Slim top HUD: ‹ Home left, live turn/engagement label right (no big title — the boards are the show).
     addHomeBack(this);

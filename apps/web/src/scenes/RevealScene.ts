@@ -10,6 +10,7 @@ import {
   PALETTE,
   REVEAL_FIGHT_LABEL,
   REVEAL_HINT,
+  REVEAL_HUD_BAND_H,
   REVEAL_TITLE,
   CLASS_ABBREVIATIONS,
   TACTIC_DISPLAY_NAME,
@@ -17,7 +18,17 @@ import {
   unitCodeStyle,
 } from '../config/constants';
 import type { MatchSetup } from '@lordly/engine';
-import { addButton, addElementBadge, addFramedPanel, addHomeBack, addUnitSprite, applyHiDpiCamera, crispText } from '../config/ui';
+import {
+  addBattleTerrain,
+  addButton,
+  addElementBadge,
+  addFramedPanel,
+  addHomeBack,
+  addHudScrim,
+  addUnitSprite,
+  applyHiDpiCamera,
+  crispText,
+} from '../config/ui';
 import { drawIsoBoard } from '../config/board';
 import { unitTileCenter } from '../flow/battleView';
 import type { MatchFlow } from '../flow/MatchFlow';
@@ -47,6 +58,10 @@ export class RevealScene extends Scene {
   create() {
     this.cameras.main.setBackgroundColor(PALETTE.background);
     applyHiDpiCamera(this);
+    // Story 5.3: the same terrain the coming battle is fought on — Reveal and
+    // Battle read the same seed, so the face-off and the clash share a place.
+    addBattleTerrain(this, this.flow.getState().seed);
+    addHudScrim(this, REVEAL_HUD_BAND_H); // title/hint/enemy label over the art
     addHomeBack(this);
 
     // Singleton reset FIRST (scenes-are-singletons) — before the uncommitted

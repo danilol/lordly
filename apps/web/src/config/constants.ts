@@ -207,6 +207,54 @@ export const PANEL_FRAME_SLICE = 30;
 /** Stone ground tile (512×512 source): drawn at this tile scale so stones read ~35px — a floor, not boulders. Device-tunable. */
 export const GROUND_TILE_SCALE = 0.35;
 
+// ---- Battle terrain (story 5.3) ----
+
+/**
+ * The biomes a battle can be fought on, in rotation order. Adding art is ONE
+ * line here plus the Boot load — nothing else in the app knows how many there
+ * are. Shell-side on purpose: a background is PRESENTATION and must never
+ * enter `MatchSetup`, the `BattleLog`, or any engine type (AD-1/AD-2).
+ */
+export const BATTLE_BACKGROUNDS = ['terrain-castle', 'terrain-plains'] as const;
+export type BattleBackgroundKey = (typeof BATTLE_BACKGROUNDS)[number];
+
+/**
+ * Which terrain a match is fought on — derived from the MATCH SEED, never from
+ * `Math.random` (story 5.3, agreed 2026-07-27).
+ *
+ * The seed is the one value a replay restores verbatim (`MatchFlow.startReplay`
+ * sets `state.seed = setup.seed`, and `commit()` writes `seed: state.seed`, so
+ * the two are provably equal on both paths — pinned in battle-background.test.ts).
+ * Deriving the terrain from it means a replayed battle is fought on the same
+ * ground as the original, for free, with zero engine involvement. A random pick
+ * would silently swap the scenery on replay.
+ *
+ * `>>> 0` keeps the index non-negative for the full uint32 seed space (AD-10)
+ * even if a caller ever hands in a signed-looking value.
+ */
+/**
+ * How far the terrain art is dimmed toward the app ground (story 5.3, FR39f).
+ * The two shipped biomes are a dark castle courtyard and a BRIGHT plains
+ * painting; every text/number treatment in Battle is tuned for a dark ground,
+ * so the art is dimmed to a common floor rather than re-tuning every overlay
+ * per biome. Device-tunable — the number Danilo's pass may move.
+ */
+export const TERRAIN_DIM_ALPHA = 0.45;
+/** Extra scrim behind the top HUD band where small labels sit over the busiest part of the art. */
+export const HUD_SCRIM_ALPHA = 0.5;
+/** Battle's top HUD band height (passLabel y=22, enemyLabel y=56 both inside). */
+export const BATTLE_HUD_BAND_H = 72;
+/** Reveal's header band: title (y26), hint (y52) and the enemy label (y70). */
+export const REVEAL_HUD_BAND_H = 84;
+
+export function backgroundKeyForSeed(seed: number): BattleBackgroundKey {
+  // The `?? [0]` is unreachable — `%` over a non-empty tuple is always in
+  // range — but it keeps the function TOTAL for `noUncheckedIndexedAccess`
+  // without an `as` cast that would hide a genuinely empty manifest. The
+  // tuple's non-emptiness is itself pinned by battle-background.test.ts.
+  return BATTLE_BACKGROUNDS[(seed >>> 0) % BATTLE_BACKGROUNDS.length] ?? BATTLE_BACKGROUNDS[0];
+}
+
 // Text render resolution multiplier: the game renders at the 360×640 base and
 // Scale.FIT upscales the canvas, which softens text. Rendering glyphs to a
 // higher-resolution texture keeps them crisp when the canvas is scaled up.
