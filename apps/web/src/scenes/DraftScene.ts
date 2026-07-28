@@ -1,6 +1,6 @@
-import { GameObjects, Scene } from 'phaser';
+import { GameObjects, Input, Scene, Time } from 'phaser';
 import { ALL_CLASSES, BALANCE, slotTotal } from '@lordly/engine';
-import type { Role, UnitClass } from '@lordly/engine';
+import type { Element, Role, UnitClass } from '@lordly/engine';
 import {
   BASE_WIDTH,
   CARD_CLASS_FONT_PX,
@@ -11,6 +11,8 @@ import {
   DRAFT_GRID,
   DRAFT_HINT_Y,
   DRAFT_TABS,
+  LONG_PRESS_MS,
+  TAP_DISTANCE_PX,
   draftGridTile,
   draftHint,
   DRAFT_RULES_LABEL,
@@ -33,6 +35,7 @@ import {
 import type { DraftTabId } from '../flow/draftModel';
 import type { MatchFlow } from '../flow/MatchFlow';
 import { addButton, addSceneGround, addFramedPanel, applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText } from '../config/ui';
+import { buildUnitCardOverlay } from '../config/unitCardOverlay';
 import { attachPerfSampler } from '../config/perf';
 
 /**
@@ -88,6 +91,10 @@ export class DraftScene extends Scene {
   private lastTapAt = 0;
   /** The transient "crown cleared" toast (story 4.5). Reset every create() (singleton scenes). */
   private crownNotice?: GameObjects.Text;
+  /** The open unit-data card's objects (story 5.6 round 5 — the same card as Placement's; grid tiles show a class PREVIEW, tray units the full card). Reset every create() (singleton scenes). */
+  private cardObjects: GameObjects.GameObject[] = [];
+  /** The armed long-press timer (story 5.6 round 5) — one at a time; cancelled by release or pointer-out (Draft has no drag). Reset every create() (singleton scenes). */
+  private longPressTimer?: Time.TimerEvent;
 
   constructor() {
     super('Draft');
@@ -108,6 +115,9 @@ export class DraftScene extends Scene {
     this.lastTapAt = 0;
     this.crownNotice = undefined;
     this.tiles = [];
+    this.cardObjects = []; // the objects died with the scene shutdown; the ARRAY must not carry stale refs (story 5.6)
+    this.longPressTimer?.remove(); // no stale card-open fires into a fresh match (the pendingCrownTimers precedent)
+    this.longPressTimer = undefined;
 
     this.cameras.main.setBackgroundColor(PALETTE.background);
     applyHiDpiCamera(this);
@@ -140,6 +150,9 @@ export class DraftScene extends Scene {
    * Rebuilt wholesale on a tab switch; tapping a tile SELECTS (does not draft).
    */
   private buildGrid() {
+    // A rebuild invalidates an armed card-press (review 2026-07-29): the
+    // pressed tile dies here and emits no further cancel signals.
+    this.cancelLongPress();
     for (const o of this.gridObjects) o.destroy();
     this.gridObjects = [];
     this.tiles = [];
@@ -209,12 +222,19 @@ export class DraftScene extends Scene {
           wordWrap: { width: GRID.tileW - 4 },
         }).setOrigin(0.5, 0),
       );
-      this.gridObjects.push(
-        this.add
-          .rectangle(x, y, GRID.tileW, GRID.tileH, 0, 0)
-          .setOrigin(0, 0)
-          .setInteractive({ useHandCursor: true })
-          .on('pointerup', () => {
+      const tileZone = this.add
+        .rectangle(x, y, GRID.tileW, GRID.tileH, 0, 0)
+        .setOrigin(0, 0)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerup', (pointer: Input.Pointer) => {
+          // While the card is up the scrim swallows everything (topOnly) —
+          // belt guard only (review 2026-07-29: the old consume flag went
+          // stale and ate later taps; the overlay's armed close handshake
+          // replaced it).
+          if (this.cardObjects.length > 0) return;
+          this.cancelLongPress(); // released before the hold matured — a tap, handled below
+          if (pointer.getDistance() > TAP_DISTANCE_PX) return; // a wander is not a select-tap (parity with Placement's classifier)
+          {
             // First tap SELECTS (fills the detail panel); a second tap on the SAME
             // tile within the window DRAFTS it — the Add-to-army shortcut (Danilo).
             const now = this.time.now;
@@ -224,8 +244,14 @@ export class DraftScene extends Scene {
             this.lastTapClass = doubleTap ? null : cls; // consume on double so a triple tap isn't two adds
             if (doubleTap) this.addToArmy(cls); // drafts only if a slot remains
             this.redraw();
-          }),
-      );
+          }
+        });
+      this.armCardPress(
+        tileZone,
+        () => cls,
+        () => undefined,
+      ); // class preview: no element until drafted
+      this.gridObjects.push(tileZone);
     });
   }
 
@@ -261,6 +287,49 @@ export class DraftScene extends Scene {
     this.tweens.add({ targets: toast, alpha: 0, delay: 1400, duration: 500, onComplete: () => toast.destroy() });
   }
 
+  /** Kills any armed (not yet fired) card-open timer — a release or a pointer-out means this gesture is not a hold (story 5.6 round 5; Draft has no drag to cancel on). */
+  private cancelLongPress() {
+    this.longPressTimer?.remove();
+    this.longPressTimer = undefined;
+  }
+
+  /** Arms the card long-press on `target` (a grid tile or a tray unit). `element` is undefined for a grid tile — elements are rolled at draft, so a class tile shows a PREVIEW card (no dot, generic Witch "Cast"). */
+  private armCardPress(target: GameObjects.GameObject, cls: () => UnitClass, element: () => Element | undefined) {
+    target.on('pointerdown', (pointer: Input.Pointer) => {
+      this.longPressTimer?.remove();
+      this.longPressTimer = this.time.delayedCall(LONG_PRESS_MS, () => {
+        this.longPressTimer = undefined;
+        // Draft has NO drag, so nothing cancels a moving hold for free
+        // (review 2026-07-29): enforce LONG_PRESS_MS's movement contract at
+        // fire time — a wander past the shared threshold is not a hold.
+        if (pointer.getDistance() > TAP_DISTANCE_PX) return;
+        this.openCard(cls(), element());
+      });
+    });
+    target.on('pointerout', () => this.cancelLongPress());
+  }
+
+  /**
+   * The unit-data card (story 5.6 round 5 — Danilo: "Could we also have that
+   * in the char selection?"): the shared overlay builder renders it; this
+   * scene owns the gesture and lifecycle, exactly like PlacementScene.
+   */
+  private openCard(cls: UnitClass, element: Element | undefined) {
+    this.closeCardNow(); // never two cards
+    this.cardObjects = buildUnitCardOverlay(this, cls, element, () => this.closeCard());
+  }
+
+  /** Closes the card ONE TICK later — the caller is an input handler on an object about to be destroyed (the 5.5 lesson). */
+  private closeCard() {
+    this.time.delayedCall(0, () => this.closeCardNow());
+  }
+
+  /** The synchronous teardown — create()'s reset path and openCard's never-two-cards guard use this directly. */
+  private closeCardNow() {
+    for (const o of this.cardObjects) o.destroy();
+    this.cardObjects = [];
+  }
+
   /**
    * A small colored matchup pill; returns its right edge x so the next pill
    * can follow. Story 5.4 closes the 4.3 review deferral: a pill that would
@@ -292,6 +361,7 @@ export class DraftScene extends Scene {
 
   /** Rebuilds the selection highlight, the detail panel, the army tray, and Continue. */
   private redraw() {
+    this.cancelLongPress(); // the pressed tray slot may die below — no orphaned timer (review 2026-07-29)
     for (const o of this.dynamic) o.destroy();
     this.dynamic = [];
 
@@ -429,12 +499,24 @@ export class DraftScene extends Scene {
             color: PALETTE.playerText,
           }).setOrigin(0.5),
         );
-        slot.setInteractive({ useHandCursor: true }).on('pointerup', () => {
+        slot.setInteractive({ useHandCursor: true }).on('pointerup', (pointer: Input.Pointer) => {
+          // Belt guard while the card is up (see the tile handler) — and a
+          // REMOVE especially must never fire from a card session's residue:
+          // inspecting a soldier is not discharging it.
+          if (this.cardObjects.length > 0) return;
+          this.cancelLongPress();
+          if (pointer.getDistance() > TAP_DISTANCE_PX) return; // a wander is not a remove-tap
           const hadCrown = this.flow.getState().playerLeader !== null;
           this.flow.removeUnit(i); // AD-9: any army mutation clears the leader crown
           if (hadCrown) this.flashCrownCleared();
           this.redraw();
         });
+        // A drafted unit HAS an element — its card is the full one (story 5.6 round 5).
+        this.armCardPress(
+          slot,
+          () => unit.class,
+          () => unit.element,
+        );
       } else {
         this.dynamic.push(crispText(this, x + slotW / 2, trayY + 26, '+', { fontFamily: 'Arial', fontSize: '22px', color: PALETTE.mutedText }).setOrigin(0.5));
       }

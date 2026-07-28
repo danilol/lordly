@@ -1,8 +1,10 @@
 import { GameObjects, Input, Scene, Time } from 'phaser';
 import { ALL_COLS, ALL_ROWS, BALANCE, legalAnchors } from '@lordly/engine';
-import type { Placement, UnitClass } from '@lordly/engine';
+import type { Element, Placement, UnitClass } from '@lordly/engine';
 import {
   BASE_WIDTH,
+  LONG_PRESS_MS,
+  TAP_DISTANCE_PX,
   ENEMY_ARMY_LABEL,
   PALETTE,
   placementSubmitHint,
@@ -17,6 +19,7 @@ import {
 import { addButton, addSceneGround, applyHiDpiCamera, addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
 import { bannedCells, placedCount, rowActionCounts, sameCell, toAnchor } from '../flow/placement';
+import { buildUnitCardOverlay } from '../config/unitCardOverlay';
 import type { MatchFlow } from '../flow/MatchFlow';
 
 const CELL = 84;
@@ -25,13 +28,6 @@ const GRID_TOP = 150;
 const TRAY_Y = 486;
 /** Two taps on the same unit within this window = a double-tap (auto-place shortcut). */
 const DOUBLE_TAP_MS = 300;
-/**
- * Shared drag-vs-tap boundary (review fix): Phaser's `dragDistanceThreshold`
- * and the tap classifier below must agree, or a pointer move in the gap
- * between two different cutoffs starts no drag AND is rejected as a tap —
- * the gesture silently does nothing.
- */
-const TAP_DISTANCE_PX = 10;
 
 /**
  * Placement scene (FR4/FR30): the player's own 3×3 grid (owner-local — AD-11:
@@ -61,6 +57,10 @@ export class PlacementScene extends Scene {
   private toast?: GameObjects.Text;
   /** FR39c per-row action-count badges — live only while a unit is dragged. Reset every create() (singleton scenes). */
   private rowBadges: GameObjects.Text[] = [];
+  /** The open unit-data card's objects — scrim, sheet, content (story 5.6). Non-empty === the card is up. Reset every create() (singleton scenes). */
+  private cardObjects: GameObjects.GameObject[] = [];
+  /** The armed long-press timer (story 5.6) — one at a time; cancelled by drag start, release, or pointer-out. Reset every create() (singleton scenes). */
+  private longPressTimer?: Time.TimerEvent;
 
   constructor() {
     super('Placement');
@@ -106,6 +106,9 @@ export class PlacementScene extends Scene {
     for (const t of this.pendingCrownTimers.values()) t.remove(); // review fix: no stale crown-toggle fires into a fresh match
     this.pendingCrownTimers.clear();
     this.toast = undefined;
+    this.cardObjects = []; // the objects died with the scene shutdown; the ARRAY must not carry stale refs (story 5.6)
+    this.longPressTimer?.remove(); // the pendingCrownTimers cleanup precedent: no stale card-open fires into a fresh match
+    this.longPressTimer = undefined;
     this.rowBadges = []; // the objects died with the previous scene shutdown; the ARRAY must not carry stale refs
     // A draggable object starts a drag on the SLIGHTEST move by default (threshold
     // 0), which swallowed the tap events double-tap-to-place needs. Require
@@ -152,6 +155,34 @@ export class PlacementScene extends Scene {
     this.tweens.add({ targets: msg, alpha: 0, delay: 1400, duration: 500, onComplete: () => msg.destroy() });
   }
 
+  /** Kills any armed (not yet fired) card-open timer — a drag, a release, or a pointer-out means this gesture is not a hold (story 5.6). */
+  private cancelLongPress() {
+    this.longPressTimer?.remove();
+    this.longPressTimer = undefined;
+  }
+
+  /**
+   * The unit-data card (story 5.6): the shared overlay builder renders it
+   * (config/unitCardOverlay.ts — extracted at device round 5 when Draft
+   * gained the same card); this scene owns only the gesture and lifecycle.
+   * Placement always knows the unit's element, so its cards are always full.
+   */
+  private openCard(cls: UnitClass, element: Element) {
+    this.closeCardNow(); // never two cards
+    this.cardObjects = buildUnitCardOverlay(this, cls, element, () => this.closeCard());
+  }
+
+  /** Closes the card ONE TICK later — the caller is an input handler on an object about to be destroyed (the 5.5 lesson). */
+  private closeCard() {
+    this.time.delayedCall(0, () => this.closeCardNow());
+  }
+
+  /** The synchronous teardown — create()'s reset path and openCard's never-two-cards guard use this directly. */
+  private closeCardNow() {
+    for (const o of this.cardObjects) o.destroy();
+    this.cardObjects = [];
+  }
+
   /** The static 3×3 grid: a labeled backdrop cell + a drop zone per square (built once). */
   private buildGrid() {
     ALL_ROWS.forEach((row) => {
@@ -170,6 +201,14 @@ export class PlacementScene extends Scene {
     // double-tap tracking so a stale pre-drag tap can never combine with a
     // post-drag tap into an unintended double-tap (review fix).
     this.input.on('dragstart', (_pointer: Input.Pointer, obj: GameObjects.Container) => {
+      // Movement past the threshold means this gesture is a DRAG — never a
+      // long-press (story 5.6): kill any armed card-open timer.
+      this.cancelLongPress();
+      // With the card up, the pointer that OPENED it can still be down on a
+      // draggable unit beneath the scrim — Phaser armed the drag at
+      // pointerdown, before the scrim existed. Ignore it wholesale (story
+      // 5.6 audit): the card is modal.
+      if (this.cardObjects.length > 0) return;
       this.lastTapIndex = -1;
       this.lastTapAt = 0;
       // FR39c (story 4.11): while THIS unit is in the air, each grid row shows
@@ -181,10 +220,12 @@ export class PlacementScene extends Scene {
       if (cls !== undefined) this.showRowCounts(cls);
     });
     this.input.on('drag', (_pointer: Input.Pointer, obj: GameObjects.Container, dragX: number, dragY: number) => {
+      if (this.cardObjects.length > 0) return; // modal card up — the armed pre-scrim drag must not move units under it (story 5.6)
       obj.x = dragX;
       obj.y = dragY;
     });
     this.input.on('drop', (_pointer: Input.Pointer, obj: GameObjects.Container, zone: GameObjects.Zone) => {
+      if (this.cardObjects.length > 0) return; // modal card up (story 5.6) — see dragstart
       // The FR39c row counts leave with the drag — cleared HERE, not only in
       // dragend: `redraw()` below destroys the dragged container, so Phaser
       // never fires dragend for it (device-reported 2026-07-20: the badges
@@ -202,7 +243,7 @@ export class PlacementScene extends Scene {
     // The badges clear here too — this is the only end-of-drag signal for a MISSED drop.
     this.input.on('dragend', (_pointer: Input.Pointer, _obj: GameObjects.Container, dropped: boolean) => {
       this.clearRowCounts();
-      if (!dropped) this.redraw();
+      if (!dropped && this.cardObjects.length === 0) this.redraw(); // no churn beneath the modal card (story 5.6) — nothing moved anyway
     });
   }
 
@@ -250,6 +291,11 @@ export class PlacementScene extends Scene {
 
   /** Rebuilds unit containers (at their model positions) and the submit button. */
   private redraw() {
+    // Any rebuild invalidates an armed card-press (review 2026-07-29): the
+    // pressed container dies here, and a destroyed object emits none of the
+    // cancel signals (pointerout/pointerup/dragstart) the timer relies on —
+    // e.g. a pending crown-toggle's redraw firing mid-hold on another unit.
+    this.cancelLongPress();
     for (const obj of this.dynamic) obj.destroy();
     this.dynamic = [];
 
@@ -285,12 +331,34 @@ export class PlacementScene extends Scene {
       c.setData('unitIndex', i);
       c.setInteractive({ useHandCursor: true });
       this.input.setDraggable(c);
+      // The unit-data card's long-press (story 5.6, gesture-audited): armed on
+      // pointerdown, cancelled by a drag start (movement past the threshold),
+      // by release (that's a tap's job), or by the pointer leaving the card.
+      // Firing sets `longPressFired` so the eventual release is consumed below.
+      c.on('pointerdown', (pointer: Input.Pointer) => {
+        this.longPressTimer?.remove();
+        this.longPressTimer = this.time.delayedCall(LONG_PRESS_MS, () => {
+          this.longPressTimer = undefined;
+          // The at-fire movement check (review 2026-07-29): dragstart usually
+          // cancels first, but a wander UNDER the drag threshold plus a
+          // destroyed-container race must not open a card mid-gesture.
+          if (pointer.getDistance() > TAP_DISTANCE_PX) return;
+          this.openCard(unit.class, unit.element);
+        });
+      });
+      c.on('pointerout', () => this.cancelLongPress());
       // Double-tap toggles a unit: an UNPLACED one drops into the first free
       // cell (top row first); a PLACED one goes back to the tray (Danilo). A
       // drag also ends in pointerup, so ignore taps that moved the pointer —
       // only a still tap counts. Must match TAP_DISTANCE_PX (the drag-start
       // threshold) exactly — a gap between the two silently eats the gesture.
       c.on('pointerup', (pointer: Input.Pointer) => {
+        // While the card is up, the scrim swallows everything (topOnly) — the
+        // opening press's release included, which is what retired the old
+        // consume flag (review 2026-07-29: it went stale and ate later taps).
+        // This guard is the belt for any exotic input path that slips past.
+        if (this.cardObjects.length > 0) return;
+        this.cancelLongPress(); // released before the hold matured — a tap, handled below
         if (pointer.getDistance() > TAP_DISTANCE_PX) return; // it was a drag, not a tap
         const now = this.time.now;
         const doubleTap = this.lastTapIndex === i && now - this.lastTapAt < DOUBLE_TAP_MS;

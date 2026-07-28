@@ -78,6 +78,74 @@ export const DRAFT_GRID = { cols: 4, tileW: 80, tileH: 48, gapX: 8, gapY: 6, sta
 export const DRAFT_TABS = { y: 76, underlineY: 86, tapH: 44, tapW: 88, tapMaxW: 128, offsetX: 70 } as const;
 
 /**
+ * The unit-data card (story 5.6 — the OB64 UNIT DATA read at Placement; the
+ * geometry survived four device rounds, 2026-07-29). Pure geometry in the
+ * DRAFT_GRID/DRAFT_TABS tradition, pinned by unit-card.test.ts:
+ * - the sheet: x 8 / w 344, h 184 anchored low (y 448, bottom 632) — round 2
+ *   shrank it ~85px by moving the radar BESIDE the move rows ("use the space
+ *   better… bringing the chart to the right"); round 4 took another 48px by
+ *   raising the radar INTO the header's empty right half (`radarCYOffset`
+ *   106 from the card top — 100 failed the ✕-clearance pin by 2px and 102
+ *   passed at literally 0px on an estimated text metric; the review re-cut
+ *   the label budget to a realistic 8px half-height and 106 clears with
+ *   real margin — the chart's top vertex tucks in beside the name
+ *   while the move rows still start below the portrait), so the two columns
+ *   STAGGER instead of stack;
+ * - headerH 78: the 64px interim portrait (FIXED 64 — never loomed; loom is
+ *   board presence, and a 96px monster portrait would burst this header),
+ *   name, and the `HP · size-squares · element-dot` subline;
+ * - three move rows at rowH 24 on the LEFT below the header (row-position
+ *   mini-grid icon `rowIconW` 12 · verb ×count within rowTextW 112 — fits
+ *   "Radiant Breath ×1" at 11px — · inline damage glyph);
+ * - the stat radar on the RIGHT centred at (radarCX 260, y + radarCYOffset
+ *   106), radius radarR 40 + radarLabelPad 12 of nameless axis labels
+ *   (round 2: numbers removed — the per-axis roster-max scaling already IS
+ *   the meaning);
+ * - closeSize 44: the ✕ tap target at the FR30 floor;
+ * - nameW 140 fits "DRAGON HUNTER" (13 chars ≈ 130px at 16px), the roster's
+ *   longest name — tightened in round 4 so the name budget can never reach
+ *   the raised chart's STR label (pinned).
+ */
+export const UNIT_CARD = {
+  x: 8,
+  y: 448,
+  w: 344,
+  h: 184,
+  pad: 14,
+  headerH: 78,
+  rowH: 24,
+  rowIconW: 12,
+  rowTextW: 112,
+  radarR: 40,
+  radarLabelPad: 12,
+  radarCX: 260,
+  radarCYOffset: 106,
+  closeSize: 44,
+  nameW: 140,
+  portraitW: 64,
+  nameGapX: 10,
+} as const;
+
+/**
+ * Shared drag-vs-tap boundary (extracted from PlacementScene at the 5.6
+ * review): Phaser's `dragDistanceThreshold`, the tap classifiers, AND the
+ * long-press movement cancel must all agree on ONE number, or a pointer move
+ * in the gap between two different cutoffs starts no drag and is rejected as
+ * a tap — the gesture silently does nothing.
+ */
+export const TAP_DISTANCE_PX = 10;
+
+/**
+ * How long a still press must hold before the unit-data card opens (story
+ * 5.6). Comfortably past a tap, comfortably short of feeling stuck; the
+ * gesture cancels on ANY movement past TAP_DISTANCE_PX (checked at fire time
+ * in BOTH scenes — review 2026-07-29: Draft has no drag to cancel it for
+ * free), on release (a tap is a tap), and on pointer-out. Danilo tuned the
+ * feel across the five 5.6 device rounds and accepted 450.
+ */
+export const LONG_PRESS_MS = 450;
+
+/**
  * The draft hint line's centre y (story 5.5 review): at y=50 its 11px line
  * bottom (~55.5) grazed the tab zones' top edge (76 − 44/2 = 54) by ~1.5px —
  * a tap on the hint's last pixels silently switched tabs. At 46 the line
@@ -127,6 +195,8 @@ export const PALETTE = {
   buttonTextDisabled: '#9a9db0',
   /** bone — label on a default (dark-bodied) button. */
   buttonText: '#e8e4d8',
+  /** bone as a NUMBER for shape fills (the backgroundFill twin-pattern) — the unit-card's filled size-squares and lit row-bars (review 2026-07-29: the raw 0xe8e4d8 was hand-duplicated at three sites). */
+  boneFill: 0xe8e4d8,
   /** Enabled/selected = the gold FILL (DESIGN button component); label flips to ink via buttonTextOnGold. */
   buttonFillEnabled: 0xe3b64b,
   buttonStrokeEnabled: 0x9c7c26,
@@ -455,6 +525,45 @@ export const BATTLE_LEADER_FELL_BANNER = 'The leader has fallen!';
  */
 export const GUARD_MARKER_GLYPH = '🛡';
 export const GUARD_MARKER_COLOR = '#8ea6c2';
+
+/**
+ * The damage-type mark on a unit-card move row (story 5.6; the TYPE lives
+ * here — review 2026-07-29 — so CARD_GLYPHS/CARD_GLYPH_COLORS are genuinely
+ * keyed by it rather than by a hand-copied literal union; flow/unitCard
+ * derives rows AS this type and re-exports it).
+ */
+export type CardGlyph = 'physical' | 'magic' | 'shield' | 'heal';
+
+/**
+ * The card's glyph vocabulary (story 5.6): a small mark per move row —
+ * OB64's "small, and placed where it makes sense" detail. Keyed by CardGlyph
+ * so a new glyph kind is a compile error here.
+ * Physical/magic get single-glyph marks; shield reuses the Guard marker's
+ * glyph (one meaning, one symbol — GUARD_MARKER_GLYPH); heal is the
+ * restorative cross, deliberately NOT an aggression read.
+ */
+export const CARD_GLYPHS: Record<CardGlyph, string> = {
+  physical: '⚔',
+  magic: '✦',
+  shield: GUARD_MARKER_GLYPH,
+  heal: '✚',
+};
+
+/**
+ * The glyph marks' colors (story 5.6): none is a side colour and none is gold
+ * (gold stays the leader's metal). Physical = bone (the default label ink);
+ * magic = a neutral arcane violet (deliberately NOT a status hue — the glyph
+ * says "magic damage", not "poison"); shield = the Guard marker's own colour
+ * (one meaning, one look); heal = the heal-trace green (restorative, no
+ * aggression read).
+ */
+export const CARD_GLYPH_COLORS: Record<CardGlyph, string> = {
+  physical: '#e8e4d8',
+  magic: '#b48ce0',
+  shield: GUARD_MARKER_COLOR,
+  heal: '#8fe0a0',
+};
+
 /** The caption stacked over a Guard-blocked hit's number (story 4.7) — the crit/dodge caption's sibling. */
 export const GUARD_BLOCKED_CAPTION = 'GUARDED';
 

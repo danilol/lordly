@@ -215,6 +215,28 @@ These are loved but out of scope for this UX phase — noted only so no one desi
 
 ---
 
+## Amendment (story 5.6, 2026-07-29) — inspecting a unit at Placement and at Draft
+
+Dated amendment: Placement AND Draft gain a READ gesture beside their existing act gestures.
+**Press and hold any unit (~450ms)** — Placement tray or board, Draft grid tile or army tray —
+to open its unit-data card. On a Draft GRID TILE the card is a class PREVIEW: elements are
+rolled at draft, so it shows no element dot and the Witch reads a generic "Cast"; everywhere
+else (drafted or placed units) the card is complete. The hold never acts, and each scene keeps
+its own tap language untouched (corrected at review 2026-07-29 — the first cut of this
+amendment blurred them): at PLACEMENT a short tap crowns a placed unit (nothing on a tray
+unit), a double-tap places/removes, and movement past the shared 10px threshold is a drag; at
+DRAFT a short tap on a grid tile SELECTS, a double-tap DRAFTS, a single tap on an army-tray
+unit REMOVES it (which is exactly why the hold's release is consumed by the card's scrim —
+inspecting a soldier must never discharge him), and there is no drag — the same 10px
+threshold instead cancels the hold and voids a wandering tap. The card's open/close flow — the OB64 UNIT DATA read:
+what this soldier does from each row, how many times, what kind of damage, and its full stat
+block. Release-after-hold does nothing else (the hold is consumed); a shorter tap keeps its
+existing meaning (crown a placed unit; nothing on a tray unit), a double-tap still
+places/removes, and any movement past the 10px threshold is still a drag. The card is modal —
+tap outside it or the ✕ to dismiss — and purely informative: it never mutates the draft. The
+gesture was chosen over a per-card ⓘ (the 64px card face is the drag surface; a 44px-floor
+button inside it would swallow most of it); the ~450ms hold was tuned and accepted across the story's five device rounds (2026-07-29); it remains a single constant (`LONG_PRESS_MS`) if it ever needs a re-feel.
+
 ## Reference mockups
 
 - [Battle screen — Fixed-HUD hero layout](mockups/battle-screen-mock.html) (theme-toggleable)

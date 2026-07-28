@@ -254,3 +254,31 @@ any more. Original entry kept below for the record.
   gap, not caused by 5.5: `apps/web/test` has no Phaser mock harness, the same tooling story the
   5.2 review recorded for `addButton`'s untested Phaser behaviour. When that harness lands, the
   tab strip should be its second customer.
+
+## Logged from: story 5-6 device pass (2026-07-29) — PO wish: the unit data INLINE on the Draft detail panel
+
+- **Danilo's true wish for the unit-data read (his words: "my true wish… is to have it visible
+  on the main screen, not as an overlay"), pointing at the DRAFT detail panel as the place
+  ("That should be the place where you think: this char is what i need, this one is strong,
+  this one is weak for my comp"), "probably smaller and more discreet", "maybe use more icons
+  than text — i want to love it the same way i love OB64."** He accepted the Placement overlay
+  for now (his explicit "I can accept for now"), so 5.6 ships the card as specced; this wish is
+  the NEXT step, not a 5.6 correction. What it actually asks for: folding the card's richness
+  (per-row moves w/ counts, damage-type glyphs, the stat spider chart) into `DRAFT_DETAIL` —
+  which is 108px tall today and already carries name/role/behavior/matchup-chips/Add — so it is
+  a Draft-panel REDESIGN (denser, icon-first, possibly taller at the grid's expense), not a
+  bolt-on. Assets that make it cheaper by then: the pure `unitCard` model + `statAxisRatios`/
+  `radarPoints` + `CARD_GLYPHS` all exist and are surface-agnostic; the 5.9 portraits will have
+  landed. **Route: a design pass first (DESIGN/EXPERIENCE amendment with a mock), then its own
+  story — natural slots: beside 5.9 (portraits land in the same panel) or the epic-5 retro.**
+  Surface this at the next retro/correct-course (the PO-wish convention).
+
+## Deferred from: code review of story-5-6-the-unit-data-card (2026-07-29)
+
+- **Multi-touch audit for the scene gesture system.** The 5.6 review noted the new long-press
+  shares one timer across pointers (a second finger re-arms it), a card opened mid-drag
+  freezes the dragged unit, and close-during-drag resumes swallowed drag events. NOT a 5.6
+  regression: the whole gesture system (double-tap windows, deferred crown timers) has been
+  single-pointer by design since story 1.8, and the target platform is one-thumb portrait
+  play. If a device session ever shows two-finger weirdness, the fix is pointer-id-scoped
+  gesture state across DraftScene/PlacementScene — an audit-shaped task, not a patch.

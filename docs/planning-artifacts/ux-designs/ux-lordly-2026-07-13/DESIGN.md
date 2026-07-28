@@ -258,6 +258,47 @@ Behavioral rules for these live in `EXPERIENCE.md`; this section is appearance o
 - **Floating combat numbers** (`{components.combat-number}`) — bold tabular monospace, **side-colored** (blue when you deal/heal, red for the enemy), floating up from the struck unit. ≥ 14px on a 360px viewport.
 - **Iso board** (`{components.iso-board}`) — ungframed procedural geometry: a tilted 3×3 checkerboard. Tiles **color-code the side** — `{colors.blue-you}` on the player board, `{colors.red-enemy}` on the enemy board, alternating with a neutral tile and stroked in gold-deep. Flat billboard sprites stand on the tiles. The OB64 iso look, zero art.
 
+## Amendment (story 5.6, 2026-07-29) — the unit-data card (`{components.unit-data-card}`)
+
+Dated amendment (the 4.0/5.2 precedent — nothing below is rewritten; this note adds a component):
+
+- **Unit-data card** (`{components.unit-data-card}`) — the OB64 UNIT DATA read: a **framed
+  bottom-sheet** (the `{components.panel}` 9-slice) over a 60%-black input-blocking scrim,
+  opened by **long-press (~450ms)** on any unit at **Placement (tray or board) and at Draft
+  (round 5 — grid tiles open a class PREVIEW: no element dot, generic Witch "Cast", since
+  elements roll at draft; army-tray units open the full card)**. Geometry is the exported
+  `UNIT_CARD` constant (344×184 after device rounds 2+4 — the radar sits BESIDE the move rows
+  and climbs into the header's empty right half, so the columns stagger; the sheet shrank
+  316 → 184 across the rounds), anchored 8px off the bottom edge, pinned by test. Dismissal
+  is an ARMED down→up pair on the scrim or ✕ (review 2026-07-29): the release that OPENED the
+  card and the release that DISMISSES it are both consumed by the live scrim, so neither can
+  reach — or mutate — anything beneath.
+- **The sheet is OPAQUE by construction** (device round 2026-07-29: the frame art's dark
+  centre is not load-bearing over busy content — an explicit `panel-body-night` plate sits
+  under the 9-slice frame; the card must read as a CARD over the board, never a wash).
+- **Content** — a header over a two-column band (device round 2, 2026-07-29: "use the space
+  better… bringing the chart to the right"). Header: the class portrait at a FIXED 64px
+  (never loomed — loom is board presence; story 5.9 swaps in the Midjourney portraits); the
+  class name in gold (gold marks a TITLE here, never a side); the subline reads
+  `HP 120 · ■□ · ●` — the unit's SIZE as a fixed "1 out of 2" square frame (always
+  MAX_SLOT_COST squares drawn, the unit's cost FILLED: a small ■□, a monster ■■ — device
+  round 3: the frame of reference must be on screen for the read to be instant) and its
+  ELEMENT as the shared colored dot, both VISUAL, not words. Band left: three move
+  rows — a procedural **row-position mini-grid** (three stacked bars, the firing row lit —
+  the OB64 row-icon read, front on top like the board), the verb ×count with the damage-type
+  glyph INLINE right after it at 15px (round 3: parked in its own column at 13px it read as a
+  stray mark). Band right: the **stat spider chart** — its own component, registered BY this amendment (`{components.stat-radar}`): six axes STR→DEX
+  clockwise from the top, each scaled to the ROSTER's best on that axis (the web's edge =
+  "best in the game at this"), web + spokes in `{colors.card-stroke}`, the value shape
+  filled/stroked in `{colors.blue-you}` (the card shows YOUR unit), axis labels NAME-ONLY
+  (round 2: the raw numbers are removed — the relative shape is the read).
+- **The damage-type glyph** (`CARD_GLYPHS`/`CARD_GLYPH_COLORS`): ⚔ physical in bone,
+  ✦ magic in arcane violet `#b48ce0` (deliberately NOT a status hue and NOT a side colour),
+  🛡 shield in the Guard marker's own colour (one meaning, one symbol), ✚ heal in the
+  heal-trace green (a heal carries no aggression read). No glyph is ever gold or side-colored.
+- **Close** = tap the scrim or the ✕ (44px tap floor, FR30). The card is strictly read-only
+  and modal: nothing beneath it receives input while it is up.
+
 ## Do's and Don'ts
 
 | Do | Don't |
