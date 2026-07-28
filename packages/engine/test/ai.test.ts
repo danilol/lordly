@@ -26,14 +26,12 @@ describe('STRATEGY_POOL curation (FR25)', () => {
    * FR25's INTENT (enough board variety that the AI never repeats itself) is
    * exceeded, not weakened; what a tighter ceiling would buy is a smaller
    * sweep, and the sweep still runs inside its budget (18² × 15 = 4860
-   * battles per mode in CI). Recorded as a deliberate PRD deviation in
-   * docs/implementation-artifacts/deferred-work.md for the PO to ratify or
-   * push back on. The count is pinned EXACTLY (review 2026-07-28): a looser
-   * ceiling would quietly pre-authorize further growth past the number the
-   * PO has not yet ratified — the next comp must come back through this
-   * line, and through the same conversation.
+   * battles per mode in CI). RATIFIED by the PO 2026-07-29 ("we have 18 —
+   * that's the reality; FR25 is the past") and FR25 amended in epics.md with
+   * a dated note. The count stays pinned EXACTLY: growth is a deliberate
+   * edit here, gated by the ≤65% sweep band, never a silent drift.
    */
-  it('holds exactly the 18 curated archetypes, unique ids (FR25 says ~8–12 — see the note above; growth is a deliberate edit HERE)', () => {
+  it('holds exactly the 18 curated archetypes, unique ids (FR25 pool-size clause amended 2026-07-29 — growth is a deliberate edit HERE)', () => {
     expect(STRATEGY_POOL.length).toBe(18);
     const ids = STRATEGY_POOL.map((a) => a.id);
     expect(new Set(ids).size).toBe(ids.length);

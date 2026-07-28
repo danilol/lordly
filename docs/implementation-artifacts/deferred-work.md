@@ -210,7 +210,12 @@
 
 ## Logged from: story 5-5-roster-wave-monsters (2026-07-28) — PRD deviation for the PO to ratify
 
-- **The AI strategy pool now holds 18 archetypes; FR25 says "~8–12".** Needs Danilo's
+**RATIFIED 2026-07-29 by Danilo: "we have 18. That's the reality. FR25 is the past."** FR25's
+pool-size clause is amended in epics.md (dated note); the exact-18 pin in `ai.test.ts` stays as
+the growth gate, and the ≤65% sweep band remains the curation criterion. Nothing here is open
+any more. Original entry kept below for the record.
+
+- ~~**The AI strategy pool now holds 18 archetypes; FR25 says "~8–12".**~~ Needs Danilo's
   ratification (or a push-back) — flagged here rather than silently rewritten. Why it grew:
   story 4.12's reverse-coverage guard requires EVERY class to appear in at least one
   archetype, so the sweep certifies the whole roster. A `sizeClass: 'monster'` unit costs 2
