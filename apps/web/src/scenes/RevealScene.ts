@@ -11,6 +11,7 @@ import {
   REVEAL_FIGHT_LABEL,
   REVEAL_HINT,
   REVEAL_HUD_BAND_H,
+  ISO_BOARD_REVEAL,
   REVEAL_TITLE,
   CLASS_ABBREVIATIONS,
   TACTIC_DISPLAY_NAME,
@@ -30,7 +31,7 @@ import {
   crispText,
 } from '../config/ui';
 import { drawIsoBoard } from '../config/board';
-import { unitTileCenter } from '../flow/battleView';
+import { DEFAULT_ORIENTATION, unitTileCenter } from '../flow/battleView';
 import type { MatchFlow } from '../flow/MatchFlow';
 
 /**
@@ -94,8 +95,10 @@ export class RevealScene extends Scene {
 
     // The shared iso boards (story 2.2, ADR-0001) — the same component the
     // Battle scene stages, so Reveal → Battle reads as one continuous place.
-    drawIsoBoard(this, 'B');
-    drawIsoBoard(this, 'A');
+    // Story 5.3 device pass: Reveal keeps its own COMPACT frame — Battle's
+    // enlarged boards would run straight into the tactics block below.
+    drawIsoBoard(this, 'B', DEFAULT_ORIENTATION, ISO_BOARD_REVEAL);
+    drawIsoBoard(this, 'A', DEFAULT_ORIENTATION, ISO_BOARD_REVEAL);
 
     // resolve() caches the log (AD-13); the Battle scene replays it. The initial
     // roster is the BattleStarted event, which is tactic-INDEPENDENT — so a
@@ -235,8 +238,8 @@ export class RevealScene extends Scene {
    * inherits the code's FR39f stroke treatment so it survives the tile fill.
    */
   private drawUnit(unit: UnitSnapshot, setup?: MatchSetup) {
-    const { x, y } = unitTileCenter(unit.side, unit.placement);
-    addUnitSprite(this, x, y - 12, unit.class, 32).setDepth(y);
+    const { x, y } = unitTileCenter(unit.side, unit.placement, DEFAULT_ORIENTATION, ISO_BOARD_REVEAL);
+    addUnitSprite(this, x, y - 13, unit.class, 38).setDepth(y); // grew with the 5.3 tiles (56→70)
     // FR6 leader disclosure (story 4.5): the ♛ crown sits ON the leader's sprite
     // (a board marker, "the read is the payoff" — not a separate text line like
     // the tactic labels). Gold (PALETTE.title = {colors.gold}), never a side color.

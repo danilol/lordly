@@ -1,6 +1,7 @@
 import { ALL_COLS, ALL_ROWS, BALANCE } from '@lordly/engine';
 import type { BattleEvent, MoveKind, Placement, Side, SpellKind, UnitId, UnitSnapshot } from '@lordly/engine';
 import { BASE_WIDTH, FIZZLE_PLATE_LABEL, HEAL_PLATE_LABEL, ISO_BOARD, moveDisplayName, SPELL_DISPLAY_NAME } from '../config/constants';
+import type { IsoBoardLayout } from '../config/constants';
 
 /**
  * Pure, Phaser-free, DOM-free presentation helpers for the Reveal/Battle
@@ -48,11 +49,11 @@ function projection(side: Side, placement: Placement): { r: number; c: number } 
   return { r: colIndex, c: 2 - rowIndex };
 }
 
-/** The board origin (its top-corner tile center) for a side under an orientation. */
-function frame(side: Side, orientation: BoardOrientation): { ox: number; oy: number } {
-  if (orientation === '|') return side === 'A' ? ISO_BOARD.stackedPlayer : ISO_BOARD.stackedEnemy;
+/** The board origin (its top-corner tile center) for a side under an orientation, within a scene's frame. */
+function frame(side: Side, orientation: BoardOrientation, layout: IsoBoardLayout): { ox: number; oy: number } {
+  if (orientation === '|') return side === 'A' ? layout.stackedPlayer : layout.stackedEnemy;
   // '\' and '/' share origins; '/' mirrors the final x instead.
-  return side === 'A' ? ISO_BOARD.player : ISO_BOARD.enemy;
+  return side === 'A' ? layout.player : layout.enemy;
 }
 
 /**
@@ -60,11 +61,16 @@ function frame(side: Side, orientation: BoardOrientation): { ox: number; oy: num
  * board origin, `x` steps ±tileW/2 with (c − r) and `y` steps +tileH/2 with
  * (c + r), producing the 2:1 diamond grid.
  */
-export function unitTileCenter(side: Side, placement: Placement, orientation: BoardOrientation = DEFAULT_ORIENTATION): { x: number; y: number } {
+export function unitTileCenter(
+  side: Side,
+  placement: Placement,
+  orientation: BoardOrientation = DEFAULT_ORIENTATION,
+  layout: IsoBoardLayout = ISO_BOARD,
+): { x: number; y: number } {
   const { r, c } = projection(side, placement);
-  const { ox, oy } = frame(side, orientation);
-  const x = ox + (c - r) * (ISO_BOARD.tileW / 2);
-  const y = oy + (c + r) * (ISO_BOARD.tileH / 2);
+  const { ox, oy } = frame(side, orientation, layout);
+  const x = ox + (c - r) * (layout.tileW / 2);
+  const y = oy + (c + r) * (layout.tileH / 2);
   return { x: orientation === '/' ? BASE_WIDTH - x : x, y };
 }
 
@@ -77,12 +83,12 @@ export interface BoardTile {
 }
 
 /** All 9 tiles of one side's board, aligned 1:1 with `unitTileCenter` so units always stand exactly on a tile. */
-export function boardTiles(side: Side, orientation: BoardOrientation = DEFAULT_ORIENTATION): BoardTile[] {
+export function boardTiles(side: Side, orientation: BoardOrientation = DEFAULT_ORIENTATION, layout: IsoBoardLayout = ISO_BOARD): BoardTile[] {
   return ALL_ROWS.flatMap((row) =>
     ALL_COLS.map((col) => {
       const placement = { row, col };
       const { r, c } = projection(side, placement);
-      const { x, y } = unitTileCenter(side, placement, orientation);
+      const { x, y } = unitTileCenter(side, placement, orientation, layout);
       return { x, y, front: row === 'front', checker: (r + c) % 2 === 0 };
     }),
   );

@@ -3,6 +3,7 @@ import type { Side } from '@lordly/engine';
 import { boardTiles, DEFAULT_ORIENTATION } from '../flow/battleView';
 import type { BoardOrientation } from '../flow/battleView';
 import { ISO_BOARD, ISO_TILES } from './constants';
+import type { IsoBoardLayout } from './constants';
 
 /**
  * Draws one side's tilted 3×3 iso checkerboard (story 2.2, ADR-0001) — pure
@@ -14,13 +15,13 @@ import { ISO_BOARD, ISO_TILES } from './constants';
  * no per-frame work). Graphics path calls are used deliberately — Phaser 4's
  * Polygon shape rendered these quads as triangles (verified by screenshot).
  */
-export function drawIsoBoard(scene: Scene, side: Side, orientation: BoardOrientation = DEFAULT_ORIENTATION): void {
-  const halfW = ISO_BOARD.tileW / 2;
-  const halfH = ISO_BOARD.tileH / 2;
+export function drawIsoBoard(scene: Scene, side: Side, orientation: BoardOrientation = DEFAULT_ORIENTATION, layout: IsoBoardLayout = ISO_BOARD): void {
+  const halfW = layout.tileW / 2;
+  const halfH = layout.tileH / 2;
   const g = scene.add.graphics().setDepth(-10); // always beneath units (unit depth = screen y)
 
   // Front tiles draw LAST so their gold-lite edge is never overdrawn by a neighbor.
-  const tiles = [...boardTiles(side, orientation)].sort((a, b) => Number(a.front) - Number(b.front));
+  const tiles = [...boardTiles(side, orientation, layout)].sort((a, b) => Number(a.front) - Number(b.front));
   for (const tile of tiles) {
     const sideFill = side === 'A' ? ISO_TILES.you : ISO_TILES.foe;
     const frontFill = side === 'A' ? ISO_TILES.youFront : ISO_TILES.foeFront;

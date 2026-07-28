@@ -497,13 +497,41 @@ export const BATTLE_SKIP_LABEL = '⏭ Skip';
 // origins serve the untuned '|' orientation (the seam ships, the toggle is
 // deferred — deferred-work.md).
 export const ISO_BOARD = {
-  tileW: 56,
-  tileH: 28,
-  enemy: { ox: 120, oy: 100 },
-  player: { ox: 240, oy: 224 },
-  stackedEnemy: { ox: 180, oy: 88 },
-  stackedPlayer: { ox: 180, oy: 236 },
+  tileW: 74,
+  tileH: 37,
+  enemy: { ox: 124, oy: 118 },
+  player: { ox: 236, oy: 330 },
+  stackedEnemy: { ox: 180, oy: 96 },
+  stackedPlayer: { ox: 180, oy: 320 },
 } as const;
+
+/**
+ * Reveal's board frame — SEPARATE from Battle's since story 5.3's device pass
+ * (Danilo: "we could enlarge the fight"). Battle is the hero scene and spreads
+ * its boards down the terrain; Reveal cannot follow, because its lower third
+ * belongs to the tactics block (ARMY TACTICS y=342, the picker bar, the enemy
+ * line and the four-row dropdown, all above Fight at y=568). So Reveal grows
+ * moderately and stays compact. Same 2:1 diamond, same component, same
+ * projection — only the frame differs.
+ */
+export const ISO_BOARD_REVEAL = {
+  tileW: 70,
+  tileH: 35,
+  enemy: { ox: 122, oy: 108 },
+  player: { ox: 238, oy: 236 },
+  stackedEnemy: { ox: 180, oy: 96 },
+  stackedPlayer: { ox: 180, oy: 240 },
+} as const;
+
+/** The shape both board frames share — `battleView`'s projection takes one of these. */
+export interface IsoBoardLayout {
+  readonly tileW: number;
+  readonly tileH: number;
+  readonly enemy: { readonly ox: number; readonly oy: number };
+  readonly player: { readonly ox: number; readonly oy: number };
+  readonly stackedEnemy: { readonly ox: number; readonly oy: number };
+  readonly stackedPlayer: { readonly ox: number; readonly oy: number };
+}
 
 // Iso tile fills/strokes (story 2.2) — the UX mock's NIGHT variant, matching
 // the current dark ground (the full Heritage/Night theme system is deferred).

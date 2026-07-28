@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_COLS, ALL_ROWS, ALL_SIDES, BALANCE } from '@lordly/engine';
 import type { BattleEvent, Element, MoveKind, Placement, Side, UnitClass, UnitId, UnitSnapshot } from '@lordly/engine';
-import { BASE_WIDTH, BATTLE_BEAT_MS, ISO_BOARD } from '../src/config/constants';
+import { BASE_WIDTH, BATTLE_BEAT_MS, BATTLE_HUD_BAND_H, ISO_BOARD, ISO_BOARD_REVEAL, REVEAL_HUD_BAND_H } from '../src/config/constants';
 import {
   ALL_ORIENTATIONS,
   DEFAULT_ORIENTATION,
@@ -142,8 +142,62 @@ describe("iso projection — the shipped '\\' layout (AC1)", () => {
     }
   });
 
-  it('uses the 2:1 diamond ratio from the UX spec', () => {
+  it('uses the 2:1 diamond ratio from the UX spec — in BOTH scene frames', () => {
     expect(ISO_BOARD.tileW).toBe(2 * ISO_BOARD.tileH);
+    expect(ISO_BOARD_REVEAL.tileW).toBe(2 * ISO_BOARD_REVEAL.tileH);
+  });
+
+  /**
+   * Story 5.3 device pass: Battle and Reveal now carry SEPARATE hand-tuned
+   * frames (Battle spreads down the terrain; Reveal stays clear of its tactics
+   * block). Hand-tuned numbers rot silently, so pin what each frame must
+   * respect — these are the constraints that made the split necessary.
+   */
+  describe('per-scene board frames (story 5.3)', () => {
+    /** Vertical extent of one side's tiles, half-diamond included. */
+    const extentY = (side: 'A' | 'B', layout: typeof ISO_BOARD | typeof ISO_BOARD_REVEAL) => {
+      const ys = boardTilesFor(side, layout).map((t) => t.y);
+      return { top: Math.min(...ys) - layout.tileH / 2, bottom: Math.max(...ys) + layout.tileH / 2 };
+    };
+    const extentX = (side: 'A' | 'B', layout: typeof ISO_BOARD | typeof ISO_BOARD_REVEAL) => {
+      const xs = boardTilesFor(side, layout).map((t) => t.x);
+      return { left: Math.min(...xs) - layout.tileW / 2, right: Math.max(...xs) + layout.tileW / 2 };
+    };
+    const boardTilesFor = (side: 'A' | 'B', layout: typeof ISO_BOARD | typeof ISO_BOARD_REVEAL) => boardTiles(side, '\\', layout);
+
+    it('keeps every board inside the 360 canvas, in both frames', () => {
+      for (const layout of [ISO_BOARD, ISO_BOARD_REVEAL]) {
+        for (const side of ALL_SIDES) {
+          const { left, right } = extentX(side, layout);
+          expect(left).toBeGreaterThanOrEqual(0);
+          expect(right).toBeLessThanOrEqual(BASE_WIDTH);
+        }
+      }
+    });
+
+    it('never lets the two boards overlap — there is always a clash gap', () => {
+      for (const layout of [ISO_BOARD, ISO_BOARD_REVEAL]) {
+        expect(extentY('A', layout).top).toBeGreaterThan(extentY('B', layout).bottom);
+      }
+    });
+
+    it('Battle: boards clear the top HUD band and the bottom control bar', () => {
+      expect(extentY('B', ISO_BOARD).top).toBeGreaterThanOrEqual(BATTLE_HUD_BAND_H);
+      // The control bar sits at BASE_HEIGHT − 40 with a 44px height → top edge 578.
+      expect(extentY('A', ISO_BOARD).bottom).toBeLessThanOrEqual(578);
+    });
+
+    it('Reveal: the player board stays above the tactics block (ARMY TACTICS y=342)', () => {
+      expect(extentY('A', ISO_BOARD_REVEAL).bottom).toBeLessThanOrEqual(342);
+      expect(extentY('B', ISO_BOARD_REVEAL).top).toBeGreaterThanOrEqual(REVEAL_HUD_BAND_H);
+    });
+
+    it('Battle really is the bigger stage — the whole point of the split', () => {
+      expect(ISO_BOARD.tileW).toBeGreaterThan(ISO_BOARD_REVEAL.tileW);
+      const battleSpan = extentY('A', ISO_BOARD).bottom - extentY('B', ISO_BOARD).top;
+      const revealSpan = extentY('A', ISO_BOARD_REVEAL).bottom - extentY('B', ISO_BOARD_REVEAL).top;
+      expect(battleSpan).toBeGreaterThan(revealSpan);
+    });
   });
 
   it('checker-flags tiles in an alternating pattern (side color vs neutral)', () => {

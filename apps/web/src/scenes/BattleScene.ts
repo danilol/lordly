@@ -75,7 +75,7 @@ interface UnitView {
   dead: boolean;
 }
 
-const BAR_W = 36;
+const BAR_W = 44; // story 5.3: widened with the enlarged battle tiles
 const BAR_H = 8;
 /**
  * How far a melee attacker steps IN toward its target and back, as a fraction
@@ -244,7 +244,8 @@ export class BattleScene extends Scene {
       0,
       0.5,
     );
-    this.playerLabel = crispText(this, BASE_WIDTH - 20, 322, BATTLE_PLAYER_LABEL, {
+    this.playerLabel = crispText(this, BASE_WIDTH - 20, 444, BATTLE_PLAYER_LABEL, {
+      // moved below the enlarged player board (story 5.3)
       fontFamily: 'Courier',
       fontSize: `${MIN_FONT_PX}px`,
       color: PALETTE.playerText,
@@ -313,7 +314,7 @@ export class BattleScene extends Scene {
     // Chrome hugs the sprite tightly — units on the same lane diagonal sit a
     // half-tile (28px) apart vertically, so every extra pixel of stack height
     // is overlap; depth sorting keeps the front unit's chrome readable.
-    const sprite = addUnitSprite(this, 0, -14, unit.class, 32);
+    const sprite = addUnitSprite(this, 0, -18, unit.class, 42); // story 5.3: scaled with the enlarged battle tiles (56→74)
     const code = crispText(this, 0, 4, CLASS_ABBREVIATIONS[unit.class], unitCodeStyle(unit.side)).setOrigin(0.5);
     const badge = addElementBadge(this, 16, -28, unit.element);
     const barBack = this.add.rectangle(-BAR_W / 2, 14, BAR_W, BAR_H, 0xffffff, 0.1).setOrigin(0, 0.5);
