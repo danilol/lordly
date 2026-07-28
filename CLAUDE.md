@@ -10,6 +10,7 @@ pnpm test                             # run all tests (engine + web) once, from 
 pnpm coverage                         # same, instrumented — engine has a 90% line gate (AD-7/NFR2)
 pnpm typecheck                        # tsc --noEmit in every workspace package
 pnpm lint / pnpm lint:fix             # eslint (incl. engine purity AST rules) + prettier --check
+pnpm knip                             # dead-code gate: unused files/exports/deps (false positives live in knip.jsonc, with reasons)
 pnpm exec vitest run <path>           # run a single test file, e.g. packages/engine/test/rng.test.ts
 pnpm exec vitest run <path> -t "name" # run a single test by name
 pnpm --filter web dev                 # dev server at http://localhost:8080
@@ -18,7 +19,7 @@ pnpm --filter @lordly/engine sim -- --runs=100 --seed=1 --threshold=0.65 --mode=
                                        # AI-vs-AI balance sweep over STRATEGY_POOL (NFR4)
 ```
 
-CI (`.github/workflows/ci.yml`) runs, in order: `typecheck` → `lint` → `coverage` → `web build` → deploy (main only). `pnpm coverage` already runs the full suite, so CI doesn't also run `pnpm test`.
+CI (`.github/workflows/ci.yml`) runs, in order: `typecheck` → `lint` → `knip` → `coverage` → `web build` → deploy (main only). `pnpm coverage` already runs the full suite, so CI doesn't also run `pnpm test`.
 
 ## Architecture
 

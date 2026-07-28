@@ -20,8 +20,13 @@ import type { BattleSpeedId } from '../config/constants';
 export const SETTINGS_KEY = 'lordly.v1.settings';
 export const HISTORY_KEY = 'lordly.v1.history';
 
-/** How many matches the on-device history remembers (FR28: the last 10). */
-export const HISTORY_LIMIT = 10;
+/**
+ * How many matches the on-device history remembers (FR28: the last 10).
+ * Module-local on purpose (2026-07-28 dead-export sweep): nothing imports it,
+ * and storage.test.ts pins the eviction against the LITERAL 10 — the FR28
+ * spec value — so a drift here fails the test instead of silently retuning it.
+ */
+const HISTORY_LIMIT = 10;
 
 /**
  * One remembered match — EXACTLY the AD-8 shape: the full `MatchSetup`

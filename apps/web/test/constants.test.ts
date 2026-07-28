@@ -10,6 +10,7 @@ import {
   battleTurnLabel,
   BLAST_ELEMENT_WORD,
   CODE_STROKE_COLOR,
+  CODE_STROKE_THICKNESS,
   DEFAULT_SPEED_ID,
   DPR_BACKING_CAP,
   GAME_NAME,
@@ -101,10 +102,15 @@ describe('backingScaleFor (story 4.0 text-ceiling fix) — the DPR-sized backing
 
 describe('unitCodeStyle (FR39f, story 4.0) — the label-contrast token treatment', () => {
   it('carries a dark stroke so codes read on same-hue tiles (and future busy backdrops)', () => {
+    // The thickness pins the TOKEN, not a literal (2026-07-28 dead-export
+    // sweep: the constant existed but the test asserted `>= 3` beside it,
+    // leaving the export with no consumer); the floor is asserted once on
+    // the token itself so a future thinning still fails here.
+    expect(CODE_STROKE_THICKNESS, 'the FR39f stroke must stay readable').toBeGreaterThanOrEqual(3);
     for (const side of ['A', 'B'] as const) {
       const style = unitCodeStyle(side);
       expect(style.stroke).toBe(CODE_STROKE_COLOR);
-      expect(style.strokeThickness).toBeGreaterThanOrEqual(3);
+      expect(style.strokeThickness).toBe(CODE_STROKE_THICKNESS);
     }
   });
 

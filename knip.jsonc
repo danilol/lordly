@@ -1,0 +1,41 @@
+// Dead-code gate (2026-07-28 sweep): knip finds unused files, exports, and
+// dependencies across the workspace. Runs in CI after lint (`pnpm knip`).
+// Every override below is a VERIFIED false positive from the adoption sweep —
+// don't add entries here without checking the flagged thing really is alive.
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // Exported TYPES used only within their own file stay exported on purpose:
+  // they name fields of exported interfaces (Outcome, MatchPhase,
+  // CompositionStats), which is API surface for consumers. Exported VALUES
+  // with no importer are still flagged — those are real dead surface (the
+  // adoption sweep demoted two).
+  "ignoreExportsUsedInFile": { "interface": true, "type": true },
+  "workspaces": {
+    ".": {},
+    "packages/engine": {
+      // `fast-check` is @fast-check/vitest's peer dependency — the tests
+      // import only the wrapper, but pnpm's strict resolution needs the peer
+      // listed here.
+      "ignoreDependencies": ["fast-check"]
+    },
+    "apps/web": {
+      // The vite configs are selected via `vite --config vite/config.*.mjs`
+      // in the scripts — a CLI flag knip can't trace, so they are declared as
+      // entries (config.base.mjs is imported by both, so it traces from
+      // these). NOT via knip's vite-plugin `config` option: that mode
+      // EXECUTES the configs and its loader can't resolve vite-plugin-pwa
+      // from the workspace (knip known issue).
+      "entry": ["vite/config.dev.mjs", "vite/config.prod.mjs"],
+      // `terser` is consumed DYNAMICALLY by vite (`minify: 'terser'` in
+      // config.prod.mjs is a string, not an import — vite requires the
+      // package at build time), so import tracing can't see it.
+      "ignoreDependencies": ["terser"],
+      // `sips` is the macOS-only image decode in check-frame-art.mjs (the
+      // script documents the skip-with-warning path on other hosts, e.g. CI).
+      // `vite` IS a listed devDependency here — but a custom `entry` list
+      // shadows knip's vite plugin, and with the plugin inactive knip loses
+      // the binary-to-package mapping and misreports it as unlisted.
+      "ignoreBinaries": ["sips", "vite"]
+    }
+  }
+}

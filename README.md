@@ -19,6 +19,8 @@ pnpm install
 pnpm test          # run all tests (engine + web) once from the root
 pnpm coverage      # same, with a coverage report
 pnpm typecheck     # typecheck every workspace package
+pnpm lint          # eslint (incl. the engine purity rules) + prettier
+pnpm knip          # dead-code gate — unused files, exports, dependencies
 ```
 
 ## Run locally

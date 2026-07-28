@@ -30,6 +30,11 @@ jobs:
       # Prettier check. Mechanizes the epic-1 recurring review findings.
       - run: pnpm lint
 
+      # Dead-code gate (2026-07-28 sweep): unused files, exports, and
+      # dependencies across the workspace. Verified false positives are
+      # codified — with reasons — in knip.jsonc; keep that file honest.
+      - run: pnpm knip
+
       # `pnpm coverage` runs the identical full suite with instrumentation,
       # so a separate `pnpm test` step would run everything twice.
       - run: pnpm coverage
