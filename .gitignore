@@ -22,3 +22,11 @@ docs/planning-artifacts/ux-designs/*/imports/
 # only the sub-folder left the parent stageable by `git add -A` in a PUBLIC repo
 # (story 5.2 code review — it already nearly happened once).
 docs/planning-artifacts/ux-designs/ui/
+
+# Same rule for the other batch folder: raw Midjourney generations land in
+# ux-designs/midjourney/ and the WINNERS are copied into midjourney/selected/
+# (tracked, and what the app ships from). Ignore the raw drops, keep selected/.
+# Four early raw files are already tracked from before this rule — gitignore
+# does not untrack, so they stay until deliberately removed.
+docs/planning-artifacts/ux-designs/midjourney/*
+!docs/planning-artifacts/ux-designs/midjourney/selected/
