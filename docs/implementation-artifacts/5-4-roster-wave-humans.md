@@ -56,11 +56,11 @@ so that my squads draw from the roster the game was always meant to have.
   - [x] Goldens (`packages/engine/test/golden.test.ts`): re-record **only** the battles the revision actually changes, and AUDIT event-by-event. Per `ROSTER.md`'s re-record column the changed inputs are mage, sorceress, phalanx and valkyrie — so any golden containing them changes; a golden with none of them **must be byte-identical** (assert that as the regression pin, the 4.4 method).
   - [x] Sweep: `pnpm --filter @lordly/engine sim` and the CI band test (`sim.test.ts`) must converge **≤65% in BOTH modes**. Casters losing splash is a real nerf to the three-mages family — expect a re-tune and budget for it. Remember the 5.1 lesson: `runs=200` can disagree with `runs=500` near the band edge — run the heavy confirmation before certifying.
   - [x] Property-test arbitraries (`packages/engine/test/arbitraries.ts:17-29`) derive small/monster class lists from `ALL_CLASSES`, so they pick up newcomers automatically — but the 4.8 lesson says a widened arbitrary can starve other properties' rare branches. Watch for flaky/starved property tests and reweight rather than lowering `numRuns`.
-- [ ] Task 8: Docs + gate (AC: 1, 2, 3)
+- [x] Task 8: Docs + gate (AC: 1, 2, 3)
   - [x] `docs/rules.md` gains the newcomers where the roster is described (the `rules-doc.test.ts` drift guard pins slot cost/role to BALANCE — check what it asserts and keep it green).
   - [x] Full gate: `pnpm typecheck && pnpm lint && pnpm coverage` (engine ≥90% lines), `pnpm --filter web build` (runs the 5.2 frame-art guard too).
   - [x] NO `logVersion` change — confirm and state it (dossier §4: new classes are new `UnitClass` values in setup/balance data, new `MoveKind` values ride the hash; the 4.7/4.8 precedents).
-  - [ ] Device pass with Danilo (the new Draft grid is the thing to look at).
+  - [x] Device pass with Danilo (the new Draft grid is the thing to look at). ACCEPTED 2026-07-28 — "it works great on my device."
 
 ## Dev Notes
 
@@ -160,11 +160,12 @@ E5-D4 (casters lose splash) collapsed the caster comps and let the melee/sniper 
 - **NO logVersion change** (confirmed: new classes are new `UnitClass` values in setup/balance data; `bolt` rides `UnitAttacked.kind`'s existing string field — the 4.7 `bash` precedent). balanceVersion 9→10, hash re-pinned (7d0a6a4e).
 - **Deferred/known-limitation notes:** the 5.6 unit-data card's damage-type glyph classification (bolt = magic) has no seam yet — it is 5.6's scoped work, nothing recorded. The 4.3 chip bounds-check deferral is CLOSED (deferred-work.md updated).
 - Full gate green: typecheck, lint, coverage (621 tests, engine 97.5% lines vs 90% gate), web build (frame-art guard included).
-- **Awaiting Danilo:** the device pass (Task 8's last subtask) — the re-laid 17-class Draft grid is the thing to look at (8px tile names and the compressed detail panel especially).
+- **Device pass ACCEPTED (Danilo, 2026-07-28):** the re-laid 17-class Draft grid confirmed on device — "it works great on my device." All tasks closed.
 
 ### Change Log
 
-- 2026-07-28: Story implemented end-to-end (engine wave + shell + re-tune + docs); status → review. Device pass pending.
+- 2026-07-28: Story implemented end-to-end (engine wave + shell + re-tune + docs); status → review.
+- 2026-07-28: Device pass accepted by Danilo — all tasks closed; story stays in review awaiting the code-review pass.
 
 ### File List
 
