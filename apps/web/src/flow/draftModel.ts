@@ -54,7 +54,59 @@ const CLASS_TEXT: Record<UnitClass, { role: string; behavior: string }> = {
   hawkman: { role: 'Skirmisher', behavior: 'Melee: nearest reachable enemy row; a reliable, unremarkable line-holder' },
   vultan: { role: 'Skirmisher', behavior: 'Melee up close; from the back row fires Wind Shot at the rearmost enemy' },
   raven: { role: 'Skirmisher', behavior: 'Melee up close; from the back row fires Thunder Arrow at the rearmost enemy' },
+  // Story 5.5 — the monster wave (prose tracks ROSTER.md's showcase column).
+  // Every one of these is leader-INELIGIBLE (E5-D13); that rule is surfaced
+  // by `draftBlockReason` on the tray hint line rather than repeated in
+  // eleven prose strings, so it stays single-sourced on the `race` field.
+  // Note the 7 row-varying monsters (Gryphon + the six breath dragons) show
+  // the F/M/B move breakdown instead of this line in the Draft panel — the
+  // prose is still their single source for every other surface.
+  gryphon: {
+    role: 'Fast beast',
+    behavior: 'Melee up close; from the back row fires Wind Shot at the rearmost enemy. Acts early; so large no unit may stand beside it',
+  },
+  wyrm: { role: 'All-row beast', behavior: 'Melee brute: bites from any row, twice from the middle; so large no unit may stand beside it' },
+  hellhound: {
+    role: 'Glass-cannon beast',
+    behavior: 'Melee brute: three bites from the front row, the biggest burst in the game; so large no unit may stand beside it',
+  },
+  whelp: { role: 'Small dragon', behavior: 'Melee: nearest reachable enemy row. A 1-slot dragon: it stands anywhere, but hunters still hit it ×1.5' },
+  emberdrake: { role: 'Damage dragon', behavior: 'Bites up close; from the back row breathes fire over a whole enemy row' },
+  frostfang: { role: 'Warded dragon', behavior: 'Bites up close; from the back row breathes frost over a whole enemy row. Resists magic' },
+  stormscale: { role: 'Fast dragon', behavior: 'Bites up close; from the back row breathes storm over a whole enemy row. Acts early and crits often' },
+  cragmaw: { role: 'Wall dragon', behavior: 'Bites up close; from the back row breathes acid over a whole enemy row. The toughest hide in the game' },
+  // Nightwing's tail tracks ROSTER's "high STR + DEX lean" — NOT "hits
+  // hardest": the Emberdrake out-muscles it 34 STR to 32 (review-caught).
+  nightwing: { role: 'Assassin dragon', behavior: 'Bites up close; from the back row breathes dread over a whole enemy row. Hits hard and crits often' },
+  halowing: { role: 'Balanced dragon', behavior: 'Bites up close; from the back row breathes radiance over a whole enemy row. No weakness, no spike' },
 };
+
+/**
+ * The Draft picker's tabs (story 5.5, Danilo-approved 2026-07-28): 27 classes
+ * arithmetically cannot fit one grid (recon against the 5.4 5×62 geometry: 6
+ * rows would have ended at y=418 against the detail panel at 310), so the
+ * picker splits into two tabs — Humans (16) and Monsters (the Golem + the
+ * 5.5 wave, 11) — and each tab renders the CURRENT `DRAFT_GRID` (the 4×80×48
+ * re-lay the tabs themselves paid for; see constants.ts for the arithmetic).
+ * The split axis is RACE (the E5-D13 field): every class lands in exactly
+ * one tab, and a future wave that overflows a tab fails draft-grid.test.ts,
+ * not a device pass.
+ */
+export type DraftTabId = 'humans' | 'monsters';
+
+export const ALL_DRAFT_TABS: readonly DraftTabId[] = ['humans', 'monsters'];
+
+export const DRAFT_TAB_LABELS: Record<DraftTabId, string> = { humans: 'HUMANS', monsters: 'MONSTERS' };
+
+/** Which tab a class lives in — humans by race, everything else is a monster-tab creature (incl. the small Whelp). */
+export function draftTabOf(cls: UnitClass): DraftTabId {
+  return BALANCE.classes[cls].race === 'human' ? 'humans' : 'monsters';
+}
+
+/** The classes shown on one tab, in ALL_CLASSES order (the grid fills row-major from this). */
+export function draftTabClasses(tab: DraftTabId): UnitClass[] {
+  return ALL_CLASSES.filter((cls) => draftTabOf(cls) === tab);
+}
 
 /**
  * Whether this class's move actually varies by row (FR32/FR33, story 4.7) —
@@ -100,9 +152,31 @@ export function canAddUnit(army: readonly DraftedUnit[], cls: UnitClass): boolea
   return true;
 }
 
-/** Whether the draft is complete and the player may continue to placement (slot budget exactly filled — AD-1). */
+/** Whether the army contains at least one human (E5-D13, story 5.5) — the crown must land on someone. */
+export function hasHuman(army: readonly DraftedUnit[]): boolean {
+  return army.some((u) => BALANCE.classes[u.class].race === 'human');
+}
+
+/**
+ * Whether the draft is complete and the player may continue to placement:
+ * slot budget exactly filled (AD-1) AND at least one human aboard (E5-D13,
+ * story 5.5 — Placement requires a crown and only humans wear it, so an
+ * all-monster army would be a dead end there; the gate moves the refusal to
+ * where the fix is, with `draftBlockReason` naming it).
+ */
 export function canContinue(army: readonly DraftedUnit[]): boolean {
-  return slotTotal(army) === BALANCE.slotBudget;
+  return slotTotal(army) === BALANCE.slotBudget && hasHuman(army);
+}
+
+/**
+ * Why the draft can't continue yet, or `null` when it can — the Draft scene's
+ * hint line renders this so the no-human case is never a silent dead end
+ * (this codebase's no-dead-end philosophy).
+ */
+export function draftBlockReason(army: readonly DraftedUnit[]): string | null {
+  if (slotTotal(army) !== BALANCE.slotBudget) return null; // the fill counter already tells this story
+  if (!hasHuman(army)) return 'Your army needs a human to lead it — swap one in to continue';
+  return null;
 }
 
 /**

@@ -7,8 +7,8 @@
 /** Package identity constant; also proves workspace wiring (story 1.1). */
 export const ENGINE_NAME = 'lordly-engine';
 
-export { ALL_CLASSES, ALL_COLS, ALL_ELEMENTS, ALL_ROLES, ALL_ROWS, ALL_SIDES, ALL_TACTICS, LOG_VERSION } from './types';
-export type { Col, Element, MatchSetup, Mode, Placement, Role, Row, Side, SpellKind, Tactic, Unit, UnitClass, UnitId } from './types';
+export { ALL_CLASSES, ALL_COLS, ALL_ELEMENTS, ALL_RACES, ALL_ROLES, ALL_ROWS, ALL_SIDES, ALL_TACTICS, LOG_VERSION } from './types';
+export type { Col, Element, MatchSetup, Mode, Placement, Race, Role, Row, Side, SpellKind, Tactic, Unit, UnitClass, UnitId } from './types';
 export type {
   ActionFizzled,
   ActionMisfired,
@@ -41,7 +41,7 @@ export type { MatchSetupViolation } from './validate';
 export { BALANCE, dealsAdvantage, MAX_MONSTERS_PER_ARMY, rpsRatio, SLOT_COST, slotTotal } from './balance';
 export type { BalanceData, ClassStats, Ratio, RoleRelation, SizeClass } from './balance';
 export { contentHash } from './hash';
-export { CLASS_SEX, CONSTRUCT_NAMES, FEMALE_NAMES, MALE_NAMES, NAME_TABLES, rollName } from './names';
+export { BEAST_NAMES, CLASS_SEX, CONSTRUCT_NAMES, DRAGON_NAMES, FEMALE_NAMES, MALE_NAMES, NAME_TABLES, rollName } from './names';
 export type { NameSex } from './names';
 export { createStreams, nextInt, rollElement, STREAM_LABELS } from './rng';
 export type { Stream, StreamLabel, Streams } from './rng';

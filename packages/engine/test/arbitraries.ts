@@ -15,7 +15,14 @@ const nameArb: fc.Arbitrary<string> = fc.oneof(
 );
 
 const SMALL_CLASSES = ALL_CLASSES.filter((c) => BALANCE.classes[c].sizeClass === 'small');
-const MONSTER_CLASSES = ALL_CLASSES.filter((c) => BALANCE.classes[c].sizeClass === 'monster'); // golem-only wave 1 (dossier D-1b), kept generic for a future wave
+const MONSTER_CLASSES = ALL_CLASSES.filter((c) => BALANCE.classes[c].sizeClass === 'monster'); // Golem-only in wave 1 (dossier D-1b); story 5.5 adds nine more — derived from data, never listed
+/**
+ * The smalls that may wear the crown (E5-D13, story 5.5): only `race:
+ * 'human'`. Story 5.5 put a NON-human into `SMALL_CLASSES` for the first time
+ * — the 1-slot Whelp — so "small" and "crownable" stopped being the same set,
+ * and `sideArb` below must draw its leader from THIS list.
+ */
+const HUMAN_SMALL_CLASSES = SMALL_CLASSES.filter((c) => BALANCE.classes[c].race === 'human');
 
 const unitArb = (classes: readonly (typeof ALL_CLASSES)[number][]): fc.Arbitrary<Unit> =>
   fc.record({
@@ -25,6 +32,7 @@ const unitArb = (classes: readonly (typeof ALL_CLASSES)[number][]): fc.Arbitrary
   });
 
 const smallUnitArb = unitArb(SMALL_CLASSES);
+const humanSmallUnitArb = unitArb(HUMAN_SMALL_CLASSES);
 const monsterUnitArb = unitArb(MONSTER_CLASSES);
 const A_SMALL = SMALL_CLASSES[0] as UnitClass; // any small — placement legality is class-independent for smalls (1 cell, no adjacency effect)
 
@@ -88,6 +96,12 @@ const VALID_MONSTER_PLACEMENTS: readonly Placement[][][] = [0, 1, 2].map((count)
  * a room-leaving cell-set, the rest of the budget filled with smalls at the
  * engine's own `legalAnchors` — footprint-legal BY CONSTRUCTION, so a
  * property run never throws a spurious `InvalidMatchSetupError`.
+ *
+ * Story 5.5 (E5-D13): the FIRST small is drawn from the humans only, so every
+ * generated side carries at least one crownable unit by construction —
+ * `smallCount` is always ≥1 (two monsters still leave one slot), so this
+ * costs no reachability. Without it, an all-Whelp small contingent would make
+ * `validateMatchSetup` throw `leader-not-human` on a generated setup.
  */
 const armyAndPlacementsArb: fc.Arbitrary<{ army: Unit[]; placements: Placement[] }> = monsterCountArb.chain((monsterCount) => {
   const smallCount = BALANCE.slotBudget - monsterCount * 2;
@@ -95,9 +109,11 @@ const armyAndPlacementsArb: fc.Arbitrary<{ army: Unit[]; placements: Placement[]
     .tuple(
       fc.constantFrom(...(VALID_MONSTER_PLACEMENTS[monsterCount] as Placement[][])),
       fc.array(monsterUnitArb, { minLength: monsterCount, maxLength: monsterCount }),
-      fc.array(smallUnitArb, { minLength: smallCount, maxLength: smallCount }),
+      humanSmallUnitArb,
+      fc.array(smallUnitArb, { minLength: smallCount - 1, maxLength: smallCount - 1 }),
     )
-    .chain(([monsterCells, monsterUnits, smallUnits]) => {
+    .chain(([monsterCells, monsterUnits, humanUnit, otherSmalls]) => {
+      const smallUnits = [humanUnit, ...otherSmalls];
       const existing = monsterUnits.map((u, i) => ({ class: u.class, placement: monsterCells[i] as Placement }));
       const freeCells = legalAnchors(A_SMALL, existing); // guaranteed ≥ smallCount by validMonsterPlacements
       return fc.shuffledSubarray(freeCells, { minLength: smallCount, maxLength: smallCount }).map((smallCells) => ({
@@ -111,17 +127,17 @@ const armyAndPlacementsArb: fc.Arbitrary<{ army: Unit[]; placements: Placement[]
  * One side's army/placements PLUS a leader index — a separate step because
  * army length now VARIES (story 4.8: 2 monsters + 1 small is 3 units, not
  * 5), so the legal leader range depends on the just-generated army. Leader
- * is drawn only from SMALL indices (device-reported follow-up: a monster can
- * never be crowned, `validateMatchSetup` rejects it) — `smallCount` is
- * always ≥1 (a 2-monster side still leaves 1 slot for a small), so this
+ * is drawn only from HUMAN indices (E5-D13, story 5.5 — race, not sizeClass:
+ * the Whelp is small but dragonkind and `validateMatchSetup` rejects it) —
+ * `armyAndPlacementsArb` guarantees at least one human per side, so this
  * never draws from an empty set.
  */
 const sideArb: fc.Arbitrary<{ army: Unit[]; placements: Placement[]; leader: number }> = armyAndPlacementsArb.chain(({ army, placements }) => {
-  const smallIndices = army.reduce<number[]>((acc, unit, i) => {
-    if (BALANCE.classes[unit.class].sizeClass !== 'monster') acc.push(i);
+  const humanIndices = army.reduce<number[]>((acc, unit, i) => {
+    if (BALANCE.classes[unit.class].race === 'human') acc.push(i);
     return acc;
   }, []);
-  return fc.integer({ min: 0, max: smallIndices.length - 1 }).map((i) => ({ army, placements, leader: smallIndices[i] as number }));
+  return fc.integer({ min: 0, max: humanIndices.length - 1 }).map((i) => ({ army, placements, leader: humanIndices[i] as number }));
 });
 
 /**

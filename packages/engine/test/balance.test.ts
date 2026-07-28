@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BALANCE, dealsAdvantage, rpsRatio, SLOT_COST, slotTotal } from '../src/balance';
 import type { Ratio } from '../src/balance';
-import { ALL_CLASSES } from '../src/types';
+import { ALL_CLASSES, ALL_RACES } from '../src/types';
 import type { UnitClass } from '../src/types';
 
 describe('balance data (FR14, FR15, FR16, AD-4)', () => {
@@ -26,16 +26,42 @@ describe('balance data (FR14, FR15, FR16, AD-4)', () => {
     }
   });
 
-  it('slot schema (AD-1, story 4.2/4.8): budget 5, every small class costs 1, the Golem (the wave-1 monster) costs 2', () => {
+  it('slot schema (AD-1, story 4.2/4.8/5.5): budget 5, smalls cost 1, and EXACTLY the ten 2-slot monsters are monsters', () => {
     expect(BALANCE.slotBudget).toBe(5);
     expect(SLOT_COST).toEqual({ small: 1, monster: 2 });
+    // The frozen membership list, not a rule re-derived from the data: a class
+    // silently flipping size class is exactly the drift this pins. Story 5.5
+    // adds nine monsters to the Golem — and the WHELP, which is dragonkind
+    // but a `small` (E5-P3: 1 slot, no reservation ring), so it belongs on
+    // the other side of this list. That distinction is the whole point.
+    const monsters = ALL_CLASSES.filter((cls) => BALANCE.classes[cls].sizeClass === 'monster');
+    expect(new Set(monsters)).toEqual(
+      new Set(['golem', 'gryphon', 'wyrm', 'hellhound', 'emberdrake', 'frostfang', 'stormscale', 'cragmaw', 'nightwing', 'halowing']),
+    );
+    expect(BALANCE.classes.whelp.sizeClass, 'the Whelp is dragonkind but SMALL (E5-P3)').toBe('small');
     for (const cls of ALL_CLASSES) {
-      if (cls === 'golem') {
-        expect(BALANCE.classes[cls].sizeClass, `${cls} ships monster`).toBe('monster');
-      } else {
-        expect(BALANCE.classes[cls].sizeClass, `${cls} ships small`).toBe('small');
-      }
+      expect(SLOT_COST[BALANCE.classes[cls].sizeClass], `${cls} slot cost`).toBe(cls === 'whelp' || !monsters.includes(cls) ? 1 : 2);
     }
+  });
+
+  it('race (E5-D13, story 5.5) is per-class data on EVERY class, and only humans may be crowned', () => {
+    for (const cls of ALL_CLASSES) {
+      expect(ALL_RACES, `${cls}.race`).toContain(BALANCE.classes[cls].race);
+    }
+    // The frozen race map for the non-humans — the crown-eligibility set is
+    // its complement, so a class drifting INTO 'human' would open the crown
+    // to a monster silently. The Whelp is listed here on purpose: small, but
+    // a dragon, so uncrownable (E5-D13) AND hunter bait (E5-P1).
+    const byRace = (race: string) => new Set(ALL_CLASSES.filter((cls) => BALANCE.classes[cls].race === race));
+    expect(byRace('golem')).toEqual(new Set(['golem']));
+    expect(byRace('beast')).toEqual(new Set(['gryphon', 'wyrm', 'hellhound']));
+    expect(byRace('dragon')).toEqual(new Set(['whelp', 'emberdrake', 'frostfang', 'stormscale', 'cragmaw', 'nightwing', 'halowing']));
+    expect(byRace('human').size, 'the 16 shipped humans — every other class is a creature').toBe(16);
+    // Race and role are SEPARATE axes (types.ts): they happen to coincide for
+    // dragonkind today, which is what makes the Dragon Hunter's hunt land on
+    // exactly the seven dragons — pin the coincidence so a future split is a
+    // deliberate edit here, not a silent balance change.
+    expect(new Set(ALL_CLASSES.filter((cls) => BALANCE.classes[cls].role === 'dragon'))).toEqual(byRace('dragon'));
   });
 
   it('slotTotal sums per-class slot costs — THE legality arithmetic, never army.length (AD-1)', () => {

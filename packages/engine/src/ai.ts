@@ -81,6 +81,23 @@ export interface ChooseSetupOptions {
  * (3-unit-era probe, kept as a caution): dominant full-RPS spread families
  * are left as discoverable player tech rather than an AI board no pool
  * could balance (see README's Balancing harness section).
+ *
+ * Story 5.5 grows the pool 12 → 18 with six MONSTER comps (see below). Two
+ * findings from that sweep are worth carrying forward:
+ *   1. A monster in the BACK row protected by a screen AND healed is the
+ *      single most overtuned shape in the game — a breath dragon behind a
+ *      knight with a cleric probed at 83.6% single / 76.6% wipeout. This is
+ *      4.8's "sustain behind a wall" finding for the third time (Golem,
+ *      beast-rush, breath-battery). The flag is that COMBINATION — screened +
+ *      back-row + healed — not healers as such: four shipped monster comps
+ *      carry clerics in shapes the sweep certifies in-band; the two comps
+ *      where a healer probe overtuned (breath-battery, beast-rush) took a
+ *      witch instead.
+ *   2. A monster in the MID row is a trap: one action a turn, and its
+ *      king-move ring swallows five cells (a mid-row dragon probed at 20.2%).
+ * Converged verdict at runs=500 (seeds 1/2/3, both modes): single max
+ * twin-golems 64.3%, wipeout max longbows 63.8% — and farshot's 4.12
+ * accepted band widening (65.3% wipeout) is RETIRED, not re-accepted.
  */
 export const STRATEGY_POOL: readonly StrategyArchetype[] = [
   {
@@ -111,13 +128,20 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
     // nerfed (E5-D4), the 3-sniper + heal-behind-a-wall shape shot to ~73% —
     // one archer steps to the exposed FRONT row (farshot's 4.7 move: still
     // snipes globally, now melee food), pulling it back toward band.
+    // Story 5.5 re-tune (the ONLY shipped comp this wave touches): longbows
+    // entered the story at 64.9% wipeout — the flagged edge — and the monster
+    // comps' arrival pushed it to 66.2%, over band. Its CLERIC steps from the
+    // sheltered mid/center to the exposed FRONT-left corner: the sustain that
+    // compounds across wipeout engagements now has to survive melee to keep
+    // paying out. Identity intact (still the archer line with a heal behind
+    // it), and single mode barely moves (64.1% → 62.9%).
     classes: ['vultan', 'archer', 'archer', 'knight', 'cleric'],
     placement: [
       { row: 'back', col: 'left' },
       { row: 'front', col: 'right' },
       { row: 'back', col: 'center' },
       { row: 'front', col: 'center' },
-      { row: 'mid', col: 'center' },
+      { row: 'front', col: 'left' },
     ],
   },
   {
@@ -202,12 +226,23 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
     // exposure sent WIPEOUT to 68.5% (the cleric's sustain compounds across
     // engagements — the very thing 4.7 was policing) while single sat at 48%,
     // so the one-archer exposure STAYS.
+    // Story 5.5 re-tune, and it RETIRES the 4.12 accepted band widening: at
+    // CONVERGENCE (runs=500) the monster wave pushed farshot's wipeout rate to
+    // 66.0%, past both the 65.3% that 4.12 consciously accepted and the band
+    // itself. The fix is one COLUMN: the second archer slides mid/right →
+    // mid/left, onto the same flank as the front archer. Same rows, same
+    // exposure, same identity — but the comp's two shooters now share a lane
+    // instead of bracketing the board, so an enemy front line engages them
+    // together rather than being split. Wipeout 66.0% → 62.5%, and single
+    // mode IMPROVES (37.5% → 39.3%) — the rare re-tune that costs the comp
+    // nothing. (Probed alternatives that pushed an archer to the FRONT row
+    // worked on wipeout too but gutted single mode to ~25%.)
     classes: ['archer', 'mage', 'cleric', 'archer', 'witch'],
     placement: [
       { row: 'front', col: 'left' },
       { row: 'back', col: 'right' },
       { row: 'back', col: 'center' },
-      { row: 'mid', col: 'right' },
+      { row: 'mid', col: 'left' },
       { row: 'back', col: 'left' },
     ],
   },
@@ -311,6 +346,117 @@ export const STRATEGY_POOL: readonly StrategyArchetype[] = [
       { row: 'back', col: 'center' },
     ],
   },
+  // ── Story 5.5 — the monster wave's six comps. Curated by SHAPE, not by
+  // stat tweaks (the 4.8 lesson): each one is a distinct board answer the
+  // 10 new classes make possible, and between them they cover all ten (the
+  // 4.12 reverse-coverage guard). Every comp carries ≥1 HUMAN — E5-D13 makes
+  // an all-creature army unvalidatable, and `chooseSetup` draws its leader
+  // from the human indices, so a human-free entry would crash the AI.
+  // The dragons' `breath` is a BACK-row move, so a comp that wants the
+  // row-AoE has to put its dragons in the back and live with the ring they
+  // reserve there — that constraint is what makes these shapes different
+  // from the Golem's.
+  {
+    id: 'breath-battery',
+    name: 'Breath Battery',
+    // The ROW-AoE shape: one Emberdrake breathing from back/left over the
+    // fullest enemy row, with a thin human line around it (its ring takes
+    // back/center, mid/left, mid/center). 2 + 1 + 1 + 1 = 5 slots. The
+    // deliberately un-sustained version: a probe with a knight screen + a
+    // cleric behind the dragon hit 83.6% single / 76.6% wipeout — the same
+    // "sustain behind a wall" shape 4.8 caught on the Golem, and the reason
+    // this comp's support is a WITCH (control, no healing) and its screen is
+    // an archer. The dragon is not the problem; protecting it is.
+    classes: ['emberdrake', 'archer', 'archer', 'witch'],
+    placement: [
+      { row: 'back', col: 'left' },
+      { row: 'front', col: 'left' },
+      { row: 'mid', col: 'right' },
+      { row: 'back', col: 'right' },
+    ],
+  },
+  {
+    id: 'dragon-wall',
+    name: 'Dragon Wall',
+    // The WALL shape, dragon-flavored: two grown dragons in the FRONT corners
+    // (2 columns apart, so neither is a king-move neighbor of the other),
+    // biting at 2 actions each with a cleric in the only free row behind
+    // them. 2 + 2 + 1 = 5 slots. Distinct from twin-golems in what it trades:
+    // ~30 less HP a body for real damage output and a `breath` the comp
+    // deliberately never uses (front row bites; breath is the back-row move —
+    // the geometry, not a rule, is what makes the choice).
+    classes: ['cragmaw', 'nightwing', 'cleric'],
+    placement: [
+      { row: 'front', col: 'left' },
+      { row: 'front', col: 'right' },
+      { row: 'back', col: 'center' },
+    ],
+  },
+  {
+    id: 'wyrmhold',
+    name: 'Wyrmhold',
+    // The STAGGERED shape: a Wyrm holding the front corner (its 2/2/1 bites
+    // are the roster's only all-row melee) with a Frostfang breathing from
+    // the diagonally-clear back corner. front/left's ring takes front/center,
+    // mid/left, mid/center; back/right's takes back/center, mid/center,
+    // mid/right — leaving back/left for the cleric and front/right open as a
+    // lane enemy melee can walk (the 4.8 golem-wall lever).
+    classes: ['wyrm', 'frostfang', 'cleric'],
+    placement: [
+      { row: 'front', col: 'left' },
+      { row: 'back', col: 'right' },
+      { row: 'back', col: 'left' },
+    ],
+  },
+  {
+    id: 'stormflight',
+    name: 'Stormflight',
+    // The SPLIT shape: one dragon breathing from the BACK (Stormscale — fast
+    // and crit-leaning) and one biting from the FRONT (Halowing), so the comp
+    // threatens a row and a lane at once. Tuning note: the mid row is a trap
+    // for a monster — a probe with the second dragon at mid/right collapsed
+    // to 20.2% (one action a turn, and its ring swallows five cells).
+    classes: ['stormscale', 'halowing', 'cleric'],
+    placement: [
+      { row: 'back', col: 'left' },
+      { row: 'front', col: 'right' },
+      { row: 'back', col: 'right' },
+    ],
+  },
+  {
+    id: 'beast-rush',
+    name: 'Beast Rush',
+    // The PRESSURE shape: the Hellhound's front Bite ×3 (the game's first
+    // 3-action row) leading a human shooting line — beasts have no AoE and no
+    // reach, so they work WITH a line rather than in pairs (a hellhound +
+    // gryphon pair probed at 11.9–26.5%). Support is a witch, not a cleric:
+    // at 68.1% the healer version was the wave's worst wipeout offender, the
+    // sustain-behind-a-monster pattern again.
+    classes: ['hellhound', 'archer', 'archer', 'witch'],
+    placement: [
+      { row: 'front', col: 'left' },
+      { row: 'mid', col: 'right' },
+      { row: 'back', col: 'right' },
+      { row: 'back', col: 'center' },
+    ],
+  },
+  {
+    id: 'skyclaw',
+    name: 'Skyclaw',
+    // The ESCORT shape, and the only comp the 1-slot Whelp makes possible
+    // (E5-P3): a Gryphon shooting Wind Shot ×2 from back/left — the one
+    // beast with a real back-row move — behind a Whelp and a Knight holding
+    // the front, cleric on the flank. 2 + 1 + 1 + 1 = 5 slots. Also the
+    // pool's Dragon-Hunter bait: the Whelp is dragonkind, so the hunt's ×1.5
+    // lands here even though nothing on the board looks like a dragon.
+    classes: ['gryphon', 'whelp', 'knight', 'cleric'],
+    placement: [
+      { row: 'back', col: 'left' },
+      { row: 'front', col: 'left' },
+      { row: 'front', col: 'center' },
+      { row: 'mid', col: 'right' },
+    ],
+  },
 ];
 
 /**
@@ -365,15 +511,23 @@ export function chooseSetup(pool: readonly StrategyArchetype[], stream: Stream, 
   // unchanged for a given stream state. A uniform index into the picked
   // archetype's OWN army length (story 4.8: a monster comp's army may be
   // shorter than 5 — the bound already reads `.length`, not a hardcoded 5):
-  // seeded variation, never always unit 0 (FR24). Story 4.8 follow-up: a
-  // monster can never be crowned (`validateMatchSetup` rejects it), so the
-  // draw is over the eligible SMALL indices only — exactly one draw either
-  // way (never a redraw-on-reject), so a monster-free archetype's draw is
-  // unchanged bit-for-bit from before this fix.
+  // seeded variation, never always unit 0 (FR24). Story 5.5 (E5-D13): only a
+  // HUMAN can be crowned — the draw is over the eligible HUMAN indices (was
+  // "non-monster" since 4.8; race generalizes it, and the Whelp — small but
+  // dragonkind — correctly drops out). Exactly one draw either way (never a
+  // redraw-on-reject), and every all-human archetype's draw is unchanged
+  // bit-for-bit. STRATEGY_POOL entries all carry ≥1 human (ai.test guard),
+  // but `pool` is a PARAMETER — sim probes and tests pass custom pools — so
+  // a human-less archetype gets a clear, attributable error here instead of
+  // an opaque `nextInt` empty-range RangeError (the empty-pool/invalid-col
+  // guard precedent below/above; review-caught, story 5.5).
   const eligibleLeaderIndices = picked.classes.reduce<number[]>((acc, cls, i) => {
-    if (BALANCE.classes[cls].sizeClass !== 'monster') acc.push(i);
+    if (BALANCE.classes[cls].race === 'human') acc.push(i);
     return acc;
   }, []);
+  if (eligibleLeaderIndices.length === 0) {
+    throw new Error(`chooseSetup: archetype "${picked.id}" fields no human — it has no legal leader (E5-D13)`);
+  }
   const leader = eligibleLeaderIndices[nextInt(stream, 0, eligibleLeaderIndices.length - 1)] as number;
 
   return { archetypeId: picked.id, classes: [...picked.classes], placement, tactic, leader };

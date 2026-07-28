@@ -143,10 +143,52 @@ describe('docs/rules.md drift guard — per-row moves and Guard (story 4.7, FR32
     expect(raw).toContain('Wind Shot');
     expect(raw).toContain('Thunder Arrow');
 
+    // Story 5.5 — the Gryphon's back-row Wind Shot (E5-D14) rides `arrow`
+    // like the birdmen's, so the doc's beast prose must match the data.
+    expect(BALANCE.classes.gryphon.moves.front).toBe('slash');
+    expect(BALANCE.classes.gryphon.moves.mid).toBe('slash');
+    expect(BALANCE.classes.gryphon.moves.back).toBe('arrow');
+    expect(raw).toContain('shoots from the back');
+
+    // The six GROWN dragons: bite up close, `breath` from the back only
+    // (E5-D7). The Whelp is deliberately NOT in this list — it bites from
+    // every row, which is the whole point of it being the budget dragon.
+    for (const cls of ['emberdrake', 'frostfang', 'stormscale', 'cragmaw', 'nightwing', 'halowing'] as const) {
+      expect(BALANCE.classes[cls].moves.front, cls).toBe('slash');
+      expect(BALANCE.classes[cls].moves.mid, cls).toBe('slash');
+      expect(BALANCE.classes[cls].moves.back, cls).toBe('breath');
+    }
+    expect(raw).toContain('from the BACK row only');
+    expect(raw).toContain('A dragon in the front or mid row **bites instead**');
+    // The doc states breath's three exclusions and its wipeout discount as
+    // FACTS — they are law (resolve.ts passes no roll, and reuses
+    // blastAttenuation), so pin the numbers, not just the words.
+    expect(raw).toContain('never crits, is never dodged, and cannot be Guarded');
+    const att = BALANCE.formulas.blastAttenuation;
+    expect(att.num / att.den, 'the doc says breath deals ×0.75 in Wipeout').toBe(0.75);
+
     // Every OTHER class stays uniform across all three rows — the doc never
     // claims a row-dependent move for them.
     for (const cls of ALL_CLASSES) {
-      if (['knight', 'phalanx', 'mage', 'sorceress', 'valkyrie', 'vultan', 'raven'].includes(cls)) continue;
+      if (
+        [
+          'knight',
+          'phalanx',
+          'mage',
+          'sorceress',
+          'valkyrie',
+          'vultan',
+          'raven',
+          'gryphon',
+          'emberdrake',
+          'frostfang',
+          'stormscale',
+          'cragmaw',
+          'nightwing',
+          'halowing',
+        ].includes(cls)
+      )
+        continue;
       const { front, mid, back } = BALANCE.classes[cls].moves;
       expect(front, cls).toBe(mid);
       expect(mid, cls).toBe(back);
@@ -205,7 +247,32 @@ describe('docs/rules.md drift guard — Monsters (story 4.8, FR38)', () => {
     expect(raw).toContain('No unit may stand directly beside one');
   });
 
-  it('states a Golem can never be crowned as leader', () => {
-    expect(raw.toLowerCase()).toContain('cannot be crowned');
+  it('states the humans-only crown, and that it is RACE not size — the Whelp must be named as uncrownable (E5-D13, story 5.5)', () => {
+    expect(raw).toContain('Only a human can be crowned as your leader');
+    expect(raw).toContain('not even the little Whelp');
+    // The consequence a player can actually hit: no humans = no legal army.
+    expect(raw).toContain('nobody to wear the crown');
+    // Derived, so a future race gaining crown eligibility fails here.
+    const crownable = ALL_CLASSES.filter((cls) => BALANCE.classes[cls].race === 'human');
+    expect(crownable.length, 'the doc claims exactly the humans are crownable').toBe(16);
+    for (const cls of ALL_CLASSES) {
+      if (crownable.includes(cls)) continue;
+      expect(['golem', 'beast', 'dragon'], `${cls} is uncrownable — the doc lists these three kinds`).toContain(BALANCE.classes[cls].race);
+    }
+  });
+
+  it('states the Whelp’s three exceptions — 1 slot, no reservation ring, outside the monster cap (E5-P3)', () => {
+    expect(raw).toContain('costs **1 slot**, reserves **nothing**');
+    expect(raw).toContain('does **not** count toward the 2-monster cap');
+    expect(BALANCE.classes.whelp.sizeClass, 'the doc rests on the Whelp being a small').toBe('small');
+    expect(SLOT_COST[BALANCE.classes.whelp.sizeClass], 'the doc says 1 slot').toBe(1);
+    expect(BALANCE.classes.whelp.race, 'the doc says it is still dragonkind').toBe('dragon');
+  });
+
+  it('names all ten 2-slot monsters, and the count matches the balance data', () => {
+    const monsters = ALL_CLASSES.filter((cls) => BALANCE.classes[cls].sizeClass === 'monster');
+    expect(monsters).toHaveLength(10); // the doc's "Ten of the army list are monsters"
+    expect(raw).toContain('Ten of the army list are **monsters**');
+    for (const cls of monsters) expect(raw, `${cls} must be named in the Monsters section`).toContain(CLASS_DISPLAY_NAME[cls]);
   });
 });

@@ -39,6 +39,18 @@ export const ALL_CLASSES = [
   'hawkman',
   'vultan',
   'raven',
+  // Story 5.5 — the monster wave (epic-5 dossier, ROSTER.md §Monsters): three
+  // beasts, then dragonkind — the 1-slot Whelp and the six grown dragons.
+  'gryphon',
+  'wyrm',
+  'hellhound',
+  'whelp',
+  'emberdrake',
+  'frostfang',
+  'stormscale',
+  'cragmaw',
+  'nightwing',
+  'halowing',
 ] as const;
 
 /** One unit class. Matchups derive from the class's `role` and the role-relation table (FR14, AD-4 — story 4.3). */
@@ -58,6 +70,21 @@ export const ALL_ROLES = ['vanguard', 'skirmisher', 'sniper', 'artillery', 'supp
 
 /** One of the combat roles (FR14). */
 export type Role = (typeof ALL_ROLES)[number];
+
+/**
+ * A class's RACE (E5-D13, story 5.5): the leader-eligibility axis — only
+ * `'human'` may be crowned (FR35), so every army needs at least one human.
+ * Deliberately separate from `sizeClass` (the slot/footprint axis): the Whelp
+ * is a 1-slot SMALL but a dragon, and must never wear the crown. Also
+ * deliberately separate from `Role` (the matchup axis): the Dragon Hunter's
+ * hunt keys on `role: 'dragon'`, not on race — the two happen to coincide
+ * today, but tuning may split them (a dragon-role human, a beast-role
+ * dragon). Static per-class balance data, like `sizeClass`.
+ */
+export const ALL_RACES = ['human', 'golem', 'beast', 'dragon'] as const;
+
+/** One race (E5-D13). */
+export type Race = (typeof ALL_RACES)[number];
 
 /**
  * The four elements (FR3) in FIXED roll order — this order is part of the
@@ -201,8 +228,12 @@ export const LOG_VERSION = 4;
  * effect it never crits, dodges, or is Guarded, and consumes ZERO battle-
  * stream draws (ADR 0003). 'blast' stays in the union for replay (old logs
  * carry it) but NO class uses it this era — reserved for a future Archmage.
+ * 'breath' (story 5.5, dossier E5-D7) is the dragons' PHYSICAL row-AoE: the
+ * blast's targeting rule with STR-vs-VIT arithmetic — and, like every AoE,
+ * zero draws (ADR 0003's draws exist only on single-target physical hits),
+ * no crit/dodge/Guard.
  */
-export type MoveKind = 'slash' | 'arrow' | 'blast' | 'staff' | 'bash' | 'bolt';
+export type MoveKind = 'slash' | 'arrow' | 'blast' | 'staff' | 'bash' | 'bolt' | 'breath';
 
 /**
  * A class's per-row move (FR32/FR33, story 4.7, dossier §4 — DATA, not code):

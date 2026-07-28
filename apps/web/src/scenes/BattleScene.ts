@@ -124,6 +124,7 @@ const TRACE_TRAVEL: Record<TraceKind, 'step' | 'projectile'> = {
   arrow: 'projectile',
   blast: 'projectile',
   bolt: 'projectile', // story 5.4 — the magic bolt crosses the gap like the arrow/blast, no melee lunge
+  breath: 'projectile', // story 5.5 — the dragon breathes ACROSS the gap at a row; a lunge would read as a bite
   heal: 'projectile',
   spell: 'projectile',
 };
@@ -599,6 +600,7 @@ export class BattleScene extends Scene {
         break;
       case 'blast':
       case 'bolt': // story 5.4 — an ATTACK sliver, so it follows the actor-color rule like the blast
+      case 'breath': // story 5.5 — likewise an ATTACK, and a row-AoE like the blast (wash included below)
         color = actorFill;
         break;
       case 'heal':
@@ -616,15 +618,18 @@ export class BattleScene extends Scene {
     // actor→row trace, not one per struck unit); the per-tile blast wash
     // blooms ON ARRIVAL (review decision 2026-07-20 — previously it fired at
     // launch while the docs claimed arrival).
+    // Story 5.5: `breath` reuses the blast's per-tile row wash — it is the
+    // same "a whole row just got hit" read, and the only visual difference
+    // between them is the damage stat, which the wash never shows.
     const washRow = () => {
-      if (trace.kind === 'blast') for (const struck of targets) this.blastWash(struck, actorFill);
+      if (trace.kind === 'blast' || trace.kind === 'breath') for (const struck of targets) this.blastWash(struck, actorFill);
     };
     if (!to) {
       // No cross-gap target (self-target, or every target view gone): no
       // travel, effects land immediately. An ATTACK with a vanished target
       // keeps the old aggression nudge; a heal/spell just stays still —
       // stepping a healer at the enemy board would fabricate an attack read (review).
-      if (trace.kind === 'arrow' || trace.kind === 'blast' || trace.kind === 'bolt') this.meleeStep(attacker);
+      if (trace.kind === 'arrow' || trace.kind === 'blast' || trace.kind === 'bolt' || trace.kind === 'breath') this.meleeStep(attacker);
       washRow();
       return 0;
     }

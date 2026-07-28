@@ -9,6 +9,8 @@ import {
   DRAFT_CONTINUE_LABEL,
   DRAFT_DETAIL,
   DRAFT_GRID,
+  DRAFT_HINT_Y,
+  DRAFT_TABS,
   draftGridTile,
   draftHint,
   DRAFT_RULES_LABEL,
@@ -17,7 +19,18 @@ import {
   MIN_FONT_PX,
   PALETTE,
 } from '../config/constants';
-import { canAddUnit, canContinue, classRulesCard, moveLabel, movesVaryByRow } from '../flow/draftModel';
+import {
+  ALL_DRAFT_TABS,
+  canAddUnit,
+  canContinue,
+  classRulesCard,
+  draftBlockReason,
+  DRAFT_TAB_LABELS,
+  draftTabClasses,
+  moveLabel,
+  movesVaryByRow,
+} from '../flow/draftModel';
+import type { DraftTabId } from '../flow/draftModel';
 import type { MatchFlow } from '../flow/MatchFlow';
 import { addButton, addSceneGround, addFramedPanel, applyHiDpiCamera, addBackAffordance, addElementBadge, addUnitSprite, crispText } from '../config/ui';
 import { attachPerfSampler } from '../config/perf';
@@ -62,7 +75,11 @@ export class DraftScene extends Scene {
   private flow!: MatchFlow;
   /** The currently highlighted class in the grid — its detail shows in the panel. Reset every create() (singleton scenes). */
   private selected: UnitClass = ALL_CLASSES[0];
-  /** Static grid tiles' geometry, for drawing the selection highlight. */
+  /** The active picker tab (story 5.5 — Humans/Monsters). Reset every create() (singleton scenes). */
+  private tab: DraftTabId = 'humans';
+  /** The active tab's grid objects (tab strip + tiles) — destroyed and rebuilt on tab switch. */
+  private gridObjects: GameObjects.GameObject[] = [];
+  /** The active tab's tile geometry, for drawing the selection highlight. */
   private tiles: { cls: UnitClass; x: number; y: number }[] = [];
   /** Selection-dependent objects (highlight + detail panel + army tray + Continue), rebuilt on each redraw. */
   private dynamic: GameObjects.GameObject[] = [];
@@ -84,7 +101,9 @@ export class DraftScene extends Scene {
     // Story 3.4 (NFR1): no-op unless `?perf=1`.
     attachPerfSampler(this);
     this.selected = ALL_CLASSES[0]; // reset: Phaser scenes are singletons
+    this.tab = 'humans'; // reset tab (singleton scenes — story 5.5)
     this.dynamic = [];
+    this.gridObjects = [];
     this.lastTapClass = null; // reset double-tap state (singleton lesson: no stale carry-over)
     this.lastTapAt = 0;
     this.crownNotice = undefined;
@@ -96,7 +115,7 @@ export class DraftScene extends Scene {
     addBackAffordance(this, HOME_BACK_LABEL, () => this.scene.start('Home'));
 
     crispText(this, BASE_WIDTH / 2, 26, DRAFT_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
-    crispText(this, BASE_WIDTH / 2, 50, draftHint(BALANCE.slotBudget), {
+    crispText(this, BASE_WIDTH / 2, DRAFT_HINT_Y, draftHint(BALANCE.slotBudget), {
       fontFamily: 'Arial',
       fontSize: '11px',
       color: PALETTE.mutedText,
@@ -111,43 +130,102 @@ export class DraftScene extends Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerup', () => this.scene.start('Help', { from: 'Draft', flow: this.flow }));
 
-    crispText(this, BASE_WIDTH / 2, 72, 'CHOOSE A CLASS', { fontFamily: 'Arial Black', fontSize: '13px', color: PALETTE.mutedText }).setOrigin(0.5);
-
     this.buildGrid();
     this.redraw();
   }
 
-  /** The static class icon-grid: a tile per class, tapping SELECTS (does not draft). */
+  /**
+   * The active tab's icon grid + the tab strip (story 5.5): 27 classes split
+   * across Humans/Monsters tabs, each reusing the same DRAFT_GRID geometry.
+   * Rebuilt wholesale on a tab switch; tapping a tile SELECTS (does not draft).
+   */
   private buildGrid() {
-    ALL_CLASSES.forEach((cls, i) => {
+    for (const o of this.gridObjects) o.destroy();
+    this.gridObjects = [];
+    this.tiles = [];
+
+    // The tab strip (replaces 4.3's static "CHOOSE A CLASS" heading): two
+    // labels above the grid — the active one gold with an underline. Geometry
+    // lives in DRAFT_TABS (constants.ts) so the tap zone is tested numbers,
+    // not literals buried here: the width grows with the label between the
+    // tapW floor (FR30) and the tapMaxW ceiling, and it is the CEILING that
+    // guarantees the two zones never touch at the ±offsetX centres (review
+    // 2026-07-28 — "MONSTERS" already outgrows the floor).
+    ALL_DRAFT_TABS.forEach((tab, t) => {
+      const x = BASE_WIDTH / 2 + (t === 0 ? -DRAFT_TABS.offsetX : DRAFT_TABS.offsetX);
+      const active = tab === this.tab;
+      const label = crispText(this, x, DRAFT_TABS.y, DRAFT_TAB_LABELS[tab], {
+        fontFamily: 'Arial Black',
+        fontSize: '13px',
+        color: active ? PALETTE.title : PALETTE.mutedText,
+      }).setOrigin(0.5);
+      const parts: GameObjects.GameObject[] = [label];
+      // GOLD underline, not a side colour: DESIGN's "gold is the metal" rule
+      // reserves blue/red for whose side a thing is on, and a picker tab
+      // belongs to neither. `buttonFillEnabled` is the numeric twin of
+      // `PALETTE.title`'s #e3b64b (rectangles take numbers, text takes strings).
+      if (active) parts.push(this.add.rectangle(x, DRAFT_TABS.underlineY, label.width + 8, 2, PALETTE.buttonFillEnabled).setOrigin(0.5));
+      parts.push(
+        this.add
+          .rectangle(x, DRAFT_TABS.y, Math.min(Math.max(label.width + 24, DRAFT_TABS.tapW), DRAFT_TABS.tapMaxW), DRAFT_TABS.tapH, 0, 0)
+          .setInteractive({ useHandCursor: true })
+          .on('pointerup', () => {
+            if (tab === this.tab) return;
+            this.tab = tab;
+            this.lastTapClass = null; // a tab switch is never half a double-tap
+            const classes = draftTabClasses(tab);
+            if (!classes.includes(this.selected)) this.selected = classes[0] as UnitClass;
+            // Rebuild ONE TICK LATER (review 2026-07-28): buildGrid() destroys
+            // every gridObject — including this very rectangle, mid-event-
+            // dispatch. Phaser tolerates a synchronous destroy today, but it
+            // is a documented hazard pattern; the scene-scoped clock also
+            // drops the call on shutdown, so a scene exit mid-tick leaks
+            // nothing. One frame (~16ms) is imperceptible on a tab switch.
+            this.time.delayedCall(0, () => {
+              this.buildGrid();
+              this.redraw();
+            });
+          }),
+      );
+      this.gridObjects.push(...parts);
+    });
+
+    draftTabClasses(this.tab).forEach((cls, i) => {
       const { x, y } = draftGridTile(i);
       this.tiles.push({ cls, x, y });
-      this.add.rectangle(x, y, GRID.tileW, GRID.tileH, PALETTE.cardFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.cardStroke);
-      addUnitSprite(this, x + GRID.tileW / 2, y + 17, cls, 26);
-      // 8px on the 62px tile: every single-word name fits one line; "DRAGON
-      // HUNTER" word-wraps to two (origin-top so line 1 stays anchored).
-      crispText(this, x + GRID.tileW / 2, y + 32, CLASS_DISPLAY_NAME[cls].toUpperCase(), {
-        fontFamily: 'Arial Black',
-        fontSize: '8px',
-        color: PALETTE.bodyText,
-        align: 'center',
-        wordWrap: { width: GRID.tileW - 4 },
-      }).setOrigin(0.5, 0);
-      this.add
-        .rectangle(x, y, GRID.tileW, GRID.tileH, 0, 0)
-        .setOrigin(0, 0)
-        .setInteractive({ useHandCursor: true })
-        .on('pointerup', () => {
-          // First tap SELECTS (fills the detail panel); a second tap on the SAME
-          // tile within the window DRAFTS it — the Add-to-army shortcut (Danilo).
-          const now = this.time.now;
-          const doubleTap = this.lastTapClass === cls && now - this.lastTapAt < DOUBLE_TAP_MS;
-          this.selected = cls;
-          this.lastTapAt = now;
-          this.lastTapClass = doubleTap ? null : cls; // consume on double so a triple tap isn't two adds
-          if (doubleTap) this.addToArmy(cls); // drafts only if a slot remains
-          this.redraw();
-        });
+      this.gridObjects.push(this.add.rectangle(x, y, GRID.tileW, GRID.tileH, PALETTE.cardFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.cardStroke));
+      this.gridObjects.push(addUnitSprite(this, x + GRID.tileW / 2, y + 16, cls, 26));
+      // 8px on the 80px tile (story 5.5): the 76px wrap width carries every
+      // single-word name including "EMBERDRAKE"/"STORMSCALE" (10 chars, which
+      // the 5.4 62px tile could not); "DRAGON HUNTER" word-wraps to two
+      // (origin-top so line 1 stays anchored). Two 8px lines from y+30 end at
+      // y+46, inside the 48px tile.
+      this.gridObjects.push(
+        crispText(this, x + GRID.tileW / 2, y + 30, CLASS_DISPLAY_NAME[cls].toUpperCase(), {
+          fontFamily: 'Arial Black',
+          fontSize: '8px',
+          color: PALETTE.bodyText,
+          align: 'center',
+          wordWrap: { width: GRID.tileW - 4 },
+        }).setOrigin(0.5, 0),
+      );
+      this.gridObjects.push(
+        this.add
+          .rectangle(x, y, GRID.tileW, GRID.tileH, 0, 0)
+          .setOrigin(0, 0)
+          .setInteractive({ useHandCursor: true })
+          .on('pointerup', () => {
+            // First tap SELECTS (fills the detail panel); a second tap on the SAME
+            // tile within the window DRAFTS it — the Add-to-army shortcut (Danilo).
+            const now = this.time.now;
+            const doubleTap = this.lastTapClass === cls && now - this.lastTapAt < DOUBLE_TAP_MS;
+            this.selected = cls;
+            this.lastTapAt = now;
+            this.lastTapClass = doubleTap ? null : cls; // consume on double so a triple tap isn't two adds
+            if (doubleTap) this.addToArmy(cls); // drafts only if a slot remains
+            this.redraw();
+          }),
+      );
     });
   }
 
@@ -361,11 +439,16 @@ export class DraftScene extends Scene {
         this.dynamic.push(crispText(this, x + slotW / 2, trayY + 26, '+', { fontFamily: 'Arial', fontSize: '22px', color: PALETTE.mutedText }).setOrigin(0.5));
       }
     }
+    // The hint line doubles as the no-dead-end gate reason (story 5.5,
+    // E5-D13): a full army with no human names WHY Continue stays dark.
+    const blockReason = draftBlockReason(army);
     this.dynamic.push(
-      crispText(this, BASE_WIDTH / 2, trayY + 62, 'Tap a drafted unit to remove it', {
+      crispText(this, BASE_WIDTH / 2, trayY + 62, blockReason ?? 'Tap a drafted unit to remove it', {
         fontFamily: 'Arial',
         fontSize: `${MIN_FONT_PX}px`,
-        color: PALETTE.mutedText,
+        color: blockReason ? PALETTE.title : PALETTE.mutedText,
+        align: 'center',
+        wordWrap: { width: BASE_WIDTH - 24 },
       }).setOrigin(0.5),
     );
 

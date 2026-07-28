@@ -79,6 +79,21 @@ export const ART_ATTRIBUTIONS: readonly ArtPackAttribution[] = [
     assets: ['apps/web/src/assets/units.png'],
     classSources: {
       golem: 'original — stone-and-moss golem (sheet frame 6)',
+      // Story 5.5 monster wave — INTERIM (the 4.3/5.4 convention; dedicated
+      // tiles are story 5.9's). All ten borrow the Golem's frame: it is the
+      // only tile on the sheet that reads as a creature rather than a person.
+      // The Whelp shares it too but renders at SMALL scale (`unitDisplaySize`
+      // keys on sizeClass), so it gets no loom.
+      gryphon: 'original — stone-and-moss golem (INTERIM: shares the Golem tile)',
+      wyrm: 'original — stone-and-moss golem (INTERIM: shares the Golem tile)',
+      hellhound: 'original — stone-and-moss golem (INTERIM: shares the Golem tile)',
+      whelp: 'original — stone-and-moss golem (INTERIM: shares the Golem tile, drawn at small scale)',
+      emberdrake: 'original — stone-and-moss golem (INTERIM: shares the Golem tile)',
+      frostfang: 'original — stone-and-moss golem (INTERIM: shares the Golem tile)',
+      stormscale: 'original — stone-and-moss golem (INTERIM: shares the Golem tile)',
+      cragmaw: 'original — stone-and-moss golem (INTERIM: shares the Golem tile)',
+      nightwing: 'original — stone-and-moss golem (INTERIM: shares the Golem tile)',
+      halowing: 'original — stone-and-moss golem (INTERIM: shares the Golem tile)',
     },
   },
   {

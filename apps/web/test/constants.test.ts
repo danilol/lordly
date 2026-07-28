@@ -166,7 +166,7 @@ describe('travel-trace colors (story 4.10 review) — the format statusTraceColo
 
 describe('move-plate display vocabulary (story 4.11, FR39b/D-3a; class verbs since 5.4/E5-D10) — union-keyed drift guards', () => {
   it('names every non-blast move in the OB64 plate register', () => {
-    expect(MOVE_PLATE_NAMES).toEqual({ slash: 'Sword Slash', arrow: 'Arrow', staff: 'Staff', bash: 'Bash', bolt: 'Magic Bolt' });
+    expect(MOVE_PLATE_NAMES).toEqual({ slash: 'Sword Slash', arrow: 'Arrow', staff: 'Staff', bash: 'Bash', bolt: 'Magic Bolt', breath: 'Breath' });
   });
 
   it('flavors the blast by element — the EXPERIENCE "Ice Blast" mapping (open Q2 default)', () => {

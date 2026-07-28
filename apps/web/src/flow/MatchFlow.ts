@@ -265,12 +265,13 @@ export class MatchFlow {
     if (this.state.playerPlacements[index] === null) {
       throw new Error(`setLeader: unit ${index} is not placed`);
     }
-    // A monster can never be crowned (device-reported, story 4.8 follow-up) —
-    // `validateMatchSetup` rejects it at commit time (FR35/FR38), so the
+    // Only a HUMAN can be crowned (E5-D13, story 5.5 — race generalizes 4.8's
+    // monster rule: the 1-slot Whelp is small but dragonkind and can't lead
+    // either). `validateMatchSetup` rejects it at commit time (FR35), so the
     // crown gesture rejects it right here instead of letting a doomed pick
     // reach commit.
-    if (BALANCE.classes[(this.state.playerArmy[index] as DraftedUnit).class].sizeClass === 'monster') {
-      throw new Error(`setLeader: unit ${index} is a monster and cannot be crowned`);
+    if (BALANCE.classes[(this.state.playerArmy[index] as DraftedUnit).class].race !== 'human') {
+      throw new Error(`setLeader: unit ${index} is not human and cannot be crowned`);
     }
     if (this.state.playerLeader === index) {
       this.clearLeaderDesignation(); // toggle-off: the same crown-clear invariant as draft/remove

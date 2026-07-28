@@ -332,7 +332,7 @@ export class PlacementScene extends Scene {
             try {
               this.flow.setLeader(i);
             } catch {
-              this.flashMessage('A monster cannot be crowned leader');
+              this.flashMessage('Only a human can be crowned leader');
               return;
             }
             this.redraw();

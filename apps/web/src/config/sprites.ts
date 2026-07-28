@@ -49,6 +49,24 @@ export const UNIT_FRAMES: Record<UnitClass, number> = {
   hawkman: 1,
   vultan: 1,
   raven: 1,
+  // STORY 5.5 — INTERIM sprites (same convention; dedicated art is story
+  // 5.9's): all ten monsters borrow the GOLEM tile (frame 6). It is the only
+  // frame on the sheet that reads as a creature rather than a person, and it
+  // is already the side-neutral loomed treatment every 2-slot monster needs.
+  // The Whelp shares the tile too but renders SMALL — `unitDisplaySize` keys
+  // on `sizeClass`, so the 1-slot dragon gets no loom automatically (E5-P3).
+  // Placeholders, NOT final art — attribution.ts carries the matching
+  // "(INTERIM: shares …)" notes.
+  gryphon: 6,
+  wyrm: 6,
+  hellhound: 6,
+  whelp: 6,
+  emberdrake: 6,
+  frostfang: 6,
+  stormscale: 6,
+  cragmaw: 6,
+  nightwing: 6,
+  halowing: 6,
 };
 
 // FR31 animation representations — tween-based (the CC0 tiles are single-frame,

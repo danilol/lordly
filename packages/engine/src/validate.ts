@@ -22,8 +22,8 @@ export type MatchSetupViolation =
   | 'too-many-monsters'
   /** ANY unit — human or monster — occupies one of the 8 KING-MOVE neighbors (orthogonal OR diagonal) of a monster's cell (FR4/FR38 — device-reported, confirmed against the source game: "you cannot position other characters next to large characters"). A monster is a single cell that reserves its whole Moore neighborhood — a Golem dead-center blocks the entire rest of the board; two Golems at front-left + front-right leave the back row open. */
   | 'adjacent-to-monster'
-  /** A side's leader index names a monster (FR35/FR38 — only a small may be crowned). */
-  | 'monster-cannot-lead';
+  /** A side's leader index names a non-human (FR35, E5-D13 story 5.5 — only `race: 'human'` may be crowned; the RENAMED, race-generalized successor of 4.8's 'monster-cannot-lead': the 1-slot Whelp is small but dragonkind, and an all-monster army has no legal leader at all). */
+  | 'leader-not-human';
 
 /** True for a non-null plain object — used to reject malformed runtime input as a typed error. */
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -128,12 +128,17 @@ export function validateMatchSetup(setup: MatchSetup): void {
         `side ${side} leader must be an integer index into its ${army.length}-unit army, got ${String(leader)}`,
       );
     }
-    // A monster cannot be crowned (device-reported, story 4.8 follow-up): the
-    // leader-fall sober package (FR35) and the Attack-Leader tactic both
-    // read the leader as a single vulnerable unit — a 2-cell wall surviving
-    // as its own army's leader defeats the mechanic's intent.
-    if (BALANCE.classes[(army[leader as number] as { class: UnitClass }).class].sizeClass === 'monster') {
-      throw new InvalidMatchSetupError('monster-cannot-lead', `side ${side} leader (index ${String(leader)}) is a monster — only a small may be crowned`);
+    // Only a HUMAN can be crowned (E5-D13, story 5.5 — generalizing 4.8's
+    // monster rule by RACE, not sizeClass: the 1-slot Whelp is small but
+    // dragonkind and must be rejected too). Consequence: an army with zero
+    // humans has NO legal leader index — "every army needs at least one
+    // human" holds through this one check, no separate army-composition rule.
+    const leaderClass = (army[leader as number] as { class: UnitClass }).class;
+    if (BALANCE.classes[leaderClass].race !== 'human') {
+      throw new InvalidMatchSetupError(
+        'leader-not-human',
+        `side ${side} leader (index ${String(leader)}) is a ${BALANCE.classes[leaderClass].race} — only a human may be crowned (E5-D13)`,
+      );
     }
   }
 

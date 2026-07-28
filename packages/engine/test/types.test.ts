@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_CLASSES, ALL_COLS, ALL_ELEMENTS, ALL_ROWS, ALL_SIDES, ALL_TACTICS } from '../src/types';
+import { ALL_CLASSES, ALL_COLS, ALL_ELEMENTS, ALL_RACES, ALL_ROWS, ALL_SIDES, ALL_TACTICS } from '../src/types';
 import type { Element, MatchSetup, Placement, Side, Tactic, Unit, UnitClass, UnitId } from '../src/types';
 
 describe('domain types (AD-4, AD-9, AD-11)', () => {
@@ -75,7 +75,20 @@ describe('domain types (AD-4, AD-9, AD-11)', () => {
       'hawkman',
       'vultan',
       'raven',
+      // Story 5.5 — the monster wave (dossier ROSTER.md §Monsters): the three
+      // beasts, then dragonkind (the 1-slot Whelp, then the six breath dragons).
+      'gryphon',
+      'wyrm',
+      'hellhound',
+      'whelp',
+      'emberdrake',
+      'frostfang',
+      'stormscale',
+      'cragmaw',
+      'nightwing',
+      'halowing',
     ]);
+    expect(ALL_RACES).toEqual(['human', 'golem', 'beast', 'dragon']); // story 5.5, E5-D13
     expect(ALL_ELEMENTS).toEqual(['fire', 'water', 'wind', 'earth']);
     expect(ALL_SIDES).toEqual(['A', 'B']);
     expect(ALL_ROWS).toEqual(['front', 'mid', 'back']);

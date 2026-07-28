@@ -83,7 +83,7 @@ alone — small 5.4 shell task, noted for create-story.
 | Frostfang | FRF | Dragon | ice | Bite ×2 | Bite ×1 | Frost Breath ×1 | 6/5/5/3/5/3/5 | ✅ NEW |
 | Stormscale | STM | Dragon | storm | Bite ×2 | Bite ×1 | Storm Breath ×1 | 6/5/5/3/4/4/5 | ✅ NEW |
 | Cragmaw | CRG | Dragon | earth | Bite ×2 | Bite ×1 | Acid Breath ×1 | 7/5/6/3/4/3/4 | ✅ NEW |
-| Nightwing | NGT | Dragon | dark | Bite ×2 | Bite ×1 | Dread Breath ×1 | 6/6/5/4/4/3/5 | 🟡 NEW (was Duskwing — Danilo's rename) |
+| Nightwing | NGT | Dragon | dark | Bite ×2 | Bite ×1 | Dread Breath ×1 | 6/6/5/4/4/3/5 | ✅ NEW (was Duskwing — Danilo's rename, confirmed final 2026-07-28 at the 5.5 dev-story go-ahead) |
 | Halowing | HAL | Dragon | light | Bite ×2 | Bite ×1 | Radiant Breath ×1 | 6/5/6/4/4/3/4 | ✅ NEW (name confirmed 2026-07-26) |
 
 ### Descriptions
@@ -105,10 +105,21 @@ alone — small 5.4 shell task, noted for create-story.
 - **Leadership: only HUMANS can be crowned.** Monsters and the Whelp are leader-ineligible —
   every army needs at least one human. Golem+Emberdrake+Whelp is INVALID (no possible leader);
   Golem+Emberdrake+Knight ✓; Golem+Whelp+Knight+Cleric ✓. Eligibility is per-class data
-  (race: human/golem/beast/dragon), not sizeClass — the race field lands in 5.5.
-- **Caps confirmed as shipped:** max 2 sizeClass-monsters per army; monsters never share a
-  column. The Whelp is a small — it does NOT count toward the 2-monster cap (Danilo-confirmed
-  consequence: a 2-monster + Whelp army is legal, if a human leader is aboard).
+  (race: human/golem/beast/dragon), not sizeClass — the `race` field SHIPPED in 5.5, and all
+  three examples above are pinned verbatim in `packages/engine/test/validate.test.ts`.
+- **Caps confirmed as shipped:** max 2 sizeClass-monsters per army. The Whelp is a small — it
+  does NOT count toward the 2-monster cap.
+  - *Corrected 2026-07-28 (story 5.5 implementation).* This bullet previously said "monsters
+    never share a column" and offered "a 2-monster + Whelp army is legal, if a human leader is
+    aboard" as the cap's consequence. Both were wrong, and the code was right:
+    - There is no column rule. The only placement rule is the KING-MOVE RING, so two monsters
+      may share a column when they are two rows apart — front-left + back-left is legal (it is
+      front-left + mid-left that is not). Pinned in validate.test.ts.
+    - That particular army cannot exist. 2 + 2 + 1 = the whole 5-slot budget, leaving no room
+      for the human it requires, so it always fails validation on the crown. The CAP RULE it
+      was meant to illustrate is exactly as decided and is what shipped — the Whelp does not
+      consume a monster slot, so **1 monster + Whelp + 2 humans** (2+1+1+1) is the reachable
+      demonstration, and four Whelps beside one human is legal too.
 - **Loom treatment:** every 2-slot monster reuses the Golem loom (dedicated frame,
   ≥48px-equivalent presence, one HP bar + code at the cell). The Whelp renders as a normal
   small — no loom, no reservation ring.

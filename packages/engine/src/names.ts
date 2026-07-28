@@ -12,8 +12,13 @@ import type { UnitClass } from './types';
  * OB64-adjacent in register and unique within each list.
  */
 
-/** A name table's key. 'c' (construct) joins 'm'/'f' in story 4.8 for the Golem — it has no sex (dossier §1 row: '—'). */
-export type NameSex = 'm' | 'f' | 'c';
+/**
+ * A name table's key. 'c' (construct) joined 'm'/'f' in story 4.8 for the
+ * Golem; story 5.5 adds 'b' (beast designations) and 'd' (dragon names) —
+ * the same precedent: creatures draw from their own themed list, never from
+ * the human ones.
+ */
+export type NameSex = 'm' | 'f' | 'c' | 'b' | 'd';
 
 /**
  * Which table each class draws from (dossier D-1f):
@@ -43,6 +48,17 @@ export const CLASS_SEX: Record<UnitClass, NameSex> = {
   hawkman: 'm',
   vultan: 'm',
   raven: 'm',
+  // Story 5.5: beasts and dragonkind draw from their own themed lists.
+  gryphon: 'b',
+  wyrm: 'b',
+  hellhound: 'b',
+  whelp: 'd',
+  emberdrake: 'd',
+  frostfang: 'd',
+  stormscale: 'd',
+  cragmaw: 'd',
+  nightwing: 'd',
+  halowing: 'd',
 };
 
 /** ~48 male names, OB64-adjacent fantasy register. Plain data — edits are free (see module doc). */
@@ -182,8 +198,59 @@ export const CONSTRUCT_NAMES: readonly string[] = [
   'Foragrim',
 ];
 
+/** ~16 wild beast designations (story 5.5, dossier §7 precedent) — plain data, edits are free. */
+export const BEAST_NAMES: readonly string[] = [
+  'Skree',
+  'Fenrik',
+  'Gnarl',
+  'Howler',
+  'Karkass',
+  'Longtooth',
+  'Mawrick',
+  'Nettle',
+  'Ossifer',
+  'Pounce',
+  'Ragefang',
+  'Sableclaw',
+  'Talonis',
+  'Umberjaw',
+  'Vex',
+  'Whipcord',
+];
+
+/** ~16 dragon names (story 5.5) — grand, old, and a little smug; plain data, edits are free. */
+export const DRAGON_NAMES: readonly string[] = [
+  'Aurvang',
+  'Brimveil',
+  'Cindrath',
+  'Dravikor',
+  'Emberis',
+  'Fyrnwyn',
+  'Goldrath',
+  'Hjalmyr',
+  'Ithrax',
+  'Korvassa',
+  'Lorvyth',
+  'Morvain',
+  'Nyxared',
+  'Ophidor',
+  'Skalveth',
+  'Tyrmiran',
+  // The dragon list runs to 20, not 16, because the Whelp is a 1-slot SMALL:
+  // the worst legal case is FOUR Whelps beside one human (4 × 1 + 1 = the
+  // 5-slot budget), so one side can need four distinct dragon names in a
+  // single army — twice what any other creature table faces. `rollName`'s
+  // dedup walk keeps them unique as long as the table is bigger than that
+  // worst case; 20 leaves a 5× margin, which names.test.ts pins by DERIVING
+  // the worst case from the balance data rather than restating it here.
+  'Ulvarin',
+  'Vharkas',
+  'Wyrmbright',
+  'Zephyrax',
+];
+
 /** The tables keyed by name-table key — `rollName` indexes through this. */
-export const NAME_TABLES: Record<NameSex, readonly string[]> = { m: MALE_NAMES, f: FEMALE_NAMES, c: CONSTRUCT_NAMES };
+export const NAME_TABLES: Record<NameSex, readonly string[]> = { m: MALE_NAMES, f: FEMALE_NAMES, c: CONSTRUCT_NAMES, b: BEAST_NAMES, d: DRAGON_NAMES };
 
 /**
  * Rolls one soldier name (FR37, dossier §7): EXACTLY ONE `nextInt` draw for

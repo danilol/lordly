@@ -207,3 +207,45 @@
 ## Deferred from: story 5-3-battle-backgrounds (2026-07-28) — PO call
 
 - **The story-5.3 `?perf=1` capture (its AC 3) was NOT run.** Danilo accepted the look on device and chose to keep moving; no blocking reason stated. The story shipped with AC 3 marked *satisfied-with-recorded-deviation* rather than satisfied. **Why this one is not a formality:** 5.3 added two full-screen terrain textures AND enlarged the rendered board area by ~55% (tiles 56×28 → 74×37, plus the spread), and both the story-5.0 baseline and the story-5.2 addendum recorded a ~5-frame scene-entry burst (bottoming 8–11 fps) at exactly the moment the Battle scene loads its assets — the moment this story made heavier. **Owner: story 5.10 (the pre-PvP verdict)**, which already carries a closing capture; that capture must now cover 5.2's chrome, 5.3's terrain and the enlarged boards together, and should explicitly compare the scene-entry burst against the 5.0/5.2 figures. Context worth remembering: the epic-4 retrospective named this capture as one that had already survived three deferrals, which is why story 5.0 made it a hard deadline.
+
+## Logged from: story 5-5-roster-wave-monsters (2026-07-28) — PRD deviation for the PO to ratify
+
+- **The AI strategy pool now holds 18 archetypes; FR25 says "~8–12".** Needs Danilo's
+  ratification (or a push-back) — flagged here rather than silently rewritten. Why it grew:
+  story 4.12's reverse-coverage guard requires EVERY class to appear in at least one
+  archetype, so the sweep certifies the whole roster. A `sizeClass: 'monster'` unit costs 2
+  of the 5 slots, so a monster comp fields only 3–4 units, and the ten classes of the 5.5
+  wave needed six new comps (`breath-battery`, `dragon-wall`, `wyrmhold`, `stormflight`,
+  `beast-rush`, `skyclaw`) to hold them. Folding monsters into the twelve existing comps as
+  single-unit swaps — the 4.3 method — is not available: dropping two smalls to seat one
+  monster rewrites a comp's identity rather than extending it. FR25's *intent* (enough board
+  variety that the AI never repeats itself) is exceeded, not weakened. **Cost:** the sweep is
+  n², so CI went from 12² to 18² pairings per mode; measured runtime is still well inside
+  budget (the full runs=500 wipeout convergence sweep takes ~16s locally, CI's runs=15 proxy
+  is a fraction of that). The `ai.test.ts` bound was widened 12 → 20 with this note attached.
+  **If the PO wants the pool back under 12,** the honest options are (a) drop the
+  reverse-coverage guard for monsters and accept that some classes ship uncertified by the
+  sweep, or (b) merge comps by pairing two monsters per entry — which the 5.5 sweep found is
+  the game's most overtuned shape when the pair sits in the back row (87.9% before re-shaping).
+## Resolved same-day (2026-07-28): the ROSTER.md monster-rules correction — nothing here awaits the PO
+
+- **RESOLVED 2026-07-28 (same day, at Danilo's request): the ROSTER.md correction is applied.**
+  The bullet now records both errors and the reachable demonstration, and reviewing it surfaced a
+  SECOND stale claim the story had not caught — "monsters never share a column" is not a rule at
+  all (front-left + back-left is legal; only king-adjacency is banned). Both are pinned in
+  `validate.test.ts`. Original entry kept below for the record.
+- ~~**`ROSTER.md` §Monster rules states a consequence that cannot occur.**~~ "A 2-monster + Whelp
+  army is legal, if a human leader is aboard" (Danilo-confirmed, 2026-07-27) — but at
+  `slotBudget: 5` that army is 2+2+1 = 5 slots with no room left for the human, so it can
+  never validate. The *rule* it illustrates is implemented exactly as decided (the Whelp is a
+  small and does NOT consume a monster-cap slot, so 1 monster + Whelp + 2 humans IS legal);
+  only the illustration is unreachable. Pinned in `validate.test.ts` so the distinction stays
+  deliberate. Worth a one-line correction in ROSTER.md at the next dossier pass.
+
+## Deferred from: code review of story-5-5-roster-wave-monsters (2026-07-28)
+
+- **Scene-level coverage for the Draft tab strip** (the rebuild path, double-tap-state reset, and
+  selection migration on tab switch have no tests — only the pure model is covered). Pre-existing
+  gap, not caused by 5.5: `apps/web/test` has no Phaser mock harness, the same tooling story the
+  5.2 review recorded for `addButton`'s untested Phaser behaviour. When that harness lands, the
+  tab strip should be its second customer.

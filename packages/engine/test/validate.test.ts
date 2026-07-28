@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE } from '../src/balance';
+import { BALANCE, slotTotal } from '../src/balance';
 import { canPlace, InvalidMatchSetupError, legalAnchors, validateMatchSetup } from '../src/validate';
 import type { MatchSetup } from '../src/types';
 
@@ -318,10 +318,10 @@ describe('validateMatchSetup — monster footprint rules (story 4.8, AD-14, FR38
     expectViolation(s, 'adjacent-to-monster', /A/);
   });
 
-  it('rejects a monster crowned as the leader (device-reported) — only a small may be crowned', () => {
+  it('rejects a monster crowned as the leader (device-reported) — only a human may be crowned', () => {
     const s = monsterSetup();
     s.leaders.A = 0; // the Golem
-    expectViolation(s, 'monster-cannot-lead', /A/);
+    expectViolation(s, 'leader-not-human', /A/);
   });
 
   it('rejects two units on the exact same cell (overlap)', () => {
@@ -396,5 +396,262 @@ describe('validateMatchSetup — monster footprint rules (story 4.8, AD-14, FR38
         expect(inList, `${row}/${col}`).toBe(canPlace('golem', { row, col }, existing));
       }
     }
+  });
+});
+
+/**
+ * The humans-only crown (E5-D13, story 5.5): leader eligibility is the `race`
+ * field, NOT `sizeClass`. Story 5.5 is the first wave where those two differ —
+ * the 1-slot Whelp is a `small` that must still be refused the crown — so
+ * every case below would have passed under 4.8's sizeClass rule.
+ */
+describe('validateMatchSetup — the humans-only crown (E5-D13, story 5.5)', () => {
+  /** Golem front/left + a back/right monster leave exactly two free cells (front/right, back/left) — the tightest legal 2-monster footprint. */
+  const TWO_MONSTER_CELLS = [
+    { row: 'front', col: 'left' },
+    { row: 'back', col: 'right' },
+  ] as const;
+
+  /** A 5-slot side A with the given army/placements, against a plain human side B. */
+  function sideA(army: MatchSetup['armies']['A'], placements: MatchSetup['placements']['A'], leader: number): MatchSetup {
+    const base = monsterSetup();
+    return { ...base, leaders: { A: leader, B: 0 }, armies: { ...base.armies, A: army }, placements: { ...base.placements, A: placements } };
+  }
+
+  it("Danilo's example 1 — Golem + Emberdrake + Whelp is INVALID: 5 slots of creatures leave NO index that can wear the crown", () => {
+    const army = [
+      { class: 'golem', element: 'earth', name: 'Ogham' },
+      { class: 'emberdrake', element: 'fire', name: 'Cindrath' },
+      { class: 'whelp', element: 'fire', name: 'Emberis' },
+    ] as const;
+    const placements = [TWO_MONSTER_CELLS[0], TWO_MONSTER_CELLS[1], { row: 'front', col: 'right' }] as const;
+    // EVERY leader index fails — that is what "an all-creature army has no
+    // legal leader" means operationally, and why E5-D13 needs no separate
+    // army-composition rule.
+    for (const leader of [0, 1, 2]) {
+      expectViolation(sideA([...army], [...placements], leader), 'leader-not-human', /A/);
+    }
+  });
+
+  it("Danilo's example 2 — Golem + Emberdrake + Knight is VALID with the Knight crowned", () => {
+    const setup = sideA(
+      [
+        { class: 'golem', element: 'earth', name: 'Ogham' },
+        { class: 'emberdrake', element: 'fire', name: 'Cindrath' },
+        { class: 'knight', element: 'fire', name: 'Kain' },
+      ],
+      [TWO_MONSTER_CELLS[0], TWO_MONSTER_CELLS[1], { row: 'front', col: 'right' }],
+      2,
+    );
+    expect(() => validateMatchSetup(setup)).not.toThrow();
+  });
+
+  it("Danilo's example 3 — Golem + Whelp + Knight + Cleric is VALID: the Whelp is a small, so it does NOT eat the second monster slot", () => {
+    const setup = sideA(
+      [
+        { class: 'golem', element: 'earth', name: 'Ogham' },
+        { class: 'whelp', element: 'fire', name: 'Emberis' },
+        { class: 'knight', element: 'fire', name: 'Kain' },
+        { class: 'cleric', element: 'water', name: 'Sela' },
+      ],
+      [
+        { row: 'front', col: 'left' },
+        { row: 'front', col: 'right' },
+        { row: 'mid', col: 'right' },
+        { row: 'back', col: 'left' },
+      ],
+      2,
+    );
+    expect(() => validateMatchSetup(setup)).not.toThrow();
+  });
+
+  it('the WHELP specifically cannot be crowned — small, but dragonkind (the case 4.8’s sizeClass rule would have let through)', () => {
+    const setup = sideA(
+      [
+        { class: 'golem', element: 'earth', name: 'Ogham' },
+        { class: 'whelp', element: 'fire', name: 'Emberis' },
+        { class: 'knight', element: 'fire', name: 'Kain' },
+        { class: 'cleric', element: 'water', name: 'Sela' },
+      ],
+      [
+        { row: 'front', col: 'left' },
+        { row: 'front', col: 'right' },
+        { row: 'mid', col: 'right' },
+        { row: 'back', col: 'left' },
+      ],
+      1, // the Whelp
+    );
+    expectViolation(setup, 'leader-not-human', /dragon/);
+  });
+
+  it('the error names the offending RACE, so every non-human kind reports its own reason', () => {
+    const cases: [MatchSetup['armies']['A'][number]['class'], RegExp][] = [
+      ['golem', /golem/],
+      ['gryphon', /beast/],
+      ['emberdrake', /dragon/],
+    ];
+    for (const [cls, reason] of cases) {
+      const setup = sideA(
+        [
+          { class: cls, element: 'earth', name: 'Ogham' },
+          { class: 'knight', element: 'fire', name: 'Kain' },
+          { class: 'cleric', element: 'water', name: 'Sela' },
+          { class: 'archer', element: 'wind', name: 'Lyra' },
+        ],
+        [
+          { row: 'front', col: 'left' },
+          { row: 'front', col: 'right' },
+          { row: 'mid', col: 'right' },
+          { row: 'back', col: 'left' },
+        ],
+        0,
+      );
+      expectViolation(setup, 'leader-not-human', reason);
+    }
+  });
+
+  it('the monster CAP still counts sizeClass, not race: two monsters plus a Whelp clears `too-many-monsters` and dies on the crown instead', () => {
+    // ROSTER.md §Monster rules states the consequence "a 2-monster + Whelp
+    // army is legal, if a human leader is aboard" — at slotBudget 5 that
+    // army is 2+2+1 = 5 slots with no room left for the human, so it can
+    // never validate. The CAP semantics are still exactly as decided (the
+    // Whelp does not consume a monster slot); what's unreachable is only
+    // that particular illustration. Pinned so the distinction is deliberate.
+    const setup = sideA(
+      [
+        { class: 'golem', element: 'earth', name: 'Ogham' },
+        { class: 'cragmaw', element: 'earth', name: 'Korvassa' },
+        { class: 'whelp', element: 'fire', name: 'Emberis' },
+      ],
+      [TWO_MONSTER_CELLS[0], TWO_MONSTER_CELLS[1], { row: 'front', col: 'right' }],
+      0,
+    );
+    expectViolation(setup, 'leader-not-human', /A/); // NOT 'too-many-monsters' — the Whelp is a small
+  });
+
+  it('the REACHABLE cap demonstration: 1 monster + Whelp + 2 humans is legal, and four Whelps beside one human is legal (ROSTER.md, corrected)', () => {
+    // The Whelp does not consume a monster-cap slot, and unlike the retired
+    // "2 monsters + Whelp" illustration these armies leave room for the human
+    // the crown requires.
+    const setup = sideA(
+      [
+        { class: 'cragmaw', element: 'earth', name: 'Korvassa' },
+        { class: 'whelp', element: 'fire', name: 'Emberis' },
+        { class: 'knight', element: 'fire', name: 'Kain' },
+        { class: 'cleric', element: 'water', name: 'Sela' },
+      ],
+      [
+        { row: 'front', col: 'left' },
+        { row: 'front', col: 'right' },
+        { row: 'mid', col: 'right' },
+        { row: 'back', col: 'left' },
+      ],
+      2,
+    );
+    expect(() => validateMatchSetup(setup)).not.toThrow();
+
+    const brood = sideA(
+      [
+        { class: 'whelp', element: 'fire', name: 'Emberis' },
+        { class: 'whelp', element: 'water', name: 'Fyrnwyn' },
+        { class: 'whelp', element: 'wind', name: 'Ithrax' },
+        { class: 'whelp', element: 'earth', name: 'Lorvyth' },
+        { class: 'knight', element: 'fire', name: 'Kain' },
+      ],
+      [
+        { row: 'front', col: 'left' },
+        { row: 'front', col: 'center' },
+        { row: 'front', col: 'right' },
+        { row: 'mid', col: 'left' },
+        { row: 'mid', col: 'center' },
+      ],
+      4,
+    );
+    expect(() => validateMatchSetup(brood)).not.toThrow();
+  });
+
+  it('the Whelp costs 1 slot where a real monster costs 2 — the arithmetic that keeps it outside the cap', () => {
+    // Retitled at review (2026-07-28): the old title claimed a third-monster
+    // cap check this body never made. What the body actually pins is the slot
+    // arithmetic — the player-visible consequence of the Whelp being small.
+    // A third monster itself can never reach the `too-many-monsters` cap at
+    // slotBudget 5: three monsters cost 6 slots, so `wrong-slot-total` fires
+    // FIRST (validation order: slots before footprint) — the cap check is
+    // belt-and-suspenders at this budget, live again if the budget ever grows.
+    expect(slotTotal([{ class: 'whelp' }])).toBe(1);
+    expect(slotTotal([{ class: 'cragmaw' }])).toBe(2);
+  });
+});
+
+/**
+ * The monster reservation ring is DATA-driven off `sizeClass` (story 4.8's
+ * rule, story 5.5's first real test of it): nine classes now carry
+ * `sizeClass: 'monster'`, and nothing in `canPlace`/`legalAnchors` mentions
+ * the Golem by name — so every one of them must reserve the identical ring,
+ * and the 1-slot Whelp must reserve nothing at all despite being dragonkind.
+ */
+describe('placement reservations are per-sizeClass, not per-class (story 5.5, E5-P3)', () => {
+  const ALL_CELLS = (['front', 'mid', 'back'] as const).flatMap((row) => (['left', 'center', 'right'] as const).map((col) => ({ row, col })));
+  const key = (c: { row: string; col: string }) => `${c.row}/${c.col}`;
+  const MONSTERS = ['golem', 'gryphon', 'wyrm', 'hellhound', 'emberdrake', 'frostfang', 'stormscale', 'cragmaw', 'nightwing', 'halowing'] as const;
+
+  it('a dragon DEAD-CENTER blocks the entire rest of the board — no small can be placed anywhere (the dossier example, now with a dragon)', () => {
+    const anchors = legalAnchors('knight', [{ class: 'cragmaw', placement: { row: 'mid', col: 'center' } }]);
+    expect(anchors).toEqual([]);
+  });
+
+  it('a dragon in a CORNER blocks 3 cells, leaving 5 free (the other dossier example)', () => {
+    const anchors = legalAnchors('knight', [{ class: 'emberdrake', placement: { row: 'front', col: 'left' } }]);
+    // front/left's own cell plus its 3 on-grid king-move neighbours are gone.
+    expect(new Set(anchors.map(key))).toEqual(new Set(['front/right', 'mid/right', 'back/left', 'back/center', 'back/right']));
+    expect(anchors).toHaveLength(5);
+  });
+
+  it('EVERY monster class reserves the identical ring — the rule reads sizeClass, so no class is special-cased', () => {
+    for (const anchor of ALL_CELLS) {
+      const baseline = legalAnchors('knight', [{ class: 'golem', placement: anchor }])
+        .map(key)
+        .sort();
+      for (const cls of MONSTERS) {
+        expect(
+          legalAnchors('knight', [{ class: cls, placement: anchor }])
+            .map(key)
+            .sort(),
+          `${cls} at ${key(anchor)}`,
+        ).toEqual(baseline);
+      }
+    }
+  });
+
+  it('the WHELP reserves NOTHING (E5-P3: 1 slot, small, no ring) — it only occupies its own cell, like any human', () => {
+    for (const anchor of ALL_CELLS) {
+      const whelpAnchors = legalAnchors('knight', [{ class: 'whelp', placement: anchor }])
+        .map(key)
+        .sort();
+      const knightAnchors = legalAnchors('knight', [{ class: 'knight', placement: anchor }])
+        .map(key)
+        .sort();
+      expect(whelpAnchors, `whelp at ${key(anchor)}`).toEqual(knightAnchors);
+      // Concretely: all 9 cells minus its own.
+      expect(whelpAnchors).toHaveLength(ALL_CELLS.length - 1);
+    }
+  });
+
+  it('two monsters MAY share a column when two rows apart — there is no column rule, only the king-move ring (ROSTER.md said otherwise; corrected 2026-07-28)', () => {
+    // front-left + back-left: same column, row distance 2, so neither is in the
+    // other's Moore neighbourhood. LEGAL. It is the ADJACENT pair in that same
+    // column that is not.
+    expect(canPlace('emberdrake', { row: 'back', col: 'left' }, [{ class: 'golem', placement: { row: 'front', col: 'left' } }])).toBe(true);
+    expect(canPlace('emberdrake', { row: 'mid', col: 'left' }, [{ class: 'golem', placement: { row: 'front', col: 'left' } }])).toBe(false);
+    // …and the same-ROW analogue, which the shipped twin-golems comp relies on.
+    expect(canPlace('emberdrake', { row: 'front', col: 'right' }, [{ class: 'golem', placement: { row: 'front', col: 'left' } }])).toBe(true);
+  });
+
+  it('a unit may stand directly BESIDE a Whelp, and a Whelp beside anyone — the distinction that makes it a budget dragon rather than a small monster', () => {
+    expect(canPlace('knight', { row: 'front', col: 'center' }, [{ class: 'whelp', placement: { row: 'front', col: 'left' } }])).toBe(true);
+    expect(canPlace('whelp', { row: 'front', col: 'center' }, [{ class: 'knight', placement: { row: 'front', col: 'left' } }])).toBe(true);
+    // …but NOT beside a real monster, in either direction.
+    expect(canPlace('whelp', { row: 'front', col: 'center' }, [{ class: 'emberdrake', placement: { row: 'front', col: 'left' } }])).toBe(false);
+    expect(canPlace('emberdrake', { row: 'front', col: 'center' }, [{ class: 'whelp', placement: { row: 'front', col: 'left' } }])).toBe(false);
   });
 });

@@ -349,13 +349,29 @@ function act(unit: UnitState, units: UnitState[], battle: Stream, setup: MatchSe
         // data-driven: any class given a 'blast' row blasts, with the D-2c
         // tactic interaction (under `leader` the AoE targets the enemy
         // leader's ROW; otherwise fullest row, tie rearmost) intact.
-        case 'blast': {
+        // The dragons' breath (story 5.5, E5-D7) shares the case: ONE
+        // targeting rule for both row-AoEs, two arithmetics. Blast is MAGIC
+        // (no leader-fall penalty, no Guard — dossier §4: both physical
+        // only); breath is PHYSICAL (STR vs VIT, same wipeout attenuation —
+        // row coverage compounds across engagements whatever the damage
+        // stat), so the FR35 sober package applies via `leaderPenaltyBreath`
+        // — composed OUTSIDE the pipeline, re-clamped, and only wrapped once
+        // a leader has actually fallen (the allocation-free discipline).
+        // Both take zero draws and no `roll` (ADR 0003: draws exist only on
+        // single-target physical hits — so no crit, no dodge, no Guard).
+        case 'blast':
+        case 'breath': {
           const leaderRow = tactic === 'leader' ? enemies.find((e) => e.id === enemyLeaderId && e.alive)?.rowIndex : undefined;
           const row = leaderRow ?? selectBlastRow(enemies);
           if (row === undefined) return skip(unit);
           const targets = enemies.filter((e) => e.alive && e.rowIndex === row);
-          // Blast is MAGIC — no leader-fall penalty, no Guard (dossier §4: both physical only).
-          return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode), 'blast', units, setup.leaders, leaderFallen);
+          const formula =
+            move === 'blast'
+              ? (a: UnitClass, d: UnitClass, w?: boolean) => blastDamage(a, d, w ?? false, mode)
+              : leaderFallen.A || leaderFallen.B
+                ? leaderPenaltyBreath(unit.side, enemySide, leaderFallen, mode)
+                : (a: UnitClass, d: UnitClass, w?: boolean) => breathDamage(a, d, w ?? false, mode);
+          return strike(unit, targets, formula, move, units, setup.leaders, leaderFallen);
         }
         // Physical melee single-target (FR8), reach-filtered with Last Stand:
         // every slash/bash row, plus the Wizard/Sorceress FRONT-row staff jab
@@ -427,12 +443,23 @@ function misfire(unit: UnitState, units: UnitState[], battle: Stream, setup: Mat
         const target = allies[nextInt(battle, 0, allies.length - 1)] as UnitState; // A2 — the only draw
         return strike(unit, [target], magicDamage, 'bolt', units, setup.leaders, leaderFallen);
       }
-      if (move === 'blast') {
+      // A misfired row-AoE hits the caster's OWN fullest row, itself included
+      // (row-consistent — the caster counts and can be struck). A confused
+      // dragon (story 5.5) is the self-blast rule's physical twin: same row
+      // pick, but the sober package applies dealt AND taken to the SAME side.
+      // Zero draws for both (A1 only).
+      if (move === 'blast' || move === 'breath') {
         const own = units.filter((u) => u.side === unit.side);
         const row = selectBlastRow(own);
         if (row === undefined) return [{ type: 'ActionFizzled', unit: unit.id }];
         const targets = own.filter((u) => u.alive && u.rowIndex === row);
-        return strike(unit, targets, (a, d, w) => blastDamage(a, d, w ?? false, mode), 'blast', units, setup.leaders, leaderFallen);
+        const formula =
+          move === 'blast'
+            ? (a: UnitClass, d: UnitClass, w?: boolean) => blastDamage(a, d, w ?? false, mode)
+            : leaderFallen.A || leaderFallen.B
+              ? leaderPenaltyBreath(unit.side, unit.side, leaderFallen, mode)
+              : (a: UnitClass, d: UnitClass, w?: boolean) => breathDamage(a, d, w ?? false, mode);
+        return strike(unit, targets, formula, move, units, setup.leaders, leaderFallen);
       }
       if (allies.length === 0) return [{ type: 'ActionFizzled', unit: unit.id }];
       // A2 (misfire redirect target) draws first, THEN A3/A4 for the resulting
@@ -647,9 +674,26 @@ export function leaderPenaltyPhysical(
   defenderSide: Side,
   leaderFallen: Record<Side, boolean>,
 ): (a: UnitClass, d: UnitClass, weakened?: boolean, crit?: boolean) => number {
+  return leaderPenalty((a, d, weakened, crit) => physicalDamage(a, d, weakened, crit), attackerSide, defenderSide, leaderFallen);
+}
+
+/**
+ * The one FR35 sober-package composition (story 5.5 review extraction): wraps
+ * ANY physical base formula in the fixed-order dealt ×3/4 → taken ×5/4 floor
+ * multiplications, re-clamped to `minDamage` LAST. `leaderPenaltyPhysical` and
+ * `leaderPenaltyBreath` are thin bindings of this over their base arithmetic —
+ * one body, so the composed order can never drift between move kinds (and the
+ * anticipated Archmage AoE gets it for free if it ever ships physical).
+ */
+function leaderPenalty(
+  base: (a: UnitClass, d: UnitClass, weakened?: boolean, crit?: boolean) => number,
+  attackerSide: Side,
+  defenderSide: Side,
+  leaderFallen: Record<Side, boolean>,
+): (a: UnitClass, d: UnitClass, weakened?: boolean, crit?: boolean) => number {
   const { leaderFallDealt, leaderFallTaken, minDamage } = BALANCE.formulas;
   return (a, d, weakened, crit) => {
-    let dmg = physicalDamage(a, d, weakened, crit);
+    let dmg = base(a, d, weakened, crit);
     if (leaderFallen[attackerSide]) dmg = Math.floor((dmg * leaderFallDealt.num) / leaderFallDealt.den);
     if (leaderFallen[defenderSide]) dmg = Math.floor((dmg * leaderFallTaken.num) / leaderFallTaken.den);
     return Math.max(minDamage, dmg);
@@ -705,6 +749,37 @@ export function magicDamage(attacker: UnitClass, defender: UnitClass, weakened =
 export function blastDamage(attacker: UnitClass, defender: UnitClass, weakened: boolean, mode: 'single' | 'wipeout'): number {
   const attenuation = mode === 'wipeout' ? BALANCE.formulas.blastAttenuation : undefined;
   return damagePipeline(BALANCE.classes[attacker].int, attacker, defender, weakened, 'men', attenuation);
+}
+
+/**
+ * The dragons' breath (story 5.5, dossier E5-D7): per-target row-AoE damage
+ * with PHYSICAL arithmetic — STR − floor(VIT/2) — and the blast's wipeout
+ * attenuation (×3/4 BEFORE RPS, wipeout only: row coverage compounds across
+ * engagements whatever the damage stat, the story-3.0 finding). Fixed tail
+ * (RPS → Weaken → min-1) as always. Zero draws, no crit (AoE never rolls),
+ * but physical — the FR35 sober package composes OUTSIDE via
+ * `leaderPenaltyBreath`. Exported for direct table-driven tests.
+ */
+export function breathDamage(attacker: UnitClass, defender: UnitClass, weakened: boolean, mode: 'single' | 'wipeout'): number {
+  const attenuation = mode === 'wipeout' ? BALANCE.formulas.blastAttenuation : undefined;
+  return damagePipeline(BALANCE.classes[attacker].str, attacker, defender, weakened, 'vit', attenuation);
+}
+
+/**
+ * The FR35 sober package for the BREATH (story 5.5): breath is PHYSICAL, so
+ * a fallen leader cuts it exactly like melee — the shared `leaderPenalty`
+ * composition over `breathDamage`. Composed order: base → attenuation
+ * (wipeout) → RPS → Weaken → clamp → leader-fall dealt/taken → re-clamp. No
+ * crit slot — breath never rolls (the base binding simply ignores the
+ * factory's crit parameter). Exported for direct table-driven tests.
+ */
+export function leaderPenaltyBreath(
+  attackerSide: Side,
+  defenderSide: Side,
+  leaderFallen: Record<Side, boolean>,
+  mode: 'single' | 'wipeout',
+): (a: UnitClass, d: UnitClass, weakened?: boolean) => number {
+  return leaderPenalty((a, d, weakened) => breathDamage(a, d, weakened ?? false, mode), attackerSide, defenderSide, leaderFallen);
 }
 
 /** FR11 heal amount: floor(INT × 5/4); the EFFECTIVE restore is capped at max HP by the caller. */

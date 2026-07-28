@@ -44,7 +44,47 @@ export function unitDisplaySize(cls: UnitClass, baseSize: number): number {
  * 88 + 4×50 + 3×6 = 306, right edge at 9 + 5×62 + 4×8 = 351 ≤ 360, and
  * every tile stays over the FR30 44px tap floor.
  */
-export const DRAFT_GRID = { cols: 5, tileW: 62, tileH: 50, gapX: 8, gapY: 6, startX: 9, startY: 88 } as const;
+/**
+ * The Draft class-picker grid. Story 5.5 re-lays it a SECOND time, and the
+ * driver is the tab strip: with 27 classes split into Humans (16) and Monsters
+ * (11), the biggest grid any tab must hold is 16 — four rows — so the vertical
+ * budget that forced 5.4's 5×62 squeeze is back, and the tiles can be wide
+ * again. They HAVE to be: "Emberdrake" and "Stormscale" are 10 characters, and
+ * a 62px tile's 58px wrap width only carries 9 at 8px Arial Black (Phaser's
+ * word wrap does not break inside a word, so the eleventh character would
+ * simply hang outside the tile). At 4 columns of 80px the wrap width is 76px —
+ * 12 characters — and the row centres exactly: 4×80 + 3×8 = 344, leaving 8px
+ * either side.
+ *
+ * The vertical budget is the tighter half. The tab strip is PRIMARY navigation
+ * (unlike the header's Rules spur), so its tap target has to clear FR30's 44px
+ * floor — which pushes the grid's top from y=88 to y=98. Paying for that meant
+ * trimming the tile height 50 → 48 (still over the 44px floor): four rows now
+ * end at y=308, keeping 2px of daylight above DRAFT_DETAIL at 310.
+ * draft-grid.test.ts pins all of this per TAB, so the next wave fails there.
+ */
+export const DRAFT_GRID = { cols: 4, tileW: 80, tileH: 48, gapX: 8, gapY: 6, startX: 8, startY: 98 } as const;
+
+/**
+ * The Draft tab strip (story 5.5): label baseline, its active underline, and
+ * the FR30-compliant tap zone. `tapW` is the FLOOR of the tap target;
+ * `tapMaxW` is its CEILING — the scene grows the zone with the label
+ * ("MONSTERS" at 13px Arial Black already exceeds the 88px floor), and the
+ * clamp is what makes "the two targets never overlap" a testable claim
+ * instead of a hope about label widths (review-caught: the test previously
+ * pinned only the floor). 128 leaves a 12px gap between the zones at the
+ * ±70px centres and keeps both inside the canvas.
+ */
+export const DRAFT_TABS = { y: 76, underlineY: 86, tapH: 44, tapW: 88, tapMaxW: 128, offsetX: 70 } as const;
+
+/**
+ * The draft hint line's centre y (story 5.5 review): at y=50 its 11px line
+ * bottom (~55.5) grazed the tab zones' top edge (76 − 44/2 = 54) by ~1.5px —
+ * a tap on the hint's last pixels silently switched tabs. At 46 the line
+ * spans ~40.5–51.5, clearing the zones; draft-grid.test.ts pins the
+ * clearance so a future header re-lay can't reintroduce the graze.
+ */
+export const DRAFT_HINT_Y = 46;
 
 /**
  * The class-detail panel below the grid (story 5.4 re-lay): starts under the
@@ -327,6 +367,17 @@ export const CLASS_ABBREVIATIONS: Record<UnitClass, string> = {
   hawkman: 'HAW',
   vultan: 'VUL',
   raven: 'RAV',
+  // Story 5.5 roster wave — the monsters (dossier ROSTER.md's Code column).
+  gryphon: 'GRY',
+  wyrm: 'WYR',
+  hellhound: 'HEL',
+  whelp: 'WHP',
+  emberdrake: 'EMB',
+  frostfang: 'FRF',
+  stormscale: 'STM',
+  cragmaw: 'CRG',
+  nightwing: 'NGT',
+  halowing: 'HAL',
 };
 
 /**
@@ -355,6 +406,19 @@ export const CLASS_DISPLAY_NAME: Record<UnitClass, string> = {
   hawkman: 'Hawkman',
   vultan: 'Vultan',
   raven: 'Raven',
+  // Story 5.5 roster wave — the monsters. Every one is a single word, so the
+  // Draft tile's 8px label fits one line (the "Dragon Hunter" wrap stays the
+  // roster's only two-word display name).
+  gryphon: 'Gryphon',
+  wyrm: 'Wyrm',
+  hellhound: 'Hellhound',
+  whelp: 'Whelp',
+  emberdrake: 'Emberdrake',
+  frostfang: 'Frostfang',
+  stormscale: 'Stormscale',
+  cragmaw: 'Cragmaw',
+  nightwing: 'Nightwing',
+  halowing: 'Halowing',
 };
 export const CARD_CLASS_FONT_PX = 13;
 
@@ -656,6 +720,11 @@ export const MOVE_PLATE_NAMES: Record<Exclude<MoveKind, 'blast'>, string> = {
   staff: 'Staff',
   bash: 'Bash',
   bolt: 'Magic Bolt', // story 5.4 (E5-D4) — the casters' single-target bolt; the Valkyrie overrides it below
+  // Story 5.5 (E5-D7) — the dragons' row-AoE. The GENERIC fallback: every
+  // shipped breath dragon names its own element flavor below (Ember/Frost/
+  // Storm/Acid/Dread/Radiant), so this word only ever surfaces if a future
+  // class takes `breath` without a named verb.
+  breath: 'Breath',
 };
 /**
  * Per-(class, kind) display names OVER the generic plate vocabulary (story
@@ -678,6 +747,21 @@ export const CLASS_MOVE_NAMES: Partial<Record<UnitClass, Partial<Record<Exclude<
   hawkman: { slash: 'Talon Strike' },
   vultan: { slash: 'Talon Strike', arrow: 'Wind Shot' },
   raven: { slash: 'Talon Strike', arrow: 'Thunder Arrow' },
+  // Story 5.5 — the monsters (ROSTER.md's Front/Mid/Back verb columns). The
+  // beasts bite or claw over `slash`; the Gryphon's back-row Wind Shot rides
+  // `arrow` (E5-D14); each grown dragon's breath keeps its FLAVOR element
+  // word (E5-D6: flavor only — the unit still rolls one of the four engine
+  // elements, and the plate never reads that roll for a breath).
+  gryphon: { slash: 'Claw', arrow: 'Wind Shot' },
+  wyrm: { slash: 'Bite' },
+  hellhound: { slash: 'Bite' },
+  whelp: { slash: 'Bite' },
+  emberdrake: { slash: 'Bite', breath: 'Ember Breath' },
+  frostfang: { slash: 'Bite', breath: 'Frost Breath' },
+  stormscale: { slash: 'Bite', breath: 'Storm Breath' },
+  cragmaw: { slash: 'Bite', breath: 'Acid Breath' },
+  nightwing: { slash: 'Bite', breath: 'Dread Breath' },
+  halowing: { slash: 'Bite', breath: 'Radiant Breath' },
 };
 /** The blast's element flavor word (open Q2 default — EXPERIENCE.md names "Ice Blast" for water). */
 export const BLAST_ELEMENT_WORD: Record<Element, string> = {

@@ -1,4 +1,4 @@
-import type { Element, Role, RowMove, SpellKind, Unit, UnitClass } from './types';
+import type { Element, Race, Role, RowMove, SpellKind, Unit, UnitClass } from './types';
 
 /**
  * An exact integer ratio. All combat arithmetic is integer math (FR15/FR20):
@@ -39,6 +39,8 @@ export interface ClassStats {
   moves: { front: RowMove; mid: RowMove; back: RowMove };
   /** Physical size (FR38): drives slot cost and (from 4.8) the two-cell footprint. */
   sizeClass: SizeClass;
+  /** Race (E5-D13, story 5.5): the leader-eligibility axis — only 'human' may be crowned. See `Race` in types.ts for why it is neither `sizeClass` nor `role`. */
+  race: Race;
   /** Combat role (FR14, story 4.3): the ONLY thing matchups read — see `roleRelations`. */
   role: Role;
 }
@@ -150,7 +152,7 @@ export interface BalanceData {
  * forgotten (AD-8).
  */
 export const BALANCE: BalanceData = {
-  version: 10, // story 5.4: the human wave (dossier ROSTER.md) — 5 new classes, `bolt`, the shipped-12 revision
+  version: 11, // story 5.5: the monster wave (dossier ROSTER.md) — 10 monsters, `breath`, the `race` field, dragonslayer hunt goes live
 
   slotBudget: 5,
   engagementCap: 10,
@@ -171,6 +173,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 2, mid: 1, back: 1 },
       moves: { front: 'slash', mid: 'guard-half', back: 'slash' },
       sizeClass: 'small',
+      race: 'human',
       role: 'vanguard',
     },
     mercenary: {
@@ -184,6 +187,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 2, mid: 1, back: 1 },
       moves: { front: 'slash', mid: 'slash', back: 'slash' },
       sizeClass: 'small',
+      race: 'human',
       role: 'skirmisher',
     },
     archer: {
@@ -197,6 +201,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 1, mid: 2, back: 2 },
       moves: { front: 'arrow', mid: 'arrow', back: 'arrow' },
       sizeClass: 'small',
+      race: 'human',
       role: 'sniper',
     },
     // Story 5.4 (dossier E5-D4): casters LOSE the row splash — mid/back is the
@@ -212,6 +217,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 1, mid: 1, back: 2 },
       moves: { front: 'staff', mid: 'bolt', back: 'bolt' },
       sizeClass: 'small',
+      race: 'human',
       role: 'artillery',
     },
     cleric: {
@@ -225,6 +231,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 1, mid: 1, back: 2 },
       moves: { front: 'staff', mid: 'staff', back: 'staff' },
       sizeClass: 'small',
+      race: 'human',
       role: 'support',
     },
     witch: {
@@ -240,6 +247,7 @@ export const BALANCE: BalanceData = {
       // total, mirroring the retired CLASS_MOVE_KIND convention.
       moves: { front: 'staff', mid: 'staff', back: 'staff' },
       sizeClass: 'small',
+      race: 'human',
       role: 'control',
     },
     // Wave-1 additions (story 4.3, dossier §1 — TUNING DRAFTS, sweep-policed). Golem (monster) ships in 4.8.
@@ -254,6 +262,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 2, mid: 1, back: 1 },
       moves: { front: 'slash', mid: 'slash', back: 'slash' },
       sizeClass: 'small',
+      race: 'human',
       role: 'vanguard',
     },
     // Story 5.4 (dossier E5-P2): guard rows carry ONE action now (2/1/1 →
@@ -270,6 +279,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 1, mid: 1, back: 1 },
       moves: { front: 'guard-full', mid: 'guard-full', back: 'bash' },
       sizeClass: 'small',
+      race: 'human',
       role: 'vanguard',
     },
     ninja: {
@@ -283,6 +293,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 2, mid: 1, back: 1 },
       moves: { front: 'slash', mid: 'slash', back: 'slash' },
       sizeClass: 'small',
+      race: 'human',
       role: 'skirmisher',
     },
     // Story 5.4 (dossier E5-D10 + the approved Valkyrie amendment): back row
@@ -299,6 +310,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 2, mid: 1, back: 2 },
       moves: { front: 'slash', mid: 'slash', back: 'bolt' },
       sizeClass: 'small',
+      race: 'human',
       role: 'skirmisher',
     },
     // Story 5.4 (dossier E5-D4): same splash removal as the mage — see above.
@@ -313,6 +325,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 1, mid: 1, back: 2 },
       moves: { front: 'staff', mid: 'bolt', back: 'bolt' },
       sizeClass: 'small',
+      race: 'human',
       role: 'artillery',
     },
     // Story 4.8 (dossier §1/§2, D-1b) — the wave's ONLY monster (the dragon is
@@ -337,6 +350,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 2, mid: 1, back: 1 },
       moves: { front: 'slash', mid: 'slash', back: 'slash' },
       sizeClass: 'monster',
+      race: 'golem',
       role: 'brute',
     },
     // Story 5.4 — the human wave (epic-5 dossier, ROSTER.md's approved
@@ -353,6 +367,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 2, mid: 1, back: 1 },
       moves: { front: 'slash', mid: 'slash', back: 'slash' },
       sizeClass: 'small',
+      race: 'human',
       role: 'skirmisher',
     },
     // Anti-dragon (E5-P1): Skewer lands the one-way ×1.5 dragonslayer→dragon
@@ -368,6 +383,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 2, mid: 1, back: 1 },
       moves: { front: 'slash', mid: 'slash', back: 'slash' },
       sizeClass: 'small',
+      race: 'human',
       role: 'dragonslayer',
     },
     // Reliable filler skirmisher — the budget mercenary. Flying is FLAVOR only (E5-D10).
@@ -382,6 +398,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 2, mid: 1, back: 1 },
       moves: { front: 'slash', mid: 'slash', back: 'slash' },
       sizeClass: 'small',
+      race: 'human',
       role: 'skirmisher',
     },
     // Hybrid: melee up close, "Wind Shot" ×2 from the back — a physical Skill
@@ -397,6 +414,7 @@ export const BALANCE: BalanceData = {
       actions: { front: 2, mid: 1, back: 2 },
       moves: { front: 'slash', mid: 'slash', back: 'arrow' },
       sizeClass: 'small',
+      race: 'human',
       role: 'skirmisher',
     },
     // Aggressive hybrid: hits harder and crits more than the Vultan, thinner.
@@ -412,7 +430,166 @@ export const BALANCE: BalanceData = {
       actions: { front: 2, mid: 1, back: 2 },
       moves: { front: 'slash', mid: 'slash', back: 'arrow' },
       sizeClass: 'small',
+      race: 'human',
       role: 'skirmisher',
+    },
+    // ── Story 5.5: the monster wave (epic-5 dossier, ROSTER.md's approved
+    // engine-scale rows, E5-D15; sweep-policed like every tuning value).
+    // Monsters are 2-slot single-cell units reserving their king-move ring
+    // (the shipped Golem model) — except the Whelp, a 1-slot SMALL (E5-P3).
+    // Bites/claws are display verbs over `slash`; the dragons' back row is
+    // the physical row-AoE `breath` (E5-D7); the Gryphon's Wind Shot rides
+    // `arrow` (E5-D14). None can be crowned (race, E5-D13).
+    // The fast monster: acts early (AGI 26), Wind Shot ×2 from the back.
+    gryphon: {
+      hp: 220,
+      str: 26,
+      vit: 24,
+      int: 6,
+      men: 14,
+      agi: 26,
+      dex: 18,
+      actions: { front: 2, mid: 1, back: 2 },
+      moves: { front: 'slash', mid: 'slash', back: 'arrow' },
+      sizeClass: 'monster',
+      race: 'beast',
+      role: 'beast',
+    },
+    // All-row pressure (bites 2/2/1) — the mid-row monster.
+    wyrm: {
+      hp: 240,
+      str: 30,
+      vit: 28,
+      int: 4,
+      men: 10,
+      agi: 20,
+      dex: 14,
+      actions: { front: 2, mid: 2, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'slash' },
+      sizeClass: 'monster',
+      race: 'beast',
+      role: 'beast',
+    },
+    // Glass-cannon monster: front Bite ×3 — the game's first 3-action row.
+    hellhound: {
+      hp: 220,
+      str: 28,
+      vit: 24,
+      int: 6,
+      men: 10,
+      agi: 18,
+      dex: 12,
+      actions: { front: 3, mid: 2, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'slash' },
+      sizeClass: 'monster',
+      race: 'beast',
+      role: 'beast',
+    },
+    // The budget dragon (E5-P3): a 1-slot SMALL mini-bruiser with NO
+    // reservation ring — but still dragonkind: hunter bait, never crowned.
+    whelp: {
+      hp: 130,
+      str: 26,
+      vit: 22,
+      int: 4,
+      men: 10,
+      agi: 8,
+      dex: 10,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'slash' },
+      sizeClass: 'small',
+      race: 'dragon',
+      role: 'dragon',
+    },
+    // The damage dragon (STR 34; Ember Breath from the back).
+    emberdrake: {
+      hp: 270,
+      str: 34,
+      vit: 26,
+      int: 6,
+      men: 14,
+      agi: 16,
+      dex: 16,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'breath' },
+      sizeClass: 'monster',
+      race: 'dragon',
+      role: 'dragon',
+    },
+    // The magic-resistant dragon (MEN 18 — casters struggle).
+    frostfang: {
+      hp: 265,
+      str: 30,
+      vit: 26,
+      int: 6,
+      men: 18,
+      agi: 12,
+      dex: 18,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'breath' },
+      sizeClass: 'monster',
+      race: 'dragon',
+      role: 'dragon',
+    },
+    // The fast dragon: early action + crit-leaning DEX.
+    stormscale: {
+      hp: 260,
+      str: 30,
+      vit: 25,
+      int: 6,
+      men: 14,
+      agi: 18,
+      dex: 20,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'breath' },
+      sizeClass: 'monster',
+      race: 'dragon',
+      role: 'dragon',
+    },
+    // The wall dragon — closest to the Golem, but it bites back harder.
+    cragmaw: {
+      hp: 290,
+      str: 30,
+      vit: 30,
+      int: 6,
+      men: 14,
+      agi: 10,
+      dex: 14,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'breath' },
+      sizeClass: 'monster',
+      race: 'dragon',
+      role: 'dragon',
+    },
+    // The assassin dragon: high STR + a DEX lean.
+    nightwing: {
+      hp: 265,
+      str: 32,
+      vit: 26,
+      int: 8,
+      men: 14,
+      agi: 12,
+      dex: 18,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'breath' },
+      sizeClass: 'monster',
+      race: 'dragon',
+      role: 'dragon',
+    },
+    // The balanced holy dragon — no weakness, no spike.
+    halowing: {
+      hp: 270,
+      str: 30,
+      vit: 28,
+      int: 8,
+      men: 16,
+      agi: 10,
+      dex: 14,
+      actions: { front: 2, mid: 1, back: 1 },
+      moves: { front: 'slash', mid: 'slash', back: 'breath' },
+      sizeClass: 'monster',
+      race: 'dragon',
+      role: 'dragon',
     },
   },
   // FR14 role relations (story 4.3) — the shipped-six triangle + hunts, verbatim:

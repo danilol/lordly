@@ -22,9 +22,10 @@ import type { ArchetypeStats } from '../sim/sweep';
 const ACCEPTANCE_BAND = 0.65;
 
 /**
- * Reduced-but-fast CI config: 10×10 pairings × 15 runs = 1500 battles,
- * ~285 games/archetype — a fast, DETERMINISTIC proxy (fixed baseSeed) for the
- * balance truth. The truth is the CONVERGED rate: at runsPerPair≥150 the
+ * Reduced-but-fast CI config: pool² pairings × 15 runs (18² × 15 = 4860
+ * battles since story 5.5's monster wave) — a fast, DETERMINISTIC proxy
+ * (fixed baseSeed) for the balance truth. The truth is the CONVERGED rate: at
+ * runsPerPair≥150 the
  * story-4.4 pool tops out at ~62.8% single / ~60% wipeout — genuinely inside
  * the 65% band after the fixed two-step pipeline (FR9 global range re-tuned the
  * three-mages + gale placements) and the tactic dimension (each side commits
@@ -42,6 +43,15 @@ const ACCEPTANCE_BAND = 0.65;
  * balance fact. Seeds 16–25 all sample in-band for BOTH modes at 15 runs;
  * baseSeed 21 (single max 63.6%, wipeout max 62.8%) sits mid-run for
  * robustness against small future pool edits.
+ *
+ * Story 5.5 re-VERIFY (no re-pin needed): the monster wave grew the pool
+ * 12 → 18 and re-tuned longbows + farshot, so the whole seed landscape moved
+ * — but baseSeed 21 stayed clean and stayed mid-run. Seeds 14–28 all sample
+ * in-band for BOTH modes at 15 runs; 21 reads single max 60.9% / wipeout max
+ * 61.8% with pool floors at 28.9% / 29.8%, so it has real margin in both
+ * directions. Outside that window the proxy trips on the two comps that ARE
+ * the band's ceiling at convergence: twin-golems in single (seeds 29–38) and
+ * longbows in wipeout (seeds 2–6, 11–13, 34+).
  */
 const CI_CONFIG = { baseSeed: 21, runsPerPair: 15, threshold: ACCEPTANCE_BAND };
 
@@ -274,17 +284,16 @@ describe('sim sweep (NFR4)', () => {
   // × runs=30) and brushes Vitest's default under a loaded CI runner — a load
   // flake, not a slow assertion (story 3.2/4.2/4.4 review lineage).
   //
-  // Story 4.12 CONVERGENCE DISCREPANCY (recorded deviation, docs/balance-verdict.md):
-  // this CI band (runsPerPair 15, seed 1) is a fast DETERMINISTIC proxy, and it
-  // holds — but the runs=500 wipeout convergence sweep lands `farshot` at a
-  // STABLE 65.3% across seeds 1/2/3 (it reads 64.4% at runs=200; the extra
-  // tactic/leader/element combinations sampled between 200 and 500 tilt slightly
-  // in its favor). That is a real 0.3% crossing at convergence. Danilo's call
-  // (2026-07-20) was to ACCEPT it as a conscious band widening rather than
-  // re-tune farshot's board — it is a fun snipe-and-support comp, only 52%
-  // single-mode, and tuning risked nudging the pack (longbows 62%). So this
-  // 15-run assertion stays green and is the enforced gate; the verdict doc
-  // carries the honest converged number. balanceVersion stays 9.
+  // Story 4.12's CONVERGENCE DISCREPANCY is RETIRED as of story 5.5. History:
+  // 4.12 found `farshot` at a stable 65.3% converged wipeout rate — a real
+  // 0.3% band crossing — and Danilo's call (2026-07-20) was to accept it as a
+  // conscious widening rather than re-tune a fun comp. The monster wave pushed
+  // it to 66.0%, which made "accept" untenable, and the fix turned out to cost
+  // farshot nothing: its second archer slides one column (mid/right →
+  // mid/left, ai.ts) for 62.5% wipeout AND a better single-mode rate. So there
+  // is no accepted deviation left to carry: at runs=500 across seeds 1/2/3 the
+  // converged maxima are single 64.3% (twin-golems) and wipeout 63.8%
+  // (longbows), both genuinely under the band.
   it(`ACCEPTANCE BAND (wipeout): no archetype exceeds ${ACCEPTANCE_BAND * 100}% aggregate win rate in wipeout mode`, () => {
     const wipeoutReport = runSweep(STRATEGY_POOL, { ...CI_CONFIG, mode: 'wipeout' });
     const table = wipeoutReport.archetypes.map((a) => `${a.id}: ${(a.winRate * 100).toFixed(1)}%`).join('\n');

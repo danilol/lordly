@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blastDamage, healAmount, magicDamage, physicalDamage } from '../src/resolve';
+import { blastDamage, breathDamage, healAmount, leaderPenaltyBreath, magicDamage, physicalDamage } from '../src/resolve';
 import type { UnitClass } from '../src/types';
 
 /**
@@ -146,5 +146,127 @@ describe('Weaken halves damage in the FIXED order: base → RPS → halve → mi
 describe('healAmount (FR11)', () => {
   it('cleric heal = 30 (floor(24 × 5/4))', () => {
     expect(healAmount('cleric')).toBe(30);
+  });
+});
+
+/**
+ * `breathDamage` (story 5.5, dossier E5-D7) — the dragons' row-AoE. It is the
+ * blast's structure with the PHYSICAL stat pair: power STR, mitigation VIT.
+ * The mode-scoped ×3/4 attenuation carries over unchanged, because what it
+ * compensates is ROW COVERAGE compounding across wipeout engagements, and
+ * coverage doesn't care which stat produced the number (ROSTER.md's 5.5
+ * carry: "the blast rule applies to `breath`").
+ *
+ * Like every other damage helper here, `breathDamage` is class-agnostic pure
+ * math, so non-dragon attackers are legal fixtures that reach branches no
+ * shipped dragon matchup can (the min-1 clamp, the small-base order cases).
+ */
+describe('breathDamage (story 5.5, E5-D7): PHYSICAL row-AoE — STR vs VIT, wipeout-attenuated like the blast', () => {
+  const singleCases: Array<[UnitClass, number, string]> = [
+    ['knight', 20, '34 − 14, neutral (dragon has no relation to vanguard)'],
+    ['archer', 28, '34 − 6, neutral'],
+    ['mage', 30, '34 − 4, neutral'],
+    ['cleric', 28, '34 − 6, neutral'],
+    ['witch', 29, '34 − 5, neutral'],
+    ['mercenary', 24, '34 − 10, neutral'],
+    ['phalanx', 17, '34 − 17, neutral — the VIT-34 wall is the best answer to breath'],
+    ['dragonhunter', 26, '34 − 8, neutral — the hunt is ONE-WAY (E5-P1): the dragon gets no bonus back'],
+  ];
+  for (const [defender, expected, why] of singleCases) {
+    it(`SINGLE emberdrake breath → ${defender} = ${expected} (${why})`, () => {
+      expect(breathDamage('emberdrake', defender, false, 'single')).toBe(expected);
+    });
+  }
+
+  it('SINGLE-mode breath is unattenuated — identical to physicalDamage for every matchup (the attenuation is wipeout-scoped, exactly as for the blast)', () => {
+    for (const attacker of ['emberdrake', 'cragmaw', 'halowing', 'knight'] as const) {
+      for (const defender of ['knight', 'archer', 'mage', 'cleric', 'witch', 'mercenary', 'phalanx', 'whelp'] as const) {
+        expect(breathDamage(attacker, defender, false, 'single'), `${attacker}→${defender}`).toBe(physicalDamage(attacker, defender));
+      }
+    }
+  });
+
+  const wipeoutCases: Array<[UnitClass, number, string]> = [
+    ['knight', 15, '34 − 14 = 20 → att 15, neutral'],
+    ['archer', 21, '34 − 6 = 28 → att 21, neutral'],
+    ['mercenary', 18, '34 − 10 = 24 → att 18, neutral'],
+    ['phalanx', 12, '34 − 17 = 17 → att floor(12.75), neutral'],
+  ];
+  for (const [defender, expected, why] of wipeoutCases) {
+    it(`WIPEOUT emberdrake breath → ${defender} = ${expected} (${why})`, () => {
+      expect(breathDamage('emberdrake', defender, false, 'wipeout')).toBe(expected);
+    });
+  }
+
+  it('the DRAGONSLAYER hunt reads through breath too — it keys on class, not on move (E5-P1)', () => {
+    // Not a shipped board (no dragonslayer has a breath row), but the hunt is
+    // pure class arithmetic inside the shared pipeline, so this pins that the
+    // relation is not accidentally special-cased per MoveKind.
+    expect(breathDamage('dragonhunter', 'whelp', false, 'single')).toBe(19); // 24 − 11 = 13 → ×3/2 floor(19.5)
+    expect(breathDamage('dragonhunter', 'emberdrake', false, 'single')).toBe(16); // 24 − 13 = 11 → ×3/2 floor(16.5)
+  });
+
+  it('ORDER DISCRIMINATOR — attenuation BEFORE RPS, not after: wipeout dragonhunter breath → whelp = 13 (13 → att 9 → hunt floor(13.5); the after-RPS order would give 13 → hunt 19 → att 14)', () => {
+    expect(breathDamage('dragonhunter', 'whelp', false, 'wipeout')).toBe(13);
+    // A second, independent witness at a different base, so the pin isn't one
+    // lucky rounding: halowing VIT 28 → base 10 → att 7 → hunt 10 (vs 11).
+    expect(breathDamage('dragonhunter', 'halowing', false, 'wipeout')).toBe(10);
+  });
+
+  it('weakened wipeout breath keeps the full fixed order: base 20 → att 15 → RPS (none) → halve = 7', () => {
+    expect(breathDamage('emberdrake', 'knight', true, 'wipeout')).toBe(7);
+    expect(breathDamage('emberdrake', 'knight', true, 'single')).toBe(10); // unattenuated: 20 → halve
+  });
+
+  it('min-1 clamp stays LAST: a STR-6 breath into VIT 34 survives attenuation to clamp (mage-STR breath → phalanx = 1 in both modes)', () => {
+    expect(breathDamage('mage', 'phalanx', false, 'single')).toBe(1); // 6 − 17 = −11 → clamp
+    expect(breathDamage('mage', 'phalanx', false, 'wipeout')).toBe(1); // −11 → att −9 → clamp
+  });
+});
+
+/**
+ * `leaderPenaltyBreath` (story 5.5) — the FR35 sober package composed OUTSIDE
+ * the damage pipeline, exactly like `leaderPenaltyPhysical`. The decision this
+ * pins (recorded in resolve.ts): breath IS physical, so a fallen leader cuts
+ * it — while crit, dodge and Guard stay out, because those three gate on the
+ * single-target ROLL that an AoE never makes.
+ */
+describe('leaderPenaltyBreath (story 5.5, FR35): fixed-order dealt ×3/4 then taken ×5/4, re-clamped LAST', () => {
+  const base = 20; // emberdrake breath → knight, single mode, no penalty
+  it('no leader has fallen: the raw breath number, untouched', () => {
+    expect(leaderPenaltyBreath('A', 'B', { A: false, B: false }, 'single')('emberdrake', 'knight')).toBe(base);
+  });
+
+  it('ATTACKER’s leader fell: dealt ×3/4 only — floor(20 × 3/4) = 15', () => {
+    expect(leaderPenaltyBreath('A', 'B', { A: true, B: false }, 'single')('emberdrake', 'knight')).toBe(15);
+  });
+
+  it('DEFENDER’s leader fell: taken ×5/4 only — floor(20 × 5/4) = 25', () => {
+    expect(leaderPenaltyBreath('A', 'B', { A: false, B: true }, 'single')('emberdrake', 'knight')).toBe(25);
+  });
+
+  it('BOTH leaders fell: dealt THEN taken, each floored separately — 20 → 15 → floor(18.75) = 18, NOT floor(20 × 15/16) = 18 by luck', () => {
+    // The two orders happen to agree at 18 here, so the real discriminator is
+    // the pair above: 15 and 25 are only reachable if each multiplication is
+    // applied and floored independently.
+    expect(leaderPenaltyBreath('A', 'B', { A: true, B: true }, 'single')('emberdrake', 'knight')).toBe(18);
+  });
+
+  it('the MISFIRE case (attacker and defender are the SAME side): both multipliers apply to one fallen leader — 20 → 15 → 18', () => {
+    // A confused dragon breathes on its own row, so its side is both the
+    // dealer and the taker; the composed order is unchanged.
+    expect(leaderPenaltyBreath('A', 'A', { A: true, B: false }, 'single')('emberdrake', 'knight')).toBe(18);
+  });
+
+  it('composes ON TOP of the wipeout attenuation, not instead of it: 20 → att 15 → dealt floor(11.25) = 11', () => {
+    expect(leaderPenaltyBreath('A', 'B', { A: true, B: false }, 'wipeout')('emberdrake', 'knight')).toBe(11);
+  });
+
+  it('re-clamps to minDamage AFTER the penalty: a 1-damage breath cut ×3/4 stays 1, never 0', () => {
+    expect(leaderPenaltyBreath('A', 'B', { A: true, B: false }, 'single')('mage', 'phalanx')).toBe(1);
+  });
+
+  it('honours Weaken through the wrapper (the `weakened` flag reaches breathDamage): 20 → halve 10 → dealt floor(7.5) = 7', () => {
+    expect(leaderPenaltyBreath('A', 'B', { A: true, B: false }, 'single')('emberdrake', 'knight', true)).toBe(7);
   });
 });

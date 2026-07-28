@@ -819,6 +819,19 @@ describe('FR32/FR33 per-row moves (story 4.7, dossier §4; revised by story 5.4 
     hawkman: { front: 'slash', mid: 'slash', back: 'slash' },
     vultan: { front: 'slash', mid: 'slash', back: 'arrow' },
     raven: { front: 'slash', mid: 'slash', back: 'arrow' },
+    // Story 5.5 — the monster wave (ROSTER.md §Monsters): bites/claws over
+    // `slash`, the Gryphon's back-row Wind Shot over `arrow` (E5-D14), the
+    // grown dragons' back-row `breath` (E5-D7).
+    gryphon: { front: 'slash', mid: 'slash', back: 'arrow' },
+    wyrm: { front: 'slash', mid: 'slash', back: 'slash' },
+    hellhound: { front: 'slash', mid: 'slash', back: 'slash' },
+    whelp: { front: 'slash', mid: 'slash', back: 'slash' },
+    emberdrake: { front: 'slash', mid: 'slash', back: 'breath' },
+    frostfang: { front: 'slash', mid: 'slash', back: 'breath' },
+    stormscale: { front: 'slash', mid: 'slash', back: 'breath' },
+    cragmaw: { front: 'slash', mid: 'slash', back: 'breath' },
+    nightwing: { front: 'slash', mid: 'slash', back: 'breath' },
+    halowing: { front: 'slash', mid: 'slash', back: 'breath' },
   };
 
   it('every (class, row) resolves the exact pinned move — total over ALL_CLASSES × ALL_ROWS, no gaps', () => {
@@ -829,10 +842,28 @@ describe('FR32/FR33 per-row moves (story 4.7, dossier §4; revised by story 5.4 
     }
   });
 
-  it('exactly the row-varied seven vary their move by row — everyone else is uniform across all three rows', () => {
+  it('exactly the row-varied classes vary their move by row — everyone else is uniform across all three rows', () => {
     const varies = (cls: UnitClass) => new Set(ALL_ROWS.map((row) => BALANCE.classes[cls].moves[row])).size > 1;
     const varying = ALL_CLASSES.filter(varies);
-    expect(new Set(varying)).toEqual(new Set(['knight', 'phalanx', 'mage', 'sorceress', 'valkyrie', 'vultan', 'raven']));
+    expect(new Set(varying)).toEqual(
+      new Set([
+        'knight',
+        'phalanx',
+        'mage',
+        'sorceress',
+        'valkyrie',
+        'vultan',
+        'raven',
+        // Story 5.5: the Gryphon's back-row shot and the six breath dragons.
+        'gryphon',
+        'emberdrake',
+        'frostfang',
+        'stormscale',
+        'cragmaw',
+        'nightwing',
+        'halowing',
+      ]),
+    );
   });
 
   it('no class row is a back-row Guard — FORBIDDEN as data (E5-D12a): `attackMoveOf`’s guard fallback reads moves.back, which must stay a real attack', () => {
@@ -891,5 +922,329 @@ describe('FR32/FR33 per-row moves (story 4.7, dossier §4; revised by story 5.4 
       // back-row knight (B:1) — only the nearest-row reachable knights.
       expect(hit.targets.map((t) => t.unit)).not.toContain('B:1');
     }
+  });
+});
+
+/**
+ * Story 5.5 `breath` — the dragons' PHYSICAL row-AoE (dossier E5-D7). Its
+ * TARGETING is the blast's, verbatim (fullest enemy row, ties to the rearmost,
+ * with the D-2c leader-tactic override); its ARITHMETIC is physical (STR vs
+ * VIT, `breathDamage` — table-pinned in damage.test.ts); and like every AoE it
+ * consumes ZERO battle-stream draws (ADR 0003), which is what keeps crit,
+ * dodge and Guard out of it.
+ *
+ * Note on placements: a dragon only breathes from the BACK row (the move
+ * table), and a monster reserves all 8 king-move neighbours, so these fixtures
+ * put the dragon at a back cell and everything else in the front row — that
+ * is not test convenience, it is the only shape the rules allow.
+ */
+describe('story 5.5 `breath` — the dragons’ physical row-AoE (E5-D7)', () => {
+  /** A back-center Emberdrake (breath ×1) behind a three-knight front line; 2 + 1 + 1 + 1 = 5 slots, the knight at index 1 wears the crown. */
+  const breathSideA = {
+    army: [u('emberdrake', 'fire', 'Cindrath'), u('knight', 'water', 'Kain'), u('knight', 'wind', 'Ulf'), u('knight', 'earth', 'Falk')],
+    placement: [
+      { row: 'back', col: 'center' },
+      { row: 'front', col: 'left' },
+      { row: 'front', col: 'center' },
+      { row: 'front', col: 'right' },
+    ],
+  } as const;
+
+  const fiveMercs = () => (['fire', 'water', 'wind', 'earth', 'fire'] as const).map((element, i) => u('mercenary', element, `M${i}`));
+
+  /** Emberdrake AGI 16 > mercenary 14 > knight 8, so the breath is the FIRST action of pass 1 — every target is at full HP and nothing has died yet. */
+  const breathBattle = (
+    bPlacement: MatchSetup['placements']['B'],
+    leaders = { A: 1, B: 0 },
+    tactics: MatchSetup['tactics'] = { A: 'autonomous', B: 'autonomous' },
+  ) => ({
+    ...setup({ armies: { A: [...breathSideA.army], B: fiveMercs() }, placements: { A: [...breathSideA.placement], B: bPlacement } }),
+    leaders,
+    tactics,
+  });
+
+  const breathsOf = (log: { events: readonly BattleEvent[] }) => byType(log, 'UnitAttacked').filter((a) => a.kind === 'breath');
+
+  it('breathes over the FULLEST enemy row — every unit in it, one event, at the physical STR-vs-VIT number', () => {
+    const log = resolveBattle(
+      breathBattle([
+        { row: 'front', col: 'left' },
+        { row: 'front', col: 'center' },
+        { row: 'front', col: 'right' },
+        { row: 'mid', col: 'center' },
+        { row: 'back', col: 'center' },
+      ]),
+    );
+    const breaths = breathsOf(log);
+    expect(breaths).toHaveLength(1); // back row = 1 action
+    // B's front row holds 3 of its 5 units — the fullest. Emberdrake STR 34 −
+    // floor(mercenary VIT 20 / 2) = 24, neutral (the `dragon` role has no
+    // relation except being HUNTED, E5-P1 — so no ×3/2 either way).
+    expect(breaths[0]?.targets).toEqual([
+      { unit: 'B:0', damage: 24, hpAfter: 86, outcome: 'hit' },
+      { unit: 'B:1', damage: 24, hpAfter: 86, outcome: 'hit' },
+      { unit: 'B:2', damage: 24, hpAfter: 86, outcome: 'hit' },
+    ]);
+  });
+
+  it('ties break toward the REARMOST row (the blast rule, unchanged): 2 front vs 2 back → the back pair burns', () => {
+    const log = resolveBattle(
+      breathBattle([
+        { row: 'front', col: 'left' },
+        { row: 'front', col: 'right' },
+        { row: 'mid', col: 'center' },
+        { row: 'back', col: 'left' },
+        { row: 'back', col: 'right' },
+      ]),
+    );
+    expect(breathsOf(log)[0]?.targets.map((t) => t.unit)).toEqual(['B:3', 'B:4']);
+  });
+
+  it('under the Attack-Leader tactic it burns the enemy LEADER’s row, not the fullest (D-2c — the AoE treats the leader as focal point)', () => {
+    // B's front row is fullest (3) but its leader stands ALONE at mid/center,
+    // so the breath hits exactly one unit — the tactic override costs the
+    // dragon its coverage, which is the interesting half of D-2c.
+    const log = resolveBattle(
+      breathBattle(
+        [
+          { row: 'front', col: 'left' },
+          { row: 'front', col: 'center' },
+          { row: 'front', col: 'right' },
+          { row: 'mid', col: 'center' },
+          { row: 'back', col: 'center' },
+        ],
+        { A: 1, B: 3 },
+        { A: 'leader', B: 'autonomous' },
+      ),
+    );
+    expect(breathsOf(log)[0]?.targets).toEqual([{ unit: 'B:3', damage: 24, hpAfter: 86, outcome: 'hit' }]);
+  });
+
+  it('WIPEOUT applies the same cross-engagement ×3/4 attenuation the blast gets (ROSTER.md’s 5.5 carry): 21 → 15, 19 → 14', () => {
+    const dragonsAndWall = () => [u('emberdrake', 'fire', 'Cindrath'), u('cragmaw', 'earth', 'Korvassa'), u('phalanx', 'water', 'Bram')];
+    // Back corners are 2 columns apart, so neither dragon is a king-move
+    // neighbour of the other; their rings clear the mid row, leaving
+    // front/center for the phalanx (the only human — and so the only leader).
+    const cells = (): MatchSetup['placements']['A'] => [
+      { row: 'back', col: 'left' },
+      { row: 'back', col: 'right' },
+      { row: 'front', col: 'center' },
+    ];
+    const build = (mode: 'single' | 'wipeout') => ({
+      ...setup({ armies: { A: dragonsAndWall(), B: dragonsAndWall() }, placements: { A: cells(), B: cells() } }),
+      mode,
+      leaders: { A: 2, B: 2 },
+    });
+    // Each side's fullest row is its BACK pair, so every breath hits both
+    // enemy dragons: emberdrake 34 − 13 = 21 / 34 − 15 = 19 unattenuated.
+    const single = breathsOf(resolveBattle(build('single') as MatchSetup));
+    expect(single[0]?.targets.map((t) => t.damage)).toEqual([21, 19]);
+    const wipeout = breathsOf(resolveBattle(build('wipeout') as MatchSetup));
+    expect(wipeout[0]?.targets.map((t) => t.damage)).toEqual([15, 14]); // floor(21×3/4), floor(19×3/4)
+  });
+
+  it('an all-breath battle consumes ZERO battle-stream draws beyond the engagement tie flip (ADR 0003) — logs identical across seeds with the same flip', () => {
+    // Two dragons breathing from the back plus a phalanx raising a Guard —
+    // and a Guard costs no draws either, so the ONLY battle-stream draw in the
+    // whole battle is E1, the engagement tie flip. Same shape as story 5.4's
+    // all-bolt discriminator: if breath ever consulted the stream (a stray
+    // rollHit for crit/dodge), the two seeds would diverge here.
+    const boardOnly = (seed: number) => ({
+      ...setup(
+        {
+          armies: {
+            A: [u('emberdrake', 'fire', 'Cindrath'), u('cragmaw', 'earth', 'Korvassa'), u('phalanx', 'water', 'Bram')],
+            B: [u('halowing', 'fire', 'Zephyrax'), u('frostfang', 'water', 'Fyrnwyn'), u('phalanx', 'earth', 'Gerhart')],
+          },
+          placements: {
+            A: [
+              { row: 'back', col: 'left' },
+              { row: 'back', col: 'right' },
+              { row: 'front', col: 'center' },
+            ],
+            B: [
+              { row: 'back', col: 'left' },
+              { row: 'back', col: 'right' },
+              { row: 'front', col: 'center' },
+            ],
+          },
+        },
+        seed,
+      ),
+      leaders: { A: 2, B: 2 },
+    });
+    const flip = (seed: number) => nextInt(createStreams(seed).battle, 0, 1);
+    let second = 2;
+    while (flip(second) !== flip(1)) second += 1;
+    const a = resolveBattle(boardOnly(1) as MatchSetup);
+    const b = resolveBattle(boardOnly(second) as MatchSetup);
+    expect(a.events).toEqual(b.events);
+    // And the battle really was breath-only (the fixture's own guard).
+    for (const e of a.events) if (e.type === 'UnitAttacked') expect(e.kind).toBe('breath');
+  });
+
+  it('breath NEVER crits, dodges, or is Guarded — every target outcome is a plain `hit`, across many seeds and both modes', () => {
+    // Why this invariant instead of a positive "a raised Guard does not halve
+    // a breath" fixture: with the shipped data such a fixture is not
+    // constructible. Guard is raised when its owner ACTS, turn order is AGI
+    // descending, and every guard row in the roster belongs to a slow class
+    // (Phalanx AGI 6, Knight 8) while every breath dragon is faster (10–18) —
+    // so a dragon's single back-row action always resolves BEFORE any guard
+    // goes up, and guards are cleared at each engagement's end (resolve.ts).
+    // The invariant below is therefore the honest form: it holds over battles
+    // that DO contain guardians, crit-heavy DEX, and dodge-heavy defenders.
+    for (let seed = 1; seed <= 30; seed += 1) {
+      for (const mode of ['single', 'wipeout'] as const) {
+        const log = resolveBattle({
+          ...setup(
+            {
+              armies: {
+                A: [u('stormscale', 'fire', 'Skalveth'), u('knight', 'water', 'Kain'), u('knight', 'wind', 'Ulf'), u('knight', 'earth', 'Falk')],
+                // Phalanx guards, Fencer dodges and crits, Archer is glass — every roll-driven mechanic present.
+                B: [
+                  u('phalanx', 'earth', 'Bram'),
+                  u('fencer', 'fire', 'Lys'),
+                  u('archer', 'water', 'Vess'),
+                  u('cleric', 'wind', 'Sela'),
+                  u('fencer', 'fire', 'Dax'),
+                ],
+              },
+              placements: {
+                A: [
+                  { row: 'back', col: 'center' },
+                  { row: 'front', col: 'left' },
+                  { row: 'front', col: 'center' },
+                  { row: 'front', col: 'right' },
+                ],
+                B: [
+                  { row: 'front', col: 'center' },
+                  { row: 'front', col: 'left' },
+                  { row: 'mid', col: 'center' },
+                  { row: 'back', col: 'center' },
+                  { row: 'front', col: 'right' },
+                ],
+              },
+            },
+            seed,
+          ),
+          mode,
+          leaders: { A: 1, B: 0 },
+        } as MatchSetup);
+        const breaths = breathsOf(log);
+        expect(breaths.length, `seed ${seed} ${mode} produced no breath — the fixture stopped testing anything`).toBeGreaterThan(0);
+        for (const b of breaths) {
+          for (const t of b.targets) expect(t.outcome, `seed ${seed} ${mode}: breath target ${t.unit}`).toBe('hit');
+        }
+        // A breath is a single-source AoE: it can never carry the misfire
+        // redirect marker a single-target physical strike uses.
+        for (const b of breaths) expect(b.redirectedFrom).toBeUndefined();
+      }
+    }
+  });
+
+  it('a CONFUSED dragon breathes on its OWN fullest row — itself included (row-consistent, the self-blast rule’s physical twin)', () => {
+    // A's wind Witch (AGI 26, back/center) casts on the rearmost occupied
+    // enemy row — B's back-row dragons — then B:1 (Cragmaw, AGI 10) misfires
+    // on the probed seed 1. Its own fullest row is that same back pair, so the
+    // Cragmaw burns its Emberdrake ally for 30 − 13 = 17 AND ITSELF for
+    // 30 − 15 = 15: unlike the 5.4 bolt misfire (single-target, cannot hit the
+    // caster), a row-AoE misfire can.
+    const log = resolveBattle({
+      ...setup(
+        {
+          armies: {
+            A: [
+              u('witch', 'wind', 'Sylwen'),
+              u('knight', 'fire', 'Bramgar'),
+              u('cleric', 'water', 'Nerienne'),
+              u('knight', 'earth', 'Thorvald'),
+              u('mercenary', 'fire', 'Kestrel'),
+            ],
+            B: [u('emberdrake', 'fire', 'Cindrath'), u('cragmaw', 'earth', 'Korvassa'), u('phalanx', 'water', 'Bram')],
+          },
+          placements: {
+            A: [
+              { row: 'back', col: 'center' },
+              { row: 'front', col: 'center' },
+              { row: 'back', col: 'left' },
+              { row: 'front', col: 'left' },
+              { row: 'front', col: 'right' },
+            ],
+            B: [
+              { row: 'back', col: 'left' },
+              { row: 'back', col: 'right' },
+              { row: 'front', col: 'center' },
+            ],
+          },
+        },
+        1,
+      ),
+      leaders: { A: 0, B: 2 },
+    } as MatchSetup);
+    const misfireIdx = log.events.findIndex((e) => e.type === 'ActionMisfired');
+    expect(misfireIdx, 'seed 1 no longer misfires — re-probe the pin').toBeGreaterThanOrEqual(0);
+    expect(log.events[misfireIdx]).toEqual({ type: 'ActionMisfired', unit: 'B:1' });
+    expect(log.events[misfireIdx + 1]).toEqual({
+      type: 'UnitAttacked',
+      source: 'B:1',
+      kind: 'breath',
+      targets: [
+        { unit: 'B:0', damage: 17, hpAfter: 253, outcome: 'hit' },
+        { unit: 'B:1', damage: 15, hpAfter: 275, outcome: 'hit' },
+      ],
+    });
+  });
+  it('the FR35 sober package DOES cut breath — it is physical (the wired-in proof, not just the arithmetic)', () => {
+    // Wipeout, probed seed 1. A's leader is a front-row Wizard (80 hp) that B's
+    // mercenaries cut down; B's leader (B:0) falls to the breath first, so the
+    // log contains a clean BEFORE/AFTER pair for the same Emberdrake:
+    //   BEFORE any fall: 34 − 10 = 24 → wipeout att 18
+    //   AFTER both fell: 18 → dealt floor(13.5) = 13 → taken floor(16.25) = 16
+    // If `leaderPenaltyBreath` were not wired into act()'s breath branch, the
+    // AFTER number would still read 18. (Guard/crit/dodge stay out regardless —
+    // they gate on the single-target roll breath never makes.)
+    const log = resolveBattle({
+      ...setup(
+        {
+          armies: {
+            A: [u('emberdrake', 'fire', 'Cindrath'), u('mage', 'water', 'Aldous'), u('knight', 'wind', 'Ulf'), u('knight', 'earth', 'Falk')],
+            B: (['fire', 'water', 'wind', 'earth', 'fire'] as const).map((element, i) => u('mercenary', element, `M${i}`)),
+          },
+          placements: {
+            A: [
+              { row: 'back', col: 'center' },
+              { row: 'front', col: 'left' },
+              { row: 'front', col: 'center' },
+              { row: 'front', col: 'right' },
+            ],
+            B: [
+              { row: 'front', col: 'left' },
+              { row: 'front', col: 'center' },
+              { row: 'front', col: 'right' },
+              { row: 'mid', col: 'center' },
+              { row: 'back', col: 'center' },
+            ],
+          },
+        },
+        1,
+      ),
+      mode: 'wipeout',
+      leaders: { A: 1, B: 0 },
+    } as MatchSetup);
+    const fellA = log.events.findIndex((e) => e.type === 'LeaderFell' && e.side === 'A');
+    expect(fellA, 'seed 1 no longer drops A\u2019s leader \u2014 re-probe the pin').toBeGreaterThanOrEqual(0);
+    // The BEFORE window ends at the FIRST fall of EITHER side (review
+    // hardening, 2026-07-28): B's leader falls a few beats before A's, and a
+    // breath landing between the two falls would read 22 (dealt-unpenalized,
+    // taken \u00d75/4) \u2014 correct behaviour, but in neither pinned set. Anchoring
+    // the windows around both falls keeps a future re-tune from turning this
+    // into a confusing failure instead of a clean re-probe.
+    const firstFall = log.events.findIndex((e) => e.type === 'LeaderFell');
+    const breathDamages = (events: readonly BattleEvent[]) =>
+      events
+        .filter((e): e is Extract<BattleEvent, { type: 'UnitAttacked' }> => e.type === 'UnitAttacked' && e.kind === 'breath')
+        .flatMap((b) => b.targets.map((t) => t.damage));
+    expect(new Set(breathDamages(log.events.slice(0, firstFall)))).toEqual(new Set([18]));
+    expect(new Set(breathDamages(log.events.slice(fellA)))).toEqual(new Set([16]));
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BALANCE, createStreams, resolveBattle, rollElement, rollName, validateMatchSetup } from '@lordly/engine';
+import { BALANCE, createStreams, resolveBattle, rollElement, rollName, slotTotal, validateMatchSetup } from '@lordly/engine';
 import type { BattleEnded } from '@lordly/engine';
 import { MatchFlow } from '../src/flow/MatchFlow';
 import type { MatchState } from '../src/flow/MatchState';
@@ -381,7 +381,10 @@ describe('MatchFlow commit (FR5/FR24, AD-6/AD-9/AD-11/AD-13)', () => {
     expect(setup.mode).toBe('single');
     expect(setup.balanceVersion).toBe(BALANCE.version);
     expect(setup.armies.A.map((u) => u.class)).toEqual(['knight', 'archer', 'mage', 'cleric', 'witch']);
-    expect(setup.armies.B).toHaveLength(BALANCE.slotBudget); // all-smalls era: budget = unit count
+    // The AI's army fills the budget in SLOTS, never in unit count — a monster
+    // comp is 3–4 units for the same 5 slots (story 4.8, and since 5.5 the
+    // pool's six monster archetypes make it the common case, not the exception).
+    expect(slotTotal(setup.armies.B)).toBe(BALANCE.slotBudget);
     expect(setup.placements.A).toEqual([
       { row: 'front', col: 'center' },
       { row: 'back', col: 'left' },
@@ -876,13 +879,22 @@ describe('MatchFlow — monster placement/leader rules (story 4.8 device follow-
     expect(() => validateMatchSetup(setup)).not.toThrow();
   });
 
-  it('setLeader throws for a monster — only a small may be crowned (validateMatchSetup would reject it at commit anyway)', () => {
+  it('setLeader throws for any NON-HUMAN — only a human may be crowned (E5-D13; validateMatchSetup would reject it at commit anyway)', () => {
     const flow = flowWithSeed(1);
     flow.startMatch();
     flow.draftUnit('golem');
     flow.placeUnit(0, { row: 'front', col: 'center' });
-    expect(() => flow.setLeader(0)).toThrow(/monster/i);
+    expect(() => flow.setLeader(0)).toThrow(/not human/i);
     expect(flow.getState().playerLeader).toBeNull(); // rejected — no crown assigned
+  });
+
+  it('setLeader throws for the WHELP too — small, but dragonkind (story 5.5: the case the old sizeClass gate let through)', () => {
+    const flow = flowWithSeed(1);
+    flow.startMatch();
+    flow.draftUnit('whelp');
+    flow.placeUnit(0, { row: 'front', col: 'center' });
+    expect(() => flow.setLeader(0)).toThrow(/not human/i);
+    expect(flow.getState().playerLeader).toBeNull();
   });
 
   it('a full monster army commits and validates cleanly once the leader is a small (end-to-end, no console-only failure)', () => {
