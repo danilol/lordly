@@ -44,7 +44,7 @@ so that every clash feels like a place in a medieval world.
   - [x] DESIGN.md: one line in the story-5.2 amendment block recording that Battle/Reveal ship terrain art with a seed-derived biome pick (the amendment block is where the as-shipped look now lives).
   - [x] Full gate: `pnpm typecheck && pnpm lint && pnpm coverage`, `pnpm --filter web build` (which now also runs `check:art`). Engine untouched — zero `packages/engine` diffs, no `logVersion`/`balanceVersion` movement.
   - [ ] NFR1 capture (AC 3): `?perf=1` on the DEPLOYED build, three-mages wipeout at 1× and ×2, compared against the 5.0 baseline AND the 5.2 addendum. **The specific thing to watch:** 5.0 flagged and 5.2 confirmed a ~5-frame scene-ENTRY burst (bottoming 8–11 fps) when Battle loads its assets — two more full-screen textures land exactly there. If the entry burst grows materially, say so and treat it as a finding, not a footnote.
-  - [ ] Danilo's on-device acceptance of the look = the art gate (the standing art-story split: he owns picks + device pass).
+  - [x] Danilo's on-device acceptance of the look = the art gate (the standing art-story split: he owns picks + device pass). _(ACCEPTED 2026-07-28 after the enlarge-the-fight round: "it looks great. Let's move forward." — terrain, the seed rotation, the dim/scrim treatment and the enlarged boards all pass.)_
 
 ## Dev Notes
 
@@ -102,6 +102,8 @@ Web tests live in `apps/web/test/*.test.ts` (vitest; pure seams only — there i
 ### Debug Log References
 
 ### Completion Notes List
+
+- 2026-07-28 — **AC 1 and AC 2 CLOSED by Danilo's device pass** ("it looks great"). Terrain in Battle + Reveal, the seed-derived biome rotation, the dim + HUD scrims, and the enlarged boards are all accepted on device. **AC 3 (the `?perf=1` capture) is the single remaining gate** — the story stays in-progress until it runs or is explicitly PO-deferred. It matters more here than usual: this story added two full-screen textures AND grew the rendered board area by ~55%, and both the 5.0 baseline and the 5.2 addendum recorded a scene-entry burst at exactly the moment Battle loads.
 
 - 2026-07-28 (DEVICE PASS ROUND 1 — "i loved it… my only critique is that now we have a lot of space between the board/battle and the speed control bar; we could enlarge the fight"). Danilo accepted the terrain and asked for a bigger fight. This is a LAYOUT change beyond the story's three ACs, taken as a device-pass iteration (the 5.2 precedent) because the terrain is what exposed the dead space.
   - **Why it needed a refactor, not a constant tweak.** Battle and Reveal shared ONE global board frame (`ISO_BOARD`) through `battleView`'s projection. Battle can spread down the terrain; Reveal cannot — its lower third is the tactics block (ARMY TACTICS y=342, picker bar, enemy line, 4-row dropdown, all above Fight at y=568). One frame cannot serve both, so the projection is now layout-parameterised: `unitTileCenter`/`boardTiles`/`drawIsoBoard` take an `IsoBoardLayout` (defaulting to Battle's), and Reveal passes `ISO_BOARD_REVEAL`. Same component, same math, one implementation — only the frame differs.
