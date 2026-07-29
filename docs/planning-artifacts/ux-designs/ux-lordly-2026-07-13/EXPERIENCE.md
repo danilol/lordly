@@ -237,6 +237,21 @@ tap outside it or the ✕ to dismiss — and purely informative: it never mutate
 gesture was chosen over a per-card ⓘ (the 64px card face is the drag surface; a 44px-floor
 button inside it would swallow most of it); the ~450ms hold was tuned and accepted across the story's five device rounds (2026-07-29); it remains a single constant (`LONG_PRESS_MS`) if it ever needs a re-feel.
 
+## Amendment (story 5.7, 2026-07-29) — the Result screen learns to teach
+
+Dated amendment (re-cut at device round 2 — the summary is OPTIONAL now, not an always-on
+strip): under the HP percentages sits a gold **▸ BATTLE SUMMARY** link. Tap it to open the
+summary sheet: both sides' totals (yours blue, the enemy's red) and the LoL-style damage
+bars — one row per unit, the side-colored bar is damage DEALT, the thin grey one beneath it
+damage TAKEN, all on one scale so a glance says who carried and who tanked. Don't care? Don't
+tap — Result stays as clean as before. For the full story of any single soldier, **press and
+hold their chip** —
+the same hold-to-inspect gesture as Draft and Placement, now covering the whole loop: hold a
+unit anywhere, learn about it. The sheet lists what that unit dealt and took (poison broken
+out), crits, dodges, Guard blocks, healing given and received, and statuses cast — all folded
+from the battle log, so a replayed battle reads identically. Dismissal is the shared armed
+scrim/✕ pair; the sheet never mutates anything.
+
 ## Reference mockups
 
 - [Battle screen — Fixed-HUD hero layout](mockups/battle-screen-mock.html) (theme-toggleable)

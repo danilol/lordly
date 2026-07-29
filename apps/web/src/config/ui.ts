@@ -235,7 +235,25 @@ export function addButton(scene: Scene, x: number, y: number, opts: ButtonOption
     if (current === 'disabled' || !opts.onTap) rect.disableInteractive();
     else rect.setInteractive({ useHandCursor: true });
   };
-  if (opts.onTap) rect.on('pointerup', () => current !== 'disabled' && opts.onTap!());
+  if (opts.onTap) {
+    // Down-on-THIS-button tracking (5.7 review, HIGH): a bare pointerup used
+    // to fire the tap even when the pointerdown had landed elsewhere — the
+    // reachable case being a modal sheet's dismiss-tap whose down the dying
+    // scrim swallowed and whose release then fell through onto Rematch/Home.
+    // A tap is a down→up pair on the same button, nothing less.
+    let pressed = false;
+    rect.on('pointerdown', () => {
+      pressed = true;
+    });
+    rect.on('pointerout', () => {
+      pressed = false;
+    });
+    rect.on('pointerup', () => {
+      const wasPressed = pressed;
+      pressed = false;
+      if (wasPressed && current !== 'disabled') opts.onTap!();
+    });
+  }
   applyStyle();
 
   return {

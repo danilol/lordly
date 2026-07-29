@@ -1,10 +1,13 @@
-import { Scene } from 'phaser';
-import type { BattleEnded, BattleStarted, Side, UnitSnapshot } from '@lordly/engine';
+import { GameObjects, Input, Scene, Time } from 'phaser';
+import type { BattleEnded, BattleStarted, Side, UnitId, UnitSnapshot } from '@lordly/engine';
 import {
   BASE_HEIGHT,
   BASE_WIDTH,
   BUTTON_HEIGHT,
   BUTTON_WIDTH,
+  LONG_PRESS_MS,
+  SUMMARY_LINK,
+  TAP_DISTANCE_PX,
   PALETTE,
   RESULT_DRAW_LABEL,
   RESULT_HOME_LABEL,
@@ -18,6 +21,10 @@ import {
 import { addButton, addSceneGround, applyHiDpiCamera, addElementBadge, addUnitSprite, crispText, prefersReducedMotion } from '../config/ui';
 import type { ButtonStyle } from '../config/constants';
 import type { MatchFlow } from '../flow/MatchFlow';
+import { battleStats } from '../flow/battleStats';
+import type { BattleStats } from '../flow/battleStats';
+import { buildStatsSheetOverlay } from '../config/statsSheetOverlay';
+import { buildSummarySheetOverlay } from '../config/summarySheetOverlay';
 
 /**
  * Result scene (FR22, FR27 — polished in story 2.3): a full-screen verdict
@@ -28,6 +35,12 @@ import type { MatchFlow } from '../flow/MatchFlow';
  */
 export class ResultScene extends Scene {
   private flow!: MatchFlow;
+  /** The battle's folded stats (story 5.7) — computed once per create(). */
+  private stats!: BattleStats;
+  /** The open per-unit stats sheet's objects. Non-empty === the sheet is up. Reset every create() (singleton scenes). */
+  private sheetObjects: GameObjects.GameObject[] = [];
+  /** The armed long-press timer (story 5.7 — same gesture as the 5.6 card: hold a unit, learn about it). Reset every create() (singleton scenes). */
+  private longPressTimer?: Time.TimerEvent;
 
   constructor() {
     super('Result');
@@ -42,6 +55,10 @@ export class ResultScene extends Scene {
     applyHiDpiCamera(this);
     addSceneGround(this); // story 5.2: the medieval stone floor under the menu chrome
     const reduceMotion = prefersReducedMotion();
+
+    this.sheetObjects = []; // the objects died with the scene shutdown; the ARRAY must not carry stale refs (story 5.7)
+    this.longPressTimer?.remove(); // no stale sheet-open fires into a fresh result (the 5.6 hygiene)
+    this.longPressTimer = undefined;
 
     const log = this.flow.resolve();
     // The verdict moment is where the ONE live history entry gets written
@@ -98,6 +115,26 @@ export class ResultScene extends Scene {
       });
     }
 
+    // The battle-stats fold (story 5.7): once, from the same memoized log.
+    // Device round 2 (Danilo): the summary is OPTIONAL — a link you click to
+    // see, not an always-on strip you learn to ignore. The link takes the
+    // measured free band the strip briefly held; the read lives in the sheet.
+    this.stats = battleStats(log);
+    crispText(this, BASE_WIDTH / 2, SUMMARY_LINK.y, '▸ BATTLE SUMMARY', {
+      fontFamily: 'Arial Black',
+      fontSize: `${SUMMARY_LINK.fontPx}px`,
+      color: PALETTE.title,
+    }).setOrigin(0.5);
+    this.add
+      .rectangle(BASE_WIDTH / 2, SUMMARY_LINK.y, SUMMARY_LINK.tapW, SUMMARY_LINK.tapH, 0, 0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerup', (pointer: Input.Pointer) => {
+        if (pointer.getDistance() > TAP_DISTANCE_PX) return; // a stray drag-release is not a tap (the scene family's one discipline — 5.7 review)
+        this.cancelLongPress(); // a pending chip timer must not fire under the scrim we are about to raise (5.7 review)
+        this.closeSheetNow(); // never two sheets
+        this.sheetObjects = buildSummarySheetOverlay(this, this.stats, () => this.closeSheet());
+      });
+
     this.drawComposition('A', roster, 'Your army', BASE_HEIGHT * 0.4, PALETTE.playerText);
     this.drawComposition('B', roster, 'Enemy army', BASE_HEIGHT * 0.56, PALETTE.enemyText);
 
@@ -136,7 +173,26 @@ export class ResultScene extends Scene {
       const x = startX + i * (chipW + gap) + chipW / 2;
       const cy = y + 44;
       // Opaque side-blended backing (device pass 2026-07-27): the 0.12 wash let the stone floor swallow the chip.
-      this.add.rectangle(x, cy, chipW, chipH, side === 'A' ? PALETTE.cardFillYou : PALETTE.cardFillEnemy).setStrokeStyle(1, sideLine);
+      const chip = this.add.rectangle(x, cy, chipW, chipH, side === 'A' ? PALETTE.cardFillYou : PALETTE.cardFillEnemy).setStrokeStyle(1, sideLine);
+      // Story 5.7: hold a unit, learn about it — the 5.6 gesture generalized.
+      // The chips were display-only before, so the audit here is light: no
+      // tap meaning exists to collide with; the timer cancels on release,
+      // pointer-out, or a wander past the shared threshold (checked at fire —
+      // Result has no drag to cancel it for free), and the sheet's armed
+      // close handshake (config/modalSheet.ts) consumes both bounding
+      // releases, exactly as at Draft/Placement.
+      chip.setInteractive({ useHandCursor: true });
+      chip.on('pointerdown', (pointer: Input.Pointer) => {
+        this.longPressTimer?.remove();
+        this.longPressTimer = this.time.delayedCall(LONG_PRESS_MS, () => {
+          this.longPressTimer = undefined;
+          if (this.sheetObjects.length > 0) return; // a sheet is up — its scrim blocked this press's cancel events (5.7 review)
+          if (pointer.getDistance() > TAP_DISTANCE_PX) return;
+          this.openSheet(unit.id);
+        });
+      });
+      chip.on('pointerout', () => this.cancelLongPress());
+      chip.on('pointerup', () => this.cancelLongPress());
       addUnitSprite(this, x, cy - 14, unit.class, 28);
       crispText(this, x, cy + 8, CLASS_ABBREVIATIONS[unit.class], {
         fontFamily: 'Arial Black',
@@ -148,6 +204,35 @@ export class ResultScene extends Scene {
       }
       addElementBadge(this, x + chipW / 2 - 10, cy - 22, unit.element);
     });
+  }
+
+  /** Kills any armed (not yet fired) sheet-open timer (story 5.7 — the 5.6 hygiene). */
+  private cancelLongPress() {
+    this.longPressTimer?.remove();
+    this.longPressTimer = undefined;
+  }
+
+  /** Opens the per-unit stats sheet for `id` — the fold row is already computed; the shared modal shell owns chrome and dismissal. */
+  private openSheet(id: UnitId) {
+    this.cancelLongPress(); // no timer may straddle a sheet boundary (5.7 review)
+    this.closeSheetNow(); // never two sheets
+    const unit = this.stats.units.find((entry) => entry.id === id);
+    if (!unit) return; // unreachable — chips are built from the same roster the fold keys on
+    this.sheetObjects = buildStatsSheetOverlay(this, unit, () => this.closeSheet());
+  }
+
+  /** Closes ONE TICK later — the caller is an input handler on an object about to be destroyed (the 5.5/5.6 lesson). Identity-guarded (5.7 review): if a NEW sheet opened inside the deferred window, this close belongs to the old one and must not kill it. */
+  private closeSheet() {
+    const closing = this.sheetObjects;
+    this.time.delayedCall(0, () => {
+      if (this.sheetObjects === closing) this.closeSheetNow();
+      else for (const o of closing) o.destroy(); // the superseded sheet still needs its own teardown
+    });
+  }
+
+  private closeSheetNow() {
+    for (const o of this.sheetObjects) o.destroy();
+    this.sheetObjects = [];
   }
 
   private button(y: number, text: string, style: ButtonStyle, onTap: () => void) {

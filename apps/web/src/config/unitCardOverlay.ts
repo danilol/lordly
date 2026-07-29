@@ -1,7 +1,8 @@
 import { GameObjects, Scene } from 'phaser';
 import type { Element, UnitClass } from '@lordly/engine';
-import { BASE_HEIGHT, BASE_WIDTH, CARD_GLYPHS, CARD_GLYPH_COLORS, MIN_FONT_PX, PALETTE, UNIT_CARD } from './constants';
-import { addElementBadge, addFramedPanel, crispText } from './ui';
+import { CARD_GLYPHS, CARD_GLYPH_COLORS, MIN_FONT_PX, PALETTE, UNIT_CARD } from './constants';
+import { addElementBadge, crispText } from './ui';
+import { addModalSheet, SHEET_CONTENT_DEPTH } from './modalSheet';
 import { UNITS_SHEET_KEY } from './sprites';
 import { MAX_SLOT_COST, radarPoints, STAT_AXES, statAxisRatios, unitCard } from '../flow/unitCard';
 
@@ -16,58 +17,18 @@ import { MAX_SLOT_COST, radarPoints, STAT_AXES, statAxisRatios, unitCard } from 
  *
  * CONTRACT for the calling scene (the gesture and lifecycle stay ITS job):
  * - open on a matured long-press; keep the returned objects and destroy them
- *   to close — DEFERRED one tick when closing from an input handler (the 5.5
- *   review lesson: never destroy the object dispatching the current event);
- * - `requestClose` fires on an ARMED down→up pair on the scrim or the ✕
- *   (review redesign 2026-07-29): the press that OPENED the card releases
- *   onto the live scrim with `armed` still false, so that release is
- *   consumed HERE, harmlessly — no scene-side consume flag exists to go
- *   stale — and a dismissing tap's release is likewise consumed by the
- *   still-alive scrim BEFORE the deferred destroy, so it can never fall
- *   through onto the controls beneath (at Draft the ✕ sits directly over an
- *   army-tray slot whose tap handler REMOVES the unit — the fall-through was
- *   a real discharge-your-soldier bug, masked pre-review by the stale flag);
+ *   to close — DEFERRED one tick when closing from an input handler;
+ * - the chrome and the ARMED down→up close handshake live in the shared
+ *   modal-sheet SHELL (config/modalSheet.ts — extracted at story 5.7 so the
+ *   battle-stats sheet reuses it; the 5.6 review history that mandates the
+ *   handshake is documented THERE and must survive any refactor);
  * - reset the kept array in `create()` (singleton scenes).
  */
 export function buildUnitCardOverlay(scene: Scene, cls: UnitClass, element: Element | undefined, requestClose: () => void): GameObjects.GameObject[] {
   const card = unitCard(cls, element);
   const K = UNIT_CARD;
-  const objs: GameObjects.GameObject[] = [];
-
-  // The close handshake: `armed` flips on a pointerDOWN that happens while
-  // the card is up, and only an armed pointerUP closes — so the opening
-  // press's release (down happened BEFORE the card existed) is swallowed
-  // unarmed, and a dismissing tap is consumed down AND up by the live scrim.
-  let armed = false;
-  const arm = () => {
-    armed = true;
-  };
-  const closeIfArmed = () => {
-    if (armed) requestClose();
-  };
-
-  // The modal scrim: swallows every tap outside the sheet (topOnly input —
-  // nothing beneath can hear anything) and closes the card on an armed pair.
-  objs.push(
-    scene.add
-      .rectangle(BASE_WIDTH / 2, BASE_HEIGHT / 2, BASE_WIDTH, BASE_HEIGHT, 0x000000, 0.6)
-      .setDepth(300)
-      .setInteractive()
-      .on('pointerdown', arm)
-      .on('pointerup', closeIfArmed),
-  );
-  // An OPAQUE plate first (device round 1 — the frame art's dark centre is
-  // not load-bearing over busy content; over the board the card read as
-  // transparent), then the gold 9-slice frame, then an input blocker so a
-  // tap ON the sheet is a no-op rather than falling through to the scrim.
-  objs.push(
-    scene.add
-      .rectangle(K.x + 3, K.y + 3, K.w - 6, K.h - 6, PALETTE.buttonFill, 1)
-      .setOrigin(0, 0)
-      .setDepth(301),
-  );
-  objs.push(addFramedPanel(scene, K.x, K.y, K.w, K.h, { origin: [0, 0] }).setDepth(301));
-  objs.push(scene.add.rectangle(K.x, K.y, K.w, K.h, 0, 0).setOrigin(0, 0).setDepth(301).setInteractive());
+  // Chrome + armed close handshake: the shared shell (story 5.7 extraction).
+  const objs: GameObjects.GameObject[] = [...addModalSheet(scene, K, requestClose)];
 
   // Header: the interim portrait at a FIXED 64 (deliberately NOT
   // addUnitSprite — the loom is board presence, and a 96px monster portrait
@@ -78,13 +39,13 @@ export function buildUnitCardOverlay(scene: Scene, cls: UnitClass, element: Elem
     scene.add
       .sprite(left + K.portraitW / 2, K.y + K.pad + K.portraitW / 2, UNITS_SHEET_KEY, card.portraitFrame)
       .setDisplaySize(K.portraitW, K.portraitW)
-      .setDepth(302),
+      .setDepth(SHEET_CONTENT_DEPTH),
   );
   const nameX = left + K.portraitW + K.nameGapX;
   objs.push(
     crispText(scene, nameX, K.y + K.pad + 18, card.name.toUpperCase(), { fontFamily: 'Arial Black', fontSize: '16px', color: PALETTE.title })
       .setOrigin(0, 0.5)
-      .setDepth(302),
+      .setDepth(SHEET_CONTENT_DEPTH),
   );
   // The subline (device rounds 2+3 — "something visual…", then "1 out of 2"):
   // `HP 120 ·` then the unit's SIZE as a FIXED row of MAX_SLOT_COST
@@ -95,7 +56,7 @@ export function buildUnitCardOverlay(scene: Scene, cls: UnitClass, element: Elem
   const subY = K.y + K.pad + 42;
   const hpText = crispText(scene, nameX, subY, `HP ${card.hp} · `, { fontFamily: 'Arial', fontSize: '11px', color: PALETTE.bodyText })
     .setOrigin(0, 0.5)
-    .setDepth(302);
+    .setDepth(SHEET_CONTENT_DEPTH);
   objs.push(hpText);
   let cursorX = nameX + hpText.width + 2;
   for (let sq = 0; sq < MAX_SLOT_COST; sq += 1) {
@@ -105,28 +66,13 @@ export function buildUnitCardOverlay(scene: Scene, cls: UnitClass, element: Elem
         .rectangle(cursorX, subY, 11, 11, filled ? PALETTE.boneFill : 0, filled ? 1 : 0) // empty = hollow outline
         .setOrigin(0, 0.5)
         .setStrokeStyle(1, filled ? PALETTE.boneFill : PALETTE.unitStroke)
-        .setDepth(302),
+        .setDepth(SHEET_CONTENT_DEPTH),
     );
     cursorX += 14;
   }
   if (card.element !== undefined) {
-    objs.push(addElementBadge(scene, cursorX + 10, subY, card.element).setDepth(302));
+    objs.push(addElementBadge(scene, cursorX + 10, subY, card.element).setDepth(SHEET_CONTENT_DEPTH));
   }
-
-  // The ✕ — FR30's 44px floor as an invisible zone over an 18px glyph.
-  objs.push(
-    crispText(scene, K.x + K.w - K.pad - 8, K.y + K.pad + 8, '✕', { fontFamily: 'Arial', fontSize: '18px', color: PALETTE.mutedText })
-      .setOrigin(0.5)
-      .setDepth(303),
-  );
-  objs.push(
-    scene.add
-      .rectangle(K.x + K.w - K.pad - 8, K.y + K.pad + 8, K.closeSize, K.closeSize, 0, 0)
-      .setDepth(303)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerdown', arm)
-      .on('pointerup', closeIfArmed),
-  );
 
   // The three move rows, LEFT column below the header — the OB64 read: a
   // row-position mini-grid (three stacked bars, the firing row lit — front
@@ -141,7 +87,7 @@ export function buildUnitCardOverlay(scene: Scene, cls: UnitClass, element: Elem
         scene.add
           .rectangle(left, y - 5 + bar * 5, K.rowIconW, 3, bar === i ? PALETTE.boneFill : PALETTE.cardStroke, 1) // lit bar = bone
           .setOrigin(0, 0.5)
-          .setDepth(302),
+          .setDepth(SHEET_CONTENT_DEPTH),
       );
     }
     const verb = crispText(scene, left + K.rowIconW + 8, y, `${row.label} ×${row.count}`, {
@@ -150,7 +96,7 @@ export function buildUnitCardOverlay(scene: Scene, cls: UnitClass, element: Elem
       color: PALETTE.bodyText,
     })
       .setOrigin(0, 0.5)
-      .setDepth(302);
+      .setDepth(SHEET_CONTENT_DEPTH);
     objs.push(verb);
     objs.push(
       crispText(scene, verb.x + verb.width + 8, y, CARD_GLYPHS[row.glyph], {
@@ -159,7 +105,7 @@ export function buildUnitCardOverlay(scene: Scene, cls: UnitClass, element: Elem
         color: CARD_GLYPH_COLORS[row.glyph],
       })
         .setOrigin(0, 0.5)
-        .setDepth(302),
+        .setDepth(SHEET_CONTENT_DEPTH),
     );
   });
 
@@ -175,7 +121,7 @@ export function buildUnitCardOverlay(scene: Scene, cls: UnitClass, element: Elem
   // (review 2026-07-29: hardcoded six-element arrays would silently diverge
   // from the value polygon if the axes ever grew).
   const ONES = STAT_AXES.map(() => 1);
-  const g = scene.add.graphics().setDepth(302);
+  const g = scene.add.graphics().setDepth(SHEET_CONTENT_DEPTH);
   const ring = (scale: number) => {
     const pts = radarPoints(K.radarCX, radarCY, K.radarR * scale, ONES);
     g.beginPath();
@@ -207,7 +153,7 @@ export function buildUnitCardOverlay(scene: Scene, cls: UnitClass, element: Elem
         color: PALETTE.mutedText,
       })
         .setOrigin(0.5)
-        .setDepth(302),
+        .setDepth(SHEET_CONTENT_DEPTH),
     );
   });
 

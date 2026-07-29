@@ -1,5 +1,6 @@
 import { BALANCE } from '@lordly/engine';
 import type { Element, MoveKind, SpellKind, Tactic, UnitClass } from '@lordly/engine';
+import type { SideTotals } from '../flow/battleStats';
 
 // The game's full official name (story 5.2, Danilo 2026-07-27): the royal
 // epithet answers "who is Lordly?" — page title + PWA manifest. On Home the
@@ -136,14 +137,96 @@ export const UNIT_CARD = {
 export const TAP_DISTANCE_PX = 10;
 
 /**
- * How long a still press must hold before the unit-data card opens (story
- * 5.6). Comfortably past a tap, comfortably short of feeling stuck; the
- * gesture cancels on ANY movement past TAP_DISTANCE_PX (checked at fire time
- * in BOTH scenes — review 2026-07-29: Draft has no drag to cancel it for
- * free), on release (a tap is a tap), and on pointer-out. Danilo tuned the
- * feel across the five 5.6 device rounds and accepted 450.
+ * How long a still press must hold before a hold-to-inspect sheet opens —
+ * the unit-data card at Draft/Placement (story 5.6) and the per-unit stats
+ * sheet at Result (story 5.7): one gesture, one number, three scenes.
+ * Comfortably past a tap, comfortably short of feeling stuck; the gesture
+ * cancels on ANY movement past TAP_DISTANCE_PX (checked at fire time in ALL
+ * consumers — only Placement gets a drag to cancel it for free), on release
+ * (a tap is a tap), and on pointer-out. Danilo tuned the feel across the
+ * five 5.6 device rounds and accepted 450.
  */
 export const LONG_PRESS_MS = 450;
+
+/**
+ * The battle-stats sheet (story 5.7 — the per-unit read behind a long-press
+ * on Result's comp chips; the modal shell is shared with UNIT_CARD via
+ * config/modalSheet.ts). Geometry in the 5.6 tradition, pinned by test:
+ * x 8 / w 344, h 246 anchored low (y 386, bottom 632); headerH 56 carries a
+ * 40px sprite + name + code; nine counter rows at rowH 18 (14 + 56 + 9×18 +
+ * 14 = 246 exactly — the vertical budget test pins the EQUALITY, not a ≤);
+ * closeSize 44 (FR30); labels left, values right-aligned inside the padding.
+ * The two type sizes the width pins need to see live here too (5.7 review:
+ * a budget test cannot derive a worst case from a literal in the overlay).
+ */
+export const STATS_CARD = { x: 8, y: 386, w: 344, h: 246, pad: 14, headerH: 56, rowH: 18, closeSize: 44, nameFontPx: 14, valueFontPx: 11 } as const;
+
+/**
+ * The sheet's rows — label + which SideTotals counter it reads (story 5.7).
+ * Typed against the model (type-only import, no cycle: battleStats imports
+ * nothing from constants), so a renamed counter is a compile error here and
+ * the completeness test can prove every counter is surfaced.
+ */
+export const STATS_SHEET_ROWS: ReadonlyArray<readonly [string, keyof SideTotals]> = [
+  ['Damage dealt', 'dealt'],
+  ['Damage taken', 'taken'],
+  ['· of it poison', 'poisonTaken'],
+  ['Crits landed', 'crits'],
+  ['Dodges', 'dodges'],
+  ['Guard blocks', 'blocks'],
+  ['Healing given', 'healsGiven'],
+  ['Healing received', 'healsReceived'],
+  ['Statuses cast', 'statusesApplied'],
+] as const;
+
+/**
+ * The Result screen's BATTLE SUMMARY link (story 5.7, device round 2 —
+ * Danilo: the summary "could be something optional… you click and see;
+ * otherwise you don't click and ignore"). One centred label in the measured
+ * 190–250 free band between the HP count-up (~173) and "Your army" (256),
+ * with an FR30 44px tap zone (193–237 — clear of both neighbours, pinned).
+ */
+export const SUMMARY_LINK = { y: 215, tapW: 220, tapH: 44, fontPx: 12 } as const;
+
+/**
+ * The battle-summary sheet (story 5.7 round 2 — the LoL-history read Danilo
+ * asked for): the shared modal shell, then a title band, the two side-total
+ * lines (the ▲▼ strip format lives HERE now), one BAR ROW per unit — sprite
+ * avatar, a side-colored DEALT bar over a thin neutral TAKEN bar, both on
+ * ONE shared scale (statsBarMax) with values at the bar ends — and a footer
+ * hint pointing at the per-unit chip hold. Vertical budget (pinned):
+ * pad 14 + titleH 36 + totalsH 40 + 10×rowH 24 + footerH 18 + pad 14 = 362
+ * ≤ h 364; ten rows is the worst case, DERIVED in the test from the slot
+ * budget and the cheapest slot cost (5v5 smalls — monster comps run shorter
+ * and leave slack). `totalsLineH` is the two side lines' own spacing: it
+ * lives here, not as an `i*18+8` in the overlay, so the clearance test can
+ * see it (5.7 review).
+ */
+export const SUMMARY_CARD = {
+  x: 8,
+  y: 268,
+  w: 344,
+  h: 364,
+  pad: 14,
+  titleH: 36,
+  titleFontPx: 14,
+  totalsH: 40,
+  totalsLineH: 18,
+  rowH: 24,
+  footerH: 18,
+  avatarW: 24,
+  valueW: 40,
+  closeSize: 44,
+} as const;
+
+/**
+ * The summary sheet's two fixed strings (story 5.7 review — a width pin can
+ * only pin text it can read; a fiat string in the overlay is unpinnable).
+ * The hint names the CHIPS and the dismissal: it is displayed INSIDE a modal
+ * that blocks those very chips, so "hold a unit" alone stranded the reader.
+ */
+export const SUMMARY_TITLE = 'BATTLE SUMMARY';
+export const SUMMARY_HINT = 'Close, then hold a unit’s chip for its full sheet';
 
 /**
  * The draft hint line's centre y (story 5.5 review): at y=50 its 11px line

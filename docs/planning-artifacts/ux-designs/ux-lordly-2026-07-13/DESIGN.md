@@ -299,6 +299,34 @@ Dated amendment (the 4.0/5.2 precedent — nothing below is rewritten; this note
 - **Close** = tap the scrim or the ✕ (44px tap floor, FR30). The card is strictly read-only
   and modal: nothing beneath it receives input while it is up.
 
+## Amendment (story 5.7, 2026-07-29) — the battle-stats summary (`{components.summary-link}` + `{components.summary-sheet}` + `{components.stats-sheet}`)
+
+Dated amendment (nothing below is rewritten; this note adds three components). The
+always-on `{components.stats-strip}` this amendment first registered lasted one device round
+and is RETIRED — nothing defines or renders it; the link + sheet below replaced it:
+
+- **Battle-summary link** (`{components.summary-link}`) — the summary is OPTIONAL (device
+  round 2, Danilo: "you click and see; otherwise you don't click and ignore"): one gold
+  `▸ BATTLE SUMMARY` label in the free band between the HP count-up and the comps
+  (`SUMMARY_LINK`, 44px tap zone, pinned). The always-on strip it replaced lasted one round.
+- **Battle-summary sheet** (`{components.summary-sheet}`) — the shared modal shell
+  (`SUMMARY_CARD` 344×364): title; the two side-total lines in the pct line's Courier-800 at
+  10px, reading `▲dealt ▼taken · CRIT n · DGE n · BLK n · HEAL n` (▲ sent out, ▼ received —
+  round 1: the original slash pair didn't say which number was which; full words exceed every
+  10px budget); then the LoL-history read (round 2, Danilo's reference): one BAR ROW per unit
+  in roster order — 20px sprite avatar, a side-colored DEALT bar (8px) over a thin neutral
+  TAKEN bar (4px, never a side colour: damage received has no team pride), all on ONE shared
+  scale so lengths compare across units, sides, and metrics, dealt value at the row's end —
+  and a footer hint pointing at the per-unit chip hold. Poison and statuses stay off the totals
+  lines — the per-unit sheet carries the full table.
+- **Battle-stats sheet** (`{components.stats-sheet}`) — long-press a Result comp chip ("hold a
+  unit, learn about it" — the 5.6 gesture generalized) to open a framed modal sheet
+  (`STATS_CARD` 344×246, the SHARED modal shell of `{components.unit-data-card}` — one chrome,
+  one armed close handshake, config/modalSheet.ts): header sprite + soldier name in the SIDE
+  colour (whose soldier is part of the read) + class; then nine label/value counter rows —
+  damage dealt/taken, the poison share, crits, dodges, Guard blocks, healing given/received,
+  statuses cast. Values in bone, labels muted; nothing gold but the frame.
+
 ## Do's and Don'ts
 
 | Do | Don't |

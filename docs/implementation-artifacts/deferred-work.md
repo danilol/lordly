@@ -282,3 +282,17 @@ any more. Original entry kept below for the record.
   single-pointer by design since story 1.8, and the target platform is one-thumb portrait
   play. If a device session ever shows two-finger weirdness, the fix is pointer-id-scoped
   gesture state across DraftScene/PlacementScene — an audit-shaped task, not a patch.
+
+## Deferred from: code review of story-5-7-the-battle-stats-summary (2026-07-29)
+
+- **Multi-touch (extension of the 5.6 deferral):** ResultScene adds a third single-pointer
+  gesture surface (chip long-press + the summary link). Same shape as before — a second
+  finger clobbers the shared timer — and the same verdict: the whole gesture system is
+  single-pointer by design since 1.8; fold Result into the pointer-id audit if it ever runs.
+- **The poison-witch read on the summary bars (a UX decision for Danilo, not a bug):**
+  `PoisonTicked` carries no actor, so a poison-heavy witch who wins the match bars as a
+  near-pacifist (dealt ≈ 0) while her victims' grey taken-bars swell. Semantically honest and
+  documented in the fold, but the summary sheet never SAYS it — the one archetype whose
+  damage model differs is the one the teaching surface under-credits. Candidate fix when it
+  itches: a small ☠ annotation on rows with poisonTaken, or crediting ticks to the caster
+  (which would change the fold's semantics and the conservation law — a real design call).
