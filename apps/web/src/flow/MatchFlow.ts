@@ -360,19 +360,24 @@ export class MatchFlow {
 
   /**
    * Resolves the committed battle into an immutable `BattleLog` (AD-1/AD-2):
-   * `MatchFlow` is the sole caller of `resolveBattle`, and the Reveal/Battle
-   * scenes replay the returned log read-only — they never touch the engine.
+   * `MatchFlow` is the sole caller of `resolveBattle`, and the Battle scene
+   * replays the returned log read-only — it never touches the engine.
    * MEMOIZED, not once-per-match: a second call returns the SAME cached log
    * unless the cache was invalidated. It is invalidated by `startMatch()` (a
    * rematch resolves fresh) and — since story 4.13 — by `setTactic` when the
    * player changes their tactic on Reveal (the committed setup changed, so the
-   * pre-computed outcome is stale and MUST be recomputed). Consequence: within
-   * one committed match `resolve()` may run more than once (Reveal draws the
-   * roster, a tactic change drops the cache, Battle re-resolves). The one hard
-   * invariant that still holds: the log always corresponds to the CURRENT
-   * `committedSetup` — never a stale one — because every setup change nulls it.
-   * `recordResult()` relies on this: it reads the log the Battle scene resolved,
-   * which is guaranteed current because Battle always resolves after Reveal.
+   * pre-computed outcome is stale and MUST be recomputed).
+   *
+   * Story 5.8 moved the FIRST caller: Reveal used to resolve here just to read
+   * the roster, which made a live match resolve twice whenever the player
+   * changed tactic (AD-13's forbidden "double resolution"). Reveal now draws
+   * from `committedSetup` directly, so **`BattleScene` is the first and usually
+   * only resolver**, on the Fight! tap.
+   *
+   * The one hard invariant, unchanged: the log always corresponds to the
+   * CURRENT `committedSetup` — never a stale one — because every setup change
+   * nulls it. `recordResult()` relies on that, not on any scene ordering: it
+   * reads the log Battle resolved, and Result is only reachable through Battle.
    */
   resolve(): BattleLog {
     if (this.log) return this.log;

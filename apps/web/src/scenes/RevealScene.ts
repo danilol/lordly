@@ -1,6 +1,6 @@
 import { GameObjects, Scene } from 'phaser';
 import { ALL_TACTICS } from '@lordly/engine';
-import type { BattleStarted, UnitSnapshot } from '@lordly/engine';
+import type { Placement, Side, Unit } from '@lordly/engine';
 import {
   BASE_HEIGHT,
   BASE_WIDTH,
@@ -13,12 +13,12 @@ import {
   REVEAL_HUD_BAND_H,
   ISO_BOARD_REVEAL,
   REVEAL_TITLE,
-  CLASS_ABBREVIATIONS,
+  REVEAL_SPRITE_OFFSET_Y,
+  REVEAL_SPRITE_SIZE,
   TACTIC_DISPLAY_NAME,
   LEADER_CROWN_GLYPH,
   unitCodeStyle,
 } from '../config/constants';
-import type { MatchSetup } from '@lordly/engine';
 import {
   addBattleTerrain,
   addButton,
@@ -31,15 +31,17 @@ import {
   crispText,
 } from '../config/ui';
 import { drawIsoBoard } from '../config/board';
-import { DEFAULT_ORIENTATION, unitTileCenter } from '../flow/battleView';
+import { DEFAULT_ORIENTATION, revealNameOffsetY, tacticPickerLayout, unitTileCenter } from '../flow/battleView';
 import type { MatchFlow } from '../flow/MatchFlow';
 
 /**
  * Reveal scene (FR6, AD-11): both committed boards shown FACE TO FACE — the
  * FR5/FR24 fence lifts here, so the AI's side B renders for the first time.
  * Positions come from the pure lane-mirror transform (`battleView`): enemy on
- * top facing down, player on the bottom. A thin renderer — it reads the
- * initial roster off the (once-)resolved `BattleLog` and evaluates no rule.
+ * top facing down, player on the bottom. A thin renderer — it reads both
+ * boards straight off `committedSetup` (story 5.8: it never resolves a battle;
+ * AD-13 keeps `resolveBattle` to one call per live match, on the Fight! tap)
+ * and evaluates no rule.
  */
 export class RevealScene extends Scene {
   private flow!: MatchFlow;
@@ -74,8 +76,11 @@ export class RevealScene extends Scene {
     crispText(this, BASE_WIDTH / 2, 26, REVEAL_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
 
     // Defensive guard (not reachable via today's FSM — PlacementScene always
-    // commits before starting this scene — but cheap insurance against a
-    // future navigation change): resolve() throws if reached uncommitted.
+    // commits before starting this scene — but cheap insurance against a future
+    // navigation change). Story 5.8: the reason changed with the roster source.
+    // It is no longer "resolve() throws if reached uncommitted" — nothing here
+    // resolves now — it is that an uncommitted match has no `committedSetup` to
+    // draw, and a silently empty board is worse than saying so.
     if (this.flow.getState().phase !== 'committed') {
       crispText(this, BASE_WIDTH / 2, BASE_HEIGHT * 0.4, 'No match committed.', { fontFamily: 'Arial', fontSize: '16px', color: PALETTE.bodyText }).setOrigin(
         0.5,
@@ -100,15 +105,26 @@ export class RevealScene extends Scene {
     drawIsoBoard(this, 'B', DEFAULT_ORIENTATION, ISO_BOARD_REVEAL);
     drawIsoBoard(this, 'A', DEFAULT_ORIENTATION, ISO_BOARD_REVEAL);
 
-    // resolve() caches the log (AD-13); the Battle scene replays it. The initial
-    // roster is the BattleStarted event, which is tactic-INDEPENDENT — so a
-    // tactic pick below (which invalidates the cached log, story 4.13) never
-    // changes what we draw here; only the recomputed OUTCOME differs, and Battle
-    // re-resolves it. (A pre-existing double-resolve when the tactic changes is
-    // logged in deferred-work.md.)
-    const roster = (this.flow.resolve().events[0] as BattleStarted).units;
-    const committed = this.flow.getState().committedSetup;
-    for (const unit of roster) this.drawUnit(unit, committed);
+    // Story 5.8 (AC1): Reveal does NOT resolve the battle. AD-13's rule is that
+    // MatchFlow is the sole caller of `resolveBattle` and a battle is resolved
+    // exactly once per live match — its "Prevents" line literally names "double
+    // resolution". Reveal used to run a full resolve purely to read the
+    // tactic-INDEPENDENT roster off `BattleStarted`, and a tactic pick below
+    // then dropped that log (story 4.13), so Fight! paid for a second full
+    // resolve while the first was discarded unused.
+    //
+    // A board is static per-unit facts, which AD-2 routes through MatchSetup:
+    // "the renderer may read the setup, never re-derive a rule". `armies` +
+    // `placements` + `leaders` is everything `drawUnit` reads — no snapshot is
+    // built, so no engine logic is duplicated here (notably NOT hp/maxHp, which
+    // this board never draws). Fight! now performs the single resolve.
+    // The roster↔setup index correspondence this relies on is pinned in
+    // apps/web/test/reveal-roster.test.ts.
+    const setup = this.flow.getState().committedSetup;
+    if (!setup) return; // unreachable past the phase guard above; narrows the optional for the walk below
+    for (const side of ['A', 'B'] as const) {
+      setup.armies[side].forEach((unit, i) => this.drawUnit(side, unit, setup.placements[side][i]!, i === setup.leaders[side]));
+    }
 
     // FR6 disclosure (story 4.4/4.5): both army tactics revealed — the FR5 fence
     // lifts here, so the enemy's tactic (side B) shows for the first time. Story
@@ -145,13 +161,15 @@ export class RevealScene extends Scene {
    * to), and the four options drop into the empty band BELOW both lines when
    * open — so the enemy stance never jumps away mid-choice (review 2026-07-20).
    *
-   * GEOMETRY COUPLING (the "army-row coupling sites" class): the option rows are
-   * laid out from `ALL_TACTICS.length` with NO clamp against `BASE_HEIGHT` / the
-   * Fight button (top ≈ y552). At the current 4 tactics the last row ends well
-   * clear (≈ y502); if `ALL_TACTICS` ever grows past ~6 the list would ride over
-   * Fight — re-lay this against the Fight button's Y (or scroll) before adding a
-   * 7th tactic. Don't assume this scene is safe just because it isn't in that
-   * change's file list.
+   * GEOMETRY COUPLING (the "army-row coupling sites" class) — story 5.8 turned
+   * this warning into a TEST. The geometry now comes from the pure
+   * `tacticPickerLayout(ALL_TACTICS.length)`, and battle-view.test.ts pins the
+   * FR30 44px floor for the bar and every cell, the grid order, and the clamp
+   * against the Fight button's top (y568 — the old comment's "≈ y552" was a
+   * guess). The 2×2 grid holds FOUR tactics with slack; a FIFTH needs a third
+   * row and would overrun Fight, so the test fails on a grown `ALL_TACTICS` and
+   * forces a deliberate re-lay (scroll, three columns, or a shorter bar) instead
+   * of a device session discovering the overlap.
    */
   private renderTactics() {
     for (const el of this.tacticEls) el.destroy();
@@ -159,26 +177,45 @@ export class RevealScene extends Scene {
     const setup = this.flow.getState().committedSetup;
     if (!setup) return;
 
-    const bw = 210;
-    const bh = 24;
-    const bx = (BASE_WIDTH - bw) / 2;
-    const barY = 356;
-    const bar = this.add.rectangle(bx, barY, bw, bh, PALETTE.buttonFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.buttonStroke);
-    const barLabel = crispText(this, BASE_WIDTH / 2, barY + bh / 2, `You — ${TACTIC_DISPLAY_NAME[setup.tactics.A]}  ${this.pickerOpen ? '▲' : '▼'}`, {
+    // Geometry from the pure layout (story 5.8) — FR30 44px targets, the option
+    // grid, and the clamp against the Fight button all live in `battleView` so
+    // they are provable without a Phaser scene.
+    const L = tacticPickerLayout(ALL_TACTICS.length);
+    const bar = this.add.rectangle(L.bar.x, L.bar.y, L.bar.w, L.bar.h, PALETTE.buttonFill).setOrigin(0, 0).setStrokeStyle(1, PALETTE.buttonStroke);
+    const barLabel = crispText(this, BASE_WIDTH / 2, L.bar.y + L.bar.h / 2, `You — ${TACTIC_DISPLAY_NAME[setup.tactics.A]}  ${this.pickerOpen ? '▲' : '▼'}`, {
       fontFamily: 'Arial',
       fontSize: '14px',
       color: PALETTE.playerText,
     }).setOrigin(0.5);
-    bar.setInteractive({ useHandCursor: true }).on('pointerup', () => {
-      this.pickerOpen = !this.pickerOpen;
-      this.renderTactics();
-    });
+    // Down→up on the SAME object (story 5.8, carrying 5.7's HIGH): a bare
+    // `pointerup` fires even when the press began somewhere else — the bug
+    // `addButton` was hardened against (config/ui.ts). Reachable here because
+    // `addHomeBack` installs a scene-wide pointerdown and a down can lose its
+    // up across a scene boundary. A tap is a down→up pair, nothing less.
+    let barPressed = false;
+    bar
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        barPressed = true;
+      })
+      .on('pointerout', () => {
+        barPressed = false;
+      })
+      .on('pointerup', () => {
+        if (!barPressed) return;
+        barPressed = false;
+        this.pickerOpen = !this.pickerOpen;
+        // ONE TICK deferred (review 2026-08-01): renderTactics destroys every
+        // element in `tacticEls` — including this very bar, mid-dispatch. The
+        // Draft tab strip fixed the identical hazard the same way (5.5 review);
+        // the scene-scoped clock drops the call on shutdown, so nothing leaks.
+        this.time.delayedCall(0, () => this.renderTactics());
+      });
     this.tacticEls.push(bar, barLabel);
 
     // The enemy line is FIXED just under the bar — it never moves when the
     // dropdown opens (the two tactics stay paired for the FR6 read).
-    const enemyY = barY + bh + 6;
-    const enemyLabel = crispText(this, BASE_WIDTH / 2, enemyY + bh / 2, `Enemy — ${TACTIC_DISPLAY_NAME[setup.tactics.B]}`, {
+    const enemyLabel = crispText(this, BASE_WIDTH / 2, L.enemyCenterY, `Enemy — ${TACTIC_DISPLAY_NAME[setup.tactics.B]}`, {
       fontFamily: 'Arial',
       fontSize: '14px',
       color: PALETTE.enemyText,
@@ -191,25 +228,27 @@ export class RevealScene extends Scene {
       //
       // Chrome treatment (story 5.2 review, Danilo's call — option b): the OPEN
       // menu is ONE gold-framed surface (`addFramedPanel`) with flat rows
-      // inside, rather than four ornate mini-buttons. A menu row is not a
-      // button (the HistoryScene not-replayable marker sets the precedent for
-      // deliberately non-button chrome), and at 24px a row is below both the
-      // FR30 tap floor and `addButton`'s usable frame size — that height stays
-      // as shipped in 4.13 and is logged in deferred-work.md.
-      const optionsTop = enemyY + bh + 8;
-      const pad = 6;
-      this.tacticEls.push(addFramedPanel(this, bx - pad, optionsTop - pad, bw + pad * 2, ALL_TACTICS.length * bh + pad * 2, { origin: [0, 0] }).setDepth(99));
+      // inside, rather than ornate mini-buttons. A menu row is not a button (the
+      // HistoryScene not-replayable marker sets the precedent for deliberately
+      // non-button chrome).
+      //
+      // Story 5.8 (AC3): the rows meet FR30's 44px floor at last — as a 2×2
+      // GRID, because four 44px rows stacked need 188px and the band above
+      // Fight gives ~150. The open panel is wider than the bar so the longest
+      // tactic name keeps its margin at 12px. Geometry + the clamp are pinned
+      // in battle-view.test.ts.
+      this.tacticEls.push(addFramedPanel(this, L.panel.x, L.panel.y, L.panel.w, L.panel.h, { origin: [0, 0] }).setDepth(99));
       ALL_TACTICS.forEach((t, i) => {
         const isSel = t === setup.tactics.A;
-        const oy = optionsTop + i * bh;
-        // Selected = the gold plate; unselected rows show the panel's own body
-        // (no per-row stroke — a dark-gold border on a bright-gold fill was the
+        const cell = L.cells[i]!;
+        // Selected = the gold plate; unselected cells show the panel's own body
+        // (no per-cell stroke — a dark-gold border on a bright-gold fill was the
         // gold-on-gold trap flagged in review).
         const row = this.add
-          .rectangle(bx, oy, bw, bh, isSel ? PALETTE.buttonFillEnabled : PALETTE.cardFill, isSel ? 1 : 0.001)
+          .rectangle(cell.x, cell.y, cell.w, cell.h, isSel ? PALETTE.buttonFillEnabled : PALETTE.cardFill, isSel ? 1 : 0.001)
           .setOrigin(0, 0)
           .setDepth(100);
-        const label = crispText(this, BASE_WIDTH / 2, oy + bh / 2, TACTIC_DISPLAY_NAME[t], {
+        const label = crispText(this, cell.x + cell.w / 2, cell.y + cell.h / 2, TACTIC_DISPLAY_NAME[t], {
           fontFamily: 'Arial',
           fontSize: '12px',
           // Ink on the gold selected row (story 5.2 — bone-on-gold is the contrast trap).
@@ -217,42 +256,68 @@ export class RevealScene extends Scene {
         })
           .setOrigin(0.5)
           .setDepth(101);
-        row.setInteractive({ useHandCursor: true }).on('pointerup', () => {
-          this.flow.setTactic(t); // AD-13; post-commit this invalidates the cached log so Fight! re-resolves (story 4.13)
-          this.pickerOpen = false;
-          this.renderTactics();
-        });
+        // Same down→up pair as the bar (story 5.8) — and it matters more here:
+        // a stray release must never silently change the tactic the battle
+        // resolves with.
+        let rowPressed = false;
+        row
+          .setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => {
+            rowPressed = true;
+          })
+          .on('pointerout', () => {
+            rowPressed = false;
+          })
+          .on('pointerup', () => {
+            if (!rowPressed) return;
+            rowPressed = false;
+            this.flow.setTactic(t); // AD-13; post-commit this invalidates the cached log so Fight! re-resolves (story 4.13)
+            this.pickerOpen = false;
+            // One tick, same reason as the bar: this row is in `tacticEls`.
+            this.time.delayedCall(0, () => this.renderTactics());
+          });
         this.tacticEls.push(row, label);
       });
     }
   }
 
   /**
-   * Draws one unit standing on its iso tile (story 2.2): the 32px billboard
-   * sprite, side-colored 3-letter class code, and the shared element dot —
-   * matching the Battle scene's unit treatment exactly, so Reveal → Battle
-   * is the same stage. Side identity lives in the tile color + code color +
-   * board position (the non-color anchor); the 2.1 card wash is retired here.
-   * Story 4.2 (FR37, dossier §7): Reveal is a NAME surface — the soldier's
-   * name sits under the code (the battle board keeps codes only). The name
-   * inherits the code's FR39f stroke treatment so it survives the tile fill.
+   * Draws one unit standing on its iso tile (story 2.2): the billboard sprite,
+   * the soldier's NAME, and the shared element dot — matching the Battle
+   * scene's unit treatment, so Reveal → Battle is the same stage. Side identity
+   * lives in the tile color + text color + board position (the non-color
+   * anchor); the 2.1 card wash is retired here.
+   *
+   * Story 4.2 (FR37): Reveal is a NAME surface. Story 5.8 (AC2) retired the
+   * 3-letter class CODE from both boards — the PO's call after story 4.0 made
+   * the sprites crisp enough to identify a class ("we can identify the class by
+   * the sprite. So we can remove them", 2026-07-17), superseding the spine's
+   * "the board keeps codes". The name stays, and keeps the code's FR39f stroke
+   * treatment (`unitCodeStyle`) so it still survives the tile fill — it is now
+   * that token's ONE consumer.
+   *
+   * Story 5.8: takes the setup's OWN data rather than a resolved
+   * `UnitSnapshot` — the caller walks `armies`/`placements`/`leaders`, so this
+   * scene no longer needs a battle to be resolved before it can draw a board
+   * (AC1/AD-13). `isLeader` arrives decided: the crown is an army-INDEX match
+   * (`i === leaders[side]`), never a reconstructed `side:index` string.
    */
-  private drawUnit(unit: UnitSnapshot, setup?: MatchSetup) {
-    const { x, y } = unitTileCenter(unit.side, unit.placement, DEFAULT_ORIENTATION, ISO_BOARD_REVEAL);
-    addUnitSprite(this, x, y - 13, unit.class, 38).setDepth(y); // grew with the 5.3 tiles (56→70)
+  private drawUnit(side: Side, unit: Unit, placement: Placement, isLeader: boolean) {
+    const { x, y } = unitTileCenter(side, placement, DEFAULT_ORIENTATION, ISO_BOARD_REVEAL);
+    addUnitSprite(this, x, y + REVEAL_SPRITE_OFFSET_Y, unit.class, REVEAL_SPRITE_SIZE).setDepth(y); // grew with the 5.3 tiles (56→70)
     // FR6 leader disclosure (story 4.5): the ♛ crown sits ON the leader's sprite
     // (a board marker, "the read is the payoff" — not a separate text line like
     // the tactic labels). Gold (PALETTE.title = {colors.gold}), never a side color.
-    if (setup && unit.id === `${unit.side}:${setup.leaders[unit.side]}`) {
+    if (isLeader) {
       crispText(this, x, y - 30, LEADER_CROWN_GLYPH, { fontFamily: 'Arial', fontSize: '16px', color: PALETTE.title })
         .setOrigin(0.5)
         .setDepth(y + 1);
     }
-    crispText(this, x, y + 8, CLASS_ABBREVIATIONS[unit.class], unitCodeStyle(unit.side))
-      .setOrigin(0.5)
-      .setDepth(y);
     if (unit.name) {
-      crispText(this, x, y + 21, unit.name, { ...unitCodeStyle(unit.side), fontFamily: 'Arial', fontSize: '10px' })
+      // The name rises into the slot the retired code held — but only as far as
+      // the sprite allows: a LOOMED monster reaches lower than a small, so the
+      // offset is derived per class (`revealNameOffsetY`, pinned for both spans).
+      crispText(this, x, y + revealNameOffsetY(unit.class), unit.name, { ...unitCodeStyle(side), fontFamily: 'Arial', fontSize: '10px' })
         .setOrigin(0.5)
         .setDepth(y);
     }

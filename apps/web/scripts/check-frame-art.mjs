@@ -34,7 +34,7 @@ const ASSETS = join(HERE, '..', 'src', 'assets');
 /** Must mirror the slice constants in src/config/constants.ts. */
 const FRAMES = [
   { file: 'button-frame.png', slice: 36, constant: 'BUTTON_FRAME_SLICE' },
-  { file: 'panel-frame.png', slice: 30, constant: 'PANEL_FRAME_SLICE' },
+  { file: 'panel-frame.png', slice: 46, constant: 'PANEL_FRAME_SLICE' },
 ];
 
 /** A pixel light enough to read as the source matte rather than as art. */

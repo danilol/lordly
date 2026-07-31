@@ -452,6 +452,8 @@ So that the game stops looking like a prototype.
 **Given** the free/CC pack landscape (itch.io, OpenGameArt, Kenney)
 **When** packs are selected
 **Then** every class has a visually distinct sprite with at minimum idle, attack/cast, hurt, and death representations (frame animation or tween-based — FR31), and elements are visually distinguishable on a unit (badge/tint consistent across scenes — FR3)
+
+> **Citation note (added 2026-07-29, story 5.8 — the AC above is SHIPPED and is not rewritten):** "badge/tint consistent across scenes" is attributed to FR3, which does not say it. FR3 (`prd.md:47`) governs the seeded element roll, the disclosure timing (owner at draft, opponent at reveal), the Witch coupling and "no combat effect in the MVP" — it says only that the element "is displayed". The one-treatment rule is the UX spine's: `DESIGN.md` `{components.element-badge}` / §"Elements are shared and consistent" / the Do's-and-Don'ts row, and `EXPERIENCE.md`'s element-badge row. Cite the spine as implementing FR3. Also note "tint" was never built — the treatment is a dot, and story 5.8 pinned by test that no sprite tint exists.
 **And** the selection is recorded with license terms in an attribution manifest in the repo (FR31); any pack not allowing redistribution is rejected.
 
 **Given** the selected art
@@ -1141,6 +1143,8 @@ So that the game feels finished, not iterated.
 **Given** the element-badge inconsistency (deferred since 2.1)
 **When** this story closes
 **Then** every scene uses the dot-only compact badge (FR3 — one treatment everywhere), plus any flow items from Danilo's device list at story creation; no engine change, no version bump.
+
+> **Notes (added 2026-07-29 at story 5.8 dev, recorded rather than rewriting the AC):** (1) the "FR3" attribution is wrong — see the citation note under story 2.1 above; the rule is the UX spine's. (2) This clause was ALREADY SATISFIED when the story ran: the element words it targets left with the card-width shrinks in stories 2.3/4.2, and all seven surfaces already used the one dot-only helper. Story 5.8 therefore delivered what was actually missing — test pins for the treatment (which had none), the element dot on the 5.7 stats sheet (the only per-unit surface lacking it), and closure of the stale deferral entry. (3) The "flow items from Danilo's device list" resolved to exactly one item: Reveal's tactic picker was under FR30's 44px tap floor and is now a 2×2 grid of 44px targets, with the previously-unpinned clamp against the Fight button tested.
 
 ### Story 5.9: Full-roster art integration
 

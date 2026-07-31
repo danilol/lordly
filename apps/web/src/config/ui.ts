@@ -22,6 +22,8 @@ import {
   HOME_BACK_LABEL,
   PALETTE,
   PANEL_FRAME_SLICE,
+  groundLabelStyle,
+  BACK_AFFORDANCE_FONT_PX,
   TEXT_RESOLUTION,
   unitDisplaySize,
 } from './constants';
@@ -390,11 +392,12 @@ export function addHomeBack(scene: Scene): GameObjects.Rectangle {
  * the Help scene dismisses to its ORIGIN (Home or Draft), not always Home.
  */
 export function addBackAffordance(scene: Scene, label: string, onTap: () => void, depth = 0): GameObjects.Rectangle {
-  const text = crispText(scene, 44, 22, label, {
-    fontFamily: 'Arial',
-    fontSize: '13px',
-    color: PALETTE.mutedText,
-  })
+  // Story 5.8 round 5: bone + the ground outline. This link sits on the bare
+  // stone floor in every scene that has one (Draft, Placement, History, Help,
+  // Credits — only Reveal/Battle put a scrim under their HUD), and at 13px
+  // muted grey Danilo could not read it: "the Home and Help links are also grey
+  // and difficult". One fix here reaches all of them.
+  const text = crispText(scene, 44, 22, label, groundLabelStyle(PALETTE.bodyText, BACK_AFFORDANCE_FONT_PX, 'Arial'))
     .setOrigin(0.5)
     .setDepth(depth);
   // 44px tall — the FR30 minimum tap target (review: 36px fell short of AC4's explicit floor).

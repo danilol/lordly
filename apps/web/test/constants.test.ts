@@ -101,7 +101,12 @@ describe('backingScaleFor (story 4.0 text-ceiling fix) — the DPR-sized backing
 });
 
 describe('unitCodeStyle (FR39f, story 4.0) — the label-contrast token treatment', () => {
-  it('carries a dark stroke so codes read on same-hue tiles (and future busy backdrops)', () => {
+  // Story 5.8 re-pointed this suite's SUBJECT without weakening it. The class
+  // codes these tokens were built for left the board (units identify by sprite
+  // now), but the Reveal soldier NAME still stands on a solid side-coloured
+  // tile and spreads this exact style — so every assertion below is still
+  // load-bearing, just about the name rather than a code.
+  it('carries a dark stroke so tile text reads on same-hue tiles (and busy backdrops)', () => {
     // The thickness pins the TOKEN, not a literal (2026-07-28 dead-export
     // sweep: the constant existed but the test asserted `>= 3` beside it,
     // leaving the export with no consumer); the floor is asserted once on
@@ -119,7 +124,7 @@ describe('unitCodeStyle (FR39f, story 4.0) — the label-contrast token treatmen
     const enemy = unitCodeStyle('B');
     expect(you.color).not.toBe(enemy.color);
     // The shipped defect: playerText === youFront tile hue, enemyText ≈ foeFront.
-    // The code fill must not be the same hex as the bright front tile it stands on.
+    // The fill must not be the same hex as the bright front tile the text stands on.
     expect(you.color?.toLowerCase()).not.toBe('#4a8fe0');
     expect(enemy.color?.toLowerCase()).not.toBe('#c8483a');
   });

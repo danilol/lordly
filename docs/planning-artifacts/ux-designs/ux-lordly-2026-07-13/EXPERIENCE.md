@@ -77,9 +77,9 @@ Behavioral rules. Visual specs live in `DESIGN.md.Components`, referenced by tok
 | Button | `{components.button}` | Tap to act. Disabled state is visibly muted and ignores taps (e.g. Ready until 3 placed). ≥ 44px. |
 | Mode toggle | `{components.mode-toggle}` | Home only. Two mutually-exclusive buttons; tap selects, selected takes gold fill. Writes `MatchState.mode` for the next match (Story 1.10). **AMENDED 2026-07-19 (Danilo): Wipeout is the default and sits on the LEFT; Standard is the right option** (was Standard-default-left). |
 | Theme toggle | `{components.theme-toggle}` | Settings. Switches Heritage/Night live; persists via `lordly.v1.settings` (AD-8). |
-| Unit card / tile | `{components.unit-card}` | Side-colored border (blue you / red enemy). In Draft: tap to add. In Placement: drag to grid. Elsewhere: display only. Always shows class code + element badge. |
+| Unit card / tile | `{components.unit-card}` | Side-colored border (blue you / red enemy). In Draft: tap to add. In Placement: drag to grid. Elsewhere: display only. Always shows class code + element badge. **AMENDED 2026-07-29 (story 5.8): "always" is a CARD rule.** Iso BOARD tiles (`{components.iso-board}`, Reveal/Battle) carry no class code — see the board-code retirement in the Epic 4 extension below. Cards keep code + badge. |
 | HP bar | `{components.hp-bar}` | Depletes only from `BattleLog` event payloads (`hpAfter`) — never animated by guesswork (AD-2). |
-| Element badge | `{components.element-badge}` | Identical dot in every scene (FR3). Owner sees own rolls at Draft; opponent's elements appear only at Reveal (FR3). |
+| Element badge | `{components.element-badge}` | Identical dot in every scene. Owner sees own rolls at Draft; opponent's elements appear only at Reveal (FR3). **AMENDED 2026-07-29 (story 5.8):** the "identical dot everywhere" rule is THIS SPEC's, not FR3's — FR3 governs the seeded roll, the disclosure timing and the Witch coupling, and says only that the element "is displayed". The rule now holds across Draft, Placement, Reveal, Battle, Result, History AND the 5.6/5.7 modal sheets, and is enforced by test (the colour table has exactly one consumer; no element word or sprite tint exists). The ONE spec'd exception stands: a Draft grid-tile class PREVIEW shows no dot, because elements roll at draft. |
 | Combat number | `{components.combat-number}` | Battle scene only. One float per damage/heal event, side-colored, rises and fades within the event's beat. |
 | Iso board | `{components.iso-board}` | Procedural tilted 3×3. Placement uses one board (yours, blue); Reveal and Battle show two stacked (enemy red top, you blue bottom). |
 | Battle control bar | — (see Battle screen) | Pinned bottom bar: play/normal, fast-forward, skip-to-result, ≡ Log toggle. Controls playback only; never rules. |
@@ -200,8 +200,8 @@ Hosts the **theme toggle** (Heritage / Night, `{components.theme-toggle}`) and t
 - **Guard reads on the board:** `GuardRaised` shows a persistent shield marker on the guarding unit (`{components.guard-marker}`) until `GuardEnded`; an intercepted attack animates its from→to INTO the guard (the bodyguard visibly steps in — `redirectedFrom` payload).
 - **Leader fall:** `LeaderFell` gets a full-beat banner ("The leader has fallen!") + a persistent penalty tint on that side's HUD label.
 - **Leader crown ON the battle board (AMENDED 2026-07-19, Danilo — story 4.5 device follow-up):** the `{components.leader-crown}` ♛ rides BOTH leaders on the fight board for the whole battle, not only at Reveal. This is deliberate groundwork for the mid-battle tactic switch (FR39 / stories 4.10–4.11): the player must be able to see who the leaders are during the fight to decide "go for the leader or not." Supersedes the earlier reveal-only framing of the crown for the Battle surface; the crown dies with its unit's container, so a leader's fall clears it automatically.
-- **Golem (FR38):** renders ≥48px on its SINGLE cell, drawn large so it looms over and overhangs the ring of cells it reserves, ONE HP bar + ONE code on that cell — one unit, never two (AD-14). [Amended 2026-07-20, story 4.9: the monster occupies ONE tile — the earlier "spanning both its cells" was the no-neighbours adjacency rule (device-revised in 4.8), not a two-tile sprite; confirmed against the OB64 reference image.]
-- **Names (FR37):** on placement/reveal cards (under the code) and in the Log-panel narration ("Kain (KNI) struck…"); the board keeps codes.
+- **Golem (FR38):** renders ≥48px on its SINGLE cell, drawn large so it looms over and overhangs the ring of cells it reserves, ONE HP bar + ~~ONE code~~ on that cell — one unit, never two (AD-14). [Amended 2026-07-29, story 5.8: the CODE half is superseded with the board-code retirement above — the one-unit-never-two rule is what this clause exists for and stands unchanged.] [Amended 2026-07-20, story 4.9: the monster occupies ONE tile — the earlier "spanning both its cells" was the no-neighbours adjacency rule (device-revised in 4.8), not a two-tile sprite; confirmed against the OB64 reference image.]
+- **Names (FR37):** on placement/reveal cards (under the code) and in the Log-panel narration ("Kain (KNI) struck…"); ~~the board keeps codes~~. **SUPERSEDED 2026-07-29 (story 5.8, Danilo's PO decision): the BOARD KEEPS NO CODES — Reveal and Battle identify units by SPRITE ALONE.** His reasoning, from the story-4.2 device session (2026-07-17): "now that the image is clear and better, we can identify the class by the sprite. So we can remove them" — story 4.0's DPR backing-store fix had made the sprites crisp enough that a 3-letter code on the tile read as redundant chrome. The "13px space" rationale that justified codes on tiles (epic-4 dossier §7) went with it. What REMAINS on a Reveal tile is the soldier NAME, which keeps the FR39f stroke treatment so it still survives the tile fill; a Battle tile now carries no text at all (only the ♛ crown, the 🛡 Guard marker, status glyphs and the HP bar). Codes are untouched on CARD surfaces — Draft tray, Placement, History, Result chips, the unit-data and stats sheets — where the compact 3-letter code is still the class read.
 - **History cards** gain tactic + leader per side (from the stored setup, story 4.5).
 
 ## Explicitly Deferred (not designed here)
@@ -251,6 +251,38 @@ unit anywhere, learn about it. The sheet lists what that unit dealt and took (po
 out), crits, dodges, Guard blocks, healing given and received, and statuses cast — all folded
 from the battle log, so a replayed battle reads identically. Dismissal is the shared armed
 scrim/✕ pair; the sheet never mutates anything.
+
+## Amendment (story 5.8, 2026-07-29 through 2026-08-01) — the boards get quieter, the picker gets tappable
+
+Dated amendment (nothing above is rewritten):
+
+- **The board speaks in sprites.** At Reveal and during the fight, a unit is its artwork — the 3-letter
+  class code that used to sit on every tile is gone. Reveal still names each soldier under their feet
+  (the name moved up into the freed space; on a big monster it stays lower, because the sprite reaches
+  further down). Nothing else about identifying a unit changed: the crown still marks each leader, the
+  element dot still sits top-right, side colour and board position still say whose army it is. Cards
+  everywhere else — the draft tray, placement, history, the result chips, the unit and stats sheets —
+  keep their codes, so the compact 3-letter read is still there whenever you are reading a LIST rather
+  than a board.
+- **Choosing your tactic no longer needs a careful thumb.** The "You — <tactic>" bar and the four
+  options it opens were 24px tall, under the 44px minimum every other control in the game respects
+  (FR30). They are now full-size targets laid out two-by-two, in a slightly wider panel. The enemy's
+  tactic still sits directly under your own and still does not move when the options open — that pairing
+  is the whole point of the face-off, so the options continue to drop BELOW both lines.
+- **The Result screen teaches its own drill-down.** Between the enemy's army and the Rematch button sits
+  one muted line: *"Press and hold a unit for its full stats."* It began inside the battle-summary sheet and
+  was removed from there at Danilo's call — a hint inside a modal, describing a gesture that modal blocks,
+  reads as a broken link rather than as teaching. On Result the chips it names are visible and holdable
+  while you read it, which is the whole point. It is muted, never gold: it teaches, it is not a control.
+- **The framed panels' gold band is thinner and uniform now.** `PANEL_FRAME_SLICE` grew so the ornament
+  stops being stretched by the 9-slice — previously a wide panel rendered a fatter band than a narrow one,
+  and sheet content sat ON the gold at any inset a fixed number could provide. Every framed surface in the
+  app (Home plaque, Draft detail, Battle log, all sheets, the tactic picker) now has the same edge, and
+  content clears it. Danilo's verdict on device: "no info over the border, looking lovely and readable."
+- **Under the hood, one thing the player only feels as speed:** Reveal used to compute the entire battle
+  just to know which units to draw, and changing your tactic threw that work away and computed it again.
+  Reveal now reads the committed boards directly, and the battle is computed exactly once, when you tap
+  Fight!.
 
 ## Reference mockups
 

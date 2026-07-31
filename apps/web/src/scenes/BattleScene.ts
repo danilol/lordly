@@ -20,14 +20,12 @@ import {
   GUARD_MARKER_GLYPH,
   GUARD_MARKER_COLOR,
   GUARD_BLOCKED_CAPTION,
-  CLASS_ABBREVIATIONS,
   POISON_TEXT,
   STATUS_COLORS,
   STATUS_GLYPHS,
   HEAL_TRACE_COLOR,
   statusTraceColor,
   ISO_TILES,
-  unitCodeStyle,
   unitDisplaySize,
 } from '../config/constants';
 import type { BattleSpeedId } from '../config/constants';
@@ -57,7 +55,7 @@ import type { MatchFlow } from '../flow/MatchFlow';
 
 /** The mutable render handles for one unit, keyed by `UnitId`. */
 interface UnitView {
-  /** Everything that belongs to the unit (sprite, code, badge, HP bar, status icons) — dies with it. */
+  /** Everything that belongs to the unit (sprite, badge, HP bar, status icons) — dies with it. Story 5.8 retired the class code from the board. */
   container: GameObjects.Container;
   /** The billboard sprite child — the tween target for lunge/hurt/death (the bar stays planted). */
   sprite: GameObjects.Sprite;
@@ -253,7 +251,7 @@ export class BattleScene extends Scene {
       color: PALETTE.playerText,
     }).setOrigin(1, 0.5);
 
-    const log = this.flow.resolve(); // same cached log the Reveal scene resolved (AD-13)
+    const log = this.flow.resolve(); // the match's ONE resolve (AD-13) — story 5.8: Reveal no longer resolves, so this is the first call
     const roster = (log.events[0] as BattleStarted).units;
     // Both crowned leaders (story 4.5 device follow-up): the ♛ rides each leader
     // ON the battle board through the fight — the read the mid-battle tactic
@@ -309,7 +307,24 @@ export class BattleScene extends Scene {
     this.scene.start('Result', { flow: this.flow });
   }
 
-  /** Builds one unit standing on its iso tile: sprite + class code + element dot + HP bar (+ ♛ crown if it's a leader), all in one container. */
+  /**
+   * Builds one unit standing on its iso tile: sprite + element dot + HP bar
+   * (+ ♛ crown if it's a leader), all in one container.
+   *
+   * Story 5.8 (AC2) retired the 3-letter class CODE from the board — the PO's
+   * call once story 4.0's backing-store fix made sprites crisp enough to read a
+   * class from ("we can identify the class by the sprite. So we can remove
+   * them", 2026-07-17), superseding the spine's "the board keeps codes". The
+   * code was the tile's ONLY text; what remains is glyphs and bars, so this
+   * board now identifies units by sprite alone.
+   *
+   * The freed band (y≈−3…+11) is deliberately NOT reclaimed by moving the crown
+   * or the badge: it sits entirely inside a LOOMED monster's silhouette
+   * (y−49.5…y+13.5 at MONSTER_LOOM_SCALE), so there is no position in it that is
+   * "off the artwork" for the ten monster classes. That re-lay is a
+   * monster-aware layout job, logged in deferred-work.md rather than guessed at
+   * here.
+   */
   private buildUnit(unit: UnitSnapshot, isLeader: boolean) {
     const { x, y } = unitTileCenter(unit.side, unit.placement);
 
@@ -317,13 +332,12 @@ export class BattleScene extends Scene {
     // half-tile (28px) apart vertically, so every extra pixel of stack height
     // is overlap; depth sorting keeps the front unit's chrome readable.
     const sprite = addUnitSprite(this, 0, -18, unit.class, 42); // story 5.3: scaled with the enlarged battle tiles (56→74)
-    const code = crispText(this, 0, 4, CLASS_ABBREVIATIONS[unit.class], unitCodeStyle(unit.side)).setOrigin(0.5);
     const badge = addElementBadge(this, 16, -28, unit.element);
     const barBack = this.add.rectangle(-BAR_W / 2, 14, BAR_W, BAR_H, 0xffffff, 0.1).setOrigin(0, 0.5);
     const fillColor = unit.side === 'A' ? PALETTE.hpBarPlayer : PALETTE.hpBarEnemy;
     const hpFill = this.add.rectangle(-BAR_W / 2, 14, BAR_W, BAR_H, fillColor).setOrigin(0, 0.5);
 
-    const children: GameObjects.GameObject[] = [sprite, code, badge, barBack, hpFill];
+    const children: GameObjects.GameObject[] = [sprite, badge, barBack, hpFill];
     // The ♛ crown sits top-LEFT (opposite the element badge on the right), in
     // gold (PALETTE.title = {colors.gold}) — it dies WITH the unit's container,
     // so a leader's fall clears its crown automatically. Story 4.5 board follow-up.
@@ -767,9 +781,33 @@ export class BattleScene extends Scene {
     this.layoutStatusIcons(v);
   }
 
-  /** Lays icons out left→right by insertion order — slots COLLAPSE when a status clears (review: `statuses.size` as a slot index let post-clear additions overdraw the persisting poison glyph). */
+  /**
+   * Lays icons out left→right by insertion order — slots COLLAPSE when a status
+   * clears (review: `statuses.size` as a slot index let post-clear additions
+   * overdraw the persisting poison glyph).
+   *
+   * Story 5.8: the GUARD marker now actually joins this row. It always takes
+   * **slot 0** and spell icons pack after it. Before, `applyGuardMarker` called
+   * this function but the loop only walked `statuses`, so the shield was never
+   * assigned an X and sat permanently at x=0 — off the row on its own, and
+   * overlapping slot 2 (x+8) once a unit carried three statuses. The comment
+   * claiming it "shares the same left-of-sprite row" was simply false.
+   *
+   * Guard goes FIRST rather than last on purpose: last would move the shield
+   * every time a status cleared and the slots collapsed — the very churn this
+   * function was written to avoid. Fixed at slot 0, Guard is stable for as long
+   * as the stance is up. (Visible consequence, intended: a Guard-alone unit's
+   * shield moved from x=0 to x=−20.)
+   *
+   * The trade this buys (5.8 review — say it, don't imply it): guard RAISE and
+   * DROP shift every spell icon by one slot in and back out. That churn is
+   * accepted — a stance change is a moment the player is watching, while a
+   * status clearing under a stable guard is not; the shield's own position
+   * never moves during status churn, which is the case that used to look broken.
+   */
   private layoutStatusIcons(v: UnitView) {
     let slot = 0;
+    if (v.guardMarker) v.guardMarker.setX(-20 + slot++ * 14);
     for (const icon of v.statuses.values()) icon.setX(-20 + slot++ * 14);
   }
 
@@ -802,7 +840,7 @@ export class BattleScene extends Scene {
     }).setOrigin(0.5);
     v.container.add(icon);
     v.guardMarker = icon;
-    this.layoutStatusIcons(v); // shares the same left-of-sprite row as spell icons
+    this.layoutStatusIcons(v); // takes slot 0 of the left-of-sprite row; spell icons pack after it (story 5.8)
   }
 
   /** Removes the Guard marker — fires on consume (a landed hit spent the charge) AND on unconsumed natural-end expiry (engine resolve.ts). */
@@ -848,7 +886,7 @@ export class BattleScene extends Scene {
       angle: UNIT_TWEENS.death.props.angle,
       duration: UNIT_TWEENS.death.duration,
       onComplete: () => {
-        v.container.destroy(); // takes bar, code, badge, and icons with it
+        v.container.destroy(); // takes bar, badge, and icons with it
         this.views.delete(id);
       },
     });
@@ -1064,9 +1102,10 @@ export class BattleScene extends Scene {
     const panelTop = 336;
     const panelHeight = 236;
     const bg = addFramedPanel(this, BASE_WIDTH / 2, panelTop + panelHeight / 2, BASE_WIDTH - 16, panelHeight, { alpha: 0.92 });
-    // Inset past the 9-slice frame's 10px border (device pass 2026-07-27):
-    // the old x16/y+8 start sat under the gold edge.
-    this.logText = crispText(this, 22, panelTop + 14, '', {
+    // Inset past the frame's gold band (device pass 2026-07-27; re-measured at
+    // the 5.8 review: the band is PANEL_ORNAMENT_PX ≈ 15.3, not the 10 this
+    // comment used to claim — 16 clears it, the old 14 sat 1.3px inside).
+    this.logText = crispText(this, 24, panelTop + 16, '', {
       fontFamily: 'Arial',
       fontSize: '11px',
       color: PALETTE.bodyText,

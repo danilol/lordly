@@ -1,6 +1,19 @@
 import { ALL_COLS, ALL_ROWS, BALANCE } from '@lordly/engine';
-import type { BattleEvent, MoveKind, Placement, Side, SpellKind, UnitId, UnitSnapshot } from '@lordly/engine';
-import { BASE_WIDTH, FIZZLE_PLATE_LABEL, HEAL_PLATE_LABEL, ISO_BOARD, moveDisplayName, SPELL_DISPLAY_NAME } from '../config/constants';
+import type { BattleEvent, MoveKind, Placement, Side, SpellKind, UnitClass, UnitId, UnitSnapshot } from '@lordly/engine';
+import {
+  BASE_WIDTH,
+  FIZZLE_PLATE_LABEL,
+  HEAL_PLATE_LABEL,
+  ISO_BOARD,
+  moveDisplayName,
+  REVEAL_NAME_GAP,
+  REVEAL_NAME_OFFSET_Y,
+  REVEAL_SPRITE_OFFSET_Y,
+  REVEAL_SPRITE_SIZE,
+  SPELL_DISPLAY_NAME,
+  TACTIC_PICKER,
+  unitDisplaySize,
+} from '../config/constants';
 import type { IsoBoardLayout } from '../config/constants';
 
 /**
@@ -72,6 +85,85 @@ export function unitTileCenter(
   const x = ox + (c - r) * (layout.tileW / 2);
   const y = oy + (c + r) * (layout.tileH / 2);
   return { x: orientation === '/' ? BASE_WIDTH - x : x, y };
+}
+
+/**
+ * Where the soldier NAME sits under a unit on the Reveal board, as an offset
+ * from the tile centre (story 5.8).
+ *
+ * Retiring the board class code (AC2) freed the y+8 slot the code held, and
+ * moving the name up into it fixes a real defect for small units: at y+21 a
+ * 10px name spans y+16…y+26 while the tile's bottom vertex is y+17.5, so the
+ * name hangs off the tile onto the clash gap.
+ *
+ * But it CANNOT move for monsters. `addUnitSprite` draws at `unitDisplaySize`,
+ * so a monster looms at `MONSTER_LOOM_SCALE×` (story 4.9): on Reveal a small is
+ * 38px centred at y−13 (bottom edge y+6, so y+8 clears it), while a monster is
+ * 57px (bottom edge y+15.5 — a name at y+8 would sit INSIDE the sprite). Epic 5
+ * grew the roster from one monster to ten and FR1 allows two per army, so this
+ * is the common case, not an edge case. Hence: derived per class, never a
+ * hardcoded offset, with both spans pinned by test.
+ */
+export function revealNameOffsetY(cls: UnitClass, spriteSize = REVEAL_SPRITE_SIZE, spriteOffsetY = REVEAL_SPRITE_OFFSET_Y): number {
+  const spriteBottom = spriteOffsetY + unitDisplaySize(cls, spriteSize) / 2;
+  // Clear the sprite by a hair, but never sit lower than the slot the code left.
+  return Math.max(REVEAL_NAME_OFFSET_Y, Math.ceil(spriteBottom) + REVEAL_NAME_GAP);
+}
+
+/** A rectangle in scene coordinates, origin top-left. */
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** The Reveal tactic picker's geometry: the bar, the enemy line, and the option grid when open. */
+export interface TacticPickerLayout {
+  bar: Rect;
+  /** Centre y of the static "Enemy — <tactic>" line. */
+  enemyCenterY: number;
+  /** The framed surface behind the open options. */
+  panel: Rect;
+  /** One 44px cell per tactic, filled left→right then top→bottom. */
+  cells: Rect[];
+}
+
+/**
+ * Lays out the Reveal tactic picker (story 5.8) — pure, so the FR30 tap floor
+ * and the clamp against the Fight button are provable without a Phaser scene.
+ *
+ * `RevealScene`'s own comment flagged this as an "army-row coupling site": the
+ * rows were laid out from `ALL_TACTICS.length` with NO clamp against the canvas
+ * or the Fight button, so a 7th tactic would have ridden over Fight — and
+ * nothing pinned it. The tactic roster IS a live want (the extension is in
+ * deferred-work), so the clamp is now a test, not a comment.
+ */
+export function tacticPickerLayout(tacticCount: number): TacticPickerLayout {
+  const K = TACTIC_PICKER;
+  const bar: Rect = { x: (BASE_WIDTH - K.barW) / 2, y: K.barY, w: K.barW, h: K.barH };
+  const enemyTop = bar.y + bar.h + K.enemyGap;
+  const enemyBottom = enemyTop + K.enemyH;
+  const rows = Math.ceil(tacticCount / K.cols);
+  // The PANEL anchors below the enemy line's bottom — never `cellTop − pad`
+  // (review 2026-08-01, HIGH): deriving the panel from the cells let the pad
+  // growth push its opaque gold band UP over the enemy tactic's glyphs, hiding
+  // the very read the player is reacting to. Anchor the frame, inset the cells.
+  const panel: Rect = {
+    x: (BASE_WIDTH - K.panelW) / 2,
+    y: enemyBottom + K.optionsGap,
+    w: K.panelW,
+    h: rows * K.rowH + K.pad * 2,
+  };
+  const optionsTop = panel.y + K.pad;
+  const cellW = (K.panelW - K.pad * 2) / K.cols;
+  const cells = Array.from({ length: tacticCount }, (_, i) => ({
+    x: panel.x + K.pad + (i % K.cols) * cellW,
+    y: optionsTop + Math.floor(i / K.cols) * K.rowH,
+    w: cellW,
+    h: K.rowH,
+  }));
+  return { bar, enemyCenterY: enemyTop + K.enemyH / 2, panel, cells };
 }
 
 /** One renderable board tile: pixel center, front-row flag, and checker parity (side color vs neutral fill). */

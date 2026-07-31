@@ -1,6 +1,6 @@
 import { GameObjects, Scene } from 'phaser';
-import { CLASS_ABBREVIATIONS, CLASS_DISPLAY_NAME, MIN_FONT_PX, PALETTE, STATS_CARD, STATS_SHEET_ROWS } from './constants';
-import { crispText } from './ui';
+import { CLASS_ABBREVIATIONS, CLASS_DISPLAY_NAME, ELEMENT_BADGE_RADIUS, MIN_FONT_PX, PALETTE, STATS_CARD, STATS_SHEET_ROWS } from './constants';
+import { addElementBadge, crispText } from './ui';
 import { UNITS_SHEET_KEY, UNIT_FRAMES } from './sprites';
 import { addModalSheet, SHEET_CONTENT_DEPTH } from './modalSheet';
 import { clampStat } from '../flow/battleStats';
@@ -34,15 +34,19 @@ export function buildStatsSheetOverlay(scene: Scene, unit: UnitStats, requestClo
       .setOrigin(0, 0.5)
       .setDepth(SHEET_CONTENT_DEPTH),
   );
-  objs.push(
-    crispText(scene, left + 48, K.y + K.pad + 30, `${CLASS_DISPLAY_NAME[unit.class]} · ${CLASS_ABBREVIATIONS[unit.class]}`, {
-      fontFamily: 'Arial',
-      fontSize: `${MIN_FONT_PX}px`,
-      color: PALETTE.mutedText,
-    })
-      .setOrigin(0, 0.5)
-      .setDepth(SHEET_CONTENT_DEPTH),
-  );
+  const classLine = crispText(scene, left + 48, K.y + K.pad + 30, `${CLASS_DISPLAY_NAME[unit.class]} · ${CLASS_ABBREVIATIONS[unit.class]}`, {
+    fontFamily: 'Arial',
+    fontSize: `${MIN_FONT_PX}px`,
+    color: PALETTE.mutedText,
+  })
+    .setOrigin(0, 0.5)
+    .setDepth(SHEET_CONTENT_DEPTH);
+  objs.push(classLine);
+  // The shared element dot (story 5.8 AC3 — "one treatment everywhere"): this
+  // sheet identified a unit by sprite + name + class but showed no element, the
+  // last per-unit surface missing it. Trails the class line rather than taking
+  // its own row — the vertical budget is exact (STATS_CARD's pad + header + rows sum to its h — 262 since the 5.8 pad re-budget, pinned as an equality).
+  objs.push(addElementBadge(scene, classLine.x + classLine.width + 4 + ELEMENT_BADGE_RADIUS, K.y + K.pad + 30, unit.element).setDepth(SHEET_CONTENT_DEPTH));
 
   // The counter table: label left, value right-aligned — every SideTotals
   // counter surfaced exactly once (completeness pinned in tests).

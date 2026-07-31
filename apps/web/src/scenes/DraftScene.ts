@@ -4,7 +4,9 @@ import type { Element, Role, UnitClass } from '@lordly/engine';
 import {
   BASE_WIDTH,
   CARD_CLASS_FONT_PX,
+  BACK_AFFORDANCE_FONT_PX,
   CLASS_ABBREVIATIONS,
+  groundLabelStyle,
   CLASS_DISPLAY_NAME,
   DRAFT_CONTINUE_LABEL,
   DRAFT_DETAIL,
@@ -124,17 +126,15 @@ export class DraftScene extends Scene {
     addSceneGround(this); // story 5.2: the medieval stone floor under the menu chrome
     addBackAffordance(this, HOME_BACK_LABEL, () => this.scene.start('Home'));
 
-    crispText(this, BASE_WIDTH / 2, 26, DRAFT_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
+    crispText(this, BASE_WIDTH / 2, 26, DRAFT_TITLE, groundLabelStyle(PALETTE.title, 22)).setOrigin(0.5);
     crispText(this, BASE_WIDTH / 2, DRAFT_HINT_Y, draftHint(BALANCE.slotBudget), {
-      fontFamily: 'Arial',
-      fontSize: '11px',
-      color: PALETTE.mutedText,
+      ...groundLabelStyle(PALETTE.bodyText, 11, 'Arial'),
       align: 'center',
       wordWrap: { width: BASE_WIDTH - 24 },
     }).setOrigin(0.5);
 
     // Rules spur (story 2.4, FR27): top-right. Help returns HERE with the same flow (the 1.8 pattern).
-    const rules = crispText(this, BASE_WIDTH - 44, 22, DRAFT_RULES_LABEL, { fontFamily: 'Arial', fontSize: '13px', color: PALETTE.mutedText }).setOrigin(0.5);
+    const rules = crispText(this, BASE_WIDTH - 44, 22, DRAFT_RULES_LABEL, groundLabelStyle(PALETTE.bodyText, BACK_AFFORDANCE_FONT_PX, 'Arial')).setOrigin(0.5);
     this.add
       .rectangle(rules.x, rules.y, 72, 36, 0, 0)
       .setInteractive({ useHandCursor: true })
@@ -167,11 +167,7 @@ export class DraftScene extends Scene {
     ALL_DRAFT_TABS.forEach((tab, t) => {
       const x = BASE_WIDTH / 2 + (t === 0 ? -DRAFT_TABS.offsetX : DRAFT_TABS.offsetX);
       const active = tab === this.tab;
-      const label = crispText(this, x, DRAFT_TABS.y, DRAFT_TAB_LABELS[tab], {
-        fontFamily: 'Arial Black',
-        fontSize: '13px',
-        color: active ? PALETTE.title : PALETTE.mutedText,
-      }).setOrigin(0.5);
+      const label = crispText(this, x, DRAFT_TABS.y, DRAFT_TAB_LABELS[tab], groundLabelStyle(active ? PALETTE.title : PALETTE.bodyText, 13)).setOrigin(0.5);
       const parts: GameObjects.GameObject[] = [label];
       // GOLD underline, not a side colour: DESIGN's "gold is the metal" rule
       // reserves blue/red for whose side a thing is on, and a picker tab
@@ -275,9 +271,7 @@ export class DraftScene extends Scene {
   private flashCrownCleared() {
     this.crownNotice?.destroy();
     const toast = crispText(this, BASE_WIDTH / 2, 68, '♛ Leader crown cleared — crown a unit again in Placement', {
-      fontFamily: 'Arial',
-      fontSize: `${MIN_FONT_PX}px`,
-      color: PALETTE.title,
+      ...groundLabelStyle(PALETTE.title, MIN_FONT_PX, 'Arial'),
       align: 'center',
       wordWrap: { width: BASE_WIDTH - 24 },
     })
@@ -472,11 +466,7 @@ export class DraftScene extends Scene {
     // 3. The army tray.
     const army = this.flow.getState().playerArmy;
     this.dynamic.push(
-      crispText(this, BASE_WIDTH / 2, 426, `YOUR ARMY  (${slotTotal(army)}/${BALANCE.slotBudget})`, {
-        fontFamily: 'Arial Black',
-        fontSize: '12px',
-        color: PALETTE.mutedText,
-      }).setOrigin(0.5),
+      crispText(this, BASE_WIDTH / 2, 426, `YOUR ARMY  (${slotTotal(army)}/${BALANCE.slotBudget})`, groundLabelStyle(PALETTE.bodyText, 12)).setOrigin(0.5),
     );
     const slotW = 60;
     const gap = 8;
@@ -526,9 +516,7 @@ export class DraftScene extends Scene {
     const blockReason = draftBlockReason(army);
     this.dynamic.push(
       crispText(this, BASE_WIDTH / 2, trayY + 62, blockReason ?? 'Tap a drafted unit to remove it', {
-        fontFamily: 'Arial',
-        fontSize: `${MIN_FONT_PX}px`,
-        color: blockReason ? PALETTE.title : PALETTE.mutedText,
+        ...groundLabelStyle(blockReason ? PALETTE.title : PALETTE.bodyText, MIN_FONT_PX, 'Arial'),
         align: 'center',
         wordWrap: { width: BASE_WIDTH - 24 },
       }).setOrigin(0.5),

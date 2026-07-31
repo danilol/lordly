@@ -1,4 +1,4 @@
-import type { BattleLog, Side, UnitClass, UnitId } from '@lordly/engine';
+import type { BattleLog, Element, Side, UnitClass, UnitId } from '@lordly/engine';
 
 /**
  * The battle-stats fold (story 5.7, AD-2 — the log already carries
@@ -34,6 +34,8 @@ export interface UnitStats {
   side: Side;
   class: UnitClass;
   name: string;
+  /** Carried for the sheet's identity header (story 5.8 AC3 — the element dot); never a counter, hence excluded from `SideTotals`. */
+  element: Element;
   dealt: number;
   taken: number;
   /** The poison share of `taken`, kept visible on its own (the epic names poison ticks as a first-class read). */
@@ -46,8 +48,8 @@ export interface UnitStats {
   statusesApplied: number;
 }
 
-/** The per-side sums of the unit rows — same counter names, no extras. */
-export type SideTotals = Omit<UnitStats, 'id' | 'side' | 'class' | 'name'>;
+/** The per-side sums of the unit rows — same counter names, no extras (identity fields, `element` included, are not summable). */
+export type SideTotals = Omit<UnitStats, 'id' | 'side' | 'class' | 'name' | 'element'>;
 
 export interface BattleStats {
   /** BattleStarted roster order — the same order every comp surface renders. */
@@ -71,7 +73,14 @@ export function battleStats(log: BattleLog): BattleStats {
     return { units: [], totals: { A: zeroCounters(), B: zeroCounters() } };
   }
   const roster = first.units;
-  const units: UnitStats[] = roster.map((snap) => ({ id: snap.id, side: snap.side, class: snap.class, name: snap.name, ...zeroCounters() }));
+  const units: UnitStats[] = roster.map((snap) => ({
+    id: snap.id,
+    side: snap.side,
+    class: snap.class,
+    name: snap.name,
+    element: snap.element,
+    ...zeroCounters(),
+  }));
   const byId = new Map<UnitId, UnitStats>(units.map((entry) => [entry.id, entry]));
 
   for (const event of log.events) {
@@ -157,9 +166,15 @@ export function clampStat(n: number): string {
  * wipeout width must fit the sheet's inner 316px (pinned) — full words never
  * fit any of these budgets. Poison and statuses stay off the line — the
  * per-unit sheet carries the full table.
+ *
+ * Story 5.8 device round 2: the ` · ` separators became double spaces. Growing
+ * the sheets' content inset to clear the frame ornament took the inner width
+ * from 316 to 300, and the worst wipeout line measured 312 — the middots were
+ * the cheapest 24px to give back, and in a monospace line two spaces separate
+ * the groups just as clearly. Every number survived.
  */
 export function statsStripLine(t: SideTotals): string {
-  return `▲${clampStat(t.dealt)} ▼${clampStat(t.taken)} · CRIT ${t.crits} · DGE ${t.dodges} · BLK ${t.blocks} · HEAL ${t.healsGiven}`;
+  return `▲${clampStat(t.dealt)} ▼${clampStat(t.taken)}  CRIT ${t.crits}  DGE ${t.dodges}  BLK ${t.blocks}  HEAL ${t.healsGiven}`;
 }
 
 /**

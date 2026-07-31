@@ -22,7 +22,7 @@
 
 ## Deferred from: code review of story 4-13-tactics-at-the-face-off (2026-07-20)
 
-- **`RevealScene` double-resolves the battle.** `create()` runs the full `resolveBattle` (`RevealScene.ts:81`) only to read `events[0]` — the tactic-independent `BattleStarted` roster — then any tactic pick nulls the cached log (`MatchFlow.ts` `setTactic`) so `Fight!` pays for a second full resolve in Battle. Pre-existing (Reveal always resolved for the roster), but story 4.13 makes the double-resolve the guaranteed path for every tactic-changer. Battles are pure and fast so the cost is small; the clean fix is to read the initial roster from `committedSetup` (armies + placements) without resolving, so Reveal never resolves at all. Revisit if a perf capture ever flags Reveal→Battle entry.
+- ~~**`RevealScene` double-resolves the battle.**~~ **RESOLVED (story 5.8, 2026-07-29):** Reveal now renders both boards straight off `committedSetup` (`armies`/`placements`/`leaders`) and never resolves — AD-13's "double resolution" is gone and `BattleScene` is the single resolver, on the Fight! tap. No shell-side snapshot was built, so no engine logic is duplicated; the roster↔setup index correspondence Reveal relies on is pinned in `apps/web/test/reveal-roster.test.ts`. Note the citation below drifted: the call was at `RevealScene.ts:109`, not `:81`. Original entry kept for the record. **Reveal double-resolves the battle.** `create()` runs the full `resolveBattle` (`RevealScene.ts:81`) only to read `events[0]` — the tactic-independent `BattleStarted` roster — then any tactic pick nulls the cached log (`MatchFlow.ts` `setTactic`) so `Fight!` pays for a second full resolve in Battle. Pre-existing (Reveal always resolved for the roster), but story 4.13 makes the double-resolve the guaranteed path for every tactic-changer. Battles are pure and fast so the cost is small; the clean fix is to read the initial roster from `committedSetup` (armies + placements) without resolving, so Reveal never resolves at all. Revisit if a perf capture ever flags Reveal→Battle entry.
 
 ## Deferred from: code review of story 4-9-monsters-on-the-phone (2026-07-20)
 
@@ -44,7 +44,7 @@
 
 ## Deferred from: epic-4 architecture pass (2026-07-16)
 
-- **Landscape battle backgrounds (PO wish, Danilo, with OB64 reference screenshot):** replace the dark battle backdrop with OB64-style terrain — a field, mountains, rocks — under the floating formation grids. Art/UX wave item, explicitly NOT Epic 4 scope ("note for later"). Interacts with the label-contrast fix (FR39f) — whatever contrast treatment ships must survive a busy background later.
+- ~~**Landscape battle backgrounds**~~ **RESOLVED (story 5.3):** seed-derived terrain now sits under both boards (Reveal and Battle share the seed, so the face-off and the clash share a place); the FR39f contrast treatment survived the busy ground as this entry required. Never annotated at the time — closed during story 5.8's ledger sweep. Original entry: **Landscape battle backgrounds (PO wish, Danilo, with OB64 reference screenshot):** replace the dark battle backdrop with OB64-style terrain — a field, mountains, rocks — under the floating formation grids. Art/UX wave item, explicitly NOT Epic 4 scope ("note for later"). Interacts with the label-contrast fix (FR39f) — whatever contrast treatment ships must survive a busy background later.
 - **Server-side persistence / database:** deferred to the link-play epic (architecture decision, memlog'd). Revisit condition: the first feature needing cross-device or authoritative state. Landing zone: Cloudflare Durable Objects storage / D1 — same platform per AD-7, no second provider.
 
 ## Product wish (PO, 2026-07-15) — history rows show OPPONENT TYPE (vs AI / PvP) — deferred to the link-play epic
@@ -59,8 +59,8 @@
 
 ## Product wishes (PO, 2026-07-17) — from the story-4.2 device session
 
-- **Hide the 3-letter class codes on the battle/reveal BOARD — identify by sprite** (Danilo, 2026-07-17, story-4.2 device session: "now that the image is clear and better, we can identify the class by the sprite. So we can remove them"). The 4.0 backing-store fix made sprites crisp enough that the board codes read as redundant chrome to the PO. **CONFLICT FLAG — this needs a UX-spine amendment, not a silent change:** dossier §7 and EXPERIENCE.md's Epic 4 extension explicitly say "the board keeps codes" (the 13px-space rationale), and story 4.0 shipped the FR39f code-contrast treatment (`unitCodeStyle`) specifically FOR board codes. Also interacts with what's landing next: 4.5's leader crown and 4.7's guard marker anchor visually near the code, and 4.9's Golem keeps "one code at the anchor" (D-3c). Route through Sally/PO at the next UX touch (or correct-course if it should ship sooner); if decided, the change itself is small (Reveal/Battle stop drawing `CLASS_ABBREVIATIONS`, `unitCodeStyle` stays for whatever text remains on tiles).
-- **Result screen: a battle-stats summary — damage, blocks, status changes, heals; in total and per character** (Danilo, 2026-07-17, story-4.2 device session: "it would be nice (future)"). Pure shell work by design: the `BattleLog` already carries everything (AD-2 — fold over `UnitAttacked`/`UnitHealed`/`StatusApplied`/`PoisonTicked`, and from 4.6/4.7 the `outcome`/`redirectedFrom` fields add dodges and Guard blocks to the tally), so no engine change is needed. Natural scoping moment: alongside story 4.11's action-ledger work (same "read the log, present the economy" family) or as post-wave polish.
+- ~~**Hide the 3-letter class codes on the battle/reveal BOARD**~~ **DECIDED AND SHIPPED (story 5.8, 2026-07-29).** Danilo confirmed the direction at 5.8's story creation; the CONFLICT FLAG below was honoured rather than bypassed — the spine was superseded with dated notes (`EXPERIENCE.md` §Epic-4 extension + the Golem clause + the unit-card/tile row, epic-4 `DOSSIER.md` §7, `DESIGN.md`'s FR39f token block re-scoped) in the same story that removed the two `crispText` calls. `unitCodeStyle` survives with exactly ONE consumer, the Reveal soldier NAME. The crown/badge did NOT move: the band the code freed sits inside a loomed monster's silhouette, so that re-lay is logged separately below. Original entry: **Hide the 3-letter class codes on the battle/reveal BOARD — identify by sprite** (Danilo, 2026-07-17, story-4.2 device session: "now that the image is clear and better, we can identify the class by the sprite. So we can remove them"). The 4.0 backing-store fix made sprites crisp enough that the board codes read as redundant chrome to the PO. **CONFLICT FLAG — this needs a UX-spine amendment, not a silent change:** dossier §7 and EXPERIENCE.md's Epic 4 extension explicitly say "the board keeps codes" (the 13px-space rationale), and story 4.0 shipped the FR39f code-contrast treatment (`unitCodeStyle`) specifically FOR board codes. Also interacts with what's landing next: 4.5's leader crown and 4.7's guard marker anchor visually near the code, and 4.9's Golem keeps "one code at the anchor" (D-3c). Route through Sally/PO at the next UX touch (or correct-course if it should ship sooner); if decided, the change itself is small (Reveal/Battle stop drawing `CLASS_ABBREVIATIONS`, `unitCodeStyle` stays for whatever text remains on tiles).
+- ~~**Result screen: a battle-stats summary**~~ **RESOLVED (story 5.7, 2026-07-29):** shipped as an OPTIONAL ▸ BATTLE SUMMARY link opening a sheet with per-side totals and LoL-style per-unit damage bars, plus the full per-unit table behind a chip long-press. Pure shell fold over the log, exactly as this entry predicted; engine untouched. Never annotated at the time — closed during story 5.8's ledger sweep. Original entry: **Result screen: a battle-stats summary — damage, blocks, status changes, heals; in total and per character** (Danilo, 2026-07-17, story-4.2 device session: "it would be nice (future)"). Pure shell work by design: the `BattleLog` already carries everything (AD-2 — fold over `UnitAttacked`/`UnitHealed`/`StatusApplied`/`PoisonTicked`, and from 4.6/4.7 the `outcome`/`redirectedFrom` fields add dodges and Guard blocks to the tally), so no engine change is needed. Natural scoping moment: alongside story 4.11's action-ledger work (same "read the log, present the economy" family) or as post-wave polish.
 
 ## Product wishes (PO, 2026-07-14) — battle balance & tactics — ALL RESOLVED via `correct-course` (2026-07-14, see `docs/planning-artifacts/sprint-change-proposal-2026-07-14.md`)
 
@@ -93,7 +93,7 @@
 
 ## Deferred from: code review of story-2.1 (2026-07-13)
 
-- **Normalize the element badge to DESIGN's dot-only compact unit-card across all scenes.** Story 2.1 shows the element WORD in the Draft tray, Placement cards, and Battle, but dropped it in Reveal (tight 52px cells) — DESIGN's compact unit-card is 3-letter code + 12px dot only, no word. Normalizing now would make Draft/Placement/Reveal consistent but leave Battle inconsistent (Battle rendering is story 2.2's scope), so the clean time to unify is when Battle's and History's unit cards are (re)built (2.2 / epic 3). The element *color* already flows from the single reconciled `ELEMENT_COLORS` source, so this is purely dropping the redundant word label. Danilo approved the current screens on-device; the words aid first-time legibility on the roomy Draft/Placement cards, so there is no urgency.
+- ~~**Normalize the element badge to DESIGN's dot-only compact unit-card across all scenes.**~~ **RESOLVED — and it had already happened (story 5.8, 2026-07-29).** The element WORDS this entry asked to drop left with the card-width shrinks in stories 2.3 and 4.2; a grep at 5.8 found no element word anywhere in `apps/web/src` and all seven surfaces already calling the one dot-only `addElementBadge`. So 5.8 spent AC3 on what was actually missing: the treatment had ZERO test coverage, so it now carries pins (the 12px dot and the four DESIGN hexes; the colour table restricted to exactly ONE consumer; no element word and no `setTint` anywhere), and the 5.7 per-unit stats sheet — the one surface still lacking a dot — gained one. NOTE the rule is the UX spine's (`DESIGN.md:257`, `EXPERIENCE.md:82`), not FR3's: FR3 says only that the element "is displayed". Original entry: **Normalize the element badge to DESIGN's dot-only compact unit-card across all scenes.** Story 2.1 shows the element WORD in the Draft tray, Placement cards, and Battle, but dropped it in Reveal (tight 52px cells) — DESIGN's compact unit-card is 3-letter code + 12px dot only, no word. Normalizing now would make Draft/Placement/Reveal consistent but leave Battle inconsistent (Battle rendering is story 2.2's scope), so the clean time to unify is when Battle's and History's unit cards are (re)built (2.2 / epic 3). The element *color* already flows from the single reconciled `ELEMENT_COLORS` source, so this is purely dropping the redundant word label. Danilo approved the current screens on-device; the words aid first-time legibility on the roomy Draft/Placement cards, so there is no urgency.
 
 ## Deferred from: story-2.1 dev (2026-07-13)
 
@@ -162,7 +162,7 @@
 
 ## Deferred from: story 4.5 device follow-up (2026-07-19) — PO course-correction
 
-- **Battle mode default flipped to Wipeout (left) — PRD-touch pending.** Danilo (2026-07-19): Wipeout is now the Home default and sits on the LEFT; Standard is the right option. Implemented in `HomeScene.ts` and recorded in EXPERIENCE.md (dated amendments to the Home + mode-toggle rows). **PRD FR17 still reads "Standard is the MVP default"** — the next `bmad-prd` touch should update FR17/FR19 to reflect Wipeout-as-default so the PRD and the shipped app agree. Balance is unaffected (the NFR4 sweep already polices BOTH modes at ≤65%). `MatchFlow`'s constructor default stays `'single'` (a neutral engine-level fallback; Home always passes the chosen mode) — only the product-facing default moved.
+- ~~**Battle mode default flipped to Wipeout (left) — PRD-touch pending.**~~ **RESOLVED (story 5.0):** FR17/FR19 were amended to record Wipeout-as-default, so the PRD and the shipped app agree. Never annotated at the time — closed during story 5.8's ledger sweep. Original entry: **Battle mode default flipped to Wipeout (left) — PRD-touch pending.** Danilo (2026-07-19): Wipeout is now the Home default and sits on the LEFT; Standard is the right option. Implemented in `HomeScene.ts` and recorded in EXPERIENCE.md (dated amendments to the Home + mode-toggle rows). **PRD FR17 still reads "Standard is the MVP default"** — the next `bmad-prd` touch should update FR17/FR19 to reflect Wipeout-as-default so the PRD and the shipped app agree. Balance is unaffected (the NFR4 sweep already polices BOTH modes at ≤65%). `MatchFlow`'s constructor default stays `'single'` (a neutral engine-level fallback; Home always passes the chosen mode) — only the product-facing default moved.
 - **Leader crown now rides the Battle board (implemented, groundwork noted).** Danilo (2026-07-19) wanted the leader identifiable during the fight, explicitly so the coming mid-battle tactic switch can offer "go for the leader or not." Shipped in `BattleScene.buildUnit` + EXPERIENCE.md amendment. This directly feeds the ALREADY-DEFERRED **"Mid-battle tactic switching (OB64-style)"** item (story 4.4 device review, above): when that story is scoped, the on-board crown is the read the pause-and-command UI targets. No further work here — logged as the connective tissue.
 
 ## Deferred from: code review of story-4-6-crits-and-dodge (2026-07-19)
@@ -196,7 +196,7 @@
 
 ## Deferred from: code review of story-5-2-the-medieval-look (2026-07-27)
 
-- **Battle log panel caps LOGICAL lines, never visual ones.** `appendLog` keeps `LOG_PANEL_LINES` (11) narration lines, but long lines wrap: `narration.ts` emits strings like "<src> struck <tgt> — <guardian>'s guard halves it to 7 — 24→17 HP" that exceed the 300px wrap width at 11px, so 11 logical lines can render as ~14 visual lines (~250px) inside a ~212px interior and spill past the panel's bottom border. PRE-EXISTING (the flat-rect version overflowed at ~228px too), but story 5.2's 9-slice border shrank the interior by ~16px and makes the overflow read as broken art rather than text meeting an edge. Fix options when touched: cap visual lines (measure and trim), grow the panel, or clip the container.
+- **Battle log panel caps LOGICAL lines, never visual ones.** *(Note 2026-08-01, story 5.8's review: the app-wide `PANEL_FRAME_SLICE` 30→46 change altered this panel's border geometry too — the band is thinner and uniform now, and the review bumped the log text's inset 14→16 to clear the measured 15.3px ornament. The overflow defect below is unchanged and still owns its own re-lay; the Draft detail panel's title also sits ~2px of ink into the band and belongs to the same future pass.)* `appendLog` keeps `LOG_PANEL_LINES` (11) narration lines, but long lines wrap: `narration.ts` emits strings like "<src> struck <tgt> — <guardian>'s guard halves it to 7 — 24→17 HP" that exceed the 300px wrap width at 11px, so 11 logical lines can render as ~14 visual lines (~250px) inside a ~212px interior and spill past the panel's bottom border. PRE-EXISTING (the flat-rect version overflowed at ~228px too), but story 5.2's 9-slice border shrank the interior by ~16px and makes the overflow read as broken art rather than text meeting an edge. Fix options when touched: cap visual lines (measure and trim), grow the panel, or clip the container.
 - **`wordmark.jpg` ground doesn't match the plaque body.** The logo's own dark-olive ground `(19,18,0)` sits inside `panel-frame.png`'s neutral `(28,28,26)` body, leaving a ~6px ring — the mark reads as a pasted screenshot rather than art mounted in the frame. JPEG is also the wrong container for a hard-edged gold-on-black wordmark (ringing on the app's primary logo; every other crisp-edged chrome asset is PNG). May partly resolve with the panel-frame re-crop; re-judge on device, then either re-export the wordmark as a trimmed PNG or tint the plaque body to match.
 - **Home's scrim is a hard-edged rectangle.** `rectangle(360, 307.2, buttonFill, 0.55)` puts a straight 55%-dark step at y≈333 across the castle painting — the first screen a player sees. The code comment flags only the alpha as tunable; the edge is structural and no alpha removes it. Needs a gradient (a small vertical-gradient texture, or 3–4 stacked bands with graduated alpha) — a design call, not a mechanical fix.
 - **PWA icon ground vs manifest splash colour.** The generated icons' own ground is `#142637` (navy-teal, sampled from Danilo's art) while the manifest `background_color`/`theme-color` is `#161a2e` (the app's slate), so Android's install splash shows a subtle square around the icon. Either regenerate the icons composited on `#161a2e` or accept the mismatch (the maskable safe zone itself is verified fine).
@@ -296,3 +296,55 @@ any more. Original entry kept below for the record.
   damage model differs is the one the teaching surface under-credits. Candidate fix when it
   itches: a small ☠ annotation on rows with poisonTaken, or crediting ticks to the caster
   (which would change the fold's semantics and the conservation law — a real design call).
+
+## Deferred from: story 5.8 (2026-07-29, updated through the 2026-08-01 device rounds)
+
+- **The Battle tile's chrome re-lay is monster-aware work, not a drive-by.** Retiring the board class
+  code (AC2) freed the band y≈−3…+11 in the unit container, and the obvious follow-up — move the ♛ crown
+  (−16,−28) and the element dot (+16,−28) down out of the sprite's silhouette — does NOT work as stated:
+  a LOOMED monster spans y−49.5…y+13.5 at `MONSTER_LOOM_SCALE`, so the freed band is entirely inside the
+  artwork for all ten monster classes, and so is the crown's current position. Story 5.8 therefore removed
+  the code and changed nothing else on that tile. A real fix has to be size-aware (per-class offsets the
+  way `revealNameOffsetY` now is, or chrome that sits outside the sprite bounds for both spans) and wants
+  its own device round on a monster comp. The 28px lane pitch is the budget: the stack still spans ~52px.
+- **The Reveal tactic picker is at its ceiling: FOUR tactics.** Story 5.8 brought the bar and option rows
+  up to FR30's 44px floor as a 2×2 grid, and pinned the clamp against the Fight button that the scene's
+  own comment had only warned about. The arithmetic leaves no room for a fifth: 5 tactics need a third row
+  and overrun Fight's top by 38px (panel bottom 606 vs Fight top 568 — corrected at the 2026-08-01 review,
+  which also re-anchored the panel BELOW the enemy tactic line and set its pad to 18), so
+  `battle-view.test.ts` fails on a grown `ALL_TACTICS`. Whoever picks up
+  the **tactic-roster extension** (deferred above, Epic 6+) must re-lay this picker first — scroll, three
+  columns, or a shorter bar — and the failing test is the intended forcing function, not an obstacle.
+- ~~**How does a player DISCOVER the per-unit stats sheet?**~~ **DECIDED AND SHIPPED (story 5.8 device
+  round 4, 2026-08-01).** Danilo picked the placement himself: *"this hint about the char card summary
+  could be placed between the bottom team and the REMATCH button. I would like it there."* That is
+  candidate (c) below — teach the gesture where it can actually be performed — and it is now a muted
+  10px line on Result at `RESULT_HINT_Y` 456, centred in the measured 43px band between the enemy chips
+  (bottom 434.4) and Rematch (top 477.6), pinned by test against those same layout fractions. The
+  tappable-bar-rows idea (a) stays unbuilt and unneeded. Original entry: **How does a player DISCOVER
+  the per-unit stats sheet? (a UX decision for Danilo.)** The battle-summary
+  sheet used to carry a footer line — "Close, then hold a chip for its full sheet" — and story 5.8's device
+  round 3 killed it on Danilo's verdict: *"the footer hint i dont understand it… it's not a link, clickable,
+  so it's very confusing."* He is right, and the reason is structural, not wording: it is a line inside a
+  MODAL, instructing a gesture that same modal is blocking, styled like text but read as a broken link. No
+  rewrite fixes that shape. So the hint is gone and the drill-down (hold a Result comp chip) is now
+  undiscoverable except by habit from Draft/Placement, where the same hold gesture already lives.
+  Candidate fixes, none free: **(a)** make the summary's own bar rows tap targets, so tapping a unit row
+  opens that unit's sheet — by far the most discoverable, but a row is 24px and FR30 wants 44, and ten rows
+  at 44px is 440px on a 640px canvas, so it needs a scroll or a two-column re-lay; **(b)** a small ⓘ or ›
+  affordance per row, which is honest about being tappable but adds chrome to a deliberately clean chart;
+  **(c)** teach the gesture ONCE somewhere it can actually be performed (a first-run tip on Result, or a
+  line in the Help/rules screen) instead of inside the modal; **(d)** accept it as a power-user shortcut and
+  say nothing. Recommend (c) as the cheapest honest answer, or (a) if the summary sheet ever gets a re-lay
+  for other reasons.
+
+## Deferred from: code review of story-5-8-flow-corrections-and-the-board-code-decision (2026-08-01)
+
+- **Guard at slot 0 brings the status row one icon closer to the element badge.** With the 5.8 fix the
+  shield takes slot 0, so a guarding unit with 3 concurrent statuses puts a spell icon in slot 3 (x+22),
+  grazing the element badge (x10–22, both at y≈−28..−34) — reachable one status earlier than before
+  (3 statuses already grazed pre-change, so this is mostly pre-existing). Needs guard + poison + sleep +
+  confusion on one unit to trigger, and the graze is a 10px glyph on a 12px dot. Same tile-chrome-budget
+  family as the monster-aware Battle chrome re-lay logged above — fold them into one pass: the 28px lane
+  pitch is the real constraint, and any re-lay should budget the status row's maximum width (guard + all
+  spell kinds) against the badge and the sprite edge, for both sprite spans.

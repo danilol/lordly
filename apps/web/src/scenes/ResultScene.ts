@@ -12,6 +12,11 @@ import {
   RESULT_DRAW_LABEL,
   RESULT_HOME_LABEL,
   RESULT_LOSE_LABEL,
+  COMP_HEADING_FONT_PX,
+  groundLabelStyle,
+  RESULT_ANCHORS,
+  RESULT_HINT,
+  RESULT_HINT_Y,
   RESULT_REMATCH_LABEL,
   RESULT_WIN_LABEL,
   MIN_FONT_PX,
@@ -93,10 +98,10 @@ export class ResultScene extends Scene {
     // Animated count-up of both final HP percentages (FR22) — values come
     // ONLY from the BattleEnded payload; the tween just paces the reveal.
     // Under reduced motion the numbers land instantly (they ARE the info).
-    const pctY = BASE_HEIGHT * 0.27;
+    const pctY = BASE_HEIGHT * RESULT_ANCHORS.pctFrac;
     const pctText = crispText(this, BASE_WIDTH / 2, pctY, this.pctLine(0, 0), {
       fontFamily: 'Courier',
-      fontSize: '16px',
+      fontSize: `${RESULT_ANCHORS.pctFontPx}px`,
       fontStyle: '800',
       color: PALETTE.bodyText,
     }).setOrigin(0.5);
@@ -120,11 +125,7 @@ export class ResultScene extends Scene {
     // see, not an always-on strip you learn to ignore. The link takes the
     // measured free band the strip briefly held; the read lives in the sheet.
     this.stats = battleStats(log);
-    crispText(this, BASE_WIDTH / 2, SUMMARY_LINK.y, '▸ BATTLE SUMMARY', {
-      fontFamily: 'Arial Black',
-      fontSize: `${SUMMARY_LINK.fontPx}px`,
-      color: PALETTE.title,
-    }).setOrigin(0.5);
+    crispText(this, BASE_WIDTH / 2, SUMMARY_LINK.y, '▸ BATTLE SUMMARY', groundLabelStyle(PALETTE.title, SUMMARY_LINK.fontPx)).setOrigin(0.5);
     this.add
       .rectangle(BASE_WIDTH / 2, SUMMARY_LINK.y, SUMMARY_LINK.tapW, SUMMARY_LINK.tapH, 0, 0)
       .setInteractive({ useHandCursor: true })
@@ -135,14 +136,23 @@ export class ResultScene extends Scene {
         this.sheetObjects = buildSummarySheetOverlay(this, this.stats, () => this.closeSheet());
       });
 
-    this.drawComposition('A', roster, 'Your army', BASE_HEIGHT * 0.4, PALETTE.playerText);
-    this.drawComposition('B', roster, 'Enemy army', BASE_HEIGHT * 0.56, PALETTE.enemyText);
+    this.drawComposition('A', roster, 'Your army', BASE_HEIGHT * RESULT_ANCHORS.yourArmyFrac, PALETTE.playerText);
+    this.drawComposition('B', roster, 'Enemy army', BASE_HEIGHT * RESULT_ANCHORS.enemyArmyFrac, PALETTE.enemyText);
 
-    this.button(BASE_HEIGHT * 0.79, RESULT_REMATCH_LABEL, 'primary', () => {
+    // The drill-down hint (story 5.8, device round 4) — it lives HERE, not in
+    // the summary sheet, because this is the screen where the gesture works: the
+    // chips it names are on screen and holdable while you read it. Inside the
+    // modal it read as a broken link (Danilo). BONE, not muted grey and not gold
+    // (round 5: "the press and hold hint could be in white though… grey is still
+    // a bit difficult") — bright enough to read at 10px over the stone, but not
+    // the gold that means 'control'.
+    crispText(this, BASE_WIDTH / 2, RESULT_HINT_Y, RESULT_HINT, groundLabelStyle(PALETTE.bodyText, MIN_FONT_PX, 'Arial')).setOrigin(0.5);
+
+    this.button(BASE_HEIGHT * RESULT_ANCHORS.rematchFrac, RESULT_REMATCH_LABEL, 'primary', () => {
       this.flow.startMatch(); // fresh seed (AD-10), carries lastAiArchetypeId forward (FR25)
       this.scene.start('Draft', { flow: this.flow });
     });
-    this.button(BASE_HEIGHT * 0.9, RESULT_HOME_LABEL, 'default', () => {
+    this.button(BASE_HEIGHT * RESULT_ANCHORS.homeFrac, RESULT_HOME_LABEL, 'default', () => {
       this.scene.start('Home'); // Home builds a fresh MatchFlow on Play
     });
   }
@@ -161,17 +171,17 @@ export class ResultScene extends Scene {
    * (the word dropped with the width).
    */
   private drawComposition(side: Side, roster: UnitSnapshot[], heading: string, y: number, headingColor: string) {
-    crispText(this, BASE_WIDTH / 2, y, heading, { fontFamily: 'Arial Black', fontSize: '13px', color: headingColor }).setOrigin(0.5);
+    crispText(this, BASE_WIDTH / 2, y, heading, groundLabelStyle(headingColor, COMP_HEADING_FONT_PX)).setOrigin(0.5);
     const units = roster.filter((u) => u.side === side);
     const chipW = 64;
-    const chipH = 64;
+    const chipH = RESULT_ANCHORS.chipH;
     const gap = 8;
     const totalW = units.length * chipW + (units.length - 1) * gap;
     const startX = (BASE_WIDTH - totalW) / 2;
     const sideLine = side === 'A' ? PALETTE.playerLine : PALETTE.enemyLine;
     units.forEach((unit, i) => {
       const x = startX + i * (chipW + gap) + chipW / 2;
-      const cy = y + 44;
+      const cy = y + RESULT_ANCHORS.chipCYOffset;
       // Opaque side-blended backing (device pass 2026-07-27): the 0.12 wash let the stone floor swallow the chip.
       const chip = this.add.rectangle(x, cy, chipW, chipH, side === 'A' ? PALETTE.cardFillYou : PALETTE.cardFillEnemy).setStrokeStyle(1, sideLine);
       // Story 5.7: hold a unit, learn about it — the 5.6 gesture generalized.

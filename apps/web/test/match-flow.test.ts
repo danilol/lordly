@@ -235,7 +235,7 @@ describe('MatchFlow tactics & leaders (FR34/FR35, AD-9, story 4.4/4.5)', () => {
     flowA.startMatch();
     draftAndPlaceAll(flowA);
     flowA.commit();
-    flowA.resolve(); // resolve at autonomous first (this is what RevealScene does)
+    flowA.resolve(); // resolve at autonomous FIRST — this is the cache the tactic change must drop (story 5.8: Reveal no longer does this, the pin still needs a populated cache)
     flowA.setTactic('strongest'); // the Reveal picker — invalidates the cache
     const logA = flowA.resolve(); // recomputed at 'strongest'
 

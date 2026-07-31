@@ -1,5 +1,5 @@
 import { GameObjects, Scene } from 'phaser';
-import { MIN_FONT_PX, PALETTE, SUMMARY_CARD, SUMMARY_HINT, SUMMARY_TITLE } from './constants';
+import { MIN_FONT_PX, PALETTE, SUMMARY_CARD, SUMMARY_TITLE } from './constants';
 import { crispText } from './ui';
 import { UNITS_SHEET_KEY, UNIT_FRAMES } from './sprites';
 import { addModalSheet, SHEET_CONTENT_DEPTH } from './modalSheet';
@@ -15,8 +15,9 @@ import type { BattleStats } from '../flow/battleStats';
  * side-colored DEALT bar over a thin neutral TAKEN bar — both on ONE shared
  * scale (`statsBarMax`) so lengths compare across units, sides, and metrics
  * — with the dealt value at the bar's end. Bars are plain rectangles: no
- * chart library, the dataviz is three fills per row. A footer hint points at
- * the existing per-unit drill-down (hold a chip).
+ * chart library, the dataviz is three fills per row. (Story 5.8 removed the
+ * footer hint: inside a modal, a line telling you to hold a chip the modal is
+ * blocking read as a broken link — Danilo, device round 3.)
  */
 export function buildSummarySheetOverlay(scene: Scene, stats: BattleStats, requestClose: () => void): GameObjects.GameObject[] {
   const K = SUMMARY_CARD;
@@ -80,17 +81,6 @@ export function buildSummarySheetOverlay(scene: Scene, stats: BattleStats, reque
         .setDepth(SHEET_CONTENT_DEPTH),
     );
   });
-
-  // The drill-down hint — the full per-unit table lives behind the chip hold.
-  objs.push(
-    crispText(scene, K.x + K.w / 2, K.y + K.h - K.pad - 6, SUMMARY_HINT, {
-      fontFamily: 'Arial',
-      fontSize: `${MIN_FONT_PX}px`,
-      color: PALETTE.mutedText,
-    })
-      .setOrigin(0.5)
-      .setDepth(SHEET_CONTENT_DEPTH),
-  );
 
   return objs;
 }

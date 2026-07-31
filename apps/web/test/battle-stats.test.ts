@@ -5,13 +5,21 @@ import { battleStats, clampStat, statsBarMax, statsStripLine } from '../src/flow
 import {
   BASE_HEIGHT,
   BASE_WIDTH,
+  BUTTON_HEIGHT,
+  CHROME_SLICE_SCALE,
   MIN_FONT_PX,
+  PANEL_FRAME_SLICE,
+  PANEL_ORNAMENT_PX,
+  COMP_HEADING_FONT_PX,
+  RESULT_ANCHORS,
+  RESULT_HINT,
+  RESULT_HINT_Y,
   STATS_CARD,
   STATS_SHEET_ROWS,
   SUMMARY_CARD,
-  SUMMARY_HINT,
   SUMMARY_LINK,
   SUMMARY_TITLE,
+  UNIT_CARD,
 } from '../src/config/constants';
 
 /**
@@ -352,24 +360,47 @@ describe('the presentation contracts (story 5.7 AC3 — geometry as arithmetic, 
   it('statsStripLine renders the exact compact read', () => {
     // ▲ = dealt (sent out), ▼ = taken (received) — the device-pass fix: the
     // original `312/288` slash pair made Danilo ask which number was which.
+    // The separators are double spaces since 5.8's round 2: the wider content
+    // inset (clearing the frame ornament) left 300px of inner width, and the
+    // worst wipeout line measured 312 with middots.
     // The line's WIDTH is pinned where it actually renders: inside the summary
     // sheet's inner width (5.7 review — the old canvas-wide pin here belonged
     // to the always-on strip, retired at device round 2).
     expect(
       statsStripLine({ dealt: 312, taken: 288, poisonTaken: 30, crits: 4, dodges: 2, blocks: 1, healsGiven: 45, healsReceived: 45, statusesApplied: 3 }),
-    ).toBe('▲312 ▼288 · CRIT 4 · DGE 2 · BLK 1 · HEAL 45');
+    ).toBe('▲312 ▼288  CRIT 4  DGE 2  BLK 1  HEAL 45');
   });
 
   it('the BATTLE SUMMARY link’s 44px tap zone sits inside the free band DERIVED from Result’s own layout fractions', () => {
     // The band is not a fiat 190–250 (5.7 review): it is what ResultScene's
-    // own anchors leave free — the HP count-up at BASE_HEIGHT*0.27 in a 16px
-    // line, and the "Your army" heading at BASE_HEIGHT*0.4 in a 13px one.
-    const bandTop = BASE_HEIGHT * 0.27 + 16 / 2;
-    const bandBottom = BASE_HEIGHT * 0.4 - 13 / 2;
+    // own anchors leave free — the HP count-up line and the "Your army"
+    // heading, both read from RESULT_ANCHORS (shared with the scene since the
+    // 5.8 review, so a re-lay moves scene and pin together).
+    const bandTop = BASE_HEIGHT * RESULT_ANCHORS.pctFrac + RESULT_ANCHORS.pctFontPx / 2;
+    const bandBottom = BASE_HEIGHT * RESULT_ANCHORS.yourArmyFrac - COMP_HEADING_FONT_PX / 2;
     expect(SUMMARY_LINK.tapH).toBeGreaterThanOrEqual(44); // FR30
     expect(SUMMARY_LINK.y - SUMMARY_LINK.tapH / 2).toBeGreaterThanOrEqual(bandTop);
     expect(SUMMARY_LINK.y + SUMMARY_LINK.tapH / 2).toBeLessThanOrEqual(bandBottom);
     expect(SUMMARY_LINK.tapW).toBeLessThanOrEqual(BASE_WIDTH);
+  });
+
+  it('the Result drill-down hint sits in the free band between the enemy chips and Rematch (story 5.8 round 4)', () => {
+    // Danilo chose this placement, so the pin derives the band from Result's own
+    // anchors — RESULT_ANCHORS, the SAME tokens the scene consumes (review
+    // 2026-08-01: the first cut copied the scene's literals into the test, so a
+    // chip re-lay would have moved the real chips while the pin kept passing
+    // against yesterday's geometry — the 4.2 HistoryScene coupling bug).
+    const enemyChipsBottom = BASE_HEIGHT * RESULT_ANCHORS.enemyArmyFrac + RESULT_ANCHORS.chipCYOffset + RESULT_ANCHORS.chipH / 2;
+    const rematchTop = BASE_HEIGHT * RESULT_ANCHORS.rematchFrac - BUTTON_HEIGHT / 2;
+    const half = MIN_FONT_PX / 2;
+    expect(RESULT_HINT_Y - half, 'the hint must clear the enemy chips').toBeGreaterThanOrEqual(enemyChipsBottom);
+    expect(RESULT_HINT_Y + half, 'the hint must clear the Rematch button').toBeLessThanOrEqual(rematchTop);
+    // Centred, so the whole string must fit the canvas with the screen gutter.
+    expect(RESULT_HINT.length * ARIAL_CHAR_EM * MIN_FONT_PX).toBeLessThanOrEqual(BASE_WIDTH - 16);
+    // It must name the GESTURE and the thing you perform it on, or it teaches
+    // nothing — the failure mode of the modal version it replaced.
+    expect(RESULT_HINT).toMatch(/hold/i);
+    expect(RESULT_HINT).toMatch(/unit/i);
   });
 
   it('the SUMMARY sheet’s vertical budget adds up at the WORST roster, DERIVED from the slot budget, inside the canvas, ✕ at the floor', () => {
@@ -377,8 +408,8 @@ describe('the presentation contracts (story 5.7 AC3 — geometry as arithmetic, 
     // slot budget with the cheapest units the roster sells.
     const worstRows = (2 * BALANCE.slotBudget) / Math.min(...Object.values(SLOT_COST));
     expect(worstRows).toBe(10); // the arithmetic, stated — a slotBudget change lands here first
-    const content = SUMMARY_CARD.pad + SUMMARY_CARD.titleH + SUMMARY_CARD.totalsH + worstRows * SUMMARY_CARD.rowH + SUMMARY_CARD.footerH + SUMMARY_CARD.pad;
-    expect(content).toBeLessThanOrEqual(SUMMARY_CARD.h);
+    const content = SUMMARY_CARD.pad + SUMMARY_CARD.titleH + SUMMARY_CARD.totalsH + worstRows * SUMMARY_CARD.rowH + SUMMARY_CARD.pad;
+    expect(content).toBe(SUMMARY_CARD.h); // exact — the footer's removal gave its 18px to the bars, not to slack
     expect(SUMMARY_CARD.y + SUMMARY_CARD.h).toBeLessThanOrEqual(BASE_HEIGHT);
     expect(SUMMARY_CARD.x + SUMMARY_CARD.w).toBeLessThanOrEqual(BASE_WIDTH);
     expect(SUMMARY_CARD.closeSize).toBeGreaterThanOrEqual(44);
@@ -392,7 +423,7 @@ describe('the presentation contracts (story 5.7 AC3 — geometry as arithmetic, 
     expect(courierLineW(statsStripLine(WORST_TOTALS), MIN_FONT_PX)).toBeLessThanOrEqual(SUMMARY_CARD.w - 2 * SUMMARY_CARD.pad);
   });
 
-  it('the SUMMARY sheet’s clearances hold: title clear of the ✕ zone, both totals lines inside their band, the footer hint inside the width', () => {
+  it('the SUMMARY sheet’s clearances hold: title clear of the ✕ zone, totals lines inside their band, content off the ornament', () => {
     const inner = SUMMARY_CARD.w - 2 * SUMMARY_CARD.pad;
     // The title runs left-to-right from the padding; the ✕'s 44px zone owns
     // the top-right corner (the 5.6 clearance discipline, missing here — 5.7 review).
@@ -401,12 +432,10 @@ describe('the presentation contracts (story 5.7 AC3 — geometry as arithmetic, 
     expect(2 * SUMMARY_CARD.totalsLineH).toBeLessThanOrEqual(SUMMARY_CARD.totalsH);
     // …and each line's own 10px type fits inside its row (no vertical overlap).
     expect(MIN_FONT_PX).toBeLessThanOrEqual(SUMMARY_CARD.totalsLineH);
-    // The footer hint — centred, so the whole string must fit the inner width.
-    expect(SUMMARY_HINT.length * ARIAL_CHAR_EM * MIN_FONT_PX).toBeLessThanOrEqual(inner);
-    // It must also NAME the chips and the dismissal: the sheet blocks the very
-    // chips it points at (5.7 review — "hold a unit" alone stranded the reader).
-    expect(SUMMARY_HINT).toMatch(/close/i);
-    expect(SUMMARY_HINT).toMatch(/chip/i);
+    // CONTENT CLEARS THE FRAME (story 5.8 device round 3 — the defect Danilo hit
+    // twice). The gold ornament renders a constant PANEL_ORNAMENT_PX deep now
+    // that PANEL_FRAME_SLICE contains it, so the pad must beat it with margin.
+    expect(SUMMARY_CARD.pad).toBeGreaterThan(PANEL_ORNAMENT_PX);
   });
 
   it('statsBarMax: one shared scale over dealt AND taken, floored at 1 (an all-guard zero-damage battle must not produce NaN bars)', () => {
@@ -416,6 +445,7 @@ describe('the presentation contracts (story 5.7 AC3 — geometry as arithmetic, 
         side: 'A',
         class: 'knight',
         name: 'K',
+        element: 'fire',
         dealt,
         taken,
         poisonTaken: 0,
@@ -438,8 +468,32 @@ describe('the presentation contracts (story 5.7 AC3 — geometry as arithmetic, 
     expect([...surfaced].sort()).toEqual(counters);
   });
 
+  it('every framed sheet keeps its content OFF the frame ornament (story 5.8 device rounds 2-3)', () => {
+    // The defect Danilo reported twice: content began ON the gold. The first fix
+    // used the naive `ornamentDepth / CHROME_SLICE_SCALE` and was still wrong,
+    // because a 9-slice STRETCHES whatever ornament sits beyond the slice — a
+    // 344-wide sheet rendered ~26px of gold, not 14. PANEL_FRAME_SLICE now
+    // contains the ornament, so the depth is constant and a pad can beat it.
+    expect(PANEL_FRAME_SLICE / CHROME_SLICE_SCALE).toBeGreaterThanOrEqual(PANEL_ORNAMENT_PX - 1);
+    // ALL THREE modal-shell consumers (review 2026-08-01 — the first cut said
+    // "every framed sheet" and looped over two).
+    for (const [name, K] of [
+      ['STATS_CARD', STATS_CARD],
+      ['SUMMARY_CARD', SUMMARY_CARD],
+      ['UNIT_CARD', UNIT_CARD],
+    ] as const) {
+      expect(K.pad, `${name} content must clear the ornament`).toBeGreaterThan(PANEL_ORNAMENT_PX);
+      // The ✕ glyph's EDGE must clear the ornament, not just its centre
+      // (review 2026-08-01: the old form reduced to `pad + 8 > 16`, implied by
+      // the line above — it could never fail independently). The ✕ centre is
+      // at `x + w − pad − 8` and the 18px glyph reaches 9px past it, so the
+      // clearance is `pad − 1 ≥ ornament`, i.e. pad ≥ 17.
+      expect(K.pad - 1, `${name} ✕ glyph edge`).toBeGreaterThanOrEqual(PANEL_ORNAMENT_PX);
+    }
+  });
+
   it('the STATS_CARD vertical budget adds up exactly, inside the canvas, with the FR30 ✕ floor', () => {
-    // EQUALITY, not ≤ (5.7 review): the constant's comment says "246 exactly",
+    // EQUALITY, not ≤ (5.7 review; 262 since the 5.8 pad re-budget — the sum IS the height),
     // so the test must fail if a row count or padding change leaves dead space.
     expect(STATS_CARD.pad + STATS_CARD.headerH + STATS_SHEET_ROWS.length * STATS_CARD.rowH + STATS_CARD.pad).toBe(STATS_CARD.h);
     expect(STATS_CARD.y + STATS_CARD.h).toBeLessThanOrEqual(BASE_HEIGHT);

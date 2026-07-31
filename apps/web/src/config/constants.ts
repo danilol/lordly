@@ -79,10 +79,49 @@ export const DRAFT_GRID = { cols: 4, tileW: 80, tileH: 48, gapX: 8, gapY: 6, sta
 export const DRAFT_TABS = { y: 76, underlineY: 86, tapH: 44, tapW: 88, tapMaxW: 128, offsetX: 70 } as const;
 
 /**
+ * How far the gold ornament of `panel-frame.png` reaches INTO a framed panel,
+ * in logical px — i.e. how much of a panel's edge content must not use.
+ *
+ * MEASURED from the asset (decoded pixel scan): the ornament runs 42 texture px
+ * in from the left/right edges and 45 from top/bottom, on a 300×400 source.
+ *
+ * THE TRAP (story 5.8 device rounds 2 AND 3 — the second round is why this
+ * comment is long). The rendered thickness is NOT simply `depth / CHROME_SLICE_SCALE`.
+ * A 9-slice leaves the corner/edge slices unscaled and STRETCHES the middle
+ * regions, so any ornament lying BEYOND the slice boundary is stretched with
+ * them. At the old `PANEL_FRAME_SLICE = 30`, 12–15 texture px of ornament sat in
+ * the middle regions and a 344-wide sheet stretched them ~4× — the gold actually
+ * rendered ~26px deep, not the ~14 the naive division predicts. Content inset to
+ * 22px therefore STILL sat on the border (Danilo, round 3: "the summary table is
+ * still over the frame borders"), and worse, the thickness varied with every
+ * panel's size, so no single pad could ever be right.
+ *
+ * THE FIX: `PANEL_FRAME_SLICE` is 46, which puts the entire ornament inside the
+ * unstretched slices. The gold now renders a CONSTANT 15.3px on every panel
+ * whatever its dimensions (46 / CHROME_SLICE_SCALE), the ornament no longer
+ * distorts with panel width, and `SHEET_PAD` clears it with ~7px to spare.
+ * Consequence to know: the frame band reads THINNER and more uniform than
+ * before, because it is no longer being stretched. Corner flourishes reach
+ * deeper than the straight edges and still stretch past the slice, which is why
+ * corner-adjacent content (a top-left title, a top-right ✕) wants the full
+ * `SHEET_PAD` rather than the bare ornament depth.
+ *
+ * If the frame art is ever re-exported, re-run the scan and keep
+ * `PANEL_FRAME_SLICE` ≥ the deepest straight-edge ornament, or this whole class
+ * of overlap comes back. `apps/web/scripts/check-frame-art.mjs` mirrors the
+ * slice constants and must be updated in the same commit.
+ */
+export const PANEL_ORNAMENT_PX = 16;
+export const SHEET_PAD = 22;
+
+/**
  * The unit-data card (story 5.6 — the OB64 UNIT DATA read at Placement; the
  * geometry survived four device rounds, 2026-07-29). Pure geometry in the
  * DRAFT_GRID/DRAFT_TABS tradition, pinned by unit-card.test.ts:
- * - the sheet: x 8 / w 344, h 184 anchored low (y 448, bottom 632) — round 2
+ * - the sheet: x 8 / w 344, h 198 anchored low (y 434, bottom 632) — 5.8's
+ *   device round 2 grew `pad` to SHEET_PAD so content clears the frame
+ *   ornament (Danilo: the move rows' position icons sat on the gold), which
+ *   cost 10px of height at the same bottom edge — round 2
  *   shrank it ~85px by moving the radar BESIDE the move rows ("use the space
  *   better… bringing the chart to the right"); round 4 took another 48px by
  *   raising the radar INTO the header's empty right half (`radarCYOffset`
@@ -99,7 +138,13 @@ export const DRAFT_TABS = { y: 76, underlineY: 86, tapH: 44, tapW: 88, tapMaxW: 
  *   mini-grid icon `rowIconW` 12 · verb ×count within rowTextW 112 — fits
  *   "Radiant Breath ×1" at 11px — · inline damage glyph);
  * - the stat radar on the RIGHT centred at (radarCX 260, y + radarCYOffset
- *   106), radius radarR 40 + radarLabelPad 12 of nameless axis labels
+ *   114 — was 106 until 5.8's device round 2: the wider content inset pushed
+ *   the ✕ zone inward and down, so the chart drops 8px to stay out from under
+ *   it. The sheet also grew 4px (h 194 → 198) because at h 194 the chart was
+ *   squeezed between the ✕ zone and the inner bottom with ZERO margin on both
+ *   sides — the 5.6 review's lesson that a 0px pass on an estimated text
+ *   metric is not a pass. Both clearances now hold with 2px),
+ *   radius radarR 40 + radarLabelPad 12 of nameless axis labels
  *   (round 2: numbers removed — the per-axis roster-max scaling already IS
  *   the meaning);
  * - closeSize 44: the ✕ tap target at the FR30 floor;
@@ -109,10 +154,10 @@ export const DRAFT_TABS = { y: 76, underlineY: 86, tapH: 44, tapW: 88, tapMaxW: 
  */
 export const UNIT_CARD = {
   x: 8,
-  y: 448,
+  y: 434,
   w: 344,
-  h: 184,
-  pad: 14,
+  h: 198,
+  pad: SHEET_PAD,
   headerH: 78,
   rowH: 24,
   rowIconW: 12,
@@ -120,7 +165,7 @@ export const UNIT_CARD = {
   radarR: 40,
   radarLabelPad: 12,
   radarCX: 260,
-  radarCYOffset: 106,
+  radarCYOffset: 114,
   closeSize: 44,
   nameW: 140,
   portraitW: 64,
@@ -153,13 +198,15 @@ export const LONG_PRESS_MS = 450;
  * on Result's comp chips; the modal shell is shared with UNIT_CARD via
  * config/modalSheet.ts). Geometry in the 5.6 tradition, pinned by test:
  * x 8 / w 344, h 246 anchored low (y 386, bottom 632); headerH 56 carries a
- * 40px sprite + name + code; nine counter rows at rowH 18 (14 + 56 + 9×18 +
- * 14 = 246 exactly — the vertical budget test pins the EQUALITY, not a ≤);
+ * 40px sprite + name + code; nine counter rows at rowH 18 (22 + 56 + 9×18 +
+ * 22 = 262 exactly — the vertical budget test pins the EQUALITY, not a ≤;
+ * re-budgeted at 5.8's device round 2 when the pad grew to clear the frame
+ * ornament, keeping the sheet's bottom edge at 632);
  * closeSize 44 (FR30); labels left, values right-aligned inside the padding.
  * The two type sizes the width pins need to see live here too (5.7 review:
  * a budget test cannot derive a worst case from a literal in the overlay).
  */
-export const STATS_CARD = { x: 8, y: 386, w: 344, h: 246, pad: 14, headerH: 56, rowH: 18, closeSize: 44, nameFontPx: 14, valueFontPx: 11 } as const;
+export const STATS_CARD = { x: 8, y: 370, w: 344, h: 262, pad: SHEET_PAD, headerH: 56, rowH: 18, closeSize: 44, nameFontPx: 14, valueFontPx: 11 } as const;
 
 /**
  * The sheet's rows — label + which SideTotals counter it reads (story 5.7).
@@ -189,14 +236,35 @@ export const STATS_SHEET_ROWS: ReadonlyArray<readonly [string, keyof SideTotals]
 export const SUMMARY_LINK = { y: 215, tapW: 220, tapH: 44, fontPx: 12 } as const;
 
 /**
+ * The Result screen's drill-down hint (story 5.8 device round 4 — Danilo's
+ * placement call: "this hint about the char card summary could be placed
+ * between the bottom team and the REMATCH button. I would like it there").
+ *
+ * It started life INSIDE the battle-summary sheet and failed there: a line in a
+ * modal, describing a gesture that modal was blocking, reading as a broken link
+ * ("it's not a link, clickable, so it's very confusing"). Moving it onto Result
+ * itself fixes the shape — here the comp chips it talks about are visible and
+ * holdable while you read it.
+ *
+ * y 456 is the CENTRE of the measured free band: the enemy chips end at
+ * 0.56·BASE_HEIGHT + 44 + 64/2 = 434.4 and Rematch's top is
+ * 0.79·BASE_HEIGHT − BUTTON_HEIGHT/2 = 477.6, so the band is 43px and the 10px
+ * line sits mid-gap, touching neither. Derived in the test from those same
+ * fractions, never a fiat number.
+ */
+export const RESULT_HINT_Y = 456;
+export const RESULT_HINT = 'Press and hold a unit for its full stats';
+
+/**
  * The battle-summary sheet (story 5.7 round 2 — the LoL-history read Danilo
  * asked for): the shared modal shell, then a title band, the two side-total
  * lines (the ▲▼ strip format lives HERE now), one BAR ROW per unit — sprite
  * avatar, a side-colored DEALT bar over a thin neutral TAKEN bar, both on
- * ONE shared scale (statsBarMax) with values at the bar ends — and a footer
- * hint pointing at the per-unit chip hold. Vertical budget (pinned):
- * pad 14 + titleH 36 + totalsH 40 + 10×rowH 24 + footerH 18 + pad 14 = 362
- * ≤ h 364; ten rows is the worst case, DERIVED in the test from the slot
+ * ONE shared scale (statsBarMax) with values at the bar ends. Vertical budget (pinned):
+ * pad 22 + titleH 36 + totalsH 40 + 10×rowH 24 + pad 22 = 360 = h 360
+ * (re-budgeted twice at 5.8's device rounds: the pad grew to clear the frame
+ * ornament, then the confusing footer hint was dropped and gave 18px back —
+ * bottom edge stays at 632); ten rows is the worst case, DERIVED in the test from the slot
  * budget and the cheapest slot cost (5v5 smalls — monster comps run shorter
  * and leave slack). `totalsLineH` is the two side lines' own spacing: it
  * lives here, not as an `i*18+8` in the overlay, so the clearance test can
@@ -204,29 +272,34 @@ export const SUMMARY_LINK = { y: 215, tapW: 220, tapH: 44, fontPx: 12 } as const
  */
 export const SUMMARY_CARD = {
   x: 8,
-  y: 268,
+  y: 272,
   w: 344,
-  h: 364,
-  pad: 14,
+  h: 360,
+  pad: SHEET_PAD,
   titleH: 36,
   titleFontPx: 14,
   totalsH: 40,
   totalsLineH: 18,
   rowH: 24,
-  footerH: 18,
   avatarW: 24,
   valueW: 40,
   closeSize: 44,
 } as const;
 
 /**
- * The summary sheet's two fixed strings (story 5.7 review — a width pin can
- * only pin text it can read; a fiat string in the overlay is unpinnable).
- * The hint names the CHIPS and the dismissal: it is displayed INSIDE a modal
- * that blocks those very chips, so "hold a unit" alone stranded the reader.
+ * The summary sheet's title (story 5.7 review — a width pin can only pin text
+ * it can read; a fiat string in the overlay is unpinnable).
+ *
+ * The footer HINT that used to sit beside it is GONE (story 5.8 device round 3).
+ * It read "Close, then hold a chip for its full sheet" and Danilo's verdict was
+ * that it confused more than it taught: "it's not a link, clickable, so it's
+ * very confusing" — a line inside a modal, instructing a gesture that modal is
+ * currently blocking, which looks tappable and is not. Removing it also gives
+ * the bars back their 18px. The per-unit drill-down still exists (hold a Result
+ * chip); making it DISCOVERABLE without a confusing label is logged as a UX
+ * decision in deferred-work.md rather than guessed at here.
  */
 export const SUMMARY_TITLE = 'BATTLE SUMMARY';
-export const SUMMARY_HINT = 'Close, then hold a unit’s chip for its full sheet';
 
 /**
  * The draft hint line's centre y (story 5.5 review): at y=50 its 11px line
@@ -428,7 +501,7 @@ export const BUTTON_FRAME_SLICE = 36;
  * out against a 1px stroke — a 15px border swallowed it (Danilo's device pass,
  * 2026-07-27). 10px keeps the gold read without eating the content box.
  */
-export const PANEL_FRAME_SLICE = 30;
+export const PANEL_FRAME_SLICE = 46;
 /** Stone ground tile (512×512 source): drawn at this tile scale so stones read ~35px — a floor, not boulders. Device-tunable. */
 export const GROUND_TILE_SCALE = 0.35;
 
@@ -656,10 +729,81 @@ export const GUARD_BLOCKED_CAPTION = 'GUARDED';
 // unit-card component specifies; scenes consume it via `unitCodeStyle`, never
 // restating the values. (Tray/panel codes on dark cards keep their own styles
 // — the defect was tiles only.)
+//
+// RE-SCOPED story 5.8 (2026-07-29): board CODES are gone — Reveal and Battle
+// identify units by sprite alone (the PO's call once 4.0 made the sprites
+// crisp). The treatment survives because the RULE still applies to the one
+// piece of text still standing on a solid tile: the Reveal soldier NAME, which
+// spreads this style and overrides family/size. That single call site is also
+// what keeps these exports consumed — a knip failure here means the name lost
+// its stroke, not that the tokens are dead.
 export const CODE_STROKE_COLOR = '#10131f';
 export const CODE_STROKE_THICKNESS = 3;
 
-/** The one text style for board-unit class codes — both scenes (Battle, Reveal) read it from here so the FR39f treatment cannot drift. */
+/**
+ * Text standing on the STONE GROUND (story 5.8 device round 5). The scene
+ * ground (story 5.2) is a busy mid-dark texture, and small COLOURED labels lose
+ * their letterforms on it — Danilo, on the Result screen: the summary link, both
+ * army headings and the drill-down hint were "difficult to read", while the HP
+ * percentages right above them were fine. The difference is not the ground, it
+ * is the text: bone at 16px in a heavy mono survives a texture; a 10–13px
+ * side-coloured label does not.
+ *
+ * So the hue stays (side colour is load-bearing — blue = you, red = enemy, AD-11)
+ * and the letterform gets carried by a dark outline. This is deliberately the
+ * SAME mechanism and the same stroke colour as `unitCodeStyle`'s FR39f
+ * treatment, whose own DESIGN.md rationale is that the outline "carries the
+ * letterform on any ground (incl. future landscape backdrops)" — story 4.0
+ * scoped it to board tiles because that was the only busy ground at the time;
+ * the stone floor is the same problem one scene over.
+ *
+ * Thinner than the board's `CODE_STROKE_THICKNESS`: these are chrome labels, not
+ * text standing on a saturated tile. ONE constant to re-tune if a device pass
+ * wants more or less.
+ */
+export const GROUND_TEXT_STROKE_PX = 2;
+
+/** The 'Your army' / 'Enemy army' heading size on Result — a token so the ground-label pin can read it (story 5.8). */
+export const COMP_HEADING_FONT_PX = 13;
+
+/**
+ * ResultScene's vertical anchors (story 5.8 review — the coupling fix). The
+ * hint-band and link-band tests used to re-hardcode these as literals copied
+ * out of the scene ("derives the band from Result's own layout" — from a COPY
+ * of it), which is the 4.2 HistoryScene failure mode: re-lay the chips and the
+ * test keeps green against yesterday's geometry. One token block, consumed by
+ * BOTH the scene and the pins, so a re-lay moves them together or fails loudly.
+ * Fractions are of BASE_HEIGHT; chip offsets are from the heading's y.
+ */
+export const RESULT_ANCHORS = {
+  pctFrac: 0.27,
+  yourArmyFrac: 0.4,
+  enemyArmyFrac: 0.56,
+  rematchFrac: 0.79,
+  homeFrac: 0.9,
+  /** Chip row centre, below its side's heading. */
+  chipCYOffset: 44,
+  chipH: 64,
+  pctFontPx: 16,
+} as const;
+
+/** The ⌂ Home / ? Rules link size — the header affordances that sit on the bare ground in every scene (story 5.8). */
+export const BACK_AFFORDANCE_FONT_PX = 13;
+
+/**
+ * The style for a label drawn over the scene ground. Callers pass their own
+ * colour and size — the point of the helper is that the STROKE cannot drift or
+ * be forgotten on a new label.
+ */
+export function groundLabelStyle(
+  color: string,
+  fontPx: number,
+  fontFamily = 'Arial Black',
+): { fontFamily: string; fontSize: string; color: string; stroke: string; strokeThickness: number } {
+  return { fontFamily, fontSize: `${fontPx}px`, color, stroke: CODE_STROKE_COLOR, strokeThickness: GROUND_TEXT_STROKE_PX };
+}
+
+/** The one text style for text standing on a solid board tile — since story 5.8 that is the Reveal soldier NAME (its sole consumer; the class codes it was built for left the board with AC2). Read from here so the FR39f treatment cannot drift. */
 export function unitCodeStyle(side: 'A' | 'B'): {
   fontFamily: string;
   fontSize: string;
@@ -815,6 +959,64 @@ export const ISO_BOARD = {
  * moderately and stays compact. Same 2:1 diamond, same component, same
  * projection — only the frame differs.
  */
+/**
+ * The Reveal tactic picker (story 5.8 — the FR30 correction). Shipped at 4.13
+ * with a 24px bar and 24px option rows: both under FR30's 44px tap floor, so
+ * every tactic choice was a mis-tap risk (logged in deferred-work.md, whose own
+ * text said "revisit when Reveal is next laid out" — this story lays it out).
+ *
+ * Why a GRID and not taller rows in one column: the band between the picker and
+ * the Fight button is finite. Four 44px rows stacked need 188px including
+ * padding; the band gives ~150px. Two columns of two need 100px and fit with
+ * slack. The open panel is also WIDER than the bar so the longest tactic name
+ * has margin at 12px — the alternative was shrinking type, which fights FR30
+ * rather than serving it.
+ *
+ * The open panel's own `pad` is 18, NOT SHEET_PAD (review 2026-08-01). It must
+ * still beat the ornament (15.3px — at the original 6 the cells sat ON the
+ * gold), but it cannot afford the sheets' 22: the panel is ANCHORED BELOW the
+ * enemy tactic line (see below), and at pad 22 its bottom lands 2px past the
+ * Fight button's top. 18 clears the ornament by 2.7px and Fight by 6px, and a
+ * column is (300 − 36)/2 = 132px — ample for the longest tactic name at 12px.
+ *
+ * ANCHORING (the review's HIGH): the first cut computed the panel top as
+ * `optionsTop − pad`, which the pad growth silently pushed UP to y416 — over
+ * the enemy line's glyphs (411–425), burying the exact FR6 read this block
+ * exists to keep visible. The panel now anchors at the enemy line's BOTTOM
+ * plus `optionsGap`, cells inset `pad` inside it, and the layout test pins
+ * `panel.y` against the enemy band — not just the cells.
+ *
+ * The options deliberately drop BELOW both fixed lines (bar, then the enemy's
+ * tactic): the 2026-07-20 review's rule is that the enemy stance never jumps
+ * away mid-choice, since that pairing is the FR6 read the player reacts to.
+ * (It is also why the shared modal sheet is the wrong tool here — a modal would
+ * cover the very line you are reacting to.)
+ */
+export const TACTIC_PICKER = {
+  barW: 210,
+  barH: 44,
+  barY: 356,
+  enemyGap: 6,
+  enemyH: 24,
+  optionsGap: 8,
+  pad: 18,
+  rowH: 44,
+  cols: 2,
+  panelW: 300,
+} as const;
+
+/**
+ * The Reveal unit's sprite placement, and the name slot beneath it (story 5.8 —
+ * tokens rather than literals in the scene, so `revealNameOffsetY` can derive
+ * the monster-aware position and a test can pin BOTH sprite spans).
+ * `…_GAP` is the clearance between the sprite's bottom edge and the name's
+ * centre; `…_NAME_OFFSET_Y` is the floor — the slot the retired class code held.
+ */
+export const REVEAL_SPRITE_SIZE = 38;
+export const REVEAL_SPRITE_OFFSET_Y = -13;
+export const REVEAL_NAME_OFFSET_Y = 8;
+export const REVEAL_NAME_GAP = 2;
+
 export const ISO_BOARD_REVEAL = {
   tileW: 70,
   tileH: 35,

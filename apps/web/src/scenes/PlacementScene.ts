@@ -14,6 +14,7 @@ import {
   MIN_FONT_PX,
   CARD_CLASS_FONT_PX,
   CLASS_ABBREVIATIONS,
+  groundLabelStyle,
   LEADER_CROWN_GLYPH,
 } from '../config/constants';
 import { addButton, addSceneGround, applyHiDpiCamera, addElementBadge, addHomeBack, addUnitSprite, crispText } from '../config/ui';
@@ -80,16 +81,14 @@ export class PlacementScene extends Scene {
     addHomeBack(this);
     this.gridLeft = (BASE_WIDTH - (3 * CELL + 2 * GAP)) / 2;
 
-    crispText(this, BASE_WIDTH / 2, 28, PLACEMENT_TITLE, { fontFamily: 'Arial Black', fontSize: '22px', color: PALETTE.title }).setOrigin(0.5);
+    crispText(this, BASE_WIDTH / 2, 28, PLACEMENT_TITLE, groundLabelStyle(PALETTE.title, 22)).setOrigin(0.5);
     crispText(
       this,
       BASE_WIDTH / 2,
       54,
       'Drag a unit onto the grid, or double-tap it to place it. Tap a placed unit to crown your leader (♛). Front row faces the enemy (top).',
       {
-        fontFamily: 'Arial',
-        fontSize: '10px',
-        color: PALETTE.mutedText,
+        ...groundLabelStyle(PALETTE.bodyText, MIN_FONT_PX, 'Arial'),
         align: 'center',
         wordWrap: { width: BASE_WIDTH - 24 },
       },
@@ -98,7 +97,7 @@ export class PlacementScene extends Scene {
     // FR6 groundwork + first-time legibility: mark the enemy-facing side (top
     // of the grid) so a new player knows where the opponent will appear.
     const gridWidth = 3 * CELL + 2 * GAP;
-    crispText(this, BASE_WIDTH / 2, 116, ENEMY_ARMY_LABEL, { fontFamily: 'Arial', fontSize: '8px', color: PALETTE.mutedText }).setOrigin(0.5);
+    crispText(this, BASE_WIDTH / 2, 116, ENEMY_ARMY_LABEL, groundLabelStyle(PALETTE.bodyText, 8, 'Arial')).setOrigin(0.5);
     this.add.rectangle(BASE_WIDTH / 2, GRID_TOP - 8, gridWidth, 3, PALETTE.enemyLine).setOrigin(0.5);
 
     this.lastTapIndex = -1; // reset double-tap state (singleton scenes carry stale fields otherwise)
@@ -143,9 +142,7 @@ export class PlacementScene extends Scene {
   private flashMessage(text: string) {
     this.toast?.destroy();
     const msg = crispText(this, BASE_WIDTH / 2, 132, text, {
-      fontFamily: 'Arial',
-      fontSize: `${MIN_FONT_PX}px`,
-      color: PALETTE.title,
+      ...groundLabelStyle(PALETTE.title, MIN_FONT_PX, 'Arial'),
       align: 'center',
       wordWrap: { width: BASE_WIDTH - 24 },
     })
@@ -255,12 +252,7 @@ export class PlacementScene extends Scene {
       const y = GRID_TOP + r * (CELL + GAP) + CELL / 2;
       this.rowBadges.push(
         // Muted, informational tone — not gold (UX-DR2 reserves gold for attention); 12px ≥ the MIN_FONT_PX floor.
-        crispText(this, this.gridLeft - 8, y, `${counts[row]}×`, {
-          fontFamily: 'Arial',
-          fontSize: '12px',
-          fontStyle: 'bold',
-          color: PALETTE.mutedText,
-        }).setOrigin(1, 0.5),
+        crispText(this, this.gridLeft - 8, y, `${counts[row]}×`, { ...groundLabelStyle(PALETTE.bodyText, 12, 'Arial'), fontStyle: 'bold' }).setOrigin(1, 0.5),
       );
     });
   }

@@ -1,7 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_COLS, ALL_ROWS, ALL_SIDES, BALANCE } from '@lordly/engine';
+import { ALL_COLS, ALL_ROWS, ALL_SIDES, ALL_TACTICS, BALANCE } from '@lordly/engine';
 import type { BattleEvent, Element, MoveKind, Placement, Side, UnitClass, UnitId, UnitSnapshot } from '@lordly/engine';
-import { BASE_WIDTH, BATTLE_BEAT_MS, BATTLE_HUD_BAND_H, ISO_BOARD, ISO_BOARD_REVEAL, REVEAL_HUD_BAND_H } from '../src/config/constants';
+import {
+  BASE_HEIGHT,
+  BASE_WIDTH,
+  BATTLE_BEAT_MS,
+  BUTTON_HEIGHT,
+  BATTLE_HUD_BAND_H,
+  ISO_BOARD,
+  ISO_BOARD_REVEAL,
+  REVEAL_HUD_BAND_H,
+  REVEAL_NAME_OFFSET_Y,
+  REVEAL_SPRITE_OFFSET_Y,
+  REVEAL_SPRITE_SIZE,
+  PANEL_ORNAMENT_PX,
+  TACTIC_DISPLAY_NAME,
+  TACTIC_PICKER,
+  unitDisplaySize,
+} from '../src/config/constants';
 import {
   ALL_ORIENTATIONS,
   DEFAULT_ORIENTATION,
@@ -10,6 +26,8 @@ import {
   buildBeatSchedule,
   eventTrace,
   movePlate,
+  revealNameOffsetY,
+  tacticPickerLayout,
   unitTileCenter,
 } from '../src/flow/battleView';
 import type { BoardOrientation, MovePlateContext } from '../src/flow/battleView';
@@ -190,6 +208,32 @@ describe("iso projection — the shipped '\\' layout (AC1)", () => {
     it('Reveal: the player board stays above the tactics block (ARMY TACTICS y=342)', () => {
       expect(extentY('A', ISO_BOARD_REVEAL).bottom).toBeLessThanOrEqual(342);
       expect(extentY('B', ISO_BOARD_REVEAL).top).toBeGreaterThanOrEqual(REVEAL_HUD_BAND_H);
+    });
+
+    it('Reveal: the soldier name clears the sprite for BOTH sprite spans — small AND loomed monster (story 5.8)', () => {
+      // The regression this exists to prevent: story 5.8 moved the name up into
+      // the slot the retired class code held (y+8), which is right for a small
+      // (38px at y−13 → bottom edge y+6) and WRONG for a monster, whose sprite
+      // looms to 57px and reaches y+15.5 — a name at y+8 would sit inside it.
+      // Epic 5 took the roster from one monster to ten, so this is the common
+      // case; a device pass misses it unless a monster happens to be drafted.
+      const smalls = (Object.keys(BALANCE.classes) as UnitClass[]).filter((c) => BALANCE.classes[c].sizeClass === 'small');
+      const monsters = (Object.keys(BALANCE.classes) as UnitClass[]).filter((c) => BALANCE.classes[c].sizeClass === 'monster');
+      expect(smalls.length, 'fixture guard: smalls exist').toBeGreaterThan(0);
+      expect(monsters.length, 'fixture guard: the 5.5 monster wave is live').toBeGreaterThan(1);
+
+      for (const cls of [...smalls, ...monsters]) {
+        const spriteBottom = REVEAL_SPRITE_OFFSET_Y + unitDisplaySize(cls, REVEAL_SPRITE_SIZE) / 2;
+        // The name's CENTRE must sit below the sprite's bottom edge — never on top of the artwork.
+        expect(revealNameOffsetY(cls), `${cls} name must clear its sprite`).toBeGreaterThan(spriteBottom);
+      }
+      // Smalls take the freed slot exactly; monsters are pushed down by the loom.
+      for (const cls of smalls) expect(revealNameOffsetY(cls), cls).toBe(REVEAL_NAME_OFFSET_Y);
+      for (const cls of monsters) expect(revealNameOffsetY(cls), cls).toBeGreaterThan(REVEAL_NAME_OFFSET_Y);
+      // A small's name now fits INSIDE the tile — the defect the move fixes (the
+      // 10px line at y+21 spanned y+16…y+26 past the y+17.5 bottom vertex).
+      const tileBottomVertex = ISO_BOARD_REVEAL.tileH / 2;
+      expect(revealNameOffsetY('knight') + 10 / 2).toBeLessThanOrEqual(tileBottomVertex);
     });
 
     it('Battle really is the bigger stage — the whole point of the split', () => {
@@ -460,5 +504,79 @@ describe('movePlate — the FR39b ledger seam (story 4.11, D-3a: the ledger IS t
     const stuck = ctx([snap('B:0', 'mercenary', 'fire', 'back')], { 'B:0': 1 }); // back row = 1 action
     expect(movePlate({ type: 'ActionMisfired', unit: 'B:0' }, stuck)).toBeNull();
     expect(movePlate({ type: 'ActionFizzled', unit: 'B:0' }, stuck)).toEqual({ unitId: 'B:0', label: 'Fizzle', remaining: 0, max: 1 });
+  });
+});
+
+/**
+ * The Reveal tactic picker (story 5.8 AC3 — the scoped-in flow item). Shipped
+ * at 4.13 under FR30's 44px tap floor; the fix had to prove it FITS, because
+ * four 44px rows in one column do not.
+ */
+describe('tacticPickerLayout — FR30 tap targets that fit the band (story 5.8)', () => {
+  /** The Fight button's top edge: addButton centres it at BASE_HEIGHT − 44 with BUTTON_HEIGHT. */
+  const FIGHT_TOP = BASE_HEIGHT - 44 - BUTTON_HEIGHT / 2;
+
+  it('gives every tappable surface the FR30 44px floor — the bar and every option cell', () => {
+    const L = tacticPickerLayout(ALL_TACTICS.length);
+    expect(L.bar.h).toBeGreaterThanOrEqual(44);
+    expect(L.cells).toHaveLength(ALL_TACTICS.length);
+    for (const [i, c] of L.cells.entries()) {
+      expect(c.h, `cell ${i} height`).toBeGreaterThanOrEqual(44);
+      expect(c.w, `cell ${i} width`).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  it('CLAMPS the open block above the Fight button — the coupling the scene comment warned about and nothing pinned', () => {
+    const L = tacticPickerLayout(ALL_TACTICS.length);
+    expect(L.panel.y + L.panel.h).toBeLessThanOrEqual(FIGHT_TOP);
+  });
+
+  it('states the real CEILING: the 2-column grid holds 4 tactics, and a 5th must re-lay rather than overflow', () => {
+    // The scene's comment warned that rows are laid out from ALL_TACTICS.length
+    // with no clamp, so a 7th tactic would ride over Fight — it was never
+    // pinned. Now it is arithmetic: 4 tactics = 2 rows and fits with slack; 5
+    // needs a 3rd row, which overruns Fight's top. The tactic-roster extension
+    // is a live want (deferred-work), so growing ALL_TACTICS must fail HERE —
+    // in a test, cheaply — and force a deliberate re-lay (scroll, 3 columns, or
+    // a shorter bar), not a device session discovering the overlap.
+    expect(ALL_TACTICS.length).toBeLessThanOrEqual(4);
+    expect(tacticPickerLayout(4).panel.y + tacticPickerLayout(4).panel.h).toBeLessThanOrEqual(FIGHT_TOP);
+    expect(tacticPickerLayout(5).panel.y + tacticPickerLayout(5).panel.h).toBeGreaterThan(FIGHT_TOP);
+  });
+
+  it('keeps the enemy line BELOW the bar and the WHOLE PANEL below the enemy line (the FR6 pairing rule)', () => {
+    const L = tacticPickerLayout(ALL_TACTICS.length);
+    // review 2026-07-20: the enemy stance must never jump away mid-choice, so
+    // options open beneath BOTH fixed lines rather than between them.
+    expect(L.enemyCenterY).toBeGreaterThan(L.bar.y + L.bar.h);
+    for (const c of L.cells) expect(c.y).toBeGreaterThan(L.enemyCenterY);
+    // …and the PANEL, not just the cells (review 2026-08-01, HIGH): the framed
+    // surface is opaque and sits at depth 99, so its top edge is what can bury
+    // the enemy line — the first cut pinned only the cells while the panel's
+    // gold band covered the label's lower 9px. Pin the frame against the
+    // enemy BAND's bottom, derived from the same tokens the layout uses.
+    const enemyBottom = L.bar.y + L.bar.h + TACTIC_PICKER.enemyGap + TACTIC_PICKER.enemyH;
+    expect(L.panel.y, 'the open panel must not cover the enemy tactic line').toBeGreaterThanOrEqual(enemyBottom);
+    // The pad still beats the frame ornament — cells never sit on the gold.
+    expect(TACTIC_PICKER.pad).toBeGreaterThan(PANEL_ORNAMENT_PX);
+  });
+
+  it('fits the canvas, and the widest tactic name fits a column at 12px', () => {
+    const L = tacticPickerLayout(ALL_TACTICS.length);
+    expect(L.panel.x).toBeGreaterThanOrEqual(0);
+    expect(L.panel.x + L.panel.w).toBeLessThanOrEqual(BASE_WIDTH);
+    // Derived from the live table, never a fiat string (the 5.6/5.7 discipline).
+    const longest = Math.max(...ALL_TACTICS.map((t) => TACTIC_DISPLAY_NAME[t].length));
+    expect(longest * 0.62 * 12).toBeLessThanOrEqual(L.cells[0]!.w);
+  });
+
+  it('lays cells out left→right then top→bottom, in two columns', () => {
+    const L = tacticPickerLayout(4);
+    expect(L.cells[0]!.y).toBe(L.cells[1]!.y); // first row shares a y
+    expect(L.cells[1]!.x).toBeGreaterThan(L.cells[0]!.x);
+    expect(L.cells[2]!.y).toBeGreaterThan(L.cells[0]!.y); // second row drops
+    expect(L.cells[2]!.x).toBe(L.cells[0]!.x); // and returns to the left column
+    // An odd count leaves a hole rather than overflowing the grid.
+    expect(tacticPickerLayout(3).cells).toHaveLength(3);
   });
 });

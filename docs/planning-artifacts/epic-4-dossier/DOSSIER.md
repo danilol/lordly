@@ -30,7 +30,7 @@ updated: 2026-07-17
 | D-2f | Golem semantics: targeted at either cell / blocks both rows / hit once by row effects / counts per occupied row; ACTS from its anchor | DECIDED | 2026-07-17 | One rule per direction, no special cases; PRD hit-once assumption confirmed |
 | D-3a | The FR39b ledger = the OB64 move-name plate + economy pips over the acting unit | DECIDED | 2026-07-17 | Danilo's animation-off reference capture; transient, zero standing chrome, unifies FR32 move names + FR16 spell names |
 | D-3b | 4.4→4.5 window: Attack Leader is GREYED OUT in the tactic picker until leader designation ships | DECIDED | 2026-07-17 | No invisible defaults (readiness minor #3) |
-| D-3c | Golem body ≥48px spanning both cells; one HP bar + code at anchor | DECIDED | 2026-07-17 | AD-14 one-unit identity on screen (readiness minor #4) |
+| D-3c | Golem body ≥48px spanning both cells; one HP bar + ~~code at anchor~~ | DECIDED | 2026-07-17 | AD-14 one-unit identity on screen (readiness minor #4). *[Code half superseded 2026-08-01, story 5.8 — the board keeps no codes; see §7's note. One-body/one-HP-bar stands.]* |
 
 ## §1 Roles & the 12-class roster (FR14/FR15) — DECIDED 2026-07-17
 
@@ -160,7 +160,7 @@ On a side's leader dying: tactic reverts to **plain Autonomous** (deterministic 
 
 ## §7 Name generation (FR37) — DECIDED 2026-07-17 (flavor veto open at sign-off)
 
-Curated per-sex name lists (~48 male, ~48 female — OB64-adjacent fantasy register), keyed to the roster's gender split (D-1f); the Golem draws from a small construct-designation list ("Bram", "Ogham", rune-flavored). Generator: ONE `names/X` stream draw per drafted unit (list index); if the name is already used by that army, advance deterministically to the next unused (no extra draws). Names are stored in `MatchSetup` (AD-9) — the table is engine data OUTSIDE the balance hash. Display surfaces: placement/reveal cards and the battle log-panel narration ("Kain (KNI) struck…"); the board keeps 3-letter codes (13px space); the ledger row carries the name (§6).
+Curated per-sex name lists (~48 male, ~48 female — OB64-adjacent fantasy register), keyed to the roster's gender split (D-1f); the Golem draws from a small construct-designation list ("Bram", "Ogham", rune-flavored). Generator: ONE `names/X` stream draw per drafted unit (list index); if the name is already used by that army, advance deterministically to the next unused (no extra draws). Names are stored in `MatchSetup` (AD-9) — the table is engine data OUTSIDE the balance hash. Display surfaces: placement/reveal cards and the battle log-panel narration ("Kain (KNI) struck…"); ~~the board keeps 3-letter codes (13px space)~~; the ledger row carries the name (§6). **SUPERSEDED 2026-07-29 (story 5.8, PO decision): the board keeps NO codes — Reveal and Battle identify units by SPRITE ALONE.** The 13px-space rationale above was the argument FOR a code rather than a name on a tile; story 4.0's DPR backing-store fix made the sprites crisp enough to carry the class read on their own, and Danilo called it at the story-4.2 device session ("we can identify the class by the sprite. So we can remove them"). The Reveal tile still carries the soldier NAME — this section's own display surface — and it inherits the FR39f stroke treatment so it survives the tile fill. `EXPERIENCE.md` carries the matching dated amendment.
 
 ## §6 UX spine extension (UX-DR9) — DECIDED 2026-07-17 → written into the spines
 
