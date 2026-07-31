@@ -345,8 +345,9 @@ HP bar on that board. Everything else Reveal renders already comes from state: t
 
 Battle tile `ISO_BOARD` 74×37 (`constants.ts:800-802`), diamond local y−18.5…+18.5. Sprite 42px at y−18 →
 **small spans y−39…y+3; monster (63px) spans y−49.5…y+13.5.** Stack: status glyphs and 🛡 y−34 · crown
-y−28 (x−16) · element dot y−28 (x+16) · **code y+4** · HP bar 44×8 at y+14. Span y−34…+18 = 52px on a 28px
-lane pitch (`BattleScene.ts:316-318`) — tiles necessarily overlap, and the code's ~14px is the single
+y−28 (x−16) · element dot y−28 (x+16) · **code y+4** · HP bar 44×8 at y+14. Span y−34…+18 = 52px on an 18.5px
+lane pitch (`ISO_BOARD.tileH / 2`; the source comment said 28 until the 5.3 review corrected it —
+that was the pre-5.3 tile height, never a pitch) — tiles necessarily overlap, and the code's ~14px is the single
 biggest available reduction. No numeric HP text on the tile.
 
 Reveal tile `ISO_BOARD_REVEAL` 70×35 (`constants.ts:818-820`), diamond y−17.5…+17.5. Sprite 38px at y−13 →

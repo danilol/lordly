@@ -33,7 +33,12 @@ so that my squads draw from the roster the game was always meant to have.
   - [x] `balanceVersion` 9 → 10 and re-pin the hash: `balance.ts:59` holds the version; `packages/engine/test/balance-hash.test.ts` pins hash-per-version and the test message spells out the two-step ("bump `version` AND pin the new hash").
 - [x] Task 3: `bolt` — a ranged single-target MAGIC attack with ZERO draws (AC: 1, 3)
   - [x] Recon already done, use it: `act()` (`resolve.ts` ~line 270+) dispatches on `unit.class` in case-groups — melee classes share one block using `selectMeleeTarget` + `physical` + `rollHit(...)`; `archer` uses `selectRangedTarget` + `physical` + `rollHit`; `mage`/`sorceress` are the Artillery block. `strike()` (`resolve.ts:549`) takes the damage function and an OPTIONAL roll — **passing no roll is exactly what makes an attack take zero ADR-0003 draws** and never crit/dodge/Guard (`resolve.ts:539-540` states this contract).
-  - [x] So `bolt` = `selectRangedTarget` + `magicDamage` (`resolve.ts:680`) + `strike(..., undefined /* no roll */)`. Do NOT call `rollHit` on it. Confirm against ADR 0003 that adding a zero-draw move leaves the frozen draw table untouched, and add a test asserting a bolt-only battle consumes the SAME number of battle-stream draws as a blast-only battle.
+  - [x] So `bolt` = `selectRangedTarget` + `magicDamage` (`resolve.ts:680`) + `strike(..., undefined /* no roll */)`. Do NOT call `rollHit` on it. Confirm against ADR 0003 that adding a zero-draw move leaves the frozen draw table untouched, and add a test asserting a bolt-only battle consumes the SAME number of battle-stream draws as a blast-only battle. *(Substitution recorded at the 2026-08-01 review: this prescription became
+        unconstructible — the story's own E5-D4 left NO class carrying a `blast` row, so there is no
+        blast-only battle to compare against. What shipped instead is a stronger discriminator: an
+        all-bolt seed-pair identity test proving a bolt battle consumes ZERO battle-stream draws
+        beyond the engagement tie flip. The Completion Notes always described the real test; only
+        this ticked line still promised the original.)*
   - [x] Route the newcomers into the right blocks: Fencer / Hawkman / Dragon Hunter are melee-only (join the melee case-group). **Vultan and Raven have a back-row `arrow`** — physical Skills riding the existing `arrow` kind (dossier **E5-D14**), so they need the archer-style ranged branch for the back row and melee otherwise; the cleanest shape is a row-move-driven branch rather than a new per-class case — decide, and write down why.
   - [x] Valkyrie now needs the same mixed treatment (melee front/mid, `bolt` back).
 - [x] Task 4: Names (AC: 1)
@@ -48,6 +53,10 @@ so that my squads draw from the roster the game was always meant to have.
   - [x] Display names + codes + `CLASS_TEXT` role/behaviour prose for the five (`ROSTER.md` has approved one-line descriptions — use them, don't invent new ones).
   - [x] The dossier's display-only move renames (E5-D10): Berserker "Cleave", Ninja "Rend", Golem "Smash", Phalanx back "Pierce", Mercenary "Cut Throat", Valkyrie melee "Pierce", plus the newcomers' verbs (Lunge / Skewer / Talon Strike / Wind Shot / Thunder Arrow). These need a per-(class, kind) display map — today `MOVE_PLATE_NAMES` is keyed by `MoveKind` ALONE (`constants.ts`), so it cannot express "Berserker's slash is called Cleave". Extend the seam; keep it union-keyed so a new kind is a compile error.
   - [x] `bolt` needs: a `MOVE_PLATE_NAMES`-side entry ("Magic Bolt" / "Lightning" for Valkyrie), a `TRACE_TRAVEL` entry (`projectile`), and a damage-type classification for the 5.6 card glyph rule (blast/bolt/spell = magic).
+        *(Scope correction at the 2026-08-01 review: the first two clauses shipped here; the DAMAGE-TYPE
+        classification did not — there was no seam for it in this story, as the Completion Notes state,
+        and it landed in 5.6 (`flow/unitCard.ts` maps `bolt: 'magic'`). The tick ran one clause ahead of
+        the work. Nothing was lost; the record now says which part waited.)*
   - [x] Sprites: newcomers ride **INTERIM shared frames** until 5.9 — follow the 4.3 convention exactly, including the attribution note format (`attribution.ts` `classSources`, e.g. `'dc-mon/…png (INTERIM: shares the Knight tile)'`). Do NOT touch `units.png`.
   - [x] Coupling-site sweep (the standing rule): re-check Placement tray, Result comps, History rows, Reveal and Battle against 360. **Growing the CLASS count does not change army size (still 5 slots)** — so most army rows are unaffected; say so explicitly after checking rather than assuming.
 - [x] Task 7: AI pool, goldens, sweep (AC: 3)
@@ -61,6 +70,44 @@ so that my squads draw from the roster the game was always meant to have.
   - [x] Full gate: `pnpm typecheck && pnpm lint && pnpm coverage` (engine ≥90% lines), `pnpm --filter web build` (runs the 5.2 frame-art guard too).
   - [x] NO `logVersion` change — confirm and state it (dossier §4: new classes are new `UnitClass` values in setup/balance data, new `MoveKind` values ride the hash; the 4.7/4.8 precedents).
   - [x] Device pass with Danilo (the new Draft grid is the thing to look at). ACCEPTED 2026-07-28 — "it works great on my device."
+
+
+### Review Findings (senior code review 2026-08-01 — Acceptance Auditor + Edge Case Hunter complete; Blind Hunter RE-RUN in progress, see the gap note)
+
+Reviewed LATE: stories 5.5–5.8 landed on top (5.5 re-laid the same Draft grid into tabs, re-tuned the
+same balance rows, bumped balanceVersion to 11), so every finding was re-verified against the CURRENT
+tree; superseded candidates were dropped — notably ALL Draft-grid geometry, which 5.5 rebuilt.
+
+- [x] [Review][Patch] LOW: `draftGridBottom(0)` returns `startY − gapY` — the `(rows − 1)` term goes negative on an empty tab, so the fit gate would pass VACUOUSLY rather than fail; unreachable today (both tabs are non-empty and the test iterates real tabs) but it is a guard whose whole job is to catch a grid that does not fit, and a future race wave or tab-filter change is exactly when an empty tab appears [config/constants.ts:329-331]
+- [x] [Review][Patch] LOW: Task 3's prescribed test was SUBSTITUTED without the substitution being recorded — the ticked subtask says "a test asserting a bolt-only battle consumes the SAME number of battle-stream draws as a blast-only battle", but what shipped is a different (stronger) all-bolt seed-pair identity discriminator. The substitution was forced and correct (the story's own E5-D4 left no class carrying a `blast` row, making a blast-only battle unconstructible), and the Completion Notes describe what shipped accurately — but the repo's standing rule is that a ticked task whose prescription changed says so [story record, Task 3]
+- [x] [Review][Patch] LOW: a ticked Task 6 subtask overstates by one clause — "`bolt` needs … a damage-type classification for the 5.6 card glyph rule" is marked done while the same record admits the classification "has no seam yet — it is 5.6's scoped work, nothing recorded"; 5.6 did deliver it (`flow/unitCard.ts` maps `bolt: 'magic'`), so nothing was lost, but the tick was ahead of the work [story record, Task 6]
+- [x] [Review][Patch] LOW: File List path mangled by markdown — `packages/engine/test/`__snapshots__`/golden.test.ts.snap` ate the `__snapshots__` directory name to bold rendering; escape it [story record]
+
+**GAP — one layer incomplete.** The Blind Hunter's first run terminated on an API spend limit after
+clearing only the UI/grid portion (which it had determined was superseded by 5.5's tabbed re-lay); the
+ENGINE portion — this story's five new classes, their stat rows and per-row move tables, the
+dragonslayer relation, and golden integrity — never received its adversarial pass. A scoped re-run is
+in flight; this section will be updated with its findings. **Do not read the current finding count as
+a clean engine review.** What the Auditor and Edge Hunter DID cover of the engine is listed below.
+
+**Independently re-verified (Acceptance Auditor + Edge Case Hunter):** `LOG_VERSION` stayed 4 at the
+review commit and today, with the record's rationale (bolt rides `UnitAttacked.kind`'s existing string
+field — the 4.7 `bash` precedent) matching the diff. balanceVersion 10 + hash `7d0a6a4e` re-pinned, and
+the current tree's 11 supersedes it correctly with 10 intact in the contiguous history. **The zero-draw
+claim is TRUE and its test asserts exactly what the record says** — `bolt` is MAGIC ranged
+single-target (`magicDamage` = INT − floor(MEN/2), min-1), routed through `strike()` with no roll: no
+crit, no dodge, no Guard interaction, exempt from the physical leader-fall penalty; the discriminator
+pins two seeds sharing an E1 flip to deep-equal event streams, with a fixture guard that every attack
+is `kind: 'bolt'` — it passes. Goldens: exactly #4/#10 touched, and structurally forced (a fixture scan
+shows mage appears only in #4 and phalanx only in #10 across all 11), with hand-derived event-audit
+numbers present. Sweep claims recorded identically in three places. Every other ticked subtask has
+matching diff evidence (unions +5/+3/+1 with exhaustive-Record extensions, dossier-shaped balance rows,
+the inert dragonslayer→dragon relation with its pin, the E5-D12a back-row-Guard invariant, names-margin
+arithmetic, the 4.12 coverage guard auto-deriving from `ALL_CLASSES`). Interim-sprite attribution
+follows the 4.3 convention exactly, `units.png` untouched. Edge walk found every diff-born branch
+guarded in the current tree (compile-exhaustive move dispatch now covering 5.5's `breath`, dead-unit
+filtering in `selectBlastRow`, empty-board bolt targeting, terminating chip ellipsis, tab-rebuild array
+reset, balanceVersion-marked history); 58/58 in the roster/names/draft-grid suites.
 
 ## Dev Notes
 
@@ -182,7 +229,7 @@ E5-D4 (casters lose splash) collapsed the caster comps and let the melee/sniper 
 - packages/engine/test/wipeout.test.ts — bolt mode-invariance (blastDamage arithmetic contrast kept)
 - packages/engine/test/leader.test.ts — combat-kill leader → A:4; reversion fixture re-curated (structural coincidence, seed 12)
 - packages/engine/test/resolve.test.ts, sim.test.ts, ai.test.ts — anchors re-derived/re-pinned; CI proxy baseSeed 21
-- packages/engine/test/**snapshots**/golden.test.ts.snap — goldens #4/#10 only (others byte-identical, checksum-verified)
+- packages/engine/test/`__snapshots__`/golden.test.ts.snap — goldens #4/#10 only (others byte-identical, checksum-verified)
 - packages/engine/test/golden.test.ts — #4 rewritten (audited), #10 re-record note
 - apps/web/src/config/constants.ts — codes/display names +5; CLASS_MOVE_NAMES; moveDisplayName(kind, element, cls); DRAFT_GRID/DRAFT_DETAIL + helpers
 - apps/web/src/config/sprites.ts — interim frames +5
@@ -196,3 +243,19 @@ E5-D4 (casters lose splash) collapsed the caster comps and let the melee/sniper 
 - docs/rules.md — the 17-class re-cut
 - docs/implementation-artifacts/deferred-work.md — 4.3 chip deferral resolved
 - docs/implementation-artifacts/sprint-status.yaml — 5-4 status
+- 2026-08-01: SENIOR CODE REVIEW (run LATE — 5.5–5.8 had landed; findings re-verified against the
+  current tree, and all Draft-grid candidates dropped as superseded by 5.5's tabbed re-lay). 4 patches
+  applied, all LOW: the `draftGridBottom(0)` negative-row term (a fit gate that would pass vacuously on
+  an empty tab — unreachable today, but that function exists to fail when a grid does not fit) now
+  returns the grid top and is pinned; the Task 3 test SUBSTITUTION is recorded (the prescribed
+  bolt-vs-blast draw comparison became unconstructible once E5-D4 left no class carrying a `blast` row —
+  the stronger all-bolt seed-pair discriminator shipped instead, and only the ticked line still promised
+  the original); the Task 6 tick that ran one clause ahead (the damage-type classification had no seam
+  here and landed in 5.6); and a markdown-mangled `__snapshots__` path. **STATUS STAYS `review`**: the
+  Blind Hunter's first run died on an API spend limit having cleared only the superseded UI portion, so
+  the ENGINE — this story's five new classes, their move tables, the dragonslayer relation, golden
+  integrity — has had no adversarial pass. A scoped re-run is in flight. What the Auditor and Edge Hunter
+  did verify is substantial and clean: logVersion 4 held, balanceVersion 10 + hash correctly superseded
+  by 5.5's 11, the ZERO-DRAW bolt claim true with a discriminator that asserts exactly what the record
+  says, goldens #4/#10 structurally forced to be the only two touched, sweep claims consistent across
+  three records, and every other ticked subtask evidenced. Gate: 752 tests green.

@@ -184,7 +184,13 @@
 
 ## Logged from: story 5.1 close (2026-07-27) — PO wish: rotating battle backgrounds → route to story 5.3
 
-- **Danilo wants 2+ battle backgrounds in rotation, "randomly picked before the match starts."** Assets on hand: `castle-battleground.png` (in `ux-designs/midjourney/selected/`) + a green-plains candidate (`midjourney/u5297536118_fantasy_battlefield_landscape_green_plains_*.png`, not yet promoted to `selected/` — the pick is Danilo's, per the folder convention). Implementation recommendation for 5.3's create-story: derive the background index **from the match seed in the shell** (e.g. seed mod backgrounds.length), NOT `Math.random` — deterministic, so a replay shows the same background as the original battle, and the engine stays untouched (background is presentation, never `MatchSetup` data). Keep the background list as a shell-side manifest so new selected art is a one-line addition.
+- ~~**Danilo wants 2+ battle backgrounds in rotation.**~~ **RESOLVED (story 5.3) — closed late at the
+  2026-08-01 review.** 5.3 shipped exactly what this entry recommended: two biomes, the index derived
+  from the match seed in the shell (`backgroundKeyForSeed`, `seed % length`), the engine untouched, and
+  the list kept as a shell-side manifest. The story delivered it and never annotated the wish — the same
+  lapse its sibling entry at `:47` had. NOTE for whoever adds the third biome: `seed % length` means
+  growing the manifest re-skins stored replays; the constant's comment and a test pin now say so.
+  Original entry: **Danilo wants 2+ battle backgrounds in rotation, "randomly picked before the match starts."** Assets on hand: `castle-battleground.png` (in `ux-designs/midjourney/selected/`) + a green-plains candidate (`midjourney/u5297536118_fantasy_battlefield_landscape_green_plains_*.png`, not yet promoted to `selected/` — the pick is Danilo's, per the folder convention). Implementation recommendation for 5.3's create-story: derive the background index **from the match seed in the shell** (e.g. seed mod backgrounds.length), NOT `Math.random` — deterministic, so a replay shows the same background as the original battle, and the engine stays untouched (background is presentation, never `MatchSetup` data). Keep the background list as a shell-side manifest so new selected art is a one-line addition.
 
 ## Logged from: story 4.11 dev session (2026-07-20) — PO wish: the OB64 unit-data card
 
@@ -306,7 +312,10 @@ any more. Original entry kept below for the record.
   artwork for all ten monster classes, and so is the crown's current position. Story 5.8 therefore removed
   the code and changed nothing else on that tile. A real fix has to be size-aware (per-class offsets the
   way `revealNameOffsetY` now is, or chrome that sits outside the sprite bounds for both spans) and wants
-  its own device round on a monster comp. The 28px lane pitch is the budget: the stack still spans ~52px.
+  its own device round on a monster comp. The lane pitch is the budget: `ISO_BOARD.tileH / 2` = **18.5px**
+  at today's 74×37 tiles, against a chrome stack still spanning ~52px. (The "28px" this entry carried
+  until the 2026-08-01 review was inherited from a stale BattleScene comment — it was the pre-5.3 tile
+  height, not a pitch. Plan against 18.5.)
 - **The Reveal tactic picker is at its ceiling: FOUR tactics.** Story 5.8 brought the bar and option rows
   up to FR30's 44px floor as a 2×2 grid, and pinned the clamp against the Fight button that the scene's
   own comment had only warned about. The arithmetic leaves no room for a fifth: 5 tactics need a third row
@@ -345,6 +354,7 @@ any more. Original entry kept below for the record.
   grazing the element badge (x10–22, both at y≈−28..−34) — reachable one status earlier than before
   (3 statuses already grazed pre-change, so this is mostly pre-existing). Needs guard + poison + sleep +
   confusion on one unit to trigger, and the graze is a 10px glyph on a 12px dot. Same tile-chrome-budget
-  family as the monster-aware Battle chrome re-lay logged above — fold them into one pass: the 28px lane
-  pitch is the real constraint, and any re-lay should budget the status row's maximum width (guard + all
+  family as the monster-aware Battle chrome re-lay logged above — fold them into one pass: the lane pitch
+  (`ISO_BOARD.tileH / 2` = 18.5px today, NOT the 28 this entry first claimed — see the correction above)
+  is the real constraint, and any re-lay should budget the status row's maximum width (guard + all
   spell kinds) against the badge and the sprite edge, for both sprite spans.

@@ -39,6 +39,18 @@ describe('BATTLE_BACKGROUNDS manifest (story 5.3)', () => {
   it('has no duplicate texture keys — a repeat would silently skew the rotation', () => {
     expect(new Set(BATTLE_BACKGROUNDS).size).toBe(BATTLE_BACKGROUNDS.length);
   });
+
+  it('is FROZEN: growing or reordering it re-skins every stored replay, so it cannot happen by accident', () => {
+    // The pick is `seed % length`. Appending a third biome changes the terrain
+    // for two-thirds of existing seeds, so a history entry would replay on
+    // different ground than the match it recorded — the exact guarantee the
+    // seed rule provides (5.3 review, 2026-08-01: the manifest's own doc used
+    // to advertise "adding art is ONE line" with no mention of this).
+    // Changing this list is allowed — it just has to be a DECISION: read the
+    // constant's comment, pick re-skin-old-replays or persist-the-key, then
+    // update this pin.
+    expect([...BATTLE_BACKGROUNDS]).toEqual(['terrain-castle', 'terrain-plains']);
+  });
 });
 
 describe('backgroundKeyForSeed (story 5.3) — deterministic, total, and replay-stable', () => {
@@ -48,9 +60,20 @@ describe('backgroundKeyForSeed (story 5.3) — deterministic, total, and replay-
     }
   });
 
-  it('is pure: the same seed always yields the same terrain (this is what makes a replay honest)', () => {
-    for (const seed of [0, 3, 99, 123456789]) {
-      expect(backgroundKeyForSeed(seed)).toBe(backgroundKeyForSeed(seed));
+  it('is a STABLE function of the seed alone — interleaving other seeds cannot change an answer', () => {
+    // Re-cut at the 5.3 review (2026-08-01): the old version asserted
+    // `f(seed) === f(seed)` twice in one process, which ANY function passes,
+    // including one reading mutable state — while claiming to be "what makes a
+    // replay honest". The real property is that nothing accumulates between
+    // calls, so pin the answers, churn the function with unrelated seeds, and
+    // demand the originals still hold.
+    const probes = [0, 3, 99, 123456789];
+    const first = probes.map(backgroundKeyForSeed);
+    for (let i = 0; i < 50; i += 1) backgroundKeyForSeed(i * 7919);
+    expect(probes.map(backgroundKeyForSeed)).toEqual(first);
+    // …and the mapping is the documented arithmetic, not an accident.
+    for (const seed of probes) {
+      expect(backgroundKeyForSeed(seed)).toBe(BATTLE_BACKGROUNDS[(seed >>> 0) % BATTLE_BACKGROUNDS.length]);
     }
   });
 

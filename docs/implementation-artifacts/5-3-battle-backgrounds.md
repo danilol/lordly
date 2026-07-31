@@ -4,7 +4,7 @@ baseline_commit: b14a3904255e8a3ba4f3b7723d01f42ec568f958
 
 # Story 5.3: Battle backgrounds
 
-Status: review
+Status: done
 
 ## Story
 
@@ -46,6 +46,26 @@ so that every clash feels like a place in a medieval world.
   - [x] NFR1 capture (AC 3) — **PO-DEFERRED 2026-07-28** (Danilo chose option 2 after accepting the look; no blocking reason stated — momentum). Routed to story 5.10's closing capture; logged in deferred-work.md and flagged in performance-verdict.md so the doc never implies coverage it lacks. AC 3 is therefore **satisfied-with-recorded-deviation** (the 5.0 precedent), NOT satisfied. Original task text: `?perf=1` on the DEPLOYED build, three-mages wipeout at 1× and ×2, compared against the 5.0 baseline AND the 5.2 addendum. **The specific thing to watch:** 5.0 flagged and 5.2 confirmed a ~5-frame scene-ENTRY burst (bottoming 8–11 fps) when Battle loads its assets — two more full-screen textures land exactly there. If the entry burst grows materially, say so and treat it as a finding, not a footnote.
   - [x] Danilo's on-device acceptance of the look = the art gate (the standing art-story split: he owns picks + device pass). _(ACCEPTED 2026-07-28 after the enlarge-the-fight round: "it looks great. Let's move forward." — terrain, the seed rotation, the dim/scrim treatment and the enlarged boards all pass.)_
 
+
+### Review Findings (senior code review 2026-08-01 — 3 adversarial layers: Blind Hunter + Edge Case Hunter + Acceptance Auditor)
+
+Reviewed LATE: stories 5.4–5.8 landed on top of this diff, so every finding below was re-verified
+against the CURRENT tree; anything later work already fixed was dropped.
+
+- [x] [Review][Patch] MEDIUM: the replay-terrain guarantee holds only while `BATTLE_BACKGROUNDS`' LENGTH AND ORDER are frozen — the pick is `seed % n`, so appending the third biome (which the manifest's own doc advertises as "ONE line here plus the Boot load") re-shuffles two-thirds of stored history onto different ground, silently breaking AC1's core promise; pin the manifest contents and state the constraint where the "one line" invitation lives [config/constants.ts:511-516 + :548-554, DESIGN.md:186, battle-background.test.ts]
+- [x] [Review][Patch] MEDIUM: a LOOMED monster on the enemy back row draws OVER the "ENEMY ARMY" header — sprites carry depth = tile y (~90-108) while the header is depth 0 under a −11 scrim, and a 57px Emberdrake at back/left spans up to y≈66.5 against the header's y64-76. NOT hypothetical: the live AI pool's `breath-battery` comp places exactly that (`ai.ts:360-370`). Give the Reveal header a depth above the sprite band [scenes/RevealScene.ts:99]
+- [x] [Review][Patch] LOW: the seed-rule JSDoc is ORPHANED — the rationale block sits above a second docblock that attaches to `TERRAIN_DIM_ALPHA`, so `backgroundKeyForSeed` itself carries no doc (AC1's "written down" is met only via DESIGN.md); re-attach [config/constants.ts:519-532 vs :548]
+- [x] [Review][Patch] LOW: the load-bearing lane-pitch comment is WRONG and this diff made it wrong — it says "half-tile (28px) apart vertically" while justifying the unit-chrome height budget, but the same hunk moved tiles 56×28 → 74×37, making the real pitch `tileH/2` = 18.5px. Worse, story 5.8 propagated "the 28px lane pitch is the budget" into TWO deferred-work entries (`:309`, `:348`) and its own record, so the future Battle-chrome re-lay would be planned against a fabricated number; correct all four sites and derive from `ISO_BOARD.tileH` [BattleScene.ts:331-333 + deferred-work.md + 5-8 record]
+- [x] [Review][Patch] LOW: `backgroundKeyForSeed(seed) === backgroundKeyForSeed(seed)` in one process proves nothing (any function passes, including one reading mutable state) while its headline claims "this is what makes a replay honest" — the real property is covered by the replay test below it; either delete or re-cut against a hidden-state seam [battle-background.test.ts:524-528]
+- [x] [Review][Patch] LOW: File List omits 5 of 17 changed files — `config/board.ts`, `flow/battleView.ts`, `test/battle-view.test.ts`, `deferred-work.md`, `performance-verdict.md` (the last two are described as touched elsewhere in the same record); this is the exact omission class 5.2's review made the story pledge to avoid [story record]
+- [x] [Review][Patch] LOW: the gate's test count is stale — the record says "603 tests (+12)" in three places (Completion Notes, Change Log, sprint-status) but the truth at the review commit is 608 (+17); the enlarge-the-fight round added 5 `battle-view` guards after the headline was written (auditor re-ran both baseline and review commits in worktrees to confirm) [story record + sprint-status]
+- [x] [Review][Patch] LOW: Project Structure Notes still claim `config/board.ts` was NOT modified while the diff has hunks in it (the layout parameter); the note's escape clause was about the depth fix, which this wasn't [story record]
+- [x] [Review][Patch] LOW: this story DELIVERED the 5.1 rotating-backgrounds PO wish exactly as that entry recommended (seed-derived, shell-side manifest) but never closed it — still open in the current tree; the epic-4 landscape entry had the same problem and was only closed by 5.8's sweep ("Never annotated at the time") [deferred-work.md:185-188]
+- [x] [Review][Defer] The stacked `'|'` orientation origins were RE-TUNED by this diff (`stackedPlayer` oy 236→320 and the Reveal twin) but the new "hand-tuned numbers rot silently" guards only ever exercise `'\'` — no scene passes any other orientation, so the retuned numbers are both unreachable and unpinned. Verified by hand to satisfy the same constraints today. Belongs with the deferred player-facing orientation toggle: whoever ships that must pin `'|'` and `'/'` with the same geometry guards [test/battle-view.test.ts:184 + deferred-work.md] — deferred, tied to an unshipped feature
+- **Dismissed as noise (2):** the enlarge-the-fight layout refactor being "beyond the three ACs" (PO-driven on device, recorded with rationale and 5 new guard tests — the epic's device-pass iteration is how this repo works); the log panel covering the enlarged board while open (already recorded in the Dev Agent Record as a PO-accepted trade-off and logged for a future Log-panel re-lay).
+
+**Independently re-verified by the Acceptance Auditor:** engine ZERO hunks; no version movement; AC1's substance (two biomes, pure `>>> 0`-total picker, both scenes wired, terrain −20 below boards −10, static so reduced-motion holds unconditionally); the cited tests exist, assert what's claimed, and pass TODAY post-5.4–5.8 (12 background + 5 geometry, 68/68); assets on disk match the recorded byte sizes and BOTH jpgs are in `dist/sw.js`'s precache (rebuilt at the review commit); attribution added to the existing MJ entry with its glob passing; and the AC3 perf deferral is recorded in all three places the record claims (deferred-work, performance-verdict, 5.10's sprint entry).
+
 ## Dev Notes
 
 ### Scope fences
@@ -83,7 +103,11 @@ Web tests live in `apps/web/test/*.test.ts` (vitest; pure seams only — there i
 
 - MODIFIED: `apps/web/src/config/constants.ts` (manifest + keys + pure picker), `config/ui.ts` (the terrain helper), `scenes/BootScene.ts`, `scenes/BattleScene.ts`, `scenes/RevealScene.ts`, `src/assets/attribution.ts`, `test/` (new picker test), `docs/planning-artifacts/ux-designs/ux-lordly-2026-07-13/DESIGN.md`, `docs/performance-verdict.md` (AC-3 addendum).
 - NEW: two processed background jpgs under `apps/web/src/assets/`.
-- NOT modified: `packages/engine/**`, `config/board.ts` (unless the depth fix genuinely belongs there — prefer putting terrain below rather than moving the boards), the menu scenes, `sprites.ts`/`units.png`, `docs/rules.md`.
+- NOT modified: `packages/engine/**`, the menu scenes, `sprites.ts`/`units.png`, `docs/rules.md`.
+- **`config/board.ts` WAS modified** — corrected at the 2026-08-01 review. This note originally listed it
+  as not-modified with an escape clause for the depth fix; the depth fix indeed went elsewhere (terrain
+  sits below the boards, as advised), but the later enlarge-the-fight round gave `drawIsoBoard` a layout
+  parameter so Battle and Reveal could carry different frames. Legitimate work, unlisted note.
 
 ### References
 
@@ -120,7 +144,7 @@ Web tests live in `apps/web/test/*.test.ts` (vitest; pure seams only — there i
   - **Art (AC 1/3).** Both 816×1456 PNGs (1.7/1.9 MB) → 717×1280 jpg: `terrain-castle.jpg` 176 KB, `terrain-plains.jpg` 220 KB. **Precache delta ≈ 404 KB** (measured in `dist/`, not estimated — the 5.2 review's lesson). Loaded in Boot by ITERATING the manifest through a `Record<BattleBackgroundKey, string>`, so a manifest key with no load is a compile error rather than a missing texture at runtime.
   - **Render (AC 1).** `addBattleTerrain(scene, seed)` in `ui.ts` at **depth −20** — deliberately below `drawIsoBoard`'s −10 (the trap the story flagged). Cover-scaled with the HomeScene idiom. **Static by design**, so the reduced-motion rule is satisfied unconditionally with no branch and no per-frame cost.
   - **Legibility (AC 2) — a real finding, not a formality.** I looked at both processed images before judging: the castle is a dark evening courtyard, but the plains is a BRIGHT sky-and-meadow painting, and every Battle overlay (bone HUD labels, side-coloured combat numbers, status glyphs) is tuned for a dark ground. Shipping as-is would have washed out the HUD on one of the two biomes. Added a full-bleed `TERRAIN_DIM_ALPHA` (0.45) over the art plus an extra `addHudScrim` band behind each scene's top labels (`BATTLE_HUD_BAND_H` 72 / `REVEAL_HUD_BAND_H` 84, depth −11 so it can never cover a tile). One set of text treatments now stays valid on every biome, present and future. Both alphas are device-tunable constants with range-guard tests.
-  - **Gate:** 603 tests (43 files, +12), typecheck + lint clean, `pnpm --filter web build` green (the 5.2 frame-art guard runs inside it), both terrain jpgs verified in the `dist/sw.js` precache. Engine untouched — zero `packages/engine` diffs, no version bumps.
+  - **Gate:** 608 tests (43 files, +17 — corrected at the 2026-08-01 review; the 603/+12 figure was true after Tasks 1–4 and was never updated when the enlarge-the-fight round added 5 `battle-view` guards. Verified by re-running both the baseline and review commits: 591 → 608), typecheck + lint clean, `pnpm --filter web build` green (the 5.2 frame-art guard runs inside it), both terrain jpgs verified in the `dist/sw.js` precache. Engine untouched — zero `packages/engine` diffs, no version bumps.
   - **NOT done (Danilo's, and the story stays in-progress until then):** the `?perf=1` capture on the deployed build (AC 3 — watch the known Battle scene-entry burst; two more full-screen textures now load there) and the on-device look acceptance (AC 2's gate, including whether 0.45 dim / 0.5 scrim feel right).
 
 ### File List
@@ -134,9 +158,37 @@ Web tests live in `apps/web/test/*.test.ts` (vitest; pure seams only — there i
 - `apps/web/src/assets/attribution.ts` (modified — both biomes added to the Epic-5 Midjourney entry)
 - `apps/web/test/battle-background.test.ts` (new — 12 tests: rule, replay stability, legibility ranges)
 - `docs/planning-artifacts/ux-designs/ux-lordly-2026-07-13/DESIGN.md` (modified — terrain paragraph in the story-5.2 amendment block)
+- `apps/web/src/config/board.ts` (modified — `drawIsoBoard` takes the layout parameter; see the corrected Project Structure note)
+- `apps/web/src/flow/battleView.ts` (modified — `IsoBoardLayout` parameterisation so the two scenes can carry different frames)
+- `apps/web/test/battle-view.test.ts` (modified — 5 new per-scene board-frame guards from the enlarge-the-fight round)
+- `docs/implementation-artifacts/deferred-work.md` (modified — the AC3 perf-capture deferral entry)
+- `docs/performance-verdict.md` (modified — the "story 5.3, NO CAPTURE RUN" note)
 - `docs/implementation-artifacts/5-3-battle-backgrounds.md`, `sprint-status.yaml` (modified)
+
+*(The five entries above were added at the 2026-08-01 review — the original list held 12 of the 17
+changed files. Two of them were even described as touched in the record's own prose. This is the exact
+omission class carried lesson #4 was written to prevent.)*
 
 ## Change Log
 
 - 2026-07-28: Story created (recon: the depth −10 collision, the two seed sources, the known scene-entry perf burst).
-- 2026-07-28: Dev — seed-derived terrain shipped in Battle + Reveal with both biomes, a manifest-driven Boot load, and a legibility treatment added after inspecting the actual art (the two biomes bracket the brightness range). 603 tests, full gate green, engine untouched. Awaiting Danilo's device pass + the AC-3 perf capture.
+- 2026-07-28: Dev — seed-derived terrain shipped in Battle + Reveal with both biomes, a manifest-driven Boot load, and a legibility treatment added after inspecting the actual art (the two biomes bracket the brightness range). 608 tests (see the corrected gate line), full gate green, engine untouched. Awaiting Danilo's device pass + the AC-3 perf capture.
+- 2026-08-01: SENIOR CODE REVIEW (3 layers, run LATE — 5.4–5.8 had landed, so every finding was
+  re-verified against the current tree). 9 patches applied, 1 deferred, 2 dismissed. Two real defects:
+  (1) the replay-terrain guarantee held only while `BATTLE_BACKGROUNDS`' length AND order stayed frozen —
+  `seed % n` means a third biome re-skins two-thirds of stored history — while the manifest's own comment
+  advertised "adding art is ONE line"; the invitation now carries the warning and a test pins the tuple,
+  so growing it is a decision rather than an accident. (2) A LOOMED monster on the enemy back row painted
+  over Reveal's "ENEMY ARMY" header (sprites depth-sort by tile y ~90-108; the header was depth 0), and
+  the live AI pool's `breath-battery` places an Emberdrake exactly there — fixed with a HUD_LABEL_DEPTH
+  token above the sprite band. Also corrected a load-bearing lie this story introduced: the unit-chrome
+  budget comment claimed a "28px lane pitch" when 5.3's own hunk moved tiles 56×28 → 74×37, making it
+  `tileH/2` = 18.5 — and story 5.8 had already propagated the fabricated 28 into two deferred-work
+  entries as the budget for a future re-lay; all four sites now derive from `ISO_BOARD.tileH`. The
+  `f(seed) === f(seed)` purity test (which any function passes) became a real hidden-state check. Record
+  fixes: File List +5 of 17, the gate count 603 → 608 (the auditor re-ran baseline and review commits to
+  establish the truth), the contradicted `board.ts` NOT-modified note, and the 5.1 rotation wish this
+  story fully delivered but never closed. Deferred: the retuned stacked-orientation origins stay unpinned
+  until the orientation toggle ships. Auditor independently verified engine zero-hunks, AC1's substance,
+  the precache end-to-end (rebuilt at the review commit), and the AC3 perf deferral in all three places.
+  Gate: 752 tests green. Status -> done.

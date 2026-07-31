@@ -328,9 +328,13 @@ export class BattleScene extends Scene {
   private buildUnit(unit: UnitSnapshot, isLeader: boolean) {
     const { x, y } = unitTileCenter(unit.side, unit.placement);
 
-    // Chrome hugs the sprite tightly — units on the same lane diagonal sit a
-    // half-tile (28px) apart vertically, so every extra pixel of stack height
-    // is overlap; depth sorting keeps the front unit's chrome readable.
+    // Chrome hugs the sprite tightly — units on the same lane diagonal sit
+    // `ISO_BOARD.tileH / 2` apart vertically (18.5px at today's 74×37 tiles), so
+    // every extra pixel of stack height is overlap; depth sorting keeps the
+    // front unit's chrome readable. (Corrected at the 5.3 review, 2026-08-01:
+    // this said "28px", which was the PRE-5.3 tile HEIGHT — never the pitch, and
+    // doubly wrong once 5.3 moved tiles 56×28 → 74×37. The figure is
+    // load-bearing: it is the budget every chrome-layout argument spends.)
     const sprite = addUnitSprite(this, 0, -18, unit.class, 42); // story 5.3: scaled with the enlarged battle tiles (56→74)
     const badge = addElementBadge(this, 16, -28, unit.element);
     const barBack = this.add.rectangle(-BAR_W / 2, 14, BAR_W, BAR_H, 0xffffff, 0.1).setOrigin(0, 0.5);

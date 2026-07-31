@@ -27,6 +27,12 @@ describe('Draft grid geometry (story 5.5 tabs) — every tab fits, with the deta
     // roster, a taller canvas), the tab split is no longer load-bearing and
     // this assertion is the place that says so.
     expect(draftGridBottom(ALL_CLASSES.length), 'the whole roster in one grid').toBeGreaterThan(DRAFT_DETAIL.y);
+    // An EMPTY tab returns the grid's top, not `startY - gapY` (5.4 review):
+    // the fit gate above must pass because nothing is there, not because a
+    // negative row term happened to produce a small number. Guards the shape
+    // of the function, since no tab is empty today.
+    expect(draftGridBottom(0)).toBe(DRAFT_GRID.startY);
+    expect(draftGridBottom(0)).toBeLessThanOrEqual(draftGridBottom(1));
   });
 
   it('every tile of the largest tab stays inside the 360px canvas', () => {

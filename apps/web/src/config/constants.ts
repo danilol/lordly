@@ -325,8 +325,18 @@ export function draftGridTile(i: number): { x: number; y: number } {
   };
 }
 
-/** Bottom y of a `count`-tile grid — the number that must clear DRAFT_DETAIL.y. */
+/**
+ * Bottom y of a `count`-tile grid — the number that must clear DRAFT_DETAIL.y.
+ *
+ * The empty case returns the grid's TOP (5.4 review, 2026-08-01): with no tiles
+ * the `rows - 1` term went negative and handed back `startY - gapY`, so a fit
+ * gate over an empty tab would have passed by arithmetic accident rather than
+ * because anything fit. Unreachable today — both tabs are non-empty — but this
+ * function's entire job is to fail when a grid does not fit, and an empty tab
+ * is exactly what a future race wave or tab-filter change produces.
+ */
 export function draftGridBottom(count: number): number {
+  if (count <= 0) return DRAFT_GRID.startY;
   const rows = Math.ceil(count / DRAFT_GRID.cols);
   return DRAFT_GRID.startY + rows * DRAFT_GRID.tileH + (rows - 1) * DRAFT_GRID.gapY;
 }
@@ -508,28 +518,24 @@ export const GROUND_TILE_SCALE = 0.35;
 // ---- Battle terrain (story 5.3) ----
 
 /**
- * The biomes a battle can be fought on, in rotation order. Adding art is ONE
- * line here plus the Boot load — nothing else in the app knows how many there
- * are. Shell-side on purpose: a background is PRESENTATION and must never
- * enter `MatchSetup`, the `BattleLog`, or any engine type (AD-1/AD-2).
+ * The biomes a battle can be fought on, in rotation order. Shell-side on
+ * purpose: a background is PRESENTATION and must never enter `MatchSetup`, the
+ * `BattleLog`, or any engine type (AD-1/AD-2).
+ *
+ * ⚠️ ADDING OR REORDERING A BIOME RE-SHUFFLES EVERY STORED REPLAY (5.8 review
+ * of story 5.3). The pick is `seed % length`, so growing this tuple from 2 to 3
+ * changes the terrain for two-thirds of existing seeds — a history entry then
+ * replays on different ground than the match it recorded, which is exactly the
+ * guarantee the seed rule exists to provide. The code change really is one line
+ * here plus the Boot load; the DECISION is not. Either accept that old replays
+ * re-skin (cosmetic, and arguably fine — nothing about the battle changes), or
+ * persist the chosen key in `HistoryEntry` and fall back to this function only
+ * for entries that predate it. `battle-background.test.ts` pins the current
+ * contents so this comment cannot be skipped silently.
  */
 export const BATTLE_BACKGROUNDS = ['terrain-castle', 'terrain-plains'] as const;
 export type BattleBackgroundKey = (typeof BATTLE_BACKGROUNDS)[number];
 
-/**
- * Which terrain a match is fought on — derived from the MATCH SEED, never from
- * `Math.random` (story 5.3, agreed 2026-07-27).
- *
- * The seed is the one value a replay restores verbatim (`MatchFlow.startReplay`
- * sets `state.seed = setup.seed`, and `commit()` writes `seed: state.seed`, so
- * the two are provably equal on both paths — pinned in battle-background.test.ts).
- * Deriving the terrain from it means a replayed battle is fought on the same
- * ground as the original, for free, with zero engine involvement. A random pick
- * would silently swap the scenery on replay.
- *
- * `>>> 0` keeps the index non-negative for the full uint32 seed space (AD-10)
- * even if a caller ever hands in a signed-looking value.
- */
 /**
  * How far the terrain art is dimmed toward the app ground (story 5.3, FR39f).
  * The two shipped biomes are a dark castle courtyard and a BRIGHT plains
@@ -545,6 +551,30 @@ export const BATTLE_HUD_BAND_H = 72;
 /** Reveal's header band: title (y26), hint (y52) and the enemy label (y70). */
 export const REVEAL_HUD_BAND_H = 84;
 
+/**
+ * Depth for HUD text that shares vertical space with the board (story 5.3
+ * review). Units are depth-sorted by screen y — `container.setDepth(y)` — so a
+ * back-row sprite carries a depth around 90-110 and a LOOMED monster's art
+ * reaches into the header band above it. Any HUD label drawn over that band
+ * needs a depth beyond the largest tile y (BASE_HEIGHT is the hard ceiling), or
+ * the board paints over the chrome.
+ */
+export const HUD_LABEL_DEPTH = 400;
+
+/**
+ * Which terrain a match is fought on — derived from the MATCH SEED, never from
+ * `Math.random` (story 5.3, agreed 2026-07-27).
+ *
+ * The seed is the one value a replay restores verbatim (`MatchFlow.startReplay`
+ * sets `state.seed = setup.seed`, and `commit()` writes `seed: state.seed`, so
+ * the two are provably equal on both paths — pinned in battle-background.test.ts).
+ * Deriving the terrain from it means a replayed battle is fought on the same
+ * ground as the original, for free, with zero engine involvement. A random pick
+ * would silently swap the scenery on replay.
+ *
+ * `>>> 0` keeps the index non-negative for the full uint32 seed space (AD-10)
+ * even if a caller ever hands in a signed-looking value.
+ */
 export function backgroundKeyForSeed(seed: number): BattleBackgroundKey {
   // The `?? [0]` is unreachable — `%` over a non-empty tuple is always in
   // range — but it keeps the function TOTAL for `noUncheckedIndexedAccess`

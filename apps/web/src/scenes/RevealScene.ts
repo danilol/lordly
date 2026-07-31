@@ -7,6 +7,7 @@ import {
   BUTTON_HEIGHT,
   BUTTON_WIDTH,
   ENEMY_ARMY_LABEL,
+  HUD_LABEL_DEPTH,
   PALETTE,
   REVEAL_FIGHT_LABEL,
   REVEAL_HINT,
@@ -96,7 +97,15 @@ export class RevealScene extends Scene {
       wordWrap: { width: BASE_WIDTH - 24 },
     }).setOrigin(0.5);
     // Above the enemy board (tiles start ~y86 in the iso layout — story 2.2).
-    crispText(this, BASE_WIDTH / 2, 70, ENEMY_ARMY_LABEL, { fontFamily: 'Arial Black', fontSize: '12px', color: PALETTE.enemyText }).setOrigin(0.5);
+    // DEPTH (5.3 review, 2026-08-01): units are depth-sorted by screen y, so an
+    // enemy back-row sprite sits at depth ~90-108 — above this label's default
+    // 0. A LOOMED monster there reaches y≈66.5 and painted straight over the
+    // header; the live AI pool's `breath-battery` puts an Emberdrake at
+    // back/left, so it was reachable in normal play. HUD chrome outranks the
+    // board: depth above any tile-y a sprite can carry.
+    crispText(this, BASE_WIDTH / 2, 70, ENEMY_ARMY_LABEL, { fontFamily: 'Arial Black', fontSize: '12px', color: PALETTE.enemyText })
+      .setOrigin(0.5)
+      .setDepth(HUD_LABEL_DEPTH);
 
     // The shared iso boards (story 2.2, ADR-0001) — the same component the
     // Battle scene stages, so Reveal → Battle reads as one continuous place.
