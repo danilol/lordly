@@ -248,4 +248,60 @@ What the closing capture therefore does and does not cover:
 
 This capture also discharges **story 5.3's owed measurement** (`deferred-work.md`, owner: 5.10). Per that item it must compare the **Battle scene-ENTRY burst** against the 5.0 baseline (~5 frames bottoming ~8fps) and the 5.2 addendum (~10.9fps) — not only the in-battle floor — because 5.3 added two full-screen terrain textures and enlarged the board at exactly that moment.
 
-**Capture record: pending Danilo's device session.** Procedure is the standing one above (three-mages wipeout Replay at 1× and ×2, **per-scenario resets** — both the 5.0 and 5.2 sessions missed the reset and produced prefix-duplicated traces that had to be sliced by hand; third time should not repeat it).
+### The benchmark was RE-POINTED for this capture (2026-08-01)
+
+The three-mages benchmark defined at the top of this document **was invalid and had to be replaced before the capture could mean anything.** Two independent reasons:
+
+1. **It could not load.** Its seeded `HistoryEntry` is a 3-unit army at `balanceVersion` 2 — from the era when `slotBudget` was 3. At `slotBudget` 5 it fails `validateMatchSetup` outright (`wrong-slot-total`), and at `balanceVersion` 11 it would display as non-replayable anyway.
+2. **Its premise was dead.** It was chosen because "every Mage blast hits every enemy in the target row — 3 simultaneous targets per blast." Story 5.4 (E5-D4) retired the row blast from every class; Wizards now fire the single-target `bolt`. The old worst case had quietly become one of the *lightest* comps — the same decay pattern the 5.4 engine review found in three test guards.
+
+**The new benchmark, chosen by measurement** (mirror comps swept for per-beat churn proxies, wipeout, seed 424242):
+
+| Mirror comp | Attacks | Target-instances | Events | Engagements |
+|---|---|---|---|---|
+| **Emberdrake + 3 Knights (front row)** | **68** | **82** | **110** | **10** (full cap) |
+| Emberdrake + Cragmaw + Phalanx | 40 | 80 | 104 | 10 |
+| OLD three-mages (5-slot form) | 59 | 59 | 85 | 4 |
+| 5 Archers | 42 | 42 | 63 | 3 |
+
+`breath` (the dragons' row-AoE, E5-D7) is what the mage blast used to be: 3 targets in one beat. The comp wins on every proxy and runs the full engagement cap. Seeded via `lordly.v1.history` at `balanceVersion` 11 and driven through Replay, so it is byte-identical run to run (A wins 23%–0%).
+
+**Comparability note:** the battle body is therefore NOT directly comparable to the 5.0/5.2 figures — it is a heavier board. The **scene-entry burst** remains comparable (same texture atlas, same load moment).
+
+### Capture record — story 5.10 (2026-08-01, Danilo's device, deployed production build `e5b115a`)
+
+**Procedure deviation, recorded: the per-scenario reset was missed for the THIRD consecutive session** (5.0, 5.2, now 5.10). The ×2 trace contained the 1× trace as an exact 2,888-sample prefix — verified by full element-wise comparison, then sliced. ×2 is the 1,405-sample suffix. No data lost or double-counted.
+
+**This session has NO adaptive-refresh ambiguity, unlike 5.0's.** The device stayed at 60Hz throughout: zero samples above 100fps at 1× (three at ×2). Samples quantise cleanly to vsync multiples — 59.9/60.2 (1.00 interval), 40.0 (1.50), 30.0 (2.00), 24.0 (2.50) — and the **50–58fps band is completely empty**, which is the signature of vsync quantisation rather than a noisy continuum. So 5.0's caveat ("a 40fps sample here can be one heavy frame among 8.3ms ticks") **does not apply**: a 40fps sample in this capture is a genuine 25ms frame.
+
+| Scenario | Samples | Median | Min | <30fps | <55fps |
+|---|---|---|---|---|---|
+| Battle 1× | 2,888 | 59.88 | 2.61 | **280 (9.7%)** | 1,360 (47.1%) |
+| Battle ×2 | 1,405 | **40.16** | 4.61 | **194 (13.8%)** | 795 (56.6%) |
+
+**Scene-entry burst:** 5 frames, bottoming at **2.61fps** (383ms). Against 5.0 (~5 frames, ~8fps) and 5.2 (~10.9fps) this is the same *event* but materially deeper. Single session, so treat the magnitude as indicative rather than settled — but it is the one figure here that IS cross-comparable, and it moved the wrong way.
+
+**VERDICT: NFR1's 30fps in-battle floor FAILS on this comp.** Excluding the first 10 frames under the scene-transition exemption, **275 of 2,878 frames (9.56%) fall below 30fps** at 1×, minimum 9.99fps. For scale, the 5.0 baseline recorded 4 in-battle breaches in 4,205 frames (0.095%). The breaches are **not** clustered at a seam — 259 separate sub-30 events, spread throughout.
+
+**The load tracks living units and concurrent row-AoE popups**, which is the diagnostic part:
+
+| 1× trace | Median | <30fps | <55fps |
+|---|---|---|---|
+| First half | **40.00** | 241 | 973 |
+| Second half | **59.88** | 39 | 387 |
+
+The battle opens with all 8 units alive and 3-target breaths landing every beat, and holds a **sustained 40fps median** — then recovers to a clean 59.88 as units die and the board empties. Per-decile the picture is monotonic (deciles 1–5 median 40.00, deciles 6–10 median 59.88). That points precisely at the hotspot this document named and never fixed: **per-beat trace/popup/wash object churn**, with pooling/reuse as the identified first lever. A 3-target breath instantiates three popups in one beat where a bolt instantiates one.
+
+**What this does and does not say.** It is *not* a measured regression against 5.0 — the benchmark changed in the same session, so no like-for-like delta exists. It is the **first honest measurement of the current worst case**, and the old benchmark was structurally incapable of finding it. The 5.0 record's standing instruction ("if sub-30 singles grow beyond isolated, the pooling fix is the first lever") is now triggered.
+
+**DECISION (Danilo, 2026-08-01): recorded deviation — DEFERRED to a dedicated performance story, to run at the very end.** Not tuned in story 5.10.
+
+His felt-experience on device, which is the deciding input under the 5.0 precedent: **"it felt smooth still. i didn't see performance downgrade."** So the measured 40fps first half was not perceptible to the player watching it — the same gap between instrument and experience that the 5.0 capture recorded ("it felt smooth" over 4 in-battle breaches) and that story 3.4 spent a whole review learning to respect in the other direction.
+
+Recorded plainly for whoever picks the performance story up:
+
+- **The failure is real and measured**, not an instrument artifact. This capture is the cleanest evidence in this document — 60Hz throughout, vsync-quantised, no adaptive-refresh ambiguity. 275 of 2,878 in-battle frames below 30fps at 1×.
+- **It is also not perceptible to the PO on the target device**, which is why it is a deviation rather than a blocker. Both facts stand; neither cancels the other.
+- **The fix is scoped and named:** pooling/reuse for per-beat traces, popups and washes. The first-half/second-half split (40.00 → 59.88 median as the board empties) is the evidence that object churn per living unit is the mechanism.
+- **The risk carried into link-play:** Epic 6 adds network send/receive and state sync on top of this per-beat budget, on the same frames. The headroom this capture says is missing is headroom PvP will want. That is an argument about *when* the performance story runs, and it is logged in `deferred-work.md` as a pre-link-play input rather than settled here.
+- **Not comparable to 5.0/5.2 for the battle body** (benchmark re-pointed in the same session); the entry burst is comparable and moved from ~8/~10.9fps to 2.61fps in one session — worth a second reading during the performance story before treating that depth as real.

@@ -358,3 +358,49 @@ any more. Original entry kept below for the record.
   (`ISO_BOARD.tileH / 2` = 18.5px today, NOT the 28 this entry first claimed — see the correction above)
   is the real constraint, and any re-lay should budget the status row's maximum width (guard + all
   spell kinds) against the badge and the sprite edge, for both sprite spans.
+
+## Deferred from: story 5-10 device capture (2026-08-01) — PO decision — **THE PERFORMANCE STORY**
+
+- **NFR1's 30fps in-battle floor FAILS on the current worst-case comp, and the fix is deferred to a dedicated
+  performance story "at the very end" (Danilo's call, 2026-08-01).** This is the largest single piece of
+  deferred work in the project and the only known NFR-level failure carried into link-play, so it gets its
+  own entry rather than a bullet.
+
+  **The measurement** (full record + tables in `docs/performance-verdict.md`, story-5.10 section): on the
+  re-pointed benchmark — a mirrored **Emberdrake + 3 Knights** wipeout board, which measurement shows is the
+  heaviest per-beat comp the roster can build (68 attacks / 82 target-instances / 110 events / the full
+  10-engagement cap) — Battle 1× holds a **sustained 40fps median for its first half** and breaches the 30fps
+  floor **275 times in 2,878 in-battle frames (9.56%)**. The 5.0 baseline recorded 4 breaches in 4,205 frames.
+  ×2 is worse (median 40.16, 13.8% sub-30).
+
+  **Why this evidence is unusually solid** (it should not be re-litigated, only re-measured after a fix): the
+  device stayed at 60Hz for the whole session — zero samples above 100fps — and the values quantise exactly to
+  vsync multiples (60.2 / 40.0 / 30.0 / 24.0) with the **50–58fps band completely empty**. The
+  adaptive-refresh caveat that made 5.0's sub-60 samples ambiguous therefore does **not** apply here: a 40fps
+  sample is a genuine 25ms frame.
+
+  **The diagnosis, and the named fix:** median goes **40.00 → 59.88 between the first and second half** of the
+  battle, monotonically across deciles, as units die and the board empties. Load tracks living units and
+  *concurrent* row-AoE popups — a 3-target `breath` instantiates three popups in one beat where a `bolt`
+  instantiates one. The lever is the one `performance-verdict.md` has named since story 3.4 and never pulled:
+  **pooling / reuse for per-beat traces, popups and washes.**
+
+  **Why it is a deviation and not a blocker:** Danilo watched the same battles and reported **"it felt smooth
+  still. i didn't see performance downgrade."** Under the 5.0 precedent his felt-experience is the deciding
+  input. Both facts stand together — the failure is measured AND imperceptible on the target device.
+
+  **Sequencing input for whoever schedules this** (recorded, not decided): "at the very end" was the PO's
+  framing. The counter-consideration is that **Epic 6 (link-play) adds network send/receive and state sync onto
+  the same per-beat frame budget** this capture says has no headroom. If the performance story lands after
+  link-play, PvP is built on a board already missing its floor; if it lands before, Epic 6 starts from a clean
+  measurement. Worth one explicit decision at the Epic 5 retrospective or the link-play design pass rather
+  than defaulting.
+
+  **Two loose threads to pick up with it:**
+  - The **scene-entry burst** read **2.61fps** (383ms) this session versus ~8fps at 5.0 and ~10.9fps at 5.2.
+    Entry cost IS cross-comparable (same atlas, same load moment), so that is a real move in the wrong
+    direction — but it is one session, so take a second reading before treating the depth as settled.
+  - The **per-scenario reset was missed for the third consecutive capture** (5.0, 5.2, 5.10), each time
+    producing a ×2 trace containing the 1× trace as an exact prefix that had to be sliced by hand. Three for
+    three is a procedure problem, not user error: consider having `?perf=1` reset `__perfSamples` on Battle
+    scene entry, or expose a one-tap "start new scenario" marker, so the capture cannot silently concatenate.
