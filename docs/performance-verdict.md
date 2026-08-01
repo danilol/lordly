@@ -272,7 +272,15 @@ The three-mages benchmark defined at the top of this document **was invalid and 
 
 **Procedure deviation, recorded: the per-scenario reset was missed for the THIRD consecutive session** (5.0, 5.2, now 5.10). The ×2 trace contained the 1× trace as an exact 2,888-sample prefix — verified by full element-wise comparison, then sliced. ×2 is the 1,405-sample suffix. No data lost or double-counted.
 
-**This session has NO adaptive-refresh ambiguity, unlike 5.0's.** The device stayed at 60Hz throughout: zero samples above 100fps at 1× (three at ×2). Samples quantise cleanly to vsync multiples — 59.9/60.2 (1.00 interval), 40.0 (1.50), 30.0 (2.00), 24.0 (2.50) — and the **50–58fps band is completely empty**, which is the signature of vsync quantisation rather than a noisy continuum. So 5.0's caveat ("a 40fps sample here can be one heavy frame among 8.3ms ticks") **does not apply**: a 40fps sample in this capture is a genuine 25ms frame.
+**CORRECTED 2026-08-01, same day, before this record was acted on.** The first version of this section claimed "NO adaptive-refresh ambiguity — the device stayed at 60Hz throughout", inferred from the absence of samples above 100fps. **That inference was wrong**, and the correction changes what every number below means.
+
+The panel runs at **120Hz**. Proof: every distinct sample value is an integer multiple of an **8.333 ms** tick, and the fit is near-exact — mean residual against a 120Hz grid **0.0067**, against a 60Hz grid **0.16**. The ladder: 2 ticks = 16.7 ms (59.9/60.2 fps), 3 = 25.0 ms (40.0), 4 = 33.3 ms (30.0), 5 = 41.7 ms (24.0), 6 = 50 ms (20.0), 7 = 58.1 ms (17.2).
+
+Why the original inference failed, recorded so it is not repeated: **a game targeting 60fps never completes a frame inside a single 8.33 ms tick, so the absence of >100fps samples says nothing about the panel.** The empty 50–58fps band is consistent with *both* grids and never discriminated between them either. The one discriminating value was 25.0 ms all along — exactly 3× of 8.333, but 1.5× of 16.667, and a 1.5× multiple is not a physically meaningful vsync outcome.
+
+Worse, **this document already recorded the answer at story 3.4** — see the 2026-07-16 section above: "the Pixel 9 Pro XL has a 120Hz-class display". The 5.0 capture then re-observed it ("the device ran stretches at 120Hz — adaptive refresh"). The wrong claim contradicted an established fact two sections up its own page. The procedural lesson is the story-3.4 lesson again, one level out: **verify the meter, and check what this document already knows about it before asserting something new.** So 5.0's adaptive-refresh caveat **does apply**, and this document should stop treating raw fps as the primary unit.
+
+**Read frame cost in TICKS.** A "40fps" sample is one frame that took 3 refresh intervals instead of 2 — a real overrun against the 60fps target, but not the choppy experience a 40fps reading on a 60Hz panel would imply. Only **≥5 ticks (>41 ms)** is unambiguously worse than the 30fps floor; the 4-tick bucket sits exactly *on* the 33.3 ms line, so counting it as "sub-30" overstates the breach. Re-stated in ticks, this capture reads: 1× median **2 ticks** (i.e. it *does* hold the 60fps target at the median), with **166 of 2,888 frames (5.75%) at ≥5 ticks**; ×2 median 3 ticks, 9.61% at ≥5 ticks.
 
 | Scenario | Samples | Median | Min | <30fps | <55fps |
 |---|---|---|---|---|---|
@@ -305,3 +313,28 @@ Recorded plainly for whoever picks the performance story up:
 - **The fix is scoped and named:** pooling/reuse for per-beat traces, popups and washes. The first-half/second-half split (40.00 → 59.88 median as the board empties) is the evidence that object churn per living unit is the mechanism.
 - **The risk carried into link-play:** Epic 6 adds network send/receive and state sync on top of this per-beat budget, on the same frames. The headroom this capture says is missing is headroom PvP will want. That is an argument about *when* the performance story runs, and it is logged in `deferred-work.md` as a pre-link-play input rather than settled here.
 - **Not comparable to 5.0/5.2 for the battle body** (benchmark re-pointed in the same session); the entry burst is comparable and moved from ~8/~10.9fps to 2.61fps in one session — worth a second reading during the performance story before treating that depth as real.
+
+### Real-play capture — story 5.10 (2026-08-01, Danilo's device, deployed `9a007f7`): THIS SUPERSEDES THE FIXTURE AS THE PRIMARY EVIDENCE
+
+Danilo played many games and captured `__perfSamples` across four sessions (three cumulative snapshots of one session — 1x ⊂ 2x ⊂ 3x, verified as exact prefixes — plus a separate session). Unlike every prior capture in this document, **this is real play**: Draft, Placement and Battle across whole matches with human-drafted boards, not a replayed fixture.
+
+Frame cost in 120Hz ticks. **2 ticks = the 60fps target; 4 ticks = 33.3 ms = exactly the 30fps line; ≥5 ticks = unambiguously past it.**
+
+| Segment | Samples | Median | 2t (60) | 3t (40) | 4t (30) | **≥5t** | Worst frame |
+|---|---|---|---|---|---|---|---|
+| Real: game 1 | 2,180 | **3t** | 762 | 760 | 364 | **292 (13.4%)** | 10t / 83 ms |
+| Real: game 2 | 3,132 | **3t** | 1,344 | 1,031 | 469 | **287 (9.2%)** | 13t / 108 ms |
+| Real: game 3 | 1,760 | **3t** | 718 | 625 | 238 | **178 (10.1%)** | 20t / 167 ms |
+| Real: session B | 1,667 | **3t** | 640 | 564 | 278 | **183 (11.0%)** | 13t / 108 ms |
+| Dragon fixture 1× | 2,888 | **2t** | 1,528 | 790 | 404 | **166 (5.75%)** | 46t / 383 ms (scene entry) |
+| Dragon fixture ×2 | 1,405 | 3t | 607 | 434 | 226 | 135 (9.6%) | 26t / 217 ms |
+
+**The fixture-based diagnosis in the section above is REVERSED by this data, and the earlier conclusion should not be relied on.** Real play is *worse* than the synthetic "worst case": median **3 ticks vs 2**, and **9.2–13.4% of frames past the 30fps line versus 5.75%**. The dragon fixture — chosen by measurement as the heaviest per-beat board the roster can build — actually holds the 60fps target at its median. Consistent across four independent sessions, so this is not noise.
+
+**What that means for the diagnosis.** The fixture ran Battle *only*, via Replay. Real play adds Draft, Placement, Reveal, Result and the transitions between them, on human-drafted comps. Since the Battle-only trace is the *better* performer, the dominant cost is **not** the per-beat trace/popup/wash churn the fixture section blamed — that mechanism is real (the fixture's own 40.00 → 59.88 first-half/second-half split still stands) but it is not the main term. **The next measurement must attribute cost per SCENE before any optimisation is chosen.** `perf.ts` is already wired into Battle, Draft and Placement; it just does not label samples by scene, so this capture cannot separate them. Adding a scene tag to each sample is the cheapest next step and should precede the pooling work.
+
+**Verdict, stated in the honest unit: NFR1's 30fps floor is breached in ordinary play — 9.2%–13.4% of frames exceed 33.3 ms, with isolated frames reaching 83–167 ms.** But the median frame holds a steady 3-tick (25 ms) cadence, and a *consistent* cadence is what reads as smooth, which is the most likely reconciliation with the PO's felt experience below.
+
+**This is long-standing, not an Epic 5 regression.** No prior capture measured real play, and every one used raw fps on a 120Hz panel without the tick correction — so there is no evidence this got worse in Epic 5, and some reason to think it has been true since the app first ran on this device.
+
+**PO decision unchanged (Danilo, 2026-08-01): recorded deviation, deferred to the dedicated performance story.** Felt experience across many real games: **"it felt smooth still. i didn't see performance downgrade."** That judgement now rests on the *stronger* dataset — many real matches rather than one replayed fixture — which strengthens the deferral rather than weakening it.

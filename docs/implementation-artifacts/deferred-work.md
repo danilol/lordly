@@ -404,3 +404,58 @@ any more. Original entry kept below for the record.
     producing a ×2 trace containing the 1× trace as an exact prefix that had to be sliced by hand. Three for
     three is a procedure problem, not user error: consider having `?perf=1` reset `__perfSamples` on Battle
     scene entry, or expose a one-tap "start new scenario" marker, so the capture cannot silently concatenate.
+
+  **UPDATED 2026-08-01 (same day) — the diagnosis above is SUPERSEDED; read this before scoping the story.**
+  Danilo captured `__perfSamples` across many real games (four sessions). Two things changed:
+
+  1. **The metric was misread. The panel is 120Hz, not 60Hz.** Every sample value is an integer multiple of
+     8.333 ms (mean residual 0.0067 against a 120Hz grid, 0.16 against 60Hz). The original "device stayed at
+     60Hz" claim was inferred from the absence of >100fps samples — an invalid inference, because a
+     60fps-targeting game never finishes a frame inside one 8.33 ms tick. **Read frame cost in TICKS:** 2t =
+     16.7 ms (the 60fps target), 3t = 25 ms, 4t = 33.3 ms (exactly the 30fps line), ≥5t = past it. The "sub-30"
+     counts in the entry above overstate the breach, because the 4-tick bucket sits *on* the line, not below it.
+  2. **Real play is WORSE than the synthetic worst case, which reverses the diagnosis.** Real play (Draft +
+     Placement + Battle, human-drafted boards): median **3 ticks**, **9.2–13.4%** of frames at ≥5 ticks, worst
+     frames 83–167 ms, consistent across four sessions. The dragon fixture (Battle only, via Replay): median
+     **2 ticks** — it holds the 60fps target — and only **5.75%** at ≥5 ticks. So **per-beat trace/popup/wash
+     churn is NOT the main term**; the heaviest *battle* board is the better performer. The mechanism is real
+     (the fixture's 40.00 → 59.88 first/second-half split stands) but it is not where the budget goes.
+
+  **Revised first step — do this BEFORE any pooling work:** `perf.ts` samples Battle, Draft and Placement into
+  one unlabelled array, so no existing capture can attribute cost per scene. **Add a scene tag to each sample**
+  (cheap, `?perf=1`-gated like the rest) and re-capture real play. Optimise what that points at. Pooling stays a
+  candidate, not the plan.
+
+  **Still true and unchanged:** the floor IS breached in ordinary play (9–13% of frames over 33.3 ms); it is
+  imperceptible to the PO across many real games ("it felt smooth still"); the deferral stands and is now
+  supported by the *stronger* dataset. Also newly supported: **this is long-standing, not an Epic 5
+  regression** — no prior capture ever measured real play, and every earlier one read raw fps on a 120Hz panel
+  without the tick correction.
+
+  **INSTRUMENT AUDIT 2026-08-01 — why captures "lose the measurement" (Danilo's observation, mechanism corrected).**
+  His hypothesis was that a link drops the `?perf=1` parameter during navigation. **That is not possible: the app
+  contains no navigation at all** — `grep` over `apps/web/src/` finds zero `location.href` assignments, zero
+  anchors, zero `window.open`; every screen change is a Phaser scene transition, which never reloads the page, so
+  `window.location.search` (and therefore the arming check) survives the entire session. The PWA is not the culprit
+  either: `registerType: 'autoUpdate'` with `skipWaiting`/`clientsClaim` makes the new SW take control immediately,
+  but the injected registration is a bare `navigator.serviceWorker.register('./sw.js')` with **no `location.reload()`**,
+  so a deploy does not force-reload an open tab. Two real mechanisms, both confirmed:
+
+  1. **Unwired scenes leave INVISIBLE GAPS — the important one.** `attachPerfSampler` is called in exactly three
+     scenes: `DraftScene`, `PlacementScene`, `BattleScene` (the three AC1 names). **Home, Reveal, Result, History,
+     Help and Credits contribute zero samples.** So a "real play" trace is not continuous gameplay — it is a
+     concatenation of Draft/Placement/Battle windows with unmarked seams, and nothing in the array says where one
+     ends. This is why the real-play numbers above cannot be attributed per scene, and it is a second, independent
+     reason the scene-tag fix must come first: without it, a real-play median silently blends interactive-scene
+     cost with battle cost.
+  2. **Any page reload silently resets `__perfSamples` to empty.** The buffer is `window`-scoped, so a reload
+     restarts the capture at zero while `?perf=1` still arms correctly — sampling resumes and looks healthy. On
+     Android, Chrome discards and transparently reloads a backgrounded tab under memory pressure, which is the
+     likely explanation for the fourth session file starting from sample 0 while phone and laptop were being
+     switched between during remote debugging.
+
+  **So the tooling fix is now three things, all `?perf=1`-gated and all cheap:** (a) tag every sample with its
+  scene key; (b) stamp a session/epoch id so a silent reload is visible in the data instead of looking like a
+  fresh clean capture; (c) reset-on-scenario-start (or an explicit marker), which also fixes the three-for-three
+  missed-reset problem logged above. Do these BEFORE optimising anything — every capture in this document so far
+  is less trustworthy than its numbers imply, and that is precisely the story-3.4 failure mode repeating.
