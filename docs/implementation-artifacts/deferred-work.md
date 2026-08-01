@@ -459,3 +459,108 @@ any more. Original entry kept below for the record.
   fresh clean capture; (c) reset-on-scenario-start (or an explicit marker), which also fixes the three-for-three
   missed-reset problem logged above. Do these BEFORE optimising anything — every capture in this document so far
   is less trustworthy than its numbers imply, and that is precisely the story-3.4 failure mode repeating.
+
+## Logged from: story 5.10 felt-balance pass (2026-08-01) — **PO FIGHT-SYSTEM FINDINGS: 4 confirmed deviations, OB64 fidelity**
+
+Danilo played many real games and reported four problems. **All four are confirmed in the code** — none is
+perception. His OB64 targeting research (pasted in full in the session, reproduced in summary below) is treated as
+authoritative per the standing rule that OB64 is the design north star and his sourced rule research wins.
+
+**This is NOT a story-5.10 change.** 5.10 is a certification story and Epic 5's fence forbids new mechanics. It is
+also **not** a simple wish list: items 2–4 are engine-behaviour changes that would invalidate 5.10's balance
+certificate (see the sequencing problem at the end). Route via `correct-course`.
+
+### 1. Archer action counts are un-OB64 (data only) — CONFIRMED
+
+`balance.ts` gives the Archer `actions: { front: 1, mid: 2, back: 2 }`. Per Danilo: the OB64 basic Archer acts
+**twice only from the BACK row** → should be `{ front: 1, mid: 1, back: 2 }`. Pure balance data, but it removes a
+whole action from every mid-row archer, which is a real nerf to `longbows`/`talons`/`farshot`/`gale` — the
+archer-heavy half of the pool. Needs `balanceVersion` bump + hash re-pin + golden re-records + a both-mode sweep.
+
+### 2. Ranged targeting ignores OB64's SECTOR rule — CONFIRMED, and it explains what he felt
+
+**His observation:** "we target someone on the extreme opposite side of the board when we have someone on the same
+side (closer)."
+
+**The code:** `legalTargets('ranged', …)` returns **every living enemy, any row, any column** — `if (mode ===
+'ranged') return living;` (`targeting.ts`). FR9 was written as "global range" and that is exactly what shipped.
+Melee, by contrast, already implements the sector rule correctly via `reachableEnemyCols` (facing column ± 1 → a
+corner unit reaches two enemy columns, the centre unit reaches all three), which **matches OB64**.
+
+**OB64 per his research:** Left column → may target {Left, Center}; Right → {Right, Center}; Center → all three.
+The restriction is structural, not tactical. So an own-left archer can currently shoot the enemy's far column, and
+under OB64 it must not.
+
+### 3. Ranged row priority is REVERSED vs OB64 — CONFIRMED, the bigger of the two
+
+**His observation:** "we target someone in the backline when there's someone in the front."
+
+**The code:** `rangedCmp` sorts `b.rowIndex - a.rowIndex` — **REARMOST row first**, deliberately ("arrows arc over
+the front to snipe the back line"). `meleeCmp` sorts `a.rowIndex - b.rowIndex` (front first).
+
+**OB64 per his research:** the archer runs a *depth search from closest to furthest* — scan Front (same column,
+then centre), then Middle, then Back; take the first occupied cell. Front-first, not back-first.
+
+**Both fixes together** would make Autonomous ranged = sector-filtered + front-first, i.e. the same ordering melee
+already uses, while **keeping the legal list row-unrestricted so target tactics still arc over the front** — which
+his research explicitly preserves ("Leader … bypassing front-row shields"). That is the coherent shape: melee keeps
+its FR8 nearest-row *blockade*; ranged keeps a full-depth legal list but prefers the front under Autonomous.
+
+**Blast radius:** `selectRangedTarget` is shared by the Archer, the Cleric's staff fallback, **Witch casts**, and
+(since 5.4) every `bolt`. Changing it moves the whole meta, not just archers. FR9's wording needs amending too.
+
+### 4. Sleep lasts the WHOLE ENGAGEMENT, not one turn — CONFIRMED, and it is the most likely real OP
+
+**His observation:** "I would like to confirm if the witch effects are lasting only 1 turn, because it feels very
+OP, sometimes I feel my frontline is sleeping forever."
+
+**The code:** it is not one turn. `sleep` is added to `unit.statuses` and **never removed anywhere inside an
+engagement** (`grep` for `statuses.delete` across the engine returns nothing). Every turn the unit gets
+`ActionSkipped { reason: 'asleep' }` and loses the action. The only removal is the between-engagement seam
+(`resolve.ts` — sheds every status except poison). **In SINGLE mode there is no next engagement, so a sleep landed
+in pass 1 disables that unit for the entire battle.** With Witch AGI 26 (she acts early) and 2 actions from the back
+row, one witch can remove two enemy units from a single-mode battle before they ever act. "Sleeping forever" is
+literally what the code does.
+
+Note the sweep does *not* flag this — `hex-coven` (3 witches) converges at 47.6% single — because AI-vs-AI both
+sides get to do it. It is a **human-experience** problem, which is exactly the class of thing the harness has never
+been able to see (PRD Open Item 1).
+
+**A design decision is needed, not just a tuning value:** a fixed duration in turns/passes, a wake-on-damage rule,
+a resist roll (would need an ADR-0003 draw slot — the frozen table forbids a silent insert), or accept-and-nerf
+elsewhere. OB64 source evidence should settle it before any code, per the epic-4 team agreement.
+
+### 5. Guard with nobody behind it is a suicide loop — CONFIRMED as a design gap
+
+**His observation:** "the guard command from Knight and Phalanx is useless when you have no one behind to guard …
+in case it's the only unit left, it's super weak to guard no one until you die."
+
+**The code:** `applyGuard` shields a cell when the target holds a live charge **or** a living ally directly in front
+of it does — so a guarding unit does protect *itself*, but the Phalanx's front/mid rows are `guard-full` and
+`raiseGuard` spends the action with **no attack and no `UnitAttacked`**. A lone Phalanx therefore raises one
+one-shot charge per turn forever, negates one hit per raise, never deals damage, and loses on the HP-fraction
+judgement or grinds to the cap. He is right that this is strictly dominated behaviour.
+
+**Proposed shape (needs his ratification):** a Guard row falls through to its class's attack (the `attackMoveOf`
+back-row fallback already exists for exactly this "no attack shape" case) when there is **no living ally behind it
+in the same column** — or, more narrowly, when it is the last living unit on its side. The narrow version is safer
+for balance; the broad version is what he described. Either way it changes `act()`'s guard branch and needs a sweep
+(Phalanx/bulwark/wardens all shift).
+
+### ⚠️ THE SEQUENCING PROBLEM — this is the decision that actually matters
+
+**Story 5.10's balance certificate goes stale the moment items 1–3 or 5 land.** Its whole purpose is to certify the
+game that link-play will be built on: converged both-mode sweep, floors, the 27-class coverage guard. Change ranged
+targeting and every one of those numbers is re-rolled — `selectRangedTarget` is on the hot path of archers,
+clerics, witches and all casters.
+
+Two coherent orders, and it is a PO call:
+
+- **(a) Close 5.10 now, re-certify later.** Epic 5 ends on schedule, but the "ready for link-play" certificate
+  describes a targeting model we already know we intend to replace, and a second full certification pass is owed.
+- **(b) Hold 5.10 open, do the fidelity work first, certify once.** Coherent — you certify what you ship — but it
+  widens Epic 5 past its own no-new-mechanics fence and delays the epic close.
+
+Recommendation: **(b) via `correct-course`**, because item 4 (sleep) is a live human-facing balance problem and
+items 2–3 are fidelity to the project's stated north star, not polish. Certifying the current model and then
+immediately replacing it spends the certification twice.
