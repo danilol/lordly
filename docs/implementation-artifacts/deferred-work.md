@@ -564,3 +564,31 @@ Two coherent orders, and it is a PO call:
 Recommendation: **(b) via `correct-course`**, because item 4 (sleep) is a live human-facing balance problem and
 items 2–3 are fidelity to the project's stated north star, not polish. Certifying the current model and then
 immediately replacing it spends the certification twice.
+
+## Logged from: story 5.10 / correct-course research pass (2026-08-01) — PO WISH: the "super critical" knockback
+
+- **OB64 pushes a critically-hit unit one row BACK in the formation** (unless the cell behind is occupied) — a real
+  sourced mechanic we do not model. Found during the independent OB64 research pass, not in Danilo's supplied
+  research. We have had crits since story 4.6 (`critMultiplier` ×3/2, ADR 0003 A4) but no positional consequence.
+
+  **PO decision (Danilo, 2026-08-01): wanted, but NOT as a plain crit, and NOT a priority.** His framing: *"critical
+  pushing unit behind is a mechanic I want in the future (not every critical pushes it, we could handle it as super
+  critical) but let's handle it in the future, not priority."* So the design shape is a **second, rarer tier above
+  the existing crit** — a "super critical" that both multiplies damage AND displaces the target — rather than
+  attaching knockback to every crit.
+
+  **Why this is not cheap, recorded so it is scoped honestly when it comes up:**
+  - **It needs an ADR 0003 amendment.** A super-crit tier means either a new draw or a re-read of the existing A4
+    crit draw against a second threshold. The frozen table forbids a silent insert; the cleanest form is probably
+    partitioning the existing A4 0–99 range (e.g. crit below X, super-crit below Y < X) so **no new draw is added
+    and the table's count stays intact** — that is the option to explore first.
+  - **It mutates placement mid-battle**, which nothing currently does. `snapshot.placement` is treated as fixed for
+    the whole battle: action counts, move kinds, Guard's in-front geometry, melee reach, `selectBlastRow` and the
+    breath/blast row rules all read from it. A unit changing rows mid-fight touches every one of those.
+  - **It needs a new event** (a displacement) and therefore a **`logVersion` bump** — the first since 4.2. That is an
+    era-scale change, which is exactly why it is not a bolt-on.
+  - Interacts with the E5-D19/E5-D20 targeting work: knockback changes who is in the front row, which changes who
+    the new front-first ranged order picks.
+
+  **Route:** an Epic 6+ mechanic, sequenced with (or after) link-play — not Epic 5. Needs its own design sitting with
+  OB64 evidence on the trigger rate and the blocked-cell rule before any code.
