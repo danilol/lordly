@@ -120,8 +120,20 @@ describe('STRATEGY_POOL curation (FR25)', () => {
     expect(sniper).toBe(true);
   });
 
-  it('includes an anti-front-stack archetype: ≥2 mages (row blasts punish stacked rows — FR25)', () => {
-    expect(STRATEGY_POOL.some((a) => a.classes.filter((c) => c === 'mage').length >= 2)).toBe(true);
+  it('includes an anti-front-stack archetype: some archetype PLACES a unit on a row-AoE row (FR25)', () => {
+    // Re-pointed 2026-08-01 (5.4 engine review). This used to read "≥2 mages
+    // (row blasts punish stacked rows)" — but story 5.4 (E5-D4) retired
+    // `blast` from every class, so mages fire single-target bolts and the
+    // check had decayed into "≥2 mages exist in the pool", which the 4.12
+    // reverse-coverage guard already forces. FR25's acceptance property
+    // (epics.md:357) is that SOMETHING in the pool punishes a stacked row, so
+    // test exactly that: an archetype whose PLACED row resolves to a row-AoE
+    // move. Derived from BALANCE, never from class names, so the next roster
+    // move re-points it automatically instead of decaying again. Today the
+    // dragons' `breath` (5.5, E5-D7) is the only row-AoE any class carries.
+    const ROW_AOE: ReadonlySet<string> = new Set(['blast', 'breath']);
+    const antiStack = STRATEGY_POOL.filter((a) => a.classes.some((cls, i) => ROW_AOE.has(BALANCE.classes[cls].moves[(a.placement[i] as Placement).row])));
+    expect(antiStack.length, 'no archetype places a unit on a row-AoE row — FR25 anti-front-stack is unrepresented').toBeGreaterThan(0);
   });
 });
 

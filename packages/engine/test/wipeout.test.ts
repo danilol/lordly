@@ -187,14 +187,19 @@ function mirrorClerics(seed: number): MatchSetup {
 
 /** Three mid-row mages screened by a front knight pair vs a five-cleric wall
  * (front-right + mid-right + the whole back row). The clerics out-heal the
- * blast chip and the mages are unreachable behind their screen, so NOBODY
+ * caster chip and the mages are unreachable behind their screen, so NOBODY
  * ever dies: the battle runs the full `engagementCap` (10) and every
- * engagement the three mages blast the fullest enemy row — B's three back-row
- * clerics. No witch anywhere → no weaken, and blasts never crit (magic), so
- * every blast target's damage is EXACTLY `blastDamage('mage','cleric',…)`.
- * This is the fixture for the cross-engagement blast-attenuation pin (story
- * 4.12): the wipeout ×3/4 attenuation must apply on engagement 1 AND still on
- * engagement 10 — the FR10 compounding guard the sweep relies on. */
+ * engagement the three mages fire on B's back line. No witch anywhere → no
+ * weaken, and magic never crits, so every target's damage is EXACTLY the raw
+ * damage function's number.
+ *
+ * ORIGINALLY (story 4.12) this was the cross-engagement BLAST-attenuation
+ * fixture — the mages blasted the fullest enemy row and the pin was that the
+ * wipeout ×3/4 still applied at engagement 10. Story 5.4 (E5-D4) retired the
+ * blast from the roster, so these mages fire single-target `bolt` and the
+ * fixture now serves the pin's successor: the bolt is NEVER attenuated, in
+ * either mode, engagement 1 through the last. `blastDamage`'s own mode split
+ * survives at the arithmetic level only (reserved data — no class rides it). */
 function magesVsClerics(seed: number, mode: MatchSetup['mode'] = 'wipeout'): MatchSetup {
   return setup(
     {

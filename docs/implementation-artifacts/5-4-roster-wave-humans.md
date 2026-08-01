@@ -4,7 +4,7 @@ baseline_commit: 71f64b772fc239a2db160d4a2f2dacc2b2679b30
 
 # Story 5.4: Roster wave — humans
 
-Status: review
+Status: done
 
 ## Story
 
@@ -72,7 +72,7 @@ so that my squads draw from the roster the game was always meant to have.
   - [x] Device pass with Danilo (the new Draft grid is the thing to look at). ACCEPTED 2026-07-28 — "it works great on my device."
 
 
-### Review Findings (senior code review 2026-08-01 — Acceptance Auditor + Edge Case Hunter complete; Blind Hunter RE-RUN in progress, see the gap note)
+### Review Findings (senior code review 2026-08-01 — ALL THREE LAYERS COMPLETE; the Blind Hunter's scoped engine re-run closed the gap)
 
 Reviewed LATE: stories 5.5–5.8 landed on top (5.5 re-laid the same Draft grid into tabs, re-tuned the
 same balance rows, bumped balanceVersion to 11), so every finding was re-verified against the CURRENT
@@ -83,12 +83,29 @@ tree; superseded candidates were dropped — notably ALL Draft-grid geometry, wh
 - [x] [Review][Patch] LOW: a ticked Task 6 subtask overstates by one clause — "`bolt` needs … a damage-type classification for the 5.6 card glyph rule" is marked done while the same record admits the classification "has no seam yet — it is 5.6's scoped work, nothing recorded"; 5.6 did deliver it (`flow/unitCard.ts` maps `bolt: 'magic'`), so nothing was lost, but the tick was ahead of the work [story record, Task 6]
 - [x] [Review][Patch] LOW: File List path mangled by markdown — `packages/engine/test/`__snapshots__`/golden.test.ts.snap` ate the `__snapshots__` directory name to bold rendering; escape it [story record]
 
-**GAP — one layer incomplete.** The Blind Hunter's first run terminated on an API spend limit after
-clearing only the UI/grid portion (which it had determined was superseded by 5.5's tabbed re-lay); the
-ENGINE portion — this story's five new classes, their stat rows and per-row move tables, the
-dragonslayer relation, and golden integrity — never received its adversarial pass. A scoped re-run is
-in flight; this section will be updated with its findings. **Do not read the current finding count as
-a clean engine review.** What the Auditor and Edge Hunter DID cover of the engine is listed below.
+**The scoped ENGINE re-run (2026-08-01) — the gap is closed.** Four findings, all four patched. NO
+functional defect in the engine core: the move-driven dispatch, the `bolt` semantics, the balance rows
+and the goldens are sound. Every finding below is a GUARD or a CONTRACT RECORD that the roster moved
+out from under — the same failure mode three times, which is the story's real lesson.
+
+- [x] [Review][Patch] MED: the magic-exemption tests went VACUOUS when E5-D4 retired the blast — both sites classify magic as `kind === 'blast'`, and no class carries a blast row any more. `crit-dodge.test.ts:196` filters a five-**mage** fixture on `'blast'`, so the loop body never executes (probed: that battle emits `{slash: 5, bolt: 8}`, zero blasts); `:227`'s arbitrary property classifies every `bolt` as PHYSICAL and checks it against the `hit|crit|dodged` set, which a bolt satisfies by accident. PROVEN by mutation: routing `act()`'s bolt through `rollHit` left **all 16 crit-dodge tests green**. The contract itself was never unguarded — `roster.test.ts`'s all-bolt zero-draw discriminator and the bolt-vs-Guard test both fail under that mutation — but the file that names itself the magic-exemption guard asserted nothing about the only magic attack in the game. FIXED: a `ZERO_DRAW_KINDS` set (`blast`/`bolt`/`breath`, keyed on roll-free, NOT on magic-vs-physical — `breath` is physical arithmetic and still takes no roll), plus non-vacuity guards at both sites (a `checked > 0` count and a `sawZeroDraw` reachability flag beside the existing `sawCrit`/`sawDodge`). Re-verified: both patched assertions now FAIL under the same mutation [crit-dodge.test.ts]
+- [x] [Review][Patch] LOW: ADR 0003 — the FROZEN draw contract — never recorded `bolt`. Its "Zero draws, by design" list still named only the Wizard/Sorceress row blast, so the era's new magic attack had its zero-draw classification asserted in code comments and tests but nowhere in the document replay correctness rests on. The 4.7 Guard change set the precedent (a dated amendment, not a silent edit). FIXED: an amendment covering `bolt` AND 5.5's `breath` under the existing single-target rule, stating explicitly that the zero-draw property keys on **single-target vs row-AoE**, never magic-vs-physical — and recording the one real behavioural consequence: a confused mid/back caster used to self-blast (**A1 only**) and now bolts a random ally (**A1 + A2**), which A2's own condition always covered, and which is replay-safe because it rode balanceVersion 9 → 10 [docs/adr/0003-battle-stream-draw-order.md]
+- [x] [Review][Patch] LOW: FR25's "anti-front-stack archetype" acceptance (epics.md:357) was enforced as "≥2 mages — row blasts punish stacked rows", whose entire premise died with E5-D4. The check had decayed into "≥2 mages exist in the pool", which the 4.12 reverse-coverage guard already forces — so an FR25 acceptance property was silently untested. FIXED (Danilo's call: re-point, don't record a deviation): the guard now asserts some archetype PLACES a unit on a row-AoE row, derived from `BALANCE.classes[cls].moves[placedRow]` rather than from class names, so the next roster move re-points it automatically instead of decaying again. Three archetypes qualify today (Breath Battery / Wyrmhold / Stormflight, all back-row dragons) [ai.test.ts:123]
+- [x] [Review][Patch] LOW: FR10 (epics.md:38) still described the Mage row blast as a live mechanic. It carries dated amendment notes for every prior change (the 2026-07-14 attenuation, the Archmage gating) but nothing for 5.4 retiring it from the roster — the decision lived only in the dossier as E5-D4, with no requirement-side trace. FIXED (Danilo ratified 2026-08-01): a dated amendment in the FR25 style, saying the rule is NOT repealed — kind, targeting and `blastAttenuation` stay live reserved data for the future Archmage — and pointing at the two consequences (the 4.12 attenuation pin's successor, and `breath` as the FR25 row-AoE) [epics.md:38]
+- Also patched, non-finding: `magesVsClerics`'s docstring in `wipeout.test.ts` still described the mages as blasting the fullest enemy row and called itself the 4.12 blast-attenuation fixture. 5.4 repurposed it into the bolt no-attenuation pin without rewriting the doc.
+
+**Engine surfaces adversarially walked and CLEARED (Blind Hunter, engine scope):** the merged
+move-driven dispatch preserves every pre-5.4 routing exactly (Cleric staff = ranged/global, caster
+FRONT staff = melee, Archer = ranged, Guard rows = raise); the "a new kind is a compile error"
+claim is REAL, not aspirational (an exhaustive switch with no default under `strictNullChecks` makes
+the function end reachable → TS2366; 5.5 having to add `case 'breath'` is the proof); `bolt` is
+genuinely zero-draw and Guard-immune, both test-pinned and both confirmed to FAIL under mutation;
+`attackMoveOf`'s unchecked `moves.back as MoveKind` cast is protected by the E5-D12a back-row-Guard
+invariant (`roster.test.ts:869`); the misfire branches are row-consistent with `act()` and the
+retired self-blast's replacement is deliberate; the name tables carry an enormous margin (59 male /
+52 female against a 5-unit worst case); and the 4.12 cross-engagement attenuation pin was properly
+SUCCEEDED, not dropped, by the bolt's both-mode no-attenuation pin (`wipeout.test.ts:316`). What the
+Auditor and Edge Hunter covered is listed below and stands.
 
 **Independently re-verified (Acceptance Auditor + Edge Case Hunter):** `LOG_VERSION` stayed 4 at the
 review commit and today, with the record's rationale (bolt rides `UnitAttacked.kind`'s existing string
@@ -251,11 +268,21 @@ E5-D4 (casters lose splash) collapsed the caster comps and let the melee/sniper 
   bolt-vs-blast draw comparison became unconstructible once E5-D4 left no class carrying a `blast` row —
   the stronger all-bolt seed-pair discriminator shipped instead, and only the ticked line still promised
   the original); the Task 6 tick that ran one clause ahead (the damage-type classification had no seam
-  here and landed in 5.6); and a markdown-mangled `__snapshots__` path. **STATUS STAYS `review`**: the
+  here and landed in 5.6); and a markdown-mangled `__snapshots__` path. Status stayed `review`: the
   Blind Hunter's first run died on an API spend limit having cleared only the superseded UI portion, so
-  the ENGINE — this story's five new classes, their move tables, the dragonslayer relation, golden
-  integrity — has had no adversarial pass. A scoped re-run is in flight. What the Auditor and Edge Hunter
-  did verify is substantial and clean: logVersion 4 held, balanceVersion 10 + hash correctly superseded
-  by 5.5's 11, the ZERO-DRAW bolt claim true with a discriminator that asserts exactly what the record
-  says, goldens #4/#10 structurally forced to be the only two touched, sweep claims consistent across
-  three records, and every other ticked subtask evidenced. Gate: 752 tests green.
+  the ENGINE had no adversarial pass yet. What the Auditor and Edge Hunter did verify is substantial and
+  clean: logVersion 4 held, balanceVersion 10 + hash correctly superseded by 5.5's 11, the ZERO-DRAW bolt
+  claim true with a discriminator that asserts exactly what the record says, goldens #4/#10 structurally
+  forced to be the only two touched, sweep claims consistent across three records, and every other ticked
+  subtask evidenced. Gate: 752 tests green.
+- 2026-08-01: THE SCOPED ENGINE RE-RUN — the gap is closed and the story moves to `done`. NO functional
+  defect in the engine core (dispatch, `bolt` semantics, balance rows, goldens all sound). 4 findings,
+  4 patched, 0 deferred: 1 MED (the crit-dodge magic-exemption tests went vacuous when E5-D4 retired the
+  blast — proven by mutation, since routing `bolt` through `rollHit` left all 16 of them green; now keyed
+  on roll-free kinds with non-vacuity guards, and re-verified to fail under the same mutation) and 3 LOW,
+  all the same shape: a guard or a contract the roster moved out from under. ADR 0003 never classified
+  `bolt`; FR25's anti-front-stack guard had decayed to a class-presence check; FR10 still described the
+  blast as live. **The story's real lesson, for the retro: `blast` did not break anything when it was
+  retired — it quietly emptied three separate guards that all kept passing.** Two PO decisions taken by
+  Danilo (re-point the FR25 guard at a `breath` archetype; amend FR10 now). Gate re-run green: typecheck,
+  lint, 365 engine tests.

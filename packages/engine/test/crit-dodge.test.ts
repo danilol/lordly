@@ -17,6 +17,20 @@ import { matchSetupArb } from './arbitraries';
 const divisor = BALANCE.formulas.dexChanceDivisor;
 const threshold = (cls: Unit['class']): number => Math.floor(BALANCE.classes[cls].dex / divisor);
 
+/**
+ * The ZERO-DRAW attack kinds (ADR 0003): they take no A3/A4, so they can never
+ * report `crit` or `dodged` — every target resolves `hit`. Keyed by KIND, not
+ * by class, because the roster moves underneath: story 5.4 (E5-D4) retired
+ * `blast` from every class in favour of the single-target `bolt`, and story 5.5
+ * added the dragons' `breath`. Two assertions below used to test `kind ===
+ * 'blast'` directly and went VACUOUS the moment no class blasted — a five-mage
+ * fixture emits nothing but `bolt` now (2026-08-01 engine review: mutating
+ * `bolt` to draw crit/dodge left this whole file green). `breath` is physical
+ * arithmetic but still row-AoE and roll-free, so it belongs here too: the
+ * property is "no roll", not "magic".
+ */
+const ZERO_DRAW_KINDS: ReadonlySet<UnitAttacked['kind']> = new Set(['blast', 'bolt', 'breath']);
+
 describe('rollHit — ADR 0003 A3 (dodge) + A4 (crit): order, count, DEX keying', () => {
   it('consumes EXACTLY two [0,99] draws, in order — a physical single-target hit is always 2 draws (fixed-count property)', () => {
     // The "two streams agree after N manual draws" idiom (mirrors ai.test.ts):
@@ -182,8 +196,9 @@ describe('in-battle emission (AC3): crit & dodge fire, dodge = damage 0, magic n
     }
   });
 
-  it('magic (Mage/Sorceress blast, Cleric heal) never reports crit or dodged', () => {
-    // Blast is magic — zero crit/dodge draws (ADR 0003). A mage army makes the point.
+  it('a roll-free attack (the casters’ bolt, and any blast/breath) never reports crit or dodged', () => {
+    // Magic takes zero crit/dodge draws (ADR 0003). A mage army makes the
+    // point — since story 5.4 its mid/back rows fire `bolt`, not `blast`.
     const magicSetup: MatchSetup = {
       ...setup(3),
       armies: {
@@ -192,10 +207,18 @@ describe('in-battle emission (AC3): crit & dodge fire, dodge = damage 0, magic n
       },
     };
     const log = resolveBattle(magicSetup);
+    let checked = 0;
     for (const e of log.events) {
-      if (e.type !== 'UnitAttacked' || e.kind !== 'blast') continue;
-      for (const t of e.targets) expect(['hit']).toContain(t.outcome);
+      if (e.type !== 'UnitAttacked' || !ZERO_DRAW_KINDS.has(e.kind)) continue;
+      for (const t of e.targets) {
+        expect(t.outcome, `${e.kind} must resolve 'hit' — it takes no A3/A4 draw`).toBe('hit');
+        checked++;
+      }
     }
+    // NON-VACUITY: the fixture must actually fire roll-free attacks. Without
+    // this the assertion above silently stops testing anything the next time
+    // the roster moves a move kind (which is exactly what story 5.4 did).
+    expect(checked, 'the five-mage fixture emitted no roll-free attack at all').toBeGreaterThan(0);
   });
 
   it('replays from the seed alone — same setup → byte-identical log (crits/dodges included, FR20)', () => {
@@ -217,17 +240,19 @@ describe('in-battle emission (AC3): crit & dodge fire, dodge = damage 0, magic n
 describe('outcome invariant holds across ARBITRARY setups (matchSetupArb) — the AC4 end-to-end property', () => {
   let sawCrit = false;
   let sawDodge = false;
+  let sawZeroDraw = false;
 
   test.prop([matchSetupArb])(
-    'every physical UnitAttacked resolves hit/crit/dodged (never the reserved "missed"); every magic UnitAttacked always resolves "hit"',
+    'every rolled UnitAttacked resolves hit/crit/dodged (never the reserved "missed"); every roll-free UnitAttacked always resolves "hit"',
     (s) => {
       const log = resolveBattle(s);
       for (const e of log.events) {
         if (e.type !== 'UnitAttacked') continue;
-        const isMagic = e.kind === 'blast';
+        const isZeroDraw = ZERO_DRAW_KINDS.has(e.kind);
         for (const t of e.targets) {
-          if (isMagic) {
-            expect(t.outcome, 'magic never crits or is dodged (ADR 0003)').toBe('hit');
+          if (isZeroDraw) {
+            sawZeroDraw = true;
+            expect(t.outcome, `${e.kind} never crits or is dodged (ADR 0003)`).toBe('hit');
           } else {
             expect(['hit', 'crit', 'dodged'], 'missed is reserved, never emitted in wave 1').toContain(t.outcome);
             if (t.outcome === 'crit') sawCrit = true;
@@ -242,6 +267,9 @@ describe('outcome invariant holds across ARBITRARY setups (matchSetupArb) — th
   it('the generated cases above actually exercised BOTH the crit and dodge branches (branch-reachability, not just correctness-if-reached)', () => {
     expect(sawCrit, 'no crit observed across the whole matchSetupArb property run').toBe(true);
     expect(sawDodge, 'no dodge observed across the whole matchSetupArb property run').toBe(true);
+    // The roll-free branch needs the same reachability proof: it is the one
+    // that silently emptied when story 5.4 retired `blast` from the roster.
+    expect(sawZeroDraw, 'no roll-free (bolt/blast/breath) attack observed — the zero-draw branch tested nothing').toBe(true);
   });
 });
 
