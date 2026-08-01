@@ -233,3 +233,19 @@ The AC-3 spot-check against the story-5.0 baseline above, after the full chrome 
 Recorded so this document never implies coverage it does not have: **story 5.3 shipped without an on-device capture.** Danilo accepted the visuals and deferred the measurement (his call, no blocking reason). What went unmeasured is not trivial — 5.3 added two full-screen terrain textures to the Battle/Reveal load and enlarged the rendered board area by roughly 55% (tiles 56×28 → 74×37 plus a wider spread, units 32→42px). The specific open question is the **scene-entry burst**: the story-5.0 baseline recorded ~5 frames bottoming near 8fps as Battle loads, the 5.2 addendum confirmed it unchanged at ~11fps, and 5.3 loads more at that same moment. Steady-state playback is the lower risk (the terrain is a single static image with no per-frame work; the dim and scrims are static rectangles).
 
 **Owner: story 5.10 (the pre-PvP verdict).** Its closing capture now covers 5.2's chrome, 5.3's terrain and the enlarged boards together, and must compare the entry burst against the 5.0 and 5.2 figures above rather than only checking the in-battle floor.
+
+## Story 5.10 (the pre-PvP verdict) — the closing capture, and a recorded ORDERING GAP
+
+**Written before the capture, so the gap is on the record either way.**
+
+Epic 5 sequenced story 5.10 last, *after* 5.9's full-roster art, precisely so the closing capture would cover the epic's complete visual load — `epics.md:1181` names the full-roster sheet in that load. Danilo postponed 5.9 on 2026-08-01 ("I won't have all the sprites now"), and the epic's own art-float rule says art stories never block the sequence, so **5.10 runs first and its capture PRECEDES the full-roster sprite sheet.**
+
+What the closing capture therefore does and does not cover:
+
+- **Covered:** 5.2's chrome (9-slice frames, stone ground, Home castle), 5.3's terrain textures and the ~55%-enlarged board, 5.6's unit-data card, 5.7's stats summary, 5.8's flow changes — i.e. everything that has actually shipped.
+- **NOT covered:** 5.9's dedicated sprite sheet, which replaces 20 interim tiles with real art. Sheet weight and per-texture filtering both change there. The 5.0 baseline's standing instruction ("this capture is the baseline the Epic 5 visual stories — 5.2 chrome, 5.3 backgrounds, 5.9 full-roster sheet — measure against; story 5.10's closing capture re-checks the floor after all of them") therefore cannot be fully honoured by this capture.
+- **Resolution:** a light re-capture rides 5.9's eventual device pass, OR the gap is accepted explicitly at the epic close — Danilo's call, recorded here when made. The one thing this document must not do is imply epic-5 coverage it does not have.
+
+This capture also discharges **story 5.3's owed measurement** (`deferred-work.md`, owner: 5.10). Per that item it must compare the **Battle scene-ENTRY burst** against the 5.0 baseline (~5 frames bottoming ~8fps) and the 5.2 addendum (~10.9fps) — not only the in-battle floor — because 5.3 added two full-screen terrain textures and enlarged the board at exactly that moment.
+
+**Capture record: pending Danilo's device session.** Procedure is the standing one above (three-mages wipeout Replay at 1× and ×2, **per-scenario resets** — both the 5.0 and 5.2 sessions missed the reset and produced prefix-duplicated traces that had to be sliced by hand; third time should not repeat it).

@@ -354,6 +354,72 @@ describe('wipeout mode (FR19)', () => {
     expect(singleSegs[0]!.every((d) => d === boltNumber)).toBe(true);
   });
 
+  /**
+   * FR19's cross-engagement row-AoE attenuation pin (story 5.10) — the
+   * SUCCESSOR to story 4.12's blast version, and the reason this test exists at
+   * all. 4.12 proved `blastAttenuation` ×3/4 still applied at the
+   * `engagementCap` boundary, not just on the first hit; story 5.4 (E5-D4) then
+   * left NO class carrying a `blast` row, so that fixture could no longer be
+   * built from real data and was replaced by the bolt NO-attenuation pin above.
+   * Correct, but it meant nothing proved a row-AoE's wipeout attenuation
+   * survived to the cap any more — and 5.5's `breath` is exactly that: the only
+   * wipeout-attenuated row-AoE in the game, pinned in `roster.test.ts` on its
+   * FIRST hit only. This closes the gap.
+   *
+   * The fixture is a mirrored dragon pair screened by a phalanx (the shape
+   * `roster.test.ts` uses for breath arithmetic, put into wipeout): back corners
+   * are 2 columns apart so neither dragon is a king-move neighbour of the other,
+   * their reservation rings clear the mid row, and front/center takes the
+   * phalanx — the only human, so the only legal leader. Perfectly symmetric, so
+   * nobody can win: it runs the FULL cap and judges a draw, with both dragons
+   * breathing in every single engagement.
+   *
+   * Breath damage is STAT-derived (STR vs VIT), never HP-derived, so the number
+   * is CONSTANT across the whole battle — which is what makes "every breath in
+   * every engagement" a legitimate equality assertion rather than a range check.
+   */
+  it('WIPEOUT breath attenuation holds at EVERY engagement through the cap, not just the first (FR19 compounding — the 4.12 blast pin’s successor)', () => {
+    const dragons = () => [u('emberdrake', 'fire', 'Cindrath'), u('cragmaw', 'earth', 'Korvassa'), u('phalanx', 'water', 'Bram')];
+    const cells = (): MatchSetup['placements']['A'] => [
+      { row: 'back', col: 'left' },
+      { row: 'back', col: 'right' },
+      { row: 'front', col: 'center' },
+    ];
+    const build = (mode: MatchSetup['mode']): MatchSetup => ({
+      ...setup({ armies: { A: dragons(), B: dragons() }, placements: { A: cells(), B: cells() } }, 0xdead, mode),
+      leaders: { A: 2, B: 2 }, // the phalanx — dragonkind can never be crowned (E5-D13)
+    });
+    const breathDamagesPerSeg = (mode: MatchSetup['mode']): number[][] =>
+      segments(resolveBattle(build(mode))).map((seg) =>
+        seg
+          .filter((e): e is Extract<BattleEvent, { type: 'UnitAttacked' }> => e.type === 'UnitAttacked' && e.kind === 'breath')
+          .flatMap((e) => e.targets.map((t) => t.damage)),
+      );
+
+    // Each side's fullest row is its BACK pair, so every breath hits both enemy
+    // dragons. Unattenuated (single): emberdrake 34 − 13 = 21 / 34 − 15 = 19;
+    // cragmaw 30 − 13 = 17 / 30 − 15 = 15. Attenuated (wipeout) = floor(×3/4):
+    // 15 / 14 / 12 / 11.
+    const SINGLE_SET = [21, 19, 17, 15];
+    const WIPEOUT_SET = [15, 14, 12, 11];
+
+    const wipeoutSegs = breathDamagesPerSeg('wipeout');
+    // The whole point: this runs to the CAP, so "still attenuated at the end"
+    // is a claim about engagement 10, not about engagement 2.
+    expect(wipeoutSegs).toHaveLength(BALANCE.engagementCap);
+    for (const [i, dmgs] of wipeoutSegs.entries()) {
+      expect(dmgs.length, `engagement ${i + 1} has breaths`).toBeGreaterThan(0);
+      expect(new Set(dmgs), `engagement ${i + 1} breath damages are ATTENUATED`).toEqual(new Set(WIPEOUT_SET));
+    }
+
+    // The discriminator: the same fixture in SINGLE mode lands the unattenuated
+    // numbers, so the assertion above is pinning the mode split — not just
+    // whatever arithmetic breath happens to do.
+    const singleSegs = breathDamagesPerSeg('single');
+    expect(singleSegs[0]!.length).toBeGreaterThan(0);
+    expect(new Set(singleSegs[0]), 'single-mode breath is UNattenuated').toEqual(new Set(SINGLE_SET));
+  });
+
   it('poison persists across engagements and ticks at every natural engagement end', () => {
     // Golden #5's comp grown to 5v5: mirrored earth witches poison each
     // other's sides in engagement 1 (each targets the other, rearmost-in-
@@ -401,11 +467,66 @@ describe('wipeout mode (FR19)', () => {
       ),
     );
     const segs = segments(log);
-    expect(segs.length).toBeGreaterThanOrEqual(2);
-    // Ticks in at least two different engagements — the status survived the
-    // between-engagement clear (FR19's Witch-in-wipeout synergy).
+    // This fixture ends by WIPE at engagement 4 (A takes B out), with ticks in
+    // engagements 1–3 — what it proves is that poison OUTLIVES ITS CASTER: B's
+    // witch dies in engagement 1 and her poison keeps ticking after. The
+    // cap-boundary question is a different fixture, pinned in the test below.
+    expect(segs).toHaveLength(4);
     const segsWithTicks = segs.filter((seg) => seg.some((e) => e.type === 'PoisonTicked'));
-    expect(segsWithTicks.length).toBeGreaterThanOrEqual(2);
+    expect(segsWithTicks).toHaveLength(3);
+  });
+
+  /**
+   * Poison persistence at the CAP boundary (story 5.10) — the other half of
+   * FR19's compounding claim, alongside the breath-attenuation pin above.
+   *
+   * The test above proves poison outlives its caster, but its battle ends by
+   * wipe at engagement 4, so it says nothing about engagement 10. Story 4.12
+   * noted that gap parenthetically and left it; the pre-PvP verdict closes it,
+   * because "statuses compound across a 10-engagement wipeout" is precisely the
+   * FR19 property link-play will inherit.
+   *
+   * A perfectly mirrored witch + 2 clerics + 2 phalanx stall: the clerics
+   * out-heal the poison chip, the phalanxes Guard, nobody can break through, so
+   * NOBODY EVER DIES and the battle runs the full cap to an even judged draw.
+   * The witch on each side re-casts every engagement, so the afflicted set ramps
+   * (4 ticks in engagement 1, 8 in the second, then all 10 units from the third
+   * on) and never empties. Deterministic across seeds — verified at 0xdead, 1
+   * and 7, identical every time.
+   */
+  it('poison survives every seam through to the engagement CAP — a 10-engagement stall ticks in all 10 (FR19 compounding)', () => {
+    const army = (): Unit[] => [
+      u('witch', 'earth', 'Morgause'),
+      u('cleric', 'water', 'Alys'),
+      u('cleric', 'fire', 'Bede'),
+      u('phalanx', 'wind', 'Cadoc'),
+      u('phalanx', 'earth', 'Dunstan'),
+    ];
+    const cells = (): MatchSetup['placements']['A'] => [
+      { row: 'back', col: 'center' },
+      { row: 'back', col: 'left' },
+      { row: 'back', col: 'right' },
+      { row: 'front', col: 'left' },
+      { row: 'front', col: 'right' },
+    ];
+    const log = resolveBattle(setup({ armies: { A: army(), B: army() }, placements: { A: cells(), B: cells() } }, 0xdead));
+    const segs = segments(log);
+
+    // The stall premise: the full cap, and not one death — so every engagement
+    // genuinely had poisoned units alive to tick.
+    expect(segs).toHaveLength(BALANCE.engagementCap);
+    expect(log.events.some((e) => e.type === 'UnitDied')).toBe(false);
+
+    // The property: poison ticks in EVERY engagement, first through last. The
+    // last one is the assertion that did not exist before this story.
+    const ticksPerSeg = segs.map((seg) => seg.filter((e) => e.type === 'PoisonTicked').length);
+    for (const [i, n] of ticksPerSeg.entries()) {
+      expect(n, `engagement ${i + 1} of ${BALANCE.engagementCap} ticks poison`).toBeGreaterThan(0);
+    }
+    // And it never decays to a trickle: by the third engagement every unit on
+    // the board is afflicted (5 per side) and stays that way to the cap.
+    expect(ticksPerSeg[0]).toBe(4);
+    expect(ticksPerSeg[ticksPerSeg.length - 1]).toBe(10);
   });
 
   it('weaken does not persist between engagements — the status is cleared at the boundary (FR19)', () => {

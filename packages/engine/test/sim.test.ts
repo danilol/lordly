@@ -52,6 +52,14 @@ const ACCEPTANCE_BAND = 0.65;
  * directions. Outside that window the proxy trips on the two comps that ARE
  * the band's ceiling at convergence: twin-golems in single (seeds 29–38) and
  * longbows in wipeout (seeds 2–6, 11–13, 34+).
+ *
+ * Story 5.10 re-VERIFY (the pre-PvP verdict — no re-pin, no tuning): the epic
+ * closed with the roster settled since 5.5 (5.6/5.7/5.8 were shell-only), and
+ * baseSeed 21 still reads single max 60.9% / wipeout max 61.8% with floors at
+ * 28.9% / 29.8% — unchanged, because nothing balance-shaped moved. The
+ * certified converged truth is in `docs/balance-verdict.md`: single 64.3–64.4%
+ * (twin-golems), wipeout 63.8% (longbows), floors `gale` 29.6% / `breath-battery`
+ * 30.3%, all stable across seeds 1/2/3 at runs=500. `balanceVersion` stays 11.
  */
 const CI_CONFIG = { baseSeed: 21, runsPerPair: 15, threshold: ACCEPTANCE_BAND };
 
@@ -246,17 +254,52 @@ describe('sim sweep (NFR4)', () => {
     expect(report.flagged).toEqual([]);
   }, 20_000);
 
-  it('the melee-heavy wardens stays VIABLE and in-band (the 3.0 wasted-swing floor, revised for the melee blockade)', () => {
+  /**
+   * The VIABILITY FLOOR, watched by measurement rather than by name (story
+   * 5.10). The band above is a ceiling; this is its opposite bound — no
+   * archetype may be so weak it is unplayable, because a comp nobody can win
+   * with is a dead branch of the draft.
+   *
+   * Why derived and not named: the test below this one is named for `wardens`
+   * because story 3.0 measured it at a 33% single-mode floor, and for four
+   * epics that name was the floor guard. It is not any more — 5.4's bolt meta
+   * made melee the muscle and 5.10 measured `wardens` at 57.3% single (2nd of
+   * 18) / 48.0% wipeout, so its `> 0.25` assertion had drifted onto nearly the
+   * pool's STRONGEST comp while the real floor (`gale` 29.6% single,
+   * `breath-battery` 30.3% wipeout at runs=500) went unwatched. Taking the
+   * minimum over the report keeps this pointed at whatever is actually weakest,
+   * so the next roster wave cannot silently move the floor out from under it.
+   * (The same guard-decay pattern the 5.4 engine review found three times.)
+   *
+   * The 0.25 threshold is the one the wardens test has always used, kept for
+   * continuity and comfortably clear of every measured floor: 28.9% at this CI
+   * proxy config, 29.6%/30.3% at runs=500 convergence.
+   */
+  const VIABILITY_FLOOR = 0.25;
+
+  it('the WEAKEST archetype in the pool stays viable — the floor bound, derived not named (story 5.10)', () => {
+    const weakest = report.archetypes.reduce((lo, a) => (a.winRate < lo.winRate ? a : lo));
+    const table = report.archetypes.map((a) => `${a.id}: ${(a.winRate * 100).toFixed(1)}%`).join('\n');
+    expect(weakest.winRate, `pool floor collapsed (${weakest.id}) — sweep table:\n${table}`).toBeGreaterThan(VIABILITY_FLOOR);
+  }, 20_000);
+
+  it('the melee-heavy wardens stays VIABLE and in-band (the 3.0 wasted-swing check — melee is no longer the floor)', () => {
     // Story 3.0 flagged the melee-heavy `wardens` at a 33% single-mode floor and
     // hoped tactics would LIFT it (fewer wasted swings). Story 4.4's melee
     // blockade (a front unit shields the back, even under a target tactic —
     // Danilo, 2026-07-18) makes that hope only partly true: melee is now MORE
     // constrained under a tactic, so the "improves" premise no longer holds as a
-    // hard rule. What matters is that melee stays a viable strategy, not a
-    // collapsed one — wardens holds a healthy win rate and no archetype exceeds
-    // the band. (Story 5.4: with the casters bolted, melee is the meta's
-    // muscle — wardens converges ~61% single / ~53% wipeout, near the band's
-    // ceiling rather than its old ~34% floor. Both bounds now genuinely bite.)
+    // hard rule.
+    //
+    // Story 5.10 re-measured and this test's PREMISE IS RETIRED, though the
+    // assertions stay useful: with the casters bolted (5.4's E5-D4), melee
+    // became the meta's muscle — `wardens` converges at 57.3% single (2nd of 18)
+    // / 48.0% wipeout, i.e. mid-to-high, NOT the pool's floor. So read the
+    // `> 0.25` below as continuity, not as the floor guard it used to be: the
+    // real floor bound is the derived weakest-archetype test above, and the real
+    // floors are `gale` (29.6% single) and `breath-battery` (30.3% wipeout).
+    // What this test still earns: melee specifically is neither collapsed nor
+    // dominant, which is the 3.0 question restated for today's meta.
     const wardens = report.archetypes.find((a) => a.id === 'wardens');
     expect(wardens, 'wardens archetype present in the pool').toBeDefined();
     expect((wardens as ArchetypeStats).winRate, 'wardens stays viable, not collapsed (melee is playable)').toBeGreaterThan(0.25);
@@ -294,6 +337,15 @@ describe('sim sweep (NFR4)', () => {
   // is no accepted deviation left to carry: at runs=500 across seeds 1/2/3 the
   // converged maxima are single 64.3% (twin-golems) and wipeout 63.8%
   // (longbows), both genuinely under the band.
+  //
+  // Story 5.10 re-certified both modes at convergence and the numbers above
+  // still hold exactly (single 64.3–64.4% twin-golems, wipeout 63.8% longbows,
+  // stable across seeds 1/2/3 at runs=500) — no tuning, `balanceVersion` stays
+  // 11. Worth recording for the next verdict: the runs=200 wipeout sample read
+  // longbows at 64.6%, i.e. 0.8 points HIGHER than its converged rate. The
+  // convergence rule cuts both ways — a 200-run reading can overstate a comp
+  // into looking edge-critical as easily as it can understate a real crossing
+  // (4.12's farshot was the understating direction). Certify on 500.
   it(`ACCEPTANCE BAND (wipeout): no archetype exceeds ${ACCEPTANCE_BAND * 100}% aggregate win rate in wipeout mode`, () => {
     const wipeoutReport = runSweep(STRATEGY_POOL, { ...CI_CONFIG, mode: 'wipeout' });
     const table = wipeoutReport.archetypes.map((a) => `${a.id}: ${(a.winRate * 100).toFixed(1)}%`).join('\n');
@@ -301,5 +353,10 @@ describe('sim sweep (NFR4)', () => {
       expect(a.winRate, `dominant archetype flagged (wipeout) — sweep table:\n${table}`).toBeLessThanOrEqual(ACCEPTANCE_BAND);
     }
     expect(wipeoutReport.flagged).toEqual([]);
+    // The floor bound in wipeout too (story 5.10) — asserted HERE rather than in
+    // its own test purely to reuse this sweep: the cap-length wipeout run is the
+    // suite's heaviest, and a second one for one assertion is not worth it.
+    const weakest = wipeoutReport.archetypes.reduce((lo, a) => (a.winRate < lo.winRate ? a : lo));
+    expect(weakest.winRate, `pool floor collapsed in wipeout (${weakest.id}) — sweep table:\n${table}`).toBeGreaterThan(VIABILITY_FLOOR);
   }, 60_000);
 });
