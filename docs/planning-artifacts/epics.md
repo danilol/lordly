@@ -954,7 +954,7 @@ So that no composition, tactic, or monster dominates and the game stays fun.
 
 Every class Danilo wants — human and monster — lands on the existing role-relation and single-cell-monster systems, every move is defined row by row in one PO-driven design pass, and the app dresses in its real medieval identity with Danilo's Midjourney-generated art. Closes with a pre-PvP balance verdict so Epic 6 (link-play) launches a finished-feeling game. Covers FR32/FR33 (full move table), FR38 (roster growth), FR21/FR2 (art), FR22/FR23 (Result summary), NFR1 (backgrounds + the owed capture), NFR4 (sweep per wave), plus the stale-PRD corrections.
 
-**Breakdown decisions (PO, 2026-07-23):** one epic, ordered stories, **fence: no new systems** — no new mechanics, tactics, or link-play work; content on existing systems only. `logVersion` 4 is untouched throughout (a new class changes no event shape — the 4.8 precedent; a new `MoveKind` union value rides `balanceVersion` only — the 4.7 `bash` precedent). **ONE theme** (PO decision — the DESIGN.md two-theme Heritage/Night system is retired unbuilt; a dated spine amendment records it). Art arrives via Danilo's parallel Midjourney pipeline (`midjourney-asset-prompts-2026-07-23.md`): stories 5.2/5.3/5.9 float on batch arrival and never block the sequence; Danilo owns art picks and the device pass (the established art-story split). Story 5.1 is the epic's gate for 5.4/5.5/5.6 — per the epic-4 retro team agreement, OB64 source evidence is a design input, collected BEFORE engine code. Story 5.0 runs first: the `?perf=1` capture must not survive a fourth deferral.
+**Breakdown decisions (PO, 2026-07-23):** one epic, ordered stories, **fence: no new systems** — no new mechanics, tactics, or link-play work; content on existing systems only. *(Amended 2026-08-01 — PO decision, Danilo, after story 5.10's felt-balance pass; sprint-change-proposal-2026-08-01.md: the fence is WIDENED, once and explicitly, to admit the **OB64 fight-system fidelity pass**, stories 5.11–5.12. The felt-balance gate returned FIVE code-confirmed deviations — ranged targeting ignoring OB64's column sectors AND reversing its front-to-back depth order, the Archer's mid-row action, whole-engagement sleep, and a strictly-dominated Guard row. These are corrections to mechanics built against a requirement (FR9) that itself diverged from the north star, not new features, and they must land BEFORE the pre-PvP certification so the era is certified ONCE against the model that ships to link-play. `logVersion` still holds at 4 all epic; the era takes ONE additional `balanceVersion` bump (11 → 12), carried by story 5.11. Revised sequence: 5.11 → 5.12 → 5.10 completes → 5.9 floats on art → retrospective.)* `logVersion` 4 is untouched throughout (a new class changes no event shape — the 4.8 precedent; a new `MoveKind` union value rides `balanceVersion` only — the 4.7 `bash` precedent). **ONE theme** (PO decision — the DESIGN.md two-theme Heritage/Night system is retired unbuilt; a dated spine amendment records it). Art arrives via Danilo's parallel Midjourney pipeline (`midjourney-asset-prompts-2026-07-23.md`): stories 5.2/5.3/5.9 float on batch arrival and never block the sequence; Danilo owns art picks and the device pass (the established art-story split). Story 5.1 is the epic's gate for 5.4/5.5/5.6 — per the epic-4 retro team agreement, OB64 source evidence is a design input, collected BEFORE engine code. Story 5.0 runs first: the `?perf=1` capture must not survive a fourth deferral.
 
 ### Story 5.0: Housekeeping and gate reliability
 
@@ -1185,3 +1185,56 @@ So that link-play opens on a game we can prove is fair.
 **Given** Danilo on the deployed build
 **When** he plays real matches
 **Then** felt balance is accepted on device and `docs/balance-verdict.md` gains the epic-5 addendum — the sign-off is the "ready for link-play" certificate that closes the epic.
+
+
+### Story 5.11: OB64 targeting fidelity and the dominated-Guard fix
+
+As a player,
+I want units to pick targets the way Ogre Battle 64 does,
+So that positioning is a real strategic decision instead of a lottery.
+
+**Acceptance Criteria:**
+
+**Given** Danilo's sourced OB64 targeting research (2026-08-01, reproduced in `deferred-work.md`)
+**When** ranged targeting lands
+**Then** the **sector rule** applies to ranged exactly as it already does to melee — a corner unit may target its facing column and the centre only, a centre unit all three — and the Autonomous **depth order is front → middle → back** (same column before centre within a row), while the legal list stays row-unrestricted so a target tactic still arcs over the front line (OB64's own Leader behaviour); FR9 is amended in place with a dated note and `docs/rules.md` follows with `rules-doc.test.ts` green.
+
+**Given** the OB64 basic Archer, which acts twice only from the back row
+**When** the roster row changes
+**Then** `archer.actions` is `{ front: 1, mid: 1, back: 2 }`.
+
+**Given** a Guard row (Knight mid, Phalanx front/mid) with **no living ally behind it in the same column**
+**When** the unit acts
+**Then** it performs its class's attack instead of raising a shield (the `attackMoveOf` back-row fallback is the existing seam), so guarding is never strictly dominated; FR33 and dossier §4 gain the condition.
+
+**Given** AD-8 discipline and NFR4
+**When** the pass ships
+**Then** it carries ONE `balanceVersion` bump (11 → 12) with the hash re-pinned, goldens re-recorded and **audited event-by-event** (expect most of the 11 to move — archers, cleric staff, witches and every bolt route through the changed path; a golden containing none of them must be byte-identical, the 4.4 regression pin), the both-mode convergence sweep re-runs at `runs=500` across seeds, and any out-of-band archetype is tuned or recorded — never silent. Targeting tests must include an **asymmetric** fixture that fails under the old rearmost-first order (the chirality lesson: symmetric comps pass mirror bugs).
+
+**Given** the shell
+**When** the pass ships
+**Then** `logVersion` stays 4, no event shape changes, and the Draft/Placement copy that teaches targeting is checked for accuracy.
+
+### Story 5.12: Status duration — the sleep rework
+
+As a player,
+I want a slept unit to lose a bounded part of the fight rather than all of it,
+So that one Witch cast cannot remove a unit from the battle before it ever acts.
+
+**Acceptance Criteria:**
+
+**Given** Danilo's sourced OB64 status research (supplied 2026-08-01 — the design gate is CLOSED; evidence is in the epic-5 dossier)
+**When** the rework is designed
+**Then** the dossier records dated decisions for sleep's wake conditions and duration, mapping OB64's rules onto this game's single/wipeout loop, and explicitly records which parts are adopted, which are adapted and which are deliberately NOT taken.
+
+**Given** the confirmed defect (sleep is never removed inside an engagement, so in single mode a pass-1 cast disables a unit for the entire battle)
+**When** the rework lands
+**Then** sleep is bounded: a **physical hit wakes the sleeper** (OB64's physical override; magic does not), and sleep cannot outlast a specified number of missed actions; FR16 is amended in place with a dated note, `docs/rules.md` follows, and the `ActionSkipped { reason: 'asleep' }` narration still reads correctly turn by turn.
+
+**Given** ADR 0003's frozen draw table
+**When** the rule is implemented
+**Then** the adopted rule is **deterministic** so the table stays frozen — OB64's MEN-scaled probabilistic wake check is recorded as a deliberate deviation unless the PO chooses it, in which case it requires a formal ADR amendment inserting a declared-extensible draw position; **never a silent insert.**
+
+**Given** AD-8
+**When** the rework ships
+**Then** it rides story 5.11's `balanceVersion` 12 if landed together, or takes 12 → 13 if separate; goldens containing a Witch re-record and are audited; the both-mode sweep stays in band.

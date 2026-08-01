@@ -171,3 +171,52 @@ All satisfied in `ROSTER.md` §Monsters + §Monster rules + §Engine stat rows:
 ## Sign-off
 
 **SIGNED OFF by Danilo (PO), 2026-07-27** — "i love it. im excited to proceed." The decision set (E5-D1–D15) is final; `ROSTER.md` is the normative table. THE GATE IS OPEN: stories 5.4, 5.5, and 5.6 may now be created against this dossier. (The 4.1 precedent: a design story's review IS the PO sign-off; no code-review pass applies.)
+
+## §8 OB64 status-ailment semantics (Sitting 5 — the story-5.12 design gate) — evidence 2026-08-01, decisions PENDING PO RATIFICATION
+
+Opened by story 5.10's felt-balance pass: Danilo reported "sometimes I feel my frontline is sleeping forever" and asked whether witch effects last one turn. **They do not** — `sleep` is added to `unit.statuses` and never removed anywhere inside an engagement (`grep statuses.delete` over the engine returns nothing); only the between-engagement seam sheds it, and **single mode has no next engagement**, so a pass-1 cast disables a unit for the whole battle. Danilo then supplied OB64 source research the same day, which closes this design gate per the epic-4 team agreement (*source evidence before engine code*).
+
+### The evidence, as supplied (verbatim substance)
+
+**Sleep.** Completely incapacitates — the action queue is frozen, no moves, no passive counters. Two removal paths:
+- **Tick check:** every time the unit is *supposed* to take a turn, the engine rolls `Chance to Wake = Base% + (MEN / 4)`.
+- **Physical override:** if the sleeper is hit by any **physical** attack it wakes immediately. **Magic does not wake it.**
+
+**Paralysis.** Action queue keeps filling, but on activation a high fixed chance to fail and lose the turn. **No physical removal trigger** — strictly worse than sleep to be under. *(We ship no paralysis; recorded as future-spell evidence.)*
+
+**Poison.** Unstackable scaling DoT. **Proactive tick** — damage lands *right before the unit acts*, and triggers even if the unit is stunned/paralysed and fails its move. Damage is a percentage of Max HP (~10–15% per action tick) or scales with an attacker-level metric.
+
+**Environment split.** *Short battle* (one map encounter): statuses **persist past the battle** and carry to the overworld, curable only by item/stronghold/skill. *Endless battle* (training): a **hidden timer decay** force-clears Sleep and Paralysis after ~3–5 missed actions to prevent soft-locks, and exiting runs a full sanitation — HP restored, units revived, all statuses erased.
+
+### Mapping onto this game (where OB64 and Lordly differ structurally)
+
+| OB64 concept | Lordly equivalent | Note |
+|---|---|---|
+| Short battle (1 encounter) | **single** mode — one engagement | The mode where "sleeping forever" bites hardest |
+| Endless battle (training) | **wipeout** mode — engagements to a wipe or `engagementCap` 10 | Our between-engagement seam already sheds everything except poison — the "safety cleanse" analogue |
+| Overworld carry-over / curatives | **nothing** — no campaign, no overworld, no items | Rule A's persistence is structurally N/A and is deliberately NOT adopted |
+| Per-action tick clock | our pass/turn loop (`actionsLeft` per row) | Close enough to map directly |
+
+### Proposed decisions (PENDING RATIFICATION — these become E5-D16..D18 on Danilo's word)
+
+- **E5-D16 (proposed) — Physical hits wake the sleeper; magic does not.** Adopted verbatim; it is deterministic, needs no draw, keeps ADR 0003 frozen, and on its own fixes the reported case (a slept frontline is exactly what melee hits). Implementation seam: the landed-hit path in `strike`, gated on the physical branch, emitting `StatusCleared { spell: 'sleep' }` so the shell narrates it.
+- **E5-D17 (proposed) — A deterministic missed-action cap replaces the probabilistic wake check.** OB64's `Base% + MEN/4` roll is **not** adopted, because a new per-turn draw would require formally amending ADR 0003's frozen table (every stored replay depends on its order and count) — and OB64 *itself* uses a deterministic force-clear after ~3–5 missed actions in its endless loop, so a fixed cap is source-supported rather than invented. Recorded as a **deliberate deviation** with its reason. Proposed value: sleep clears after **2 missed actions** (tunable balance data, sweep-policed) — chosen so a back-row Witch's two casts cost the enemy meaningful tempo without removing a unit from the fight.
+- **E5-D18 (proposed) — Poison's tick timing and scale are NOT changed in story 5.12.** OB64 ticks poison *before each action* at ~10–15% of Max HP; we tick a flat `poisonDamage` once per engagement end. Adopting OB64's model would make poison scale with HP (hurting monsters far more than smalls) and multiply its frequency — a large balance swing that Danilo did **not** report as a problem. Recorded as a **known, dated deviation** and routed to `deferred-work.md` as a candidate for a later fidelity pass, so it is a choice on the record rather than an oversight.
+
+**Not adopted, recorded for completeness:** overworld status carry-over and curatives (no campaign exists); paralysis (no such spell ships); the full sanitation script (our seam already does the equivalent, and `weaken`/`confusion` already clear there).
+
+### Independent research pass (2026-08-01, at Danilo's invitation) — three corroborations, TWO CONTRADICTIONS, one gap
+
+Danilo asked for independent verification rather than taking his supplied research at face value. Sources: the [LP Archive OB64 Game Mechanics Megadump](https://lparchive.org/Ogre-Battle-64/Update%2002/), CyricZ's and asimpkins' GameFAQs/Neoseeker guides (via search summaries — both sites 403 direct fetches), and the Ogre Battle Saga wiki. Recorded honestly, including where it disagrees with the supplied research, because a fidelity pass built on a wrong premise is worse than no pass.
+
+**✅ CORROBORATED — the column sector rule (three independent sources).** "You can only attack characters in the column across from you, or one column to the left or right. This means that if you're in the left column, you can't hit anything that's all the way over on the right **unless there's no other option**" (LP Archive). And: "A character placed on the left column can only attack the left and center column from the opponent grid, while a character placed in the center column can attack any range." This is exactly the supplied rule — **and it adds a detail the supplied version lacked: a fallback when nothing is in sector**, which is precisely our existing melee Last Stand (`pool = reachable.length > 0 ? reachable : living`). So story 5.11 must implement the sector rule as a *preference with fallback*, NOT as the hard "physically blocked" filter the supplied research described. Our melee already has the right shape; ranged must copy it.
+
+**❌ CONTRADICTED — the Archer's action counts.** The supplied research said the basic Archer acts twice only from the back row (→ `1/1/2`). Sources say otherwise: **"Front row delivers Shoot ×1, middle row Shoot ×2, and back row Shoot ×2"** — i.e. **`1 / 2 / 2`, exactly what we already ship.** On this evidence our current row is already OB64-faithful and the proposed change would be a **deliberate balance deviation, not a fidelity fix.** Flagged to the PO; the change may still be wanted (it nerfs the archer half of the pool, which is a legitimate balance goal) but it must be recorded as a tuning decision with its reason, not as OB64 fidelity.
+
+**⚠️ NOT CORROBORATED — the ranged front→middle→back depth order.** This is the single biggest change in story 5.11 and **no source found states a row preference for ranged attackers.** The supplied research asserts a closest-to-furthest depth search; the guides describe column sectors and per-row *action counts* in detail but are silent on which row a ranged attacker picks within its sector. What the guides do say, which may be the underlying rule and does not map cleanly onto our model: *"If there is someone in your column in front of you, any melee attacks have to go through them first; if there is anyone in your column behind you, ranged attacks are affected."* That is a statement about the **defender's** protection, and its ranged half is ambiguous. **Treat front-first as PO direction rather than sourced fidelity until better evidence exists** — it is still a defensible design choice (it makes front-line screening meaningful for arrows, which is what Danilo wants), but the dossier should not claim OB64 says so when the sources do not.
+
+**✅ CORROBORATED — sleep wakes on being attacked.** "Slumbering characters seem to wake up fairly often, particularly when being attacked", and the reason paralysis is rated stronger is exactly that "if you attack a paralyzed character, they stay paralyzed" while a sleeper "may wake up". Note "**may**" — the real mechanic is probabilistic, not the guaranteed wake E5-D16 proposes. **E5-D16 stands as a deliberate simplification**: guaranteed wake-on-physical-hit is deterministic, keeps ADR 0003 frozen, and errs toward the player-friendly reading of a status Danilo already finds oppressive.
+
+**❌ CONTRADICTED — status persistence past the battle.** The supplied research described statuses carrying to the overworld, curable only by items/strongholds. The LP Archive states flatly: **"Status ailments only last as long as the battle you're fighting."** Immaterial to us (no campaign, no overworld), but it means the supplied Short-vs-Endless framing should not be leaned on for anything else, and E5-D18's "not adopted" list is on firmer ground.
+
+**Additional sourced mechanics NOT in the supplied research, logged for future fidelity work (no action now):** a critical hit **pushes the target back a row in the formation** unless the cell behind is occupied (we have crits since 4.6 but no knockback — a real OB64 mechanic we do not model); attack order is by Agility "with characters in the front going first" (**this matches our shipped FR13 tie-break** — an unlooked-for corroboration of an existing rule).
